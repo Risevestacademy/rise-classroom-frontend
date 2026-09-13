@@ -13,13 +13,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
-      - run: npm ci
+          cache: 'pnpm'
+      - run: pnpm ci
       - name: Lint
-        run: npm run lint
+        run: pnpm run lint
       - name: Type check
         run: npx tsc --noEmit
       - name: Unit tests
-        run: npm run test
+        run: pnpm run test
       - name: Build
-        run: npm run build
+        run: pnpm run build
