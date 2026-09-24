@@ -23,16 +23,14 @@ const buttonVariants = cva(
       },
 
       size: {
-        default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-
+        medium:
+          "h-10 gap-2 px-4 py-2 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+ 
         sm: "h-8 gap-1 px-3 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
 
         "icon-sm": "size-8 p-2",
 
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        lg: "h-11 gap-1.5 px-5 py-3 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
 
         icon: "size-8",
 
@@ -55,7 +53,7 @@ const buttonVariants = cva(
 
     defaultVariants: {
       variant: "primary",
-      size: "default",
+      size: "sm",
       pill: false,
       disabled: false,
     },
@@ -65,7 +63,7 @@ const buttonVariants = cva(
 function Button({
   className,
   variant = "primary",
-  size = "default",
+  size = "sm",
   pill = false,
   disabled = false,
   ...props

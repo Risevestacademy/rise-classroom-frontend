@@ -143,6 +143,18 @@
   --color-interactive-destructive-disabled: #FECACA;
   --color-interactive-destructive-disabled-text: #9CA3AF;
   --color-interactive-secondary-disabled: #F1F3F3;
+  --color-semantic-surface-success-badge: #E8F5E9;
+  --color-semantic-border-success: #B7DDB9;
+  --color-semantic-text-success: #2E7D32;
+  --color-semantic-surface-error-badge: #FDEAEA;
+  --color-semantic-border-error: #F2B8B8;
+  --color-semantic-text-error: #C62828;
+  --color-semantic-surface-warning-badge: #FFF4D6;
+  --color-semantic-border-warning: #F0D58A;
+  --color-semantic-text-warning: #8A6100;
+  --color-semantic-surface-info-badge: #E8F1FF;
+  --color-semantic-border-info: #B8D3F2;
+  --color-semantic-text-info: #2563A8;
 }
 
 body {
