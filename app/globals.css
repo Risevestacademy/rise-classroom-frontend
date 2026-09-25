@@ -1,26 +1,163 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@custom-variant dark (&:is(.dark *));
+
+@font-face {
+  font-family: "TomatoGrotesk";
+  src: url("/fonts/TomatoGrotesk-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@font-face {
+  font-family: "TomatoGrotesk";
+  src: url("/fonts/TomatoGrotesk-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@font-face {
+  font-family: "TomatoGrotesk";
+  src: url("/fonts/TomatoGrotesk-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /* Colours */
+  --color-primary-50: #E7F0F2;
+  --color-primary-100: #B4D2D5;
+  --color-primary-200: #90BCC1;
+  --color-primary-300: #5D9DA5;
+  --color-primary-400: #3D8A93;
+  --color-primary-500: #0D6D78;
+  --color-primary-600: #0C636D;
+  --color-primary-700: #094D55;
+  --color-primary-800: #073C42;
+  --color-primary-900: #052E32;
+
+  --color-success-50: #E6F2EE;
+  --color-success-100: #B1D5CB;
+  --color-success-200: #8CC1B2;
+  --color-success-300: #57A58E;
+  --color-success-400: #369379;
+  --color-success-500: #047857;
+  --color-success-600: #046D4F;
+  --color-success-700: #03553E;
+  --color-success-800: #024230;
+  --color-success-900: #023225;
+
+  --color-warning-50: #F8EEE6;
+  --color-warning-100: #E8CAB3;
+  --color-warning-200: #DDB08E;
+  --color-warning-300: #CD8C5A;
+  --color-warning-400: #C3753A;
+  --color-warning-500: #B45309;
+  --color-warning-600: #A44C08;
+  --color-warning-700: #803B06;
+  --color-warning-800: #632E05;
+  --color-warning-900: #4C2304;
+
+  --color-error-50:  #E7F0F2;
+  --color-error-100: #B4D2D5;
+  --color-error-200: #90BCC1;
+  --color-error-300: #5D9DA5;
+  --color-error-400: #3D8A93;
+  --color-error-500: #0D6D78;
+  --color-error-600: #0C636D;
+  --color-error-700: #094D55;
+  --color-error-800: #073C42;
+  --color-error-900: #052E32;
+
+  --color-neutral-50: #FFFFFF;
+  --color-neutral-100: #F8FAFA;
+  --color-neutral-200: #F1F4F4;
+  --color-neutral-300: #E2E8E8;
+  --color-neutral-400: #CBD5D6;
+  --color-neutral-500: #647274;
+  --color-neutral-600: #475355;
+  --color-neutral-700: #344043;
+  --color-neutral-800: #1F292B;
+  --color-neutral-900: #111819;
+
+  /* Font */
+  --font-sans: "TomatoGrotesk", system-ui, -apple-system, sans-serif;
+
+  /* Radius */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-4xl: 32px;
+  --radius-full: 999px;
+
+  /* Spacing */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-7: 28px;
+  --spacing-8: 32px;
+  --spacing-9: 36px;
+  --spacing-10: 40px;
+  --spacing-11: 44px;
+  --spacing-12: 48px;
+  --spacing-13: 56px;
+  --spacing-14: 64px;
+  --spacing-15: 72px;
+  --spacing-16: 80px;
+  --spacing-17: 88px;
+  --spacing-18: 96px;
+  --spacing-19: 112px;
+  --spacing-20: 128px;
+  --spacing-21: 144px;
+  --spacing-22: 160px;
+  --spacing-23: 176px;
+  --spacing-24: 192px;
+  --spacing-25: 208px;
+  --spacing-26: 224px;
+  --spacing-27: 240px;
+  --spacing-28: 256px;
+  --spacing-29: 288px;
+  --spacing-30: 320px;
+  --spacing-31: 384px;
+  --spacing-32: 512px;
+
+  /* extras */
+  --color-interactive-tetiary-focused: #E7ECEC;
+  --color-interactive-primary-hover: #0B5D67;
+  --color-interactive-secondary-focused:#F3F6F6;
+  --color-interactive-destructive-default: #DC2626;
+  --color-interactive-destructive-hover: #B91C1C;
+  --color-interactive-destructive-disabled: #FECACA;
+  --color-interactive-destructive-disabled-text: #9CA3AF;
+  --color-interactive-secondary-disabled: #F1F3F3;
+  --color-semantic-surface-success-badge: #E8F5E9;
+  --color-semantic-border-success: #B7DDB9;
+  --color-semantic-text-success: #2E7D32;
+  --color-semantic-surface-error-badge: #FDEAEA;
+  --color-semantic-border-error: #F2B8B8;
+  --color-semantic-text-error: #C62828;
+  --color-semantic-surface-warning-badge: #FFF4D6;
+  --color-semantic-border-warning: #F0D58A;
+  --color-semantic-text-warning: #8A6100;
+  --color-semantic-surface-info-badge: #E8F1FF;
+  --color-semantic-border-info: #B8D3F2;
+  --color-semantic-text-info: #2563A8;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }
+
