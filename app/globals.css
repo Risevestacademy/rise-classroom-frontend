@@ -4,31 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@font-face {
-  font-family: "TomatoGrotesk";
-  src: url("/fonts/TomatoGrotesk-Regular.tff") format("tff");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "TomatoGrotesk";
-  src: url("/fonts/TomatoGrotesk-Medium.tff") format("tff");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "TomatoGrotesk";
-  src: url("/fonts/TomatoGrotesk-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@theme {
+@theme inline {
   /* Colours */
   --color-primary-50: #E7F0F2;
   --color-primary-100: #B4D2D5;
@@ -86,7 +62,8 @@
   --color-neutral-900: #111819;
 
   /* Font */
-  --font-sans: "TomatoGrotesk", system-ui, -apple-system, sans-serif;
+  --font-tomato: var(--font-tomato-grotesk), system-ui, sans-serif;
+  --font-work: var(--font-work-sans), system-ui, sans-serif;
 
   /* Radius */
   --radius-xs: 2px;
@@ -158,6 +135,6 @@
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-tomato);
 }
 
