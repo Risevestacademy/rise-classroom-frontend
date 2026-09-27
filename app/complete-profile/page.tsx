@@ -3,6 +3,7 @@
 import { useRef, useState } from "react"
 import Image from "next/image"
 import { User } from "@/assets/icons"
+import { Logo } from "@/assets/logo"
 import { FormField } from "@/components/ui/field"
 import { Button } from "@/components/ui/button"
 
@@ -80,7 +81,7 @@ function ProfileStep({
         </div>
       </div>
 
-      <div className="space-y-5">
+      <div className="flex flex-col gap-5">
         <FormField
           label="Full Name"
           required
@@ -183,45 +184,24 @@ export default function CompleteProfilePage() {
   const { title, subtitle, ctaLabel } = STEP_CONTENT[step]
 
   return (
-    <main className="flex min-h-screen bg-neutral-100">
-      <aside className="hidden md:flex md:w-1/2 flex-col justify-between bg-primary-700 p-12 text-white">
-        <div />
-        <div className="flex items-center justify-center gap-2 text-lg font-semibold">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-full.svg" alt="rice logo" className="w-full max-w-[120px] object-contain" />
-        </div>
-        <p className="flex w-4/5 justify-center text-2xl font-bold">
-          Learn. Practice. Progress.
-        </p>
-      </aside>
+    <main className="min-h-[100vh] bg-neutral-100 lg:flex lg:items-center lg:justify-center lg:p-4">
+      <div className="mx-auto w-full md:w-[100vw] lg:grid lg:grid-cols-2 lg:overflow-hidden">
+        <aside className="hidden flex-col justify-between rounded-lg bg-primary-700 p-10 text-white lg:flex">
+          <div className="flex flex-1 items-center justify-center">
+            <Logo variant="white" size="lg" />
+          </div>
+          <p className="flex w-4/5 justify-center text-2xl font-bold">
+            Learn. Practice. Progress.
+          </p>
+        </aside>
 
-      {/* justify-start (not justify-center) is the actual fix: `main` is
-          min-h-screen + flex, so this column stretches to full viewport
-          height by default. justify-center was centering the whole form
-          block as one clump in the middle, leaving equal dead space above
-          and below — that's the "compressed" look. justify-start lets
-          content sit at the top like Figma's mobile frame, and the button
-          gets pushed to the bottom separately (see mt-auto below) instead
-          of just trailing 32px after the fields. */}
-      <div className="flex w-full flex-col items-center justify-start px-6 py-12 md:justify-center md:w-1/2">
-        <div className="flex w-full max-w-sm flex-1 flex-col md:flex-none">
-          <div className="mb-8 flex justify-start md:hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-full-green.svg"
-              alt="rice logo"
-              className="block w-[120px]"
-            />
+        <div className="flex flex-col min-h-[100vh]">
+          <div className="flex items-center px-6 pt-6 lg:hidden">
+            <Logo variant="teal" size="sm" />
           </div>
 
-          {/* flex-1 here is what makes mt-auto on the button actually mean
-              something on mobile — without it there's no leftover space
-              for "auto" to consume, and the margin just collapses to 0. */}
-          <form
-            onSubmit={handleSubmit}
-            className="flex w-full flex-1 flex-col md:flex-none"
-          >
-            <div className="space-y-8">
+          <div className="flex flex-col gap-6 px-6 py-10 sm:px-12 lg:px-24">
+            <div className="mx-auto flex w-full items-center justify-center">
               <Image
                 src="/onboarding.png"
                 height={113}
@@ -229,14 +209,16 @@ export default function CompleteProfilePage() {
                 alt="Illustration"
                 className="h-[113px] w-full rounded-2xl object-cover"
               />
+            </div>
 
-              <div className="space-y-1">
-                <h1 className="text-[24px] font-semibold text-neutral-900">{title}</h1>
-                {subtitle && (
-                  <p className="text-[14px] font-regular text-neutral-600">{subtitle}</p>
-                )}
-              </div>
+            <div>
+              <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
+              {subtitle && (
+                <p className="mt-1 text-sm text-neutral-600">{subtitle}</p>
+              )}
+            </div>
 
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               {step === 1 && (
                 <ProfileStep
                   formData={formData}
@@ -248,34 +230,32 @@ export default function CompleteProfilePage() {
               )}
               {step === 2 && <ConfirmProgramStep />}
               {step === 3 && <WelcomeStep />}
-            </div>
 
-            {/* mt-auto pushes this to the bottom of the flex-1 form on
-                mobile (matching Figma); md:mt-8 overrides that back to a
-                normal fixed gap on desktop, where the card isn't
-                full-height-stretched so "auto" would otherwise collapse
-                to 0 and the button would sit flush against the fields. */}
-            <Button
-              type="submit"
-              size="lg"
-              pill
-              variant="primary"
-              disabled={!canContinue}
-              className="mt-auto w-full justify-center md:mt-8"
-            >
-              {isSubmitting ? "Continuing..." : ctaLabel}
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                pill
+                disabled={!canContinue}
+                className="w-full justify-center rounded-full cursor-pointer"
+              >
+                {isSubmitting ? "Continuing..." : ctaLabel}
+              </Button>
+
+              {step === 2 && (
+                <p className="text-center text-sm text-neutral-600">
+                  Something&apos;s wrong?{" "}
+                  <a
+                    href="#"
+                    className="font-medium text-primary-500 hover:underline"
+                  >
+                    Contact support
+                  </a>
+                </p>
+              )}
+            </form>
+          </div>
         </div>
-
-        {step === 2 && (
-          <p className="mt-4 text-center text-sm text-neutral-600">
-            Something&apos;s wrong?{" "}
-            <a href="#" className="text-primary-600 underline-offset-4 hover:underline">
-              Contact support
-            </a>
-          </p>
-        )}
       </div>
     </main>
   )
