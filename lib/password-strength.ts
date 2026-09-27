@@ -22,6 +22,7 @@ const passwordRequirement: PasswordRequirement[] = [
   },
 ]
 
+
 const strengthSegments = 6
 
 type PasswordStrength = "weak" | "moderate" | "strong"
