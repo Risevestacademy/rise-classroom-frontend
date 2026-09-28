@@ -118,7 +118,7 @@ export default function SignInPage() {
                 </label>
                 <Input
                   id="password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? "basic" : "password"}
                   leadingIcon={<SquareLock />}
                   trailingIcon={
                     <PasswordVisibilityToggle
