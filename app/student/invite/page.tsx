@@ -35,7 +35,7 @@ export default function InvitePage() {
                 size="lg"
                 className="w-full cursor-pointer rounded-full"
                 nativeButton={false}
-                render={<Link href="/create-account" />}
+                render={<Link href="/student/create-account" />}
               >
                 Continue
               </Button>

@@ -40,7 +40,7 @@ export default function CreateAccountPage() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (canSubmit) {
-      router.push("/create-account/success")
+      router.push("/student/create-account/success")
     }
   }
 
