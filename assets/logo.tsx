@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils"
 
 const logoVariant = {
   teal: {
-    src: "/classroom-logo-teal.png",
+    src: "/classroom-logo-teal.svg",
     textColor: "text-primary-500",
   },
   white: {
-    src: "/classroom-logo-white.png",
+    src: "/classroom-logo-white.svg",
     textColor: "text-neutral-50",
   },
 } 
