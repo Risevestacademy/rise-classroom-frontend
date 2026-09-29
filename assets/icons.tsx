@@ -28,7 +28,7 @@ export function InfoIcon() {
   );
 }
 
-export function User() {
+export function User({ className }: { className?: string }) {
     return (
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5.48131 12.9013C4.30234 13.6034 1.21114 15.0368 3.09388 16.8305C4.01359 17.7067 5.03791 18.3334 6.32572 18.3334H13.6743C14.9621 18.3334 15.9864 17.7067 16.9061 16.8305C18.7889 15.0368 15.6977 13.6034 14.5187 12.9013C11.754 11.2551 8.24599 11.2551 5.48131 12.9013Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
