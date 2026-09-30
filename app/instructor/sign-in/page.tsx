@@ -90,7 +90,7 @@ export default function SignInPage() {
             <div>
               <h1 className="text-2xl font-bold text-neutral-900">Welcome Back</h1>
               <p className="mt-1 text-sm text-neutral-600">
-                Sign in to continue your learning experience
+                Sign in to your Classroom account to continue
               </p>
             </div>
 
@@ -135,7 +135,7 @@ export default function SignInPage() {
               </Field.Root>
 
               <div className="text-right text-sm">
-                <Link href="/student/forgot-password" className="font-medium text-primary-500 hover:underline">
+                <Link href="/instructor/forgot-password" className="font-medium text-primary-500 hover:underline">
                   Forgot Password?
                 </Link>
               </div>
