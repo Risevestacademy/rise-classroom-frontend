@@ -3,7 +3,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/assets/logo"
 
-export default function InvitePage() {
+export default function InstructorInvitePage() {
   return (
     <main className="min-h-[100vh] bg-neutral-100 lg:flex lg:items-center lg:justify-center lg:p-4">
       <div className="mx-auto w-full md:w-[100vw] lg:grid lg:grid-cols-2 lg:overflow-hidden ">
@@ -35,7 +35,7 @@ export default function InvitePage() {
                 size="lg"
                 className="w-full cursor-pointer rounded-full"
                 nativeButton={false}
-                render={<Link href="/create-account" />}
+                render={<Link href="/instructor/create-account" />}
               >
                 Continue
               </Button>

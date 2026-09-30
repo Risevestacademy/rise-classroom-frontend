@@ -22,7 +22,7 @@ import {
   evaluatePassword,
 } from "@/lib/password-strength"
 
-export default function CreateAccountPage() {
+export default function InstructorCreateAccountPage() {
   const router = useRouter()
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -40,7 +40,7 @@ export default function CreateAccountPage() {
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (canSubmit) {
-      router.push("/create-account/success")
+      router.push("/instructor/create-account/success")
     }
   }
 
@@ -69,7 +69,7 @@ export default function CreateAccountPage() {
             <div>
               <h1 className="text-2xl font-bold text-neutral-900">Create your account</h1>
               <p className="mt-1 text-sm text-neutral-600">
-                Set up your account to start your learning journey with Rise Classroom
+                Set up your account to get started with Rise Classroom.
               </p>
             </div>
 
