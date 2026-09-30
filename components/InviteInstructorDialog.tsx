@@ -23,15 +23,30 @@ import {
 } from "@/components/ui/dialog";
 import type { Instructor } from "@/app/admin/instructors/data";
 
-const COHORTS = ["Cohort 2024", "Cohort 2025", "Cohort 2026", "Cohort 2027", "Cohort 2028"];
+const COHORTS = [
+  "Cohort 2024",
+  "Cohort 2025",
+  "Cohort 2026",
+  "Cohort 2027",
+  "Cohort 2028",
+];
 const TRACKS = ["Design", "Frontend", "Backend", "Mobile Engineering"];
 
-const BULK_PREVIEW: Omit<Instructor, "id" | "status" | "joined" | "cohort">[] = [
-  { name: "Tega Briggs", email: "tega.briggs@rise.edu", track: "Design" },
-  { name: "Ifeoma Chukwu", email: "ifeoma.chukwu@rise.edu", track: "Frontend" },
-  { name: "Wale Adeyemi", email: "wale.adeyemi@rise.edu", track: "Backend" },
-  { name: "Ngozi Eze", email: "ngozi.eze@rise.edu", track: "Mobile Engineering" },
-];
+const BULK_PREVIEW: Omit<Instructor, "id" | "status" | "joined" | "cohort">[] =
+  [
+    { name: "Tega Briggs", email: "tega.briggs@rise.edu", track: "Design" },
+    {
+      name: "Ifeoma Chukwu",
+      email: "ifeoma.chukwu@rise.edu",
+      track: "Frontend",
+    },
+    { name: "Wale Adeyemi", email: "wale.adeyemi@rise.edu", track: "Backend" },
+    {
+      name: "Ngozi Eze",
+      email: "ngozi.eze@rise.edu",
+      track: "Mobile Engineering",
+    },
+  ];
 
 type Step =
   | "choice"
@@ -83,7 +98,7 @@ export function InviteInstructorDialog({
 
   const [fileName, setFileName] = React.useState("");
   const [selectedRows, setSelectedRows] = React.useState<boolean[]>(
-    BULK_PREVIEW.map(() => true)
+    BULK_PREVIEW.map(() => true),
   );
 
   function reset() {
@@ -202,7 +217,7 @@ export function InviteInstructorDialog({
             selectedRows={selectedRows}
             onToggleRow={(index) =>
               setSelectedRows((rows) =>
-                rows.map((value, i) => (i === index ? !value : value))
+                rows.map((value, i) => (i === index ? !value : value)),
               )
             }
             selectedCount={selectedCount}
@@ -224,8 +239,8 @@ export function InviteInstructorDialog({
                     cohort: "Cohort 2026",
                     status: "Pending",
                     joined: "--",
-                  })
-                )
+                  }),
+                ),
               );
               setStep("bulk-success");
             }}
@@ -260,7 +275,7 @@ function ChoiceStep({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mt-6 grid grid-cols-2 gap-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <button
           type="button"
           onClick={onSingle}
@@ -297,8 +312,8 @@ function ChoiceStep({
       </div>
 
       <p className="mt-6 text-sm text-neutral-500">
-        Instructors will receive an email invitation to join Rise Classroom
-        and complete their profile.
+        Instructors will receive an email invitation to join Rise Classroom and
+        complete their profile.
       </p>
     </>
   );
@@ -329,9 +344,7 @@ function SingleFormStep({
     <>
       <DialogHeader>
         <DialogTitle>Invite an Instructor</DialogTitle>
-        <DialogDescription>
-          Enter the instructors information
-        </DialogDescription>
+        <DialogDescription>Enter the instructors information</DialogDescription>
       </DialogHeader>
 
       <div className="mt-6 flex flex-col gap-6">
@@ -346,7 +359,7 @@ function SingleFormStep({
           }}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="First name"
             inputProps={{
@@ -368,15 +381,11 @@ function SingleFormStep({
         </div>
       </div>
 
-      <DialogFooter>
+      <DialogFooter className="sm:justify-end">
         <Button variant="secondary" size="medium" onClick={onCancel}>
           Cancel
         </Button>
-        <Button
-          size="medium"
-          disabled={!canContinue}
-          onClick={onNext}
-        >
+        <Button size="medium" disabled={!canContinue} onClick={onNext}>
           Next
         </Button>
       </DialogFooter>
@@ -458,7 +467,7 @@ function ProgramDetailsStep({
         />
       </div>
 
-      <DialogFooter>
+      <DialogFooter className="sm:justify-end">
         <Button variant="secondary" size="medium" onClick={onCancel}>
           Cancel
         </Button>
@@ -515,7 +524,7 @@ function SingleReviewStep({
         </div>
       </div>
 
-      <DialogFooter>
+      <DialogFooter className="sm:justify-end">
         <Button variant="secondary" size="medium" onClick={onBack}>
           Back
         </Button>
@@ -546,11 +555,20 @@ function SuccessStep({
       </h2>
       <p className="mt-2 max-w-sm text-sm text-neutral-500">{message}</p>
 
-      <div className="mt-6 flex items-center gap-3">
-        <Button size="medium" onClick={onInviteAnother}>
+      <div className="mt-6 flex w-full flex-col-reverse gap-3 sm:w-auto sm:flex-row sm:items-center">
+        <Button
+          size="medium"
+          onClick={onInviteAnother}
+          className="w-full sm:w-auto"
+        >
           Invite another instructor
         </Button>
-        <Button variant="secondary" size="medium" onClick={onViewInstructors}>
+        <Button
+          variant="secondary"
+          size="medium"
+          onClick={onViewInstructors}
+          className="w-full sm:w-auto"
+        >
           View instructors
         </Button>
       </div>
@@ -570,8 +588,8 @@ function BulkUploadStep({
       <DialogHeader>
         <DialogTitle>Upload Instructor CSV</DialogTitle>
         <DialogDescription>
-          Upload a CSV file with instructors details, we&apos;ll help you
-          assign them to a cohort and track.
+          Upload a CSV file with instructors details, we&apos;ll help you assign
+          them to a cohort and track.
         </DialogDescription>
       </DialogHeader>
 
@@ -593,7 +611,7 @@ function BulkUploadStep({
         </Button>
       </div>
 
-      <DialogFooter>
+      <DialogFooter className="sm:justify-end">
         <Button variant="secondary" size="medium" onClick={onCancel}>
           Cancel
         </Button>
@@ -654,41 +672,43 @@ function BulkReviewStep({
       </DialogHeader>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-neutral-300">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-neutral-100 text-xs tracking-wider text-neutral-500 uppercase">
-            <tr>
-              <th className="w-10 px-4 py-3" />
-              <th className="px-4 py-3">Instructor</th>
-              <th className="px-4 py-3">Email Address</th>
-              <th className="px-4 py-3">Track</th>
-            </tr>
-          </thead>
-          <tbody>
-            {BULK_PREVIEW.map((row, index) => (
-              <tr key={row.email} className="border-t border-neutral-200">
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => onToggleRow(index)}
-                    className={cn(
-                      "flex h-4 w-4 items-center justify-center rounded border",
-                      selectedRows[index]
-                        ? "border-primary-500 bg-primary-500 text-white"
-                        : "border-neutral-400"
-                    )}
-                  >
-                    {selectedRows[index] && <Check className="h-3 w-3" />}
-                  </button>
-                </td>
-                <td className="px-4 py-3 font-medium text-neutral-900">
-                  {row.name}
-                </td>
-                <td className="px-4 py-3 text-neutral-500">{row.email}</td>
-                <td className="px-4 py-3 text-neutral-500">{row.track}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-left text-sm">
+            <thead className="bg-neutral-100 text-xs tracking-wider text-neutral-500 uppercase">
+              <tr>
+                <th className="w-10 px-4 py-3" />
+                <th className="px-4 py-3">Instructor</th>
+                <th className="px-4 py-3">Email Address</th>
+                <th className="px-4 py-3">Track</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {BULK_PREVIEW.map((row, index) => (
+                <tr key={row.email} className="border-t border-neutral-200">
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => onToggleRow(index)}
+                      className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded border",
+                        selectedRows[index]
+                          ? "border-primary-500 bg-primary-500 text-white"
+                          : "border-neutral-400",
+                      )}
+                    >
+                      {selectedRows[index] && <Check className="h-3 w-3" />}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 font-medium text-neutral-900">
+                    {row.name}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-500">{row.email}</td>
+                  <td className="px-4 py-3 text-neutral-500">{row.track}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <DialogFooter className="justify-between">
@@ -747,7 +767,7 @@ function BulkConfirmStep({
         ))}
       </div>
 
-      <DialogFooter>
+      <DialogFooter className="sm:justify-end">
         <Button variant="secondary" size="medium" onClick={onCancel}>
           Cancel
         </Button>

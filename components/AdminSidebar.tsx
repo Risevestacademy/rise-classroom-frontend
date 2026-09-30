@@ -21,11 +21,13 @@ import {
   MessageSquare,
   Settings,
   Blocks,
+  X,
 } from "lucide-react";
 
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/UserAvatar";
+import { useAdminNav } from "@/components/AdminNavContext";
 
 interface NavItem {
   title: string;
@@ -73,74 +75,105 @@ const accountNavItems: NavItem[] = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { open, setOpen } = useAdminNav();
+
+  React.useEffect(() => {
+    setOpen(false);
+  }, [pathname, setOpen]);
 
   return (
-    <aside className="flex min-h-screen w-60 flex-col border-r border-neutral-300 bg-white">
-      <div className="flex items-center gap-2.5 border-b border-neutral-300 px-4 py-5">
-        <Link href="/admin/dashboard" className="flex items-center overflow-hidden">
-          <Logo variant="teal" size="sm" />
-        </Link>
-      </div>
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-neutral-900/50 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
 
-      <div className="flex-1 space-y-6 overflow-y-auto px-4 py-4">
-        <NavSection
-          label="Overview"
-          items={overviewNavItems}
-          pathname={pathname}
-        />
-        <NavSection
-          label="Operations"
-          items={operationsNavItems}
-          pathname={pathname}
-        />
-        <NavSection
-          label="People"
-          items={peopleNavItems}
-          pathname={pathname}
-        />
-        <NavSection
-          label="Academy"
-          items={academyNavItems}
-          pathname={pathname}
-        />
-        <NavSection
-          label="Insight"
-          items={insightNavItems}
-          pathname={pathname}
-        />
-        <NavSection
-          label="Communication"
-          items={communicationNavItems}
-          pathname={pathname}
-        />
-      </div>
-
-      <div className="px-4 pb-4">
-        <div className="space-y-1">
-          {accountNavItems.map((item) => (
-            <SidebarNavItem
-              key={item.href}
-              item={item}
-              isActive={pathname === item.href}
-            />
-          ))}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 -translate-x-full flex-col border-r border-neutral-300 bg-white transition-transform duration-200 ease-in-out",
+          "lg:static lg:z-auto lg:h-auto lg:min-h-screen lg:w-60 lg:translate-x-0",
+          open && "translate-x-0",
+        )}
+      >
+        <div className="flex items-center justify-between gap-2.5 border-b border-neutral-300 px-4 py-5">
+          <Link
+            href="/admin/dashboard"
+            className="flex items-center overflow-hidden"
+          >
+            <Logo variant="teal" size="sm" />
+          </Link>
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+            className="text-neutral-500 hover:text-neutral-700 lg:hidden"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        <hr className="my-3 text-neutral-300" />
+        <div className="flex-1 space-y-6 overflow-y-auto px-4 py-4">
+          <NavSection
+            label="Overview"
+            items={overviewNavItems}
+            pathname={pathname}
+          />
+          <NavSection
+            label="Operations"
+            items={operationsNavItems}
+            pathname={pathname}
+          />
+          <NavSection
+            label="People"
+            items={peopleNavItems}
+            pathname={pathname}
+          />
+          <NavSection
+            label="Academy"
+            items={academyNavItems}
+            pathname={pathname}
+          />
+          <NavSection
+            label="Insight"
+            items={insightNavItems}
+            pathname={pathname}
+          />
+          <NavSection
+            label="Communication"
+            items={communicationNavItems}
+            pathname={pathname}
+          />
+        </div>
 
-        <div className="flex items-center gap-3 rounded-2xl bg-neutral-100 p-3">
-          <UserAvatar />
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-bold text-neutral-900">
-              Admin A.
-            </span>
-            <span className="mt-0.5 truncate text-xs text-neutral-500">
-              Super Admin
-            </span>
+        <div className="px-4 pb-4">
+          <div className="space-y-1">
+            {accountNavItems.map((item) => (
+              <SidebarNavItem
+                key={item.href}
+                item={item}
+                isActive={pathname === item.href}
+              />
+            ))}
+          </div>
+
+          <hr className="my-3 text-neutral-300" />
+
+          <div className="flex items-center gap-3 rounded-2xl bg-neutral-100 p-3">
+            <UserAvatar />
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-bold text-neutral-900">
+                Admin A.
+              </span>
+              <span className="mt-0.5 truncate text-xs text-neutral-500">
+                Super Admin
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
@@ -185,7 +218,7 @@ function SidebarNavItem({
         "flex h-10 w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium",
         isActive
           ? "border-primary-500 bg-[#E8F5F6] text-primary-500"
-          : "border-transparent text-[#505258]"
+          : "border-transparent text-[#505258]",
       )}
     >
       <Icon className="h-5 w-5 shrink-0" />

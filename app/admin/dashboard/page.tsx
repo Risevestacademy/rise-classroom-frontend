@@ -90,9 +90,9 @@ export default function AdminDashboardPage() {
   return (
     <>
       <AdminTopNav />
-      <main className="flex-1 p-8">
+      <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-col gap-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-neutral-900">
                 Good Morning, Admin
@@ -133,11 +133,14 @@ export default function AdminDashboardPage() {
                     Track Health
                   </h3>
                   {trackHealth.map((track) => (
-                    <div key={track.label} className="flex items-center gap-3">
+                    <div
+                      key={track.label}
+                      className="flex items-center gap-2 sm:gap-3"
+                    >
                       <track.icon
                         className={cn("h-4 w-4 shrink-0", track.className)}
                       />
-                      <span className="w-36 shrink-0 text-sm text-neutral-700">
+                      <span className="w-20 shrink-0 truncate text-sm text-neutral-700 sm:w-36">
                         {track.label}
                       </span>
                       <div className="h-2 flex-1 rounded-full bg-neutral-200">
@@ -225,7 +228,7 @@ export default function AdminDashboardPage() {
                 {upcomingActivities.map((item) => (
                   <li
                     key={item.title}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-neutral-200 px-4 py-3"
+                    className="flex flex-col gap-1 rounded-lg border border-neutral-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
                   >
                     <p className="text-sm font-medium text-neutral-900">
                       {item.title}
