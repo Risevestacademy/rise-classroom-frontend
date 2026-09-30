@@ -36,9 +36,9 @@ export default function InstructorsPage() {
   return (
     <>
       <AdminTopNav breadcrumb={["People", "Instructors"]} />
-      <main className="flex-1 p-8">
+      <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         {instructors.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
             <Users className="h-12 w-12 text-neutral-300" />
             <p className="font-semibold text-neutral-900">
               No instructors yet.
@@ -53,7 +53,7 @@ export default function InstructorsPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-neutral-900">
                   Instructors
@@ -66,7 +66,7 @@ export default function InstructorsPage() {
             </div>
 
             <div className="rounded-xl border border-neutral-300 bg-white">
-              <div className="flex items-center justify-between border-b border-neutral-200 p-5">
+              <div className="flex flex-col gap-4 border-b border-neutral-200 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="font-semibold text-neutral-900">
                     {instructors.length} Instructor
@@ -78,95 +78,97 @@ export default function InstructorsPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-neutral-400">
-                    <Search className="h-4 w-4" />
+                  <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-neutral-400 sm:flex-none">
+                    <Search className="h-4 w-4 shrink-0" />
                     <input
                       type="search"
                       placeholder="Search by name or email"
-                      className="w-56 bg-transparent text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+                      className="w-full min-w-0 bg-transparent text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none sm:w-56"
                     />
                   </div>
                   <button
                     type="button"
-                    className="flex h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-700"
+                    className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-700"
                   >
                     <SlidersHorizontal className="h-4 w-4" />
-                    Filter
+                    <span className="hidden sm:inline">Filter</span>
                   </button>
                 </div>
               </div>
 
-              <table className="w-full text-left text-sm">
-                <thead className="text-xs tracking-wider text-neutral-500 uppercase">
-                  <tr>
-                    <th className="w-10 px-5 py-3">
-                      <input type="checkbox" className="h-4 w-4 rounded" />
-                    </th>
-                    <th className="px-5 py-3">Instructor</th>
-                    <th className="px-5 py-3">Track</th>
-                    <th className="px-5 py-3">Cohort</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Joined</th>
-                    <th className="w-12 px-5 py-3">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {instructors.map((instructor) => (
-                    <tr
-                      key={instructor.id}
-                      className="border-t border-neutral-200"
-                    >
-                      <td className="px-5 py-4">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-left text-sm">
+                  <thead className="text-xs tracking-wider text-neutral-500 uppercase">
+                    <tr>
+                      <th className="w-10 px-5 py-3">
                         <input type="checkbox" className="h-4 w-4 rounded" />
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-500">
-                            {initials(instructor.name)}
-                          </span>
-                          <div>
-                            <p className="font-medium text-neutral-900">
-                              {instructor.name}
-                            </p>
-                            <p className="text-xs text-neutral-500">
-                              {instructor.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-neutral-700">
-                        {instructor.track}
-                      </td>
-                      <td className="px-5 py-4 text-neutral-700">
-                        {instructor.cohort}
-                      </td>
-                      <td className="px-5 py-4">
-                        <Badge
-                          status={
-                            instructor.status === "Active"
-                              ? "success"
-                              : "warning"
-                          }
-                        >
-                          {instructor.status}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-4 text-neutral-500">
-                        {instructor.joined}
-                      </td>
-                      <td className="px-5 py-4">
-                        <button
-                          type="button"
-                          aria-label="Row actions"
-                          className="text-neutral-400 hover:text-neutral-700"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </td>
+                      </th>
+                      <th className="px-5 py-3">Instructor</th>
+                      <th className="px-5 py-3">Track</th>
+                      <th className="px-5 py-3">Cohort</th>
+                      <th className="px-5 py-3">Status</th>
+                      <th className="px-5 py-3">Joined</th>
+                      <th className="w-12 px-5 py-3">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {instructors.map((instructor) => (
+                      <tr
+                        key={instructor.id}
+                        className="border-t border-neutral-200"
+                      >
+                        <td className="px-5 py-4">
+                          <input type="checkbox" className="h-4 w-4 rounded" />
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-500">
+                              {initials(instructor.name)}
+                            </span>
+                            <div>
+                              <p className="font-medium text-neutral-900">
+                                {instructor.name}
+                              </p>
+                              <p className="text-xs text-neutral-500">
+                                {instructor.email}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-neutral-700">
+                          {instructor.track}
+                        </td>
+                        <td className="px-5 py-4 text-neutral-700">
+                          {instructor.cohort}
+                        </td>
+                        <td className="px-5 py-4">
+                          <Badge
+                            status={
+                              instructor.status === "Active"
+                                ? "success"
+                                : "warning"
+                            }
+                          >
+                            {instructor.status}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-4 text-neutral-500">
+                          {instructor.joined}
+                        </td>
+                        <td className="px-5 py-4">
+                          <button
+                            type="button"
+                            aria-label="Row actions"
+                            className="text-neutral-400 hover:text-neutral-700"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

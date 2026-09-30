@@ -1,11 +1,11 @@
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { X } from "lucide-react"
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { X } from "lucide-react";
 
-import { cn } from "cn"
+import { cn } from "cn";
 
-const Dialog = DialogPrimitive.Root
-const DialogTrigger = DialogPrimitive.Trigger
-const DialogClose = DialogPrimitive.Close
+const Dialog = DialogPrimitive.Root;
+const DialogTrigger = DialogPrimitive.Trigger;
+const DialogClose = DialogPrimitive.Close;
 
 function DialogContent({
   className,
@@ -13,37 +13,34 @@ function DialogContent({
   showClose = true,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Popup> & {
-  showClose?: boolean
+  showClose?: boolean;
 }) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-neutral-900/50 transition-opacity data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
       <DialogPrimitive.Popup
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 w-[648px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-neutral-300 bg-white p-6 shadow-lg outline-none",
+          "fixed top-1/2 left-1/2 z-50 max-h-[85vh] w-[648px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-neutral-300 bg-white p-4 shadow-lg outline-none sm:p-6",
           "data-[ending-style]:opacity-0 data-[ending-style]:scale-95 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 transition-all",
-          className
+          className,
         )}
         {...props}
       >
         {showClose && (
-          <DialogPrimitive.Close className="absolute top-6 right-6 flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-200">
+          <DialogPrimitive.Close className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-200 sm:top-6 sm:right-6">
             <X className="h-5 w-5" />
           </DialogPrimitive.Close>
         )}
         {children}
       </DialogPrimitive.Popup>
     </DialogPrimitive.Portal>
-  )
+  );
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
-      className={cn("flex flex-col gap-1 pr-10", className)}
-      {...props}
-    />
-  )
+    <div className={cn("flex flex-col gap-1 pr-10", className)} {...props} />
+  );
 }
 
 function DialogTitle({
@@ -55,7 +52,7 @@ function DialogTitle({
       className={cn("text-xl font-bold text-neutral-900", className)}
       {...props}
     />
-  )
+  );
 }
 
 function DialogDescription({
@@ -67,16 +64,19 @@ function DialogDescription({
       className={cn("text-sm text-neutral-500", className)}
       {...props}
     />
-  )
+  );
 }
 
 function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("mt-8 flex items-center justify-end gap-3", className)}
+      className={cn(
+        "mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center",
+        className,
+      )}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -88,4 +88,4 @@ export {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-}
+};
