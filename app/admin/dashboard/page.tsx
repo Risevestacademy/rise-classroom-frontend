@@ -14,6 +14,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { AdminTopNav } from "@/components/AdminTopNav";
 
 const metrics = [
   {
@@ -51,15 +52,31 @@ const metrics = [
 
 const trackHealth = [
   { label: "Design", value: 91, icon: PenTool, className: "text-primary-500" },
-  { label: "Frontend", value: 82, icon: Code2, className: "text-semantic-text-info" },
+  {
+    label: "Frontend",
+    value: 82,
+    icon: Code2,
+    className: "text-semantic-text-info",
+  },
   { label: "Backend", value: 74, icon: Database, className: "text-[#960B93]" },
-  { label: "Mobile Engineering", value: 88, icon: Smartphone, className: "text-[#7C3AED]" },
+  {
+    label: "Mobile Engineering",
+    value: 88,
+    icon: Smartphone,
+    className: "text-[#7C3AED]",
+  },
 ];
 
 const recentActivity = [
   { title: "New student enrolled in Frontend Track", time: "12 minutes ago" },
-  { title: "Instructor submitted grading for Backend cohort", time: "1 hour ago" },
-  { title: "Mentor added feedback on Mobile Engineering project", time: "3 hours ago" },
+  {
+    title: "Instructor submitted grading for Backend cohort",
+    time: "1 hour ago",
+  },
+  {
+    title: "Mentor added feedback on Mobile Engineering project",
+    time: "3 hours ago",
+  },
   { title: "Track milestone completed for Design cohort", time: "Yesterday" },
 ];
 
@@ -71,148 +88,159 @@ const upcomingActivities = [
 
 export default function AdminDashboardPage() {
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">
-            Good Morning, Admin
-          </h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            Here&apos;s what&apos;s happening across your program
-          </p>
-        </div>
-        <WeekFilter />
-      </div>
+    <>
+      <AdminTopNav />
+      <main className="flex-1 p-8">
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-neutral-900">
+                Good Morning, Admin
+              </h1>
+              <p className="mt-1 text-sm text-neutral-500">
+                Here&apos;s what&apos;s happening across your program
+              </p>
+            </div>
+            <WeekFilter />
+          </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((metric) => (
-          <MetricCard key={metric.title} {...metric} />
-        ))}
-      </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {metrics.map((metric) => (
+              <MetricCard key={metric.title} {...metric} />
+            ))}
+          </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <DashboardCard
-          title="Program Health"
-          subtitle="Overall program health across all tracks"
-          action={<WeekFilter />}
-        >
-          <div className="flex flex-col gap-8 sm:flex-row sm:items-center">
-            <CircularProgress value={84}>
-              <div className="flex flex-col items-center">
-                <span className="text-3xl font-bold text-neutral-900">84%</span>
-                <span className="text-xs text-neutral-500">Overall health</span>
-              </div>
-            </CircularProgress>
-
-            <div className="flex-1 space-y-4">
-              <h3 className="text-sm font-semibold text-neutral-900">
-                Track Health
-              </h3>
-              {trackHealth.map((track) => (
-                <div key={track.label} className="flex items-center gap-3">
-                  <track.icon className={cn("h-4 w-4 shrink-0", track.className)} />
-                  <span className="w-36 shrink-0 text-sm text-neutral-700">
-                    {track.label}
-                  </span>
-                  <div className="h-2 flex-1 rounded-full bg-neutral-200">
-                    <div
-                      className={cn(
-                        "h-2 rounded-full bg-current",
-                        track.className
-                      )}
-                      style={{ width: `${track.value}%` }}
-                    />
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <DashboardCard
+              title="Program Health"
+              subtitle="Overall program health across all tracks"
+              action={<WeekFilter />}
+            >
+              <div className="flex flex-col gap-8 sm:flex-row sm:items-center">
+                <CircularProgress value={84}>
+                  <div className="flex flex-col items-center">
+                    <span className="text-3xl font-bold text-neutral-900">
+                      84%
+                    </span>
+                    <span className="text-xs text-neutral-500">
+                      Overall health
+                    </span>
                   </div>
-                  <span className="w-10 shrink-0 text-right text-sm font-medium text-neutral-900">
-                    {track.value}%
-                  </span>
+                </CircularProgress>
+
+                <div className="flex-1 space-y-4">
+                  <h3 className="text-sm font-semibold text-neutral-900">
+                    Track Health
+                  </h3>
+                  {trackHealth.map((track) => (
+                    <div key={track.label} className="flex items-center gap-3">
+                      <track.icon
+                        className={cn("h-4 w-4 shrink-0", track.className)}
+                      />
+                      <span className="w-36 shrink-0 text-sm text-neutral-700">
+                        {track.label}
+                      </span>
+                      <div className="h-2 flex-1 rounded-full bg-neutral-200">
+                        <div
+                          className={cn(
+                            "h-2 rounded-full bg-current",
+                            track.className,
+                          )}
+                          style={{ width: `${track.value}%` }}
+                        />
+                      </div>
+                      <span className="w-10 shrink-0 text-right text-sm font-medium text-neutral-900">
+                        {track.value}%
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          <button
-            type="button"
-            className="mt-6 flex items-center gap-1 text-sm font-medium text-primary-500"
-          >
-            View detailed progress
-            <ArrowUpRight className="h-4 w-4" />
-          </button>
-        </DashboardCard>
-
-        <DashboardCard
-          title="Attention Required"
-          subtitle="Items that may need your attention"
-        >
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-semantic-surface-success-badge text-semantic-text-success">
-              <CheckCircle2 className="h-6 w-6" />
-            </div>
-            <p className="font-semibold text-neutral-900">All caught up!</p>
-            <p className="max-w-64 text-sm text-neutral-500">
-              There are no pending items that need your attention right now.
-            </p>
-          </div>
-        </DashboardCard>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <DashboardCard
-          title="Recent Activity"
-          subtitle="What's happening across your program"
-          action={
-            <button
-              type="button"
-              className="flex items-center gap-1 text-sm font-medium text-primary-500"
-            >
-              View all
-              <ArrowUpRight className="h-4 w-4" />
-            </button>
-          }
-        >
-          <ul className="space-y-4">
-            {recentActivity.map((item) => (
-              <li key={item.title} className="flex items-start gap-3">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-500" />
-                <div>
-                  <p className="text-sm text-neutral-900">{item.title}</p>
-                  <p className="text-xs text-neutral-500">{item.time}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </DashboardCard>
-
-        <DashboardCard
-          title="Upcoming Activities"
-          subtitle="What's coming up next"
-          action={
-            <button
-              type="button"
-              className="flex items-center gap-1 text-sm font-medium text-primary-500"
-            >
-              Schedule activity
-            </button>
-          }
-        >
-          <ul className="space-y-4">
-            {upcomingActivities.map((item) => (
-              <li
-                key={item.title}
-                className="flex items-center justify-between gap-3 rounded-lg border border-neutral-200 px-4 py-3"
+              <button
+                type="button"
+                className="mt-6 flex items-center gap-1 text-sm font-medium text-primary-500"
               >
-                <p className="text-sm font-medium text-neutral-900">
-                  {item.title}
+                View detailed progress
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
+            </DashboardCard>
+
+            <DashboardCard
+              title="Attention Required"
+              subtitle="Items that may need your attention"
+            >
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-semantic-surface-success-badge text-semantic-text-success">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <p className="font-semibold text-neutral-900">All caught up!</p>
+                <p className="max-w-64 text-sm text-neutral-500">
+                  There are no pending items that need your attention right now.
                 </p>
-                <p className="text-xs whitespace-nowrap text-neutral-500">
-                  {item.date}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </DashboardCard>
-      </div>
-    </div>
+              </div>
+            </DashboardCard>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <DashboardCard
+              title="Recent Activity"
+              subtitle="What's happening across your program"
+              action={
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-sm font-medium text-primary-500"
+                >
+                  View all
+                  <ArrowUpRight className="h-4 w-4" />
+                </button>
+              }
+            >
+              <ul className="space-y-4">
+                {recentActivity.map((item) => (
+                  <li key={item.title} className="flex items-start gap-3">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-500" />
+                    <div>
+                      <p className="text-sm text-neutral-900">{item.title}</p>
+                      <p className="text-xs text-neutral-500">{item.time}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </DashboardCard>
+
+            <DashboardCard
+              title="Upcoming Activities"
+              subtitle="What's coming up next"
+              action={
+                <button
+                  type="button"
+                  className="flex items-center gap-1 text-sm font-medium text-primary-500"
+                >
+                  Schedule activity
+                </button>
+              }
+            >
+              <ul className="space-y-4">
+                {upcomingActivities.map((item) => (
+                  <li
+                    key={item.title}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-neutral-200 px-4 py-3"
+                  >
+                    <p className="text-sm font-medium text-neutral-900">
+                      {item.title}
+                    </p>
+                    <p className="text-xs whitespace-nowrap text-neutral-500">
+                      {item.date}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </DashboardCard>
+          </div>
+        </div>
+      </main>
+    </>
   );
 }
 
@@ -248,7 +276,7 @@ function MetricCard({
       <div
         className={cn(
           "flex h-10 w-10 items-center justify-center rounded-lg",
-          iconWrapperClassName
+          iconWrapperClassName,
         )}
       >
         <Icon className="h-5 w-5" />
