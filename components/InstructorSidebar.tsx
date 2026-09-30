@@ -146,7 +146,7 @@ export function Sidebar() {
         <hr className="text-neutral-300 mx-4" />
         <div className="mt-auto p-4 bg-neutral-100">
           <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
-            <UserAvatar src="/avatar.png" name="Instructor" size="md" />
+            <UserAvatar />
             <div className="flex flex-col min-w-0">
               <span className="text-base font-bold text-neutral-900 truncate">
                 Instructor
