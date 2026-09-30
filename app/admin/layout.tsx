@@ -1,7 +1,6 @@
 import { AdminSidebar } from "@/components/AdminSidebar";
-import { AdminTopNav } from "@/components/AdminTopNav";
 
-export default function AdminDashboardLayout({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -10,8 +9,7 @@ export default function AdminDashboardLayout({
     <div className="flex min-h-screen w-full">
       <AdminSidebar />
       <div className="flex min-h-screen flex-1 flex-col bg-neutral-50/50">
-        <AdminTopNav />
-        <main className="flex-1 p-8">{children}</main>
+        {children}
       </div>
     </div>
   );
