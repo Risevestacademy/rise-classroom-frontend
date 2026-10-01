@@ -145,7 +145,11 @@ export default function ForgotPasswordOtpPage() {
                 {errors.otp && <Error match={true}>{errors.otp}</Error>}
               </Field.Root>
 
-              {formError && <Error match={true}>{formError}</Error>}
+              {formError && (
+                <p className="flex items-center gap-1 text-xs text-semantic-text-error">
+                  {formError}
+                </p>
+              )}
               {resendMessage && (
                 <p className="text-sm text-primary-500">{resendMessage}</p>
               )}

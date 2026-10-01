@@ -195,8 +195,12 @@ export default function ForgotPasswordResetPage() {
                 />
                 {errors.confirmPassword && <Error match={true}>{errors.confirmPassword}</Error>}
               </Field.Root>
-
-              {formError && <Error match={true}>{formError}</Error>}
+              
+              {formError && (
+                <p className="flex items-center gap-1 text-xs text-semantic-text-error">
+                  {formError}
+                </p>
+              )}
 
               <Button
                 type="submit"
