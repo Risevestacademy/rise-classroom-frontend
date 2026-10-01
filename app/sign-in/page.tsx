@@ -14,6 +14,7 @@ import { Error } from "@/components/ui/hint"
 import { PasswordVisibilityToggle } from "@/components/ui/password-visibility-toggle"
 import { SquareLock } from "@/assets/icons"
 import { Logo } from "@/assets/logo"
+import { getSignInErrorMessage, landingPathFor, signIn } from "@/lib/auth"
 
 const signInSchema = z.object({
   email: z
@@ -29,11 +30,14 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
+    setFormError(null);
     if (errors.email) {
       setErrors((prev) => ({ ...prev, email: undefined }));
     }
@@ -41,6 +45,7 @@ export default function SignInPage() {
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
+    setFormError(null);
     if (errors.password) {
       setErrors((prev) => ({ ...prev, password: undefined }));
     }
@@ -48,7 +53,7 @@ export default function SignInPage() {
 
   const formFilled = email.trim() !== "" && password.trim() !== "";
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const result = signInSchema.safeParse({ email, password });
 
@@ -62,7 +67,26 @@ export default function SignInPage() {
     }
 
     setErrors({});
-    router.push("/dashboard")
+    setFormError(null);
+    setSubmitting(true);
+
+    try {
+      const { user } = await signIn({
+        email: result.data.email.trim(),
+        password: result.data.password,
+      });
+
+      if (user.status === "SUSPENDED") {
+        setFormError("This account has been suspended. Please contact support.");
+        return;
+      }
+
+      router.push(landingPathFor(user));
+    } catch (error) {
+      setFormError(getSignInErrorMessage(error));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -90,11 +114,20 @@ export default function SignInPage() {
             <div>
               <h1 className="text-2xl font-bold text-neutral-900">Welcome Back</h1>
               <p className="mt-1 text-sm text-neutral-600">
-                Sign in to continue your learning experience
+                Sign in to your Classroom account to continue
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
+              {formError && (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+                >
+                  {formError}
+                </p>
+              )}
+
               <Field.Root
                 className="flex flex-col gap-1.5"
                 invalid={Boolean(errors.email)}
@@ -104,6 +137,7 @@ export default function SignInPage() {
                   type="email"
                   value={email}
                   onChange={handleEmailChange}
+                  disabled={submitting}
                   placeholder="rise@email.com"
                 />
                 {errors.email && <Error match={true}>{errors.email}</Error>}
@@ -129,13 +163,14 @@ export default function SignInPage() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={handlePasswordChange}
+                  disabled={submitting}
                 />
 
                 {errors.password && <Error match={true}>{errors.password}</Error>}
               </Field.Root>
 
               <div className="text-right text-sm">
-                <Link href="/student/forgot-password" className="font-medium text-primary-500 hover:underline">
+                <Link href="/forgot-password" className="font-medium text-primary-500 hover:underline">
                   Forgot Password?
                 </Link>
               </div>
@@ -144,10 +179,10 @@ export default function SignInPage() {
                 type="submit"
                 variant="primary"
                 size="lg"
-                disabled={!formFilled}
+                disabled={!formFilled || submitting}
                 className="w-full rounded-full cursor-pointer"
               >
-                Sign in
+                {submitting ? "Signing in…" : "Sign in"}
               </Button>
 
               <p className="text-center text-sm text-neutral-600">

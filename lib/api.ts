@@ -1,3 +1,5 @@
+import { getAuthToken } from "@/lib/auth-token";
+
 function getApiUrl() {
   const url = process.env.NEXT_PUBLIC_API_URL;
 
@@ -47,12 +49,34 @@ function buildUrl(path: string, query?: Record<string, QueryValue>) {
   return url.toString();
 }
 
+function extractMessage(
+  isJson: boolean,
+  data: unknown,
+  response: Response
+): string {
+  if (isJson && data && typeof data === "object" && "message" in data) {
+    const message = (data as { message: unknown }).message;
+
+    // The API returns a string for single errors and an array for field-level
+    // validation failures.
+    if (Array.isArray(message)) {
+      const joined = message.filter(Boolean).map(String).join(" ");
+      if (joined) return joined;
+    }
+
+    if (typeof message === "string" && message.trim()) return message;
+  }
+
+  return response.statusText || `Request failed with status ${response.status}`;
+}
+
 async function request<T>(
   method: string,
   path: string,
   { body, query, headers, ...init }: RequestOptions = {}
 ): Promise<T> {
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const token = getAuthToken();
 
   const response = await fetch(buildUrl(path, query), {
     ...init,
@@ -61,6 +85,7 @@ async function request<T>(
     headers: {
       Accept: "application/json",
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
     body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
@@ -73,12 +98,11 @@ async function request<T>(
     : await response.text().catch(() => null);
 
   if (!response.ok) {
-    const message =
-      (isJson && data && typeof data === "object" && "message" in data
-        ? String((data as { message: unknown }).message)
-        : undefined) ?? response.statusText;
-
-    throw new ApiError(response.status, message, data);
+    throw new ApiError(
+      response.status,
+      extractMessage(isJson, data, response),
+      data
+    );
   }
 
   return data as T;
