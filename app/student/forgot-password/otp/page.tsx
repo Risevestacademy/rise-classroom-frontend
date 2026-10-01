@@ -135,7 +135,7 @@ export default function ForgotPasswordOtpPage() {
               >
                 <label className="text-sm font-medium text-neutral-800">Verification Code</label>
                 <Input
-                  type="text"
+                  type="basic"
                   inputMode="numeric"
                   maxLength={6}
                   value={otp}
