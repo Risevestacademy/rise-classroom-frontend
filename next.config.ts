@@ -3,7 +3,23 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
 
-const nextConfig: NextConfig = {/* config options here */};
+const nextConfig: NextConfig = {
+  // The per-role sign-in pages were merged into a single /sign-in.
+  async redirects() {
+    return [
+      {
+        source: "/student/sign-in",
+        destination: "/sign-in",
+        permanent: true,
+      },
+      {
+        source: "/instructor/sign-in",
+        destination: "/sign-in",
+        permanent: true,
+      },
+    ];
+  },
+};
 
 export default isDev 
 ? nextConfig 
