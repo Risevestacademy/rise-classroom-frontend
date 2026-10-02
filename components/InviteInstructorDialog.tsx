@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   UserPlus,
   Upload,
@@ -8,11 +9,13 @@ import {
   ChevronDown,
   Check,
   CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -21,32 +24,19 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { Instructor } from "@/app/admin/instructors/data";
+import {
+  adminQueries,
+  inviteUser,
+  inviteUsersBulk,
+  type InviteUserInput,
+} from "@/lib/admin";
 
-const COHORTS = [
-  "Cohort 2024",
-  "Cohort 2025",
-  "Cohort 2026",
-  "Cohort 2027",
-  "Cohort 2028",
-];
-const TRACKS = ["Design", "Frontend", "Backend", "Mobile Engineering"];
-
-const BULK_PREVIEW: Omit<Instructor, "id" | "status" | "joined" | "cohort">[] =
-  [
-    { name: "Tega Briggs", email: "tega.briggs@rise.edu", track: "Design" },
-    {
-      name: "Ifeoma Chukwu",
-      email: "ifeoma.chukwu@rise.edu",
-      track: "Frontend",
-    },
-    { name: "Wale Adeyemi", email: "wale.adeyemi@rise.edu", track: "Backend" },
-    {
-      name: "Ngozi Eze",
-      email: "ngozi.eze@rise.edu",
-      track: "Mobile Engineering",
-    },
-  ];
+/** One row parsed out of an uploaded CSV. */
+type CsvRow = {
+  firstName: string;
+  lastName: string;
+  email: string;
+};
 
 type Step =
   | "choice"
@@ -55,7 +45,6 @@ type Step =
   | "single-review"
   | "single-success"
   | "bulk-upload"
-  | "bulk-uploading"
   | "bulk-review"
   | "bulk-confirm"
   | "bulk-success";
@@ -67,7 +56,6 @@ const STEP_WIDTH: Partial<Record<Step, string>> = {
   "single-review": "w-[620px]",
   "single-success": "w-[560px]",
   "bulk-upload": "w-[648px]",
-  "bulk-uploading": "w-[648px]",
   "bulk-review": "w-[696px]",
   "bulk-confirm": "w-[620px]",
   "bulk-success": "w-[560px]",
@@ -82,34 +70,144 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-export function InviteInstructorDialog({
-  onInvited,
-}: {
-  onInvited: (instructors: Omit<Instructor, "id">[]) => void;
-}) {
+/**
+ * Reads `firstName,lastName,email` rows out of a CSV. Columns are matched by
+ * header name where a header is present, falling back to column order. A
+ * single `name` column is split on the first space.
+ */
+export function parseInstructorCsv(text: string) {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return { rows: [], skipped: 0 };
+
+  const cells = (line: string) =>
+    line.split(",").map((cell) => cell.trim().replace(/^"|"$/g, ""));
+
+  const first = cells(lines[0]).map((cell) => cell.toLowerCase());
+  const hasHeader = first.some((cell) => cell.includes("email"));
+
+  const indexOf = (...names: string[]) =>
+    first.findIndex((cell) => names.includes(cell));
+
+  const emailAt = hasHeader ? indexOf("email", "email address") : 2;
+  const firstAt = hasHeader ? indexOf("firstname", "first name", "first") : 0;
+  const lastAt = hasHeader ? indexOf("lastname", "last name", "last") : 1;
+  const nameAt = hasHeader ? indexOf("name", "full name") : -1;
+
+  const rows: CsvRow[] = [];
+  let skipped = 0;
+
+  for (const line of lines.slice(hasHeader ? 1 : 0)) {
+    const parts = cells(line);
+    const email = (emailAt >= 0 ? parts[emailAt] : "") ?? "";
+
+    if (!email.includes("@")) {
+      skipped += 1;
+      continue;
+    }
+
+    let firstName = (firstAt >= 0 ? parts[firstAt] : "") ?? "";
+    let lastName = (lastAt >= 0 ? parts[lastAt] : "") ?? "";
+
+    if (!firstName && nameAt >= 0) {
+      const [head, ...tail] = (parts[nameAt] ?? "").split(" ");
+      firstName = head ?? "";
+      lastName = tail.join(" ");
+    }
+
+    // The API requires both names, so fall back to the email local part.
+    if (!firstName) firstName = email.split("@")[0];
+    if (!lastName) lastName = firstName;
+
+    rows.push({ firstName, lastName, email });
+  }
+
+  return { rows, skipped };
+}
+
+export function InviteInstructorDialog() {
+  const queryClient = useQueryClient();
+
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState<Step>("choice");
 
   const [email, setEmail] = React.useState("");
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
-  const [cohort, setCohort] = React.useState("Cohort 2026");
-  const [track, setTrack] = React.useState("Design");
 
   const [fileName, setFileName] = React.useState("");
-  const [selectedRows, setSelectedRows] = React.useState<boolean[]>(
-    BULK_PREVIEW.map(() => true),
+  // Only the explicit choice is stored; the effective value falls back to the
+  // first option, so there is no state to sync once the lists load.
+  const [chosenCohortId, setChosenCohortId] = React.useState("");
+  const [chosenTrackId, setChosenTrackId] = React.useState("");
+  const [csvRows, setCsvRows] = React.useState<CsvRow[]>([]);
+  const [csvSkipped, setCsvSkipped] = React.useState(0);
+  const [csvError, setCsvError] = React.useState<string | null>(null);
+  const [selectedRows, setSelectedRows] = React.useState<boolean[]>([]);
+
+  const cohortsQuery = useQuery({
+    ...adminQueries.cohorts(),
+    enabled: open,
+  });
+  const tracksQuery = useQuery({
+    ...adminQueries.tracks("ACTIVE"),
+    enabled: open,
+  });
+
+  const cohorts = React.useMemo(
+    () => cohortsQuery.data ?? [],
+    [cohortsQuery.data]
   );
+  const tracks = React.useMemo(
+    () => tracksQuery.data ?? [],
+    [tracksQuery.data]
+  );
+  const programLoading = cohortsQuery.isPending || tracksQuery.isPending;
+
+  // The API requires a real cohort and track id, so inviting is impossible
+  // until the program has both.
+  const missingProgram =
+    !programLoading && (cohorts.length === 0 || tracks.length === 0);
+
+  // Fall back to the first option rather than syncing state in an effect.
+  const cohortId = chosenCohortId || cohorts[0]?.id || "";
+  const trackId = chosenTrackId || tracks[0]?.id || "";
+
+  function refreshInstructors() {
+    queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+  }
+
+  const singleInvite = useMutation({
+    mutationFn: (input: InviteUserInput) => inviteUser(input),
+    onSuccess: () => {
+      refreshInstructors();
+      setStep("single-success");
+    },
+  });
+
+  const bulkInvite = useMutation({
+    mutationFn: (users: InviteUserInput[]) => inviteUsersBulk(users),
+    onSuccess: () => {
+      refreshInstructors();
+      setStep("bulk-success");
+    },
+  });
 
   function reset() {
     setStep("choice");
     setEmail("");
     setFirstName("");
     setLastName("");
-    setCohort("Cohort 2026");
-    setTrack("Design");
     setFileName("");
-    setSelectedRows(BULK_PREVIEW.map(() => true));
+    setCsvRows([]);
+    setCsvSkipped(0);
+    setCsvError(null);
+    setSelectedRows([]);
+    singleInvite.reset();
+    bulkInvite.reset();
   }
 
   function handleOpenChange(next: boolean) {
@@ -117,21 +215,32 @@ export function InviteInstructorDialog({
     if (!next) reset();
   }
 
-  function handleBrowseFile() {
-    setFileName("instructors.csv");
-    setStep("bulk-uploading");
-    setTimeout(() => setStep("bulk-review"), 900);
+  async function handleFile(file: File) {
+    setFileName(file.name);
+    setCsvError(null);
+
+    try {
+      const { rows, skipped } = parseInstructorCsv(await file.text());
+
+      if (rows.length === 0) {
+        setCsvError(
+          "No rows with a valid email address were found in that file."
+        );
+        return;
+      }
+
+      setCsvRows(rows);
+      setCsvSkipped(skipped);
+      setSelectedRows(rows.map(() => true));
+      setStep("bulk-review");
+    } catch {
+      setCsvError("That file couldn't be read. Please upload a CSV.");
+    }
   }
 
   const selectedCount = selectedRows.filter(Boolean).length;
-  const tracksSummary = React.useMemo(() => {
-    const counts = new Map<string, number>();
-    BULK_PREVIEW.forEach((row, index) => {
-      if (!selectedRows[index]) return;
-      counts.set(row.track, (counts.get(row.track) ?? 0) + 1);
-    });
-    return Array.from(counts.entries());
-  }, [selectedRows]);
+  const cohortName = cohorts.find((c) => c.id === cohortId)?.name ?? "";
+  const trackName = tracks.find((t) => t.id === trackId)?.name ?? "";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -143,6 +252,9 @@ export function InviteInstructorDialog({
       <DialogContent className={STEP_WIDTH[step]}>
         {step === "choice" && (
           <ChoiceStep
+            missingProgram={missingProgram}
+            noCohorts={cohorts.length === 0}
+            noTracks={tracks.length === 0}
             onSingle={() => setStep("single-form")}
             onBulk={() => setStep("bulk-upload")}
           />
@@ -163,10 +275,13 @@ export function InviteInstructorDialog({
 
         {step === "single-program" && (
           <ProgramDetailsStep
-            cohort={cohort}
-            track={track}
-            onCohortChange={setCohort}
-            onTrackChange={setTrack}
+            isLoading={programLoading}
+            cohortId={cohortId}
+            trackId={trackId}
+            cohorts={cohorts}
+            tracks={tracks}
+            onCohortChange={setChosenCohortId}
+            onTrackChange={setChosenTrackId}
             onCancel={() => handleOpenChange(false)}
             onNext={() => setStep("single-review")}
           />
@@ -174,30 +289,29 @@ export function InviteInstructorDialog({
 
         {step === "single-review" && (
           <SingleReviewStep
-            name={`${firstName} ${lastName}`.trim() || "New Instructor"}
-            email={email || "rise@email.com"}
-            cohort={cohort}
-            track={track}
+            name={`${firstName} ${lastName}`.trim() || email}
+            email={email}
+            cohort={cohortName}
+            track={trackName}
+            isSending={singleInvite.isPending}
+            error={singleInvite.error?.message ?? null}
             onBack={() => setStep("single-program")}
-            onSend={() => {
-              onInvited([
-                {
-                  name: `${firstName} ${lastName}`.trim() || "New Instructor",
-                  email: email || "rise@email.com",
-                  track,
-                  cohort,
-                  status: "Pending",
-                  joined: "--",
-                },
-              ]);
-              setStep("single-success");
-            }}
+            onSend={() =>
+              singleInvite.mutate({
+                cohortId,
+                trackId,
+                role: "INSTRUCTOR",
+                firstName: firstName.trim() || email.split("@")[0],
+                lastName: lastName.trim() || firstName.trim() || "Instructor",
+                email: email.trim(),
+              })
+            }
           />
         )}
 
         {step === "single-success" && (
           <SuccessStep
-            message={`${firstName || "The instructor"} ${lastName} has been invited to join Rise Classroom. They will receive an email with instructions to create their account.`}
+            message={`${`${firstName} ${lastName}`.trim() || email} has been invited to join Rise Classroom. They will receive an email with instructions to create their account.`}
             onInviteAnother={reset}
             onViewInstructors={() => handleOpenChange(false)}
           />
@@ -205,19 +319,21 @@ export function InviteInstructorDialog({
 
         {step === "bulk-upload" && (
           <BulkUploadStep
+            error={csvError}
             onCancel={() => handleOpenChange(false)}
-            onBrowseFile={handleBrowseFile}
+            onFile={handleFile}
           />
         )}
 
-        {step === "bulk-uploading" && <BulkUploadingStep fileName={fileName} />}
-
         {step === "bulk-review" && (
           <BulkReviewStep
+            rows={csvRows}
+            skipped={csvSkipped}
+            fileName={fileName}
             selectedRows={selectedRows}
             onToggleRow={(index) =>
               setSelectedRows((rows) =>
-                rows.map((value, i) => (i === index ? !value : value)),
+                rows.map((value, i) => (i === index ? !value : value))
               )
             }
             selectedCount={selectedCount}
@@ -228,28 +344,35 @@ export function InviteInstructorDialog({
 
         {step === "bulk-confirm" && (
           <BulkConfirmStep
+            isLoading={programLoading}
             selectedCount={selectedCount}
-            tracksSummary={tracksSummary}
+            cohortId={cohortId}
+            trackId={trackId}
+            cohorts={cohorts}
+            tracks={tracks}
+            onCohortChange={setChosenCohortId}
+            onTrackChange={setChosenTrackId}
+            isSending={bulkInvite.isPending}
+            error={bulkInvite.error?.message ?? null}
             onCancel={() => handleOpenChange(false)}
-            onSend={() => {
-              onInvited(
-                BULK_PREVIEW.filter((_, index) => selectedRows[index]).map(
-                  (row) => ({
+            onSend={() =>
+              bulkInvite.mutate(
+                csvRows
+                  .filter((_, index) => selectedRows[index])
+                  .map((row) => ({
                     ...row,
-                    cohort: "Cohort 2026",
-                    status: "Pending",
-                    joined: "--",
-                  }),
-                ),
-              );
-              setStep("bulk-success");
-            }}
+                    cohortId,
+                    trackId,
+                    role: "INSTRUCTOR" as const,
+                  }))
+              )
+            }
           />
         )}
 
         {step === "bulk-success" && (
           <SuccessStep
-            message={`${selectedCount} instructors have been invited to join Rise Classroom. They will receive an email with instructions to create their account.`}
+            message={`${selectedCount} instructor${selectedCount === 1 ? "" : "s"} have been invited to join Rise Classroom. They will receive an email with instructions to create their account.`}
             onInviteAnother={reset}
             onViewInstructors={() => handleOpenChange(false)}
           />
@@ -259,13 +382,35 @@ export function InviteInstructorDialog({
   );
 }
 
+function ErrorNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      role="alert"
+      className="mt-4 flex items-start gap-2 rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+    >
+      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+      <span>{children}</span>
+    </p>
+  );
+}
+
 function ChoiceStep({
+  missingProgram,
+  noCohorts,
+  noTracks,
   onSingle,
   onBulk,
 }: {
+  missingProgram: boolean;
+  noCohorts: boolean;
+  noTracks: boolean;
   onSingle: () => void;
   onBulk: () => void;
 }) {
+  const missing = [noTracks && "an active track", noCohorts && "a cohort"]
+    .filter(Boolean)
+    .join(" and ");
+
   return (
     <>
       <DialogHeader>
@@ -279,12 +424,13 @@ function ChoiceStep({
         <button
           type="button"
           onClick={onSingle}
-          className="flex flex-col items-start gap-3 rounded-xl border border-neutral-300 p-5 text-left hover:border-primary-500"
+          disabled={missingProgram}
+          className="flex flex-col items-start gap-3 rounded-xl border border-neutral-300 p-5 text-left hover:border-primary-500 disabled:pointer-events-none disabled:opacity-50"
         >
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-semantic-surface-success-badge text-semantic-text-success">
             <UserPlus className="h-5 w-5" />
           </span>
-          <span className="flex items-center justify-between w-full font-semibold text-neutral-900">
+          <span className="flex w-full items-center justify-between font-semibold text-neutral-900">
             Invite Individually
             <ArrowRight className="h-4 w-4 text-neutral-400" />
           </span>
@@ -296,12 +442,13 @@ function ChoiceStep({
         <button
           type="button"
           onClick={onBulk}
-          className="flex flex-col items-start gap-3 rounded-xl border border-neutral-300 p-5 text-left hover:border-primary-500"
+          disabled={missingProgram}
+          className="flex flex-col items-start gap-3 rounded-xl border border-neutral-300 p-5 text-left hover:border-primary-500 disabled:pointer-events-none disabled:opacity-50"
         >
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-semantic-surface-info-badge text-semantic-text-info">
             <Upload className="h-5 w-5" />
           </span>
-          <span className="flex items-center justify-between w-full font-semibold text-neutral-900">
+          <span className="flex w-full items-center justify-between font-semibold text-neutral-900">
             Upload CSV
             <ArrowRight className="h-4 w-4 text-neutral-400" />
           </span>
@@ -311,10 +458,18 @@ function ChoiceStep({
         </button>
       </div>
 
-      <p className="mt-6 text-sm text-neutral-500">
-        Instructors will receive an email invitation to join Rise Classroom and
-        complete their profile.
-      </p>
+      {missingProgram ? (
+        <ErrorNote>
+          Every invitation has to be assigned to a track and a cohort, and your
+          program doesn&apos;t have {missing} yet. Create {missing} first, then
+          come back here.
+        </ErrorNote>
+      ) : (
+        <p className="mt-6 text-sm text-neutral-500">
+          Instructors will receive an email invitation to join Rise Classroom
+          and complete their profile.
+        </p>
+      )}
     </>
   );
 }
@@ -338,7 +493,7 @@ function SingleFormStep({
   onCancel: () => void;
   onNext: () => void;
 }) {
-  const canContinue = email.trim().length > 0;
+  const canContinue = email.trim().includes("@");
 
   return (
     <>
@@ -401,7 +556,7 @@ function SimpleSelect({
 }: {
   label: string;
   value: string;
-  options: string[];
+  options: { id: string; name: string }[];
   onChange: (value: string) => void;
 }) {
   return (
@@ -417,27 +572,83 @@ function SimpleSelect({
           className="h-11 w-full appearance-none rounded-lg border border-neutral-300 bg-transparent px-3 pr-9 text-sm text-neutral-900 outline-none focus:border-primary-500"
         >
           {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
+            <option key={option.id} value={option.id}>
+              {option.name}
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-500" />
       </div>
     </div>
   );
 }
 
+function ProgramSelects({
+  isLoading,
+  cohortId,
+  trackId,
+  cohorts,
+  tracks,
+  onCohortChange,
+  onTrackChange,
+}: {
+  isLoading: boolean;
+  cohortId: string;
+  trackId: string;
+  cohorts: { id: string; name: string }[];
+  tracks: { id: string; name: string }[];
+  onCohortChange: (value: string) => void;
+  onTrackChange: (value: string) => void;
+}) {
+  if (isLoading) {
+    return (
+      <>
+        <div className="flex flex-col gap-1.5">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-11 w-full rounded-lg" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Skeleton className="h-4 w-14" />
+          <Skeleton className="h-11 w-full rounded-lg" />
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <SimpleSelect
+        label="Cohort"
+        value={cohortId}
+        options={cohorts}
+        onChange={onCohortChange}
+      />
+      <SimpleSelect
+        label="Track"
+        value={trackId}
+        options={tracks}
+        onChange={onTrackChange}
+      />
+    </>
+  );
+}
+
 function ProgramDetailsStep({
-  cohort,
-  track,
+  isLoading,
+  cohortId,
+  trackId,
+  cohorts,
+  tracks,
   onCohortChange,
   onTrackChange,
   onCancel,
   onNext,
 }: {
-  cohort: string;
-  track: string;
+  isLoading: boolean;
+  cohortId: string;
+  trackId: string;
+  cohorts: { id: string; name: string }[];
+  tracks: { id: string; name: string }[];
   onCohortChange: (value: string) => void;
   onTrackChange: (value: string) => void;
   onCancel: () => void;
@@ -453,17 +664,14 @@ function ProgramDetailsStep({
       </DialogHeader>
 
       <div className="mt-6 flex flex-col gap-6">
-        <SimpleSelect
-          label="Cohort"
-          value={cohort}
-          options={COHORTS}
-          onChange={onCohortChange}
-        />
-        <SimpleSelect
-          label="Track"
-          value={track}
-          options={TRACKS}
-          onChange={onTrackChange}
+        <ProgramSelects
+          isLoading={isLoading}
+          cohortId={cohortId}
+          trackId={trackId}
+          cohorts={cohorts}
+          tracks={tracks}
+          onCohortChange={onCohortChange}
+          onTrackChange={onTrackChange}
         />
       </div>
 
@@ -471,7 +679,11 @@ function ProgramDetailsStep({
         <Button variant="secondary" size="medium" onClick={onCancel}>
           Cancel
         </Button>
-        <Button size="medium" onClick={onNext}>
+        <Button
+          size="medium"
+          disabled={isLoading || !cohortId || !trackId}
+          onClick={onNext}
+        >
           Next
         </Button>
       </DialogFooter>
@@ -484,6 +696,8 @@ function SingleReviewStep({
   email,
   cohort,
   track,
+  isSending,
+  error,
   onBack,
   onSend,
 }: {
@@ -491,6 +705,8 @@ function SingleReviewStep({
   email: string;
   cohort: string;
   track: string;
+  isSending: boolean;
+  error: string | null;
   onBack: () => void;
   onSend: () => void;
 }) {
@@ -508,9 +724,9 @@ function SingleReviewStep({
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 font-semibold text-primary-500">
             {initials(name)}
           </span>
-          <div>
-            <p className="font-semibold text-neutral-900">{name}</p>
-            <p className="text-sm text-neutral-500">{email}</p>
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-neutral-900">{name}</p>
+            <p className="truncate text-sm text-neutral-500">{email}</p>
           </div>
         </div>
 
@@ -524,12 +740,19 @@ function SingleReviewStep({
         </div>
       </div>
 
+      {error && <ErrorNote>{error}</ErrorNote>}
+
       <DialogFooter className="sm:justify-end">
-        <Button variant="secondary" size="medium" onClick={onBack}>
+        <Button
+          variant="secondary"
+          size="medium"
+          disabled={isSending}
+          onClick={onBack}
+        >
           Back
         </Button>
-        <Button size="medium" onClick={onSend}>
-          Send Invitation
+        <Button size="medium" disabled={isSending} onClick={onSend}>
+          {isSending ? "Sending…" : "Send Invitation"}
         </Button>
       </DialogFooter>
     </>
@@ -577,85 +800,99 @@ function SuccessStep({
 }
 
 function BulkUploadStep({
+  error,
   onCancel,
-  onBrowseFile,
+  onFile,
 }: {
+  error: string | null;
   onCancel: () => void;
-  onBrowseFile: () => void;
+  onFile: (file: File) => void;
 }) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  function handleDrop(event: React.DragEvent) {
+    event.preventDefault();
+    setIsDragging(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) onFile(file);
+  }
+
   return (
     <>
       <DialogHeader>
         <DialogTitle>Upload Instructor CSV</DialogTitle>
         <DialogDescription>
-          Upload a CSV file with instructors details, we&apos;ll help you assign
-          them to a cohort and track.
+          Upload a CSV with the columns <code>firstName</code>,{" "}
+          <code>lastName</code> and <code>email</code>. We&apos;ll help you
+          assign everyone to a cohort and track.
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mt-6 flex flex-col items-center gap-3 rounded-xl border border-dashed border-neutral-300 px-6 py-10 text-center">
+      <div
+        onDragOver={(event) => {
+          event.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        className={cn(
+          "mt-6 flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center",
+          isDragging ? "border-primary-500 bg-primary-50" : "border-neutral-300"
+        )}
+      >
         <Upload className="h-6 w-6 text-neutral-400" />
         <p className="font-medium text-neutral-900">
-          Choose a file or drag & drop it here.
+          Choose a file or drag &amp; drop it here.
         </p>
-        <p className="text-sm text-neutral-500">
-          CSV format only, up to 10 MB.
-        </p>
+        <p className="text-sm text-neutral-500">CSV format only, up to 10 MB.</p>
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) onFile(file);
+            event.target.value = "";
+          }}
+        />
+
         <Button
           variant="secondary"
           size="medium"
           className="mt-2"
-          onClick={onBrowseFile}
+          onClick={() => inputRef.current?.click()}
         >
           Browse File
         </Button>
       </div>
 
+      {error && <ErrorNote>{error}</ErrorNote>}
+
       <DialogFooter className="sm:justify-end">
         <Button variant="secondary" size="medium" onClick={onCancel}>
           Cancel
-        </Button>
-        <Button size="medium" disabled>
-          Next
         </Button>
       </DialogFooter>
     </>
   );
 }
 
-function BulkUploadingStep({ fileName }: { fileName: string }) {
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2 text-base">
-          <Upload className="h-4 w-4" />
-          File Upload In Progress
-        </DialogTitle>
-      </DialogHeader>
-
-      <div className="mt-6 flex items-center gap-3 rounded-xl border border-neutral-300 p-4">
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-semantic-surface-error-badge text-semantic-text-error text-xs font-bold">
-          CSV
-        </span>
-        <div className="flex-1">
-          <p className="text-sm font-medium text-neutral-900">{fileName}</p>
-          <p className="text-xs text-neutral-500">Uploading...</p>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
-            <div className="h-full w-2/3 animate-pulse rounded-full bg-primary-500" />
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 function BulkReviewStep({
+  rows,
+  skipped,
+  fileName,
   selectedRows,
   onToggleRow,
   selectedCount,
   onCancel,
   onNext,
 }: {
+  rows: CsvRow[];
+  skipped: number;
+  fileName: string;
   selectedRows: boolean[];
   onToggleRow: (index: number) => void;
   selectedCount: number;
@@ -667,43 +904,51 @@ function BulkReviewStep({
       <DialogHeader>
         <DialogTitle>Review Instructors</DialogTitle>
         <DialogDescription>
-          We found {BULK_PREVIEW.length} instructors in your file.
+          We found {rows.length} instructor{rows.length === 1 ? "" : "s"} in{" "}
+          {fileName}
+          {skipped > 0 &&
+            ` · ${skipped} row${skipped === 1 ? "" : "s"} skipped (no valid email)`}
+          .
         </DialogDescription>
       </DialogHeader>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-neutral-300">
-        <div className="overflow-x-auto">
+        <div className="max-h-80 overflow-auto">
           <table className="w-full min-w-[520px] text-left text-sm">
             <thead className="bg-neutral-100 text-xs tracking-wider text-neutral-500 uppercase">
               <tr>
                 <th className="w-10 px-4 py-3" />
-                <th className="px-4 py-3">Instructor</th>
+                <th className="px-4 py-3">First name</th>
+                <th className="px-4 py-3">Last name</th>
                 <th className="px-4 py-3">Email Address</th>
-                <th className="px-4 py-3">Track</th>
               </tr>
             </thead>
             <tbody>
-              {BULK_PREVIEW.map((row, index) => (
-                <tr key={row.email} className="border-t border-neutral-200">
+              {rows.map((row, index) => (
+                <tr
+                  key={`${row.email}-${index}`}
+                  className="border-t border-neutral-200"
+                >
                   <td className="px-4 py-3">
                     <button
                       type="button"
+                      aria-label={`Include ${row.email}`}
                       onClick={() => onToggleRow(index)}
                       className={cn(
                         "flex h-4 w-4 items-center justify-center rounded border",
                         selectedRows[index]
                           ? "border-primary-500 bg-primary-500 text-white"
-                          : "border-neutral-400",
+                          : "border-neutral-400"
                       )}
                     >
                       {selectedRows[index] && <Check className="h-3 w-3" />}
                     </button>
                   </td>
                   <td className="px-4 py-3 font-medium text-neutral-900">
-                    {row.name}
+                    {row.firstName}
                   </td>
+                  <td className="px-4 py-3 text-neutral-700">{row.lastName}</td>
                   <td className="px-4 py-3 text-neutral-500">{row.email}</td>
-                  <td className="px-4 py-3 text-neutral-500">{row.track}</td>
                 </tr>
               ))}
             </tbody>
@@ -729,13 +974,29 @@ function BulkReviewStep({
 }
 
 function BulkConfirmStep({
+  isLoading,
   selectedCount,
-  tracksSummary,
+  cohortId,
+  trackId,
+  cohorts,
+  tracks,
+  onCohortChange,
+  onTrackChange,
+  isSending,
+  error,
   onCancel,
   onSend,
 }: {
+  isLoading: boolean;
   selectedCount: number;
-  tracksSummary: [string, number][];
+  cohortId: string;
+  trackId: string;
+  cohorts: { id: string; name: string }[];
+  tracks: { id: string; name: string }[];
+  onCohortChange: (value: string) => void;
+  onTrackChange: (value: string) => void;
+  isSending: boolean;
+  error: string | null;
   onCancel: () => void;
   onSend: () => void;
 }) {
@@ -744,35 +1005,41 @@ function BulkConfirmStep({
       <DialogHeader>
         <DialogTitle>Confirm and send</DialogTitle>
         <DialogDescription>
-          You&apos;re about to send track invitations to {selectedCount}{" "}
-          selected instructors.
+          You&apos;re about to invite {selectedCount} instructor
+          {selectedCount === 1 ? "" : "s"}. Choose the cohort and track
+          they&apos;ll all be assigned to.
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mt-6 rounded-xl border border-neutral-300 p-5">
-        <p className="mb-3 flex items-center gap-2 font-semibold text-neutral-900">
-          <UserPlus className="h-4 w-4" />
-          Selected instructors by Track
-        </p>
-        {tracksSummary.map(([track, count]) => (
-          <div
-            key={track}
-            className="flex items-center justify-between border-t border-neutral-200 py-3 text-sm first:border-t-0"
-          >
-            <span className="text-neutral-900">{track}</span>
-            <span className="text-neutral-500">
-              {count} instructor{count > 1 ? "s" : ""}
-            </span>
-          </div>
-        ))}
+      <div className="mt-6 flex flex-col gap-6">
+        <ProgramSelects
+          isLoading={isLoading}
+          cohortId={cohortId}
+          trackId={trackId}
+          cohorts={cohorts}
+          tracks={tracks}
+          onCohortChange={onCohortChange}
+          onTrackChange={onTrackChange}
+        />
       </div>
 
+      {error && <ErrorNote>{error}</ErrorNote>}
+
       <DialogFooter className="sm:justify-end">
-        <Button variant="secondary" size="medium" onClick={onCancel}>
+        <Button
+          variant="secondary"
+          size="medium"
+          disabled={isSending}
+          onClick={onCancel}
+        >
           Cancel
         </Button>
-        <Button size="medium" onClick={onSend}>
-          Send Invitation
+        <Button
+          size="medium"
+          disabled={isSending || isLoading || !cohortId || !trackId}
+          onClick={onSend}
+        >
+          {isSending ? "Sending…" : "Send Invitation"}
         </Button>
       </DialogFooter>
     </>

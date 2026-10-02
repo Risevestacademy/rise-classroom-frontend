@@ -8,6 +8,10 @@ import { LayoutDashboard, House, FileText, Settings, Blocks } from "lucide-react
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/UserAvatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
+import { sessionQuery } from "@/lib/session-query";
+
 
 interface NavItem {
   title: string;
@@ -50,9 +54,11 @@ const accountNavItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session, isPending } = useQuery(sessionQuery());
+  const user = session?.user;
 
   return (
-    <aside className="flex min-h-screen w-56 flex-col border-r-2 border-neutral-300">
+    <aside className="sticky top-0 flex h-screen w-56 shrink-0 self-start flex-col border-r-2 border-neutral-300">
       <div className="flex h-16 items-center">
         <Link
           href="/instructor/dashboard"
@@ -66,7 +72,7 @@ export function Sidebar() {
 
       <hr className="text-neutral-300 mx-4" />
 
-      <div className="flex-1 px-3 py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
         <div className="space-y-1">
           <p className="px-3 text-xs font-medium uppercase tracking-wider text-neutral-500 mb-2">
             Overview
@@ -146,14 +152,29 @@ export function Sidebar() {
         <hr className="text-neutral-300 mx-4" />
         <div className="mt-auto p-4 bg-neutral-100">
           <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
-            <UserAvatar />
+            <UserAvatar
+              user={{
+                name: user?.name ?? "Instructor",
+                avatar: user?.image ?? "/default-avatar.png",
+              }}
+              isLoading={isPending}
+            />
             <div className="flex flex-col min-w-0">
-              <span className="text-base font-bold text-neutral-900 truncate">
-                Instructor
-              </span>
-              <span className="text-xs text-neutral-500 truncate mt-0.5">
-                Admin@gmail.com
-              </span>
+              {isPending ? (
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              ) : (
+                <>
+                  <span className="text-base font-bold text-neutral-900 truncate">
+                    {user?.displayName ?? user?.name ?? "Instructor"}
+                  </span>
+                  <span className="text-xs text-neutral-500 truncate mt-0.5">
+                    {user?.email ?? "Not signed in"}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
