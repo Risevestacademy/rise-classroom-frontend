@@ -69,7 +69,8 @@ export function getSession() {
 }
 
 export function signOut() {
-  return api.post<{ success: boolean }>("/auth/sign-out");
+  // An empty object rather than no body: the request is sent as JSON.
+  return api.post<{ success: boolean }>("/auth/sign-out", {});
 }
 
 /**
@@ -81,11 +82,9 @@ export function landingPathFor(user: AuthUser) {
 
   const isInstructor = user.role === "INSTRUCTOR";
 
-  if (user.onboardingStatus === "INVITED") {
-    return isInstructor
-      ? "/instructor/complete-profile"
-      : "/student/complete-profile";
-  }
+  // Onboarding needs the token from the invite email, so this lands on a page
+  // telling them to use that link.
+  if (user.onboardingStatus === "INVITED") return "/onboarding";
 
   return isInstructor ? "/instructor/dashboard" : "/student/dashboard";
 }

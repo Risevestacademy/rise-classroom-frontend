@@ -7,10 +7,7 @@ import { LayoutDashboard, House, FileText, Settings, Blocks } from "lucide-react
 
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
-import { UserAvatar } from "@/components/UserAvatar";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useQuery } from "@tanstack/react-query";
-import { sessionQuery } from "@/lib/session-query";
+import { UserMenu } from "@/components/UserMenu";
 
 
 interface NavItem {
@@ -54,8 +51,6 @@ const accountNavItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { data: session, isPending } = useQuery(sessionQuery());
-  const user = session?.user;
 
   return (
     <aside className="sticky top-0 flex h-screen w-56 shrink-0 self-start flex-col border-r-2 border-neutral-300">
@@ -151,32 +146,7 @@ export function Sidebar() {
         </div>
         <hr className="text-neutral-300 mx-4" />
         <div className="mt-auto p-4 bg-neutral-100">
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
-            <UserAvatar
-              user={{
-                name: user?.name ?? "Instructor",
-                avatar: user?.image ?? "/default-avatar.png",
-              }}
-              isLoading={isPending}
-            />
-            <div className="flex flex-col min-w-0">
-              {isPending ? (
-                <div className="flex flex-col gap-1.5">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              ) : (
-                <>
-                  <span className="text-base font-bold text-neutral-900 truncate">
-                    {user?.displayName ?? user?.name ?? "Instructor"}
-                  </span>
-                  <span className="text-xs text-neutral-500 truncate mt-0.5">
-                    {user?.email ?? "Not signed in"}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
+          <UserMenu variant="card" />
         </div>
       </div>
     </aside>

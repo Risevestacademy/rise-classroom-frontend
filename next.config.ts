@@ -39,6 +39,13 @@ const nextConfig: NextConfig = {
         destination: "/sign-in",
         permanent: true,
       },
+      // The per-role onboarding pages were merged into /onboarding, which is
+      // where the invite email links. Query strings (the token) carry over.
+      {
+        source: "/:role(student|instructor)/:step(invite|create-account|complete-profile)/:rest*",
+        destination: "/onboarding",
+        permanent: true,
+      },
     ];
   },
 };

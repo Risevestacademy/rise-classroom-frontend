@@ -1,12 +1,31 @@
 "use client";
 
 import * as React from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 
 import { ApiError } from "@/lib/api";
 
+const SESSION_KEY = ["auth", "session"];
+
 function makeQueryClient() {
-  return new QueryClient({
+  const client: QueryClient = new QueryClient({
+    queryCache: new QueryCache({
+      // A 401 mid-visit means the session expired or was revoked. Re-check it,
+      // and <AuthGuard> sends the user to sign-in once it comes back empty.
+      onError: (error, query) => {
+        if (
+          error instanceof ApiError &&
+          error.status === 401 &&
+          query.queryKey[0] !== SESSION_KEY[0]
+        ) {
+          client.invalidateQueries({ queryKey: SESSION_KEY });
+        }
+      },
+    }),
     defaultOptions: {
       queries: {
         // Dashboard figures don't need to be re-fetched on every mount or tab
@@ -22,6 +41,8 @@ function makeQueryClient() {
       },
     },
   });
+
+  return client;
 }
 
 let browserQueryClient: QueryClient | undefined;

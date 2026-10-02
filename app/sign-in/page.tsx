@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { z } from "zod";
 
 import Image from "next/image"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 
 import { Field } from "@base-ui/react/field"
 import { Button } from "@/components/ui/button"
@@ -24,8 +25,30 @@ const signInSchema = z.object({
   password: z.string().min(1, "Password is required."),
 });
 
+/**
+ * Where to go after signing in. Only same-site paths are honoured, so a crafted
+ * `?next=https://evil.example` link can't bounce someone off the site.
+ */
+function safeNextPath(next: string | null) {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) {
+    return null
+  }
+  return next
+}
+
+// useSearchParams needs a Suspense boundary for the page to prerender.
 export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInForm />
+    </Suspense>
+  )
+}
+
+function SignInForm() {
   const router = useRouter()
+  const queryClient = useQueryClient()
+  const nextPath = safeNextPath(useSearchParams().get("next"))
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,7 +104,10 @@ export default function SignInPage() {
         return;
       }
 
-      router.push(landingPathFor(user));
+      // Drop the signed-out session cached before this sign-in, or the area
+      // guard would read it and send the user straight back here.
+      queryClient.removeQueries({ queryKey: ["auth", "session"] })
+      router.push(nextPath ?? landingPathFor(user));
     } catch (error) {
       setFormError(getSignInErrorMessage(error));
     } finally {
