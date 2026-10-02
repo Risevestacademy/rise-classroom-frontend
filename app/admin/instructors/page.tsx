@@ -1,12 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Users, Search, SlidersHorizontal, MoreHorizontal } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Users,
+  Search,
+  SlidersHorizontal,
+  MoreHorizontal,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { InviteInstructorDialog } from "@/components/InviteInstructorDialog";
 import { Badge } from "@/components/ui/badge";
-import type { Instructor } from "./data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { adminQueries, assignmentsFor, type AdminUser } from "@/lib/admin";
+
+const PAGE_SIZE = 20;
 
 function initials(name: string) {
   return name
@@ -17,27 +28,78 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+function formatJoined(user: AdminUser) {
+  // Invited instructors haven't joined yet, so there is no date to show.
+  if (user.onboardingStatus === "INVITED") return "--";
+
+  return new Date(user.onboardedAt ?? user.createdAt).toLocaleDateString(
+    undefined,
+    { day: "numeric", month: "short", year: "numeric" }
+  );
+}
+
+/** Delays a value so typing in the search box doesn't fire a request per key. */
+function useDebounced<T>(value: T, delay = 350) {
+  const [debounced, setDebounced] = React.useState(value);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
+}
+
 export default function InstructorsPage() {
-  const [instructors, setInstructors] = React.useState<Instructor[]>([]);
+  const [search, setSearch] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const debouncedSearch = useDebounced(search);
 
-  function handleInvited(added: Omit<Instructor, "id">[]) {
-    setInstructors((current) => [
-      ...current,
-      ...added.map((instructor) => ({
-        ...instructor,
-        id: `${instructor.email}-${Date.now()}-${Math.random()}`,
-      })),
-    ]);
-  }
+  const instructorsQuery = useQuery(
+    adminQueries.users({
+      role: "INSTRUCTOR",
+      search: debouncedSearch || undefined,
+      page,
+      limit: PAGE_SIZE,
+    })
+  );
 
-  const activeCount = instructors.filter((i) => i.status === "Active").length;
-  const pendingCount = instructors.filter((i) => i.status === "Pending").length;
+  const activeQuery = useQuery(
+    adminQueries.userCount({
+      role: "INSTRUCTOR",
+      onboardingStatus: "COMPLETED",
+    })
+  );
+  const pendingQuery = useQuery(
+    adminQueries.userCount({
+      role: "INSTRUCTOR",
+      onboardingStatus: "INVITED",
+    })
+  );
+
+  const instructors = instructorsQuery.data?.items ?? [];
+  const total = instructorsQuery.data?.total ?? 0;
+  const totalPages = instructorsQuery.data?.totalPages ?? 1;
+
+  const isSearching = debouncedSearch.length > 0;
+  const showEmptyState =
+    !instructorsQuery.isPending && total === 0 && !isSearching;
 
   return (
     <>
       <AdminTopNav breadcrumb={["People", "Instructors"]} />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
-        {instructors.length === 0 ? (
+        {instructorsQuery.isError ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
+            <Users className="h-12 w-12 text-neutral-300" />
+            <p className="font-semibold text-neutral-900">
+              Couldn&apos;t load instructors
+            </p>
+            <p className="max-w-80 text-sm text-neutral-500">
+              {instructorsQuery.error.message}
+            </p>
+          </div>
+        ) : showEmptyState ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
             <Users className="h-12 w-12 text-neutral-300" />
             <p className="font-semibold text-neutral-900">
@@ -48,7 +110,7 @@ export default function InstructorsPage() {
               your program.
             </p>
             <div className="mt-2">
-              <InviteInstructorDialog onInvited={handleInvited} />
+              <InviteInstructorDialog />
             </div>
           </div>
         ) : (
@@ -62,19 +124,28 @@ export default function InstructorsPage() {
                   Manage instructors across your program
                 </p>
               </div>
-              <InviteInstructorDialog onInvited={handleInvited} />
+              <InviteInstructorDialog />
             </div>
 
             <div className="rounded-xl border border-neutral-300 bg-white">
               <div className="flex flex-col gap-4 border-b border-neutral-200 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-semibold text-neutral-900">
-                    {instructors.length} Instructor
-                    {instructors.length > 1 ? "s" : ""}
-                  </p>
-                  <p className="text-sm text-neutral-500">
-                    {activeCount} Active · {pendingCount} Pending
-                  </p>
+                  {instructorsQuery.isPending ? (
+                    <>
+                      <Skeleton className="h-5 w-28" />
+                      <Skeleton className="mt-2 h-4 w-40" />
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-semibold text-neutral-900">
+                        {total} Instructor{total === 1 ? "" : "s"}
+                      </p>
+                      <p className="text-sm text-neutral-500">
+                        {activeQuery.data ?? 0} Active ·{" "}
+                        {pendingQuery.data ?? 0} Pending
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -82,6 +153,12 @@ export default function InstructorsPage() {
                     <Search className="h-4 w-4 shrink-0" />
                     <input
                       type="search"
+                      value={search}
+                      onChange={(event) => {
+                        setSearch(event.target.value);
+                        // A new search starts from the first page again.
+                        setPage(1);
+                      }}
                       placeholder="Search by name or email"
                       className="w-full min-w-0 bg-transparent text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none sm:w-56"
                     />
@@ -112,63 +189,147 @@ export default function InstructorsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {instructors.map((instructor) => (
-                      <tr
-                        key={instructor.id}
-                        className="border-t border-neutral-200"
-                      >
-                        <td className="px-5 py-4">
-                          <input type="checkbox" className="h-4 w-4 rounded" />
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-500">
-                              {initials(instructor.name)}
-                            </span>
-                            <div>
-                              <p className="font-medium text-neutral-900">
-                                {instructor.name}
-                              </p>
-                              <p className="text-xs text-neutral-500">
-                                {instructor.email}
-                              </p>
+                    {instructorsQuery.isPending ? (
+                      Array.from({ length: 5 }).map((_, index) => (
+                        <tr key={index} className="border-t border-neutral-200">
+                          <td className="px-5 py-4">
+                            <Skeleton className="h-4 w-4" />
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-9 w-9 rounded-full" />
+                              <div className="flex flex-col gap-1.5">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-44" />
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-neutral-700">
-                          {instructor.track}
-                        </td>
-                        <td className="px-5 py-4 text-neutral-700">
-                          {instructor.cohort}
-                        </td>
-                        <td className="px-5 py-4">
-                          <Badge
-                            status={
-                              instructor.status === "Active"
-                                ? "success"
-                                : "warning"
-                            }
-                          >
-                            {instructor.status}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-4 text-neutral-500">
-                          {instructor.joined}
-                        </td>
-                        <td className="px-5 py-4">
-                          <button
-                            type="button"
-                            aria-label="Row actions"
-                            className="text-neutral-400 hover:text-neutral-700"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </button>
+                          </td>
+                          <td className="px-5 py-4">
+                            <Skeleton className="h-4 w-20" />
+                          </td>
+                          <td className="px-5 py-4">
+                            <Skeleton className="h-4 w-24" />
+                          </td>
+                          <td className="px-5 py-4">
+                            <Skeleton className="h-6 w-16 rounded-full" />
+                          </td>
+                          <td className="px-5 py-4">
+                            <Skeleton className="h-4 w-24" />
+                          </td>
+                          <td className="px-5 py-4">
+                            <Skeleton className="h-4 w-4" />
+                          </td>
+                        </tr>
+                      ))
+                    ) : instructors.length === 0 ? (
+                      <tr className="border-t border-neutral-200">
+                        <td
+                          colSpan={7}
+                          className="px-5 py-10 text-center text-sm text-neutral-500"
+                        >
+                          No instructors match &ldquo;{debouncedSearch}&rdquo;.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      instructors.map((instructor) => {
+                        const { tracks, cohorts } = assignmentsFor(instructor);
+                        const isPendingInvite =
+                          instructor.onboardingStatus === "INVITED";
+
+                        return (
+                          <tr
+                            key={instructor.id}
+                            className="border-t border-neutral-200"
+                          >
+                            <td className="px-5 py-4">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded"
+                              />
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-3">
+                                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-500">
+                                  {initials(instructor.name)}
+                                </span>
+                                <div>
+                                  <p className="font-medium text-neutral-900">
+                                    {instructor.displayName ?? instructor.name}
+                                  </p>
+                                  <p className="text-xs text-neutral-500">
+                                    {instructor.email}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-neutral-700">
+                              {tracks.join(", ") || "—"}
+                            </td>
+                            <td className="px-5 py-4 text-neutral-700">
+                              {cohorts.join(", ") || "—"}
+                            </td>
+                            <td className="px-5 py-4">
+                              {instructor.status === "SUSPENDED" ? (
+                                <Badge status="error">Suspended</Badge>
+                              ) : (
+                                <Badge
+                                  status={
+                                    isPendingInvite ? "warning" : "success"
+                                  }
+                                >
+                                  {isPendingInvite ? "Pending" : "Active"}
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="px-5 py-4 text-neutral-500">
+                              {formatJoined(instructor)}
+                            </td>
+                            <td className="px-5 py-4">
+                              <button
+                                type="button"
+                                aria-label="Row actions"
+                                className="text-neutral-400 hover:text-neutral-700"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between gap-4 border-t border-neutral-200 p-5">
+                  <p className="text-sm text-neutral-500">
+                    Page {page} of {totalPages}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPage((current) => current - 1)}
+                      disabled={page <= 1 || instructorsQuery.isFetching}
+                      className="flex h-9 items-center gap-1 rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-700 disabled:opacity-40"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPage((current) => current + 1)}
+                      disabled={
+                        page >= totalPages || instructorsQuery.isFetching
+                      }
+                      className="flex h-9 items-center gap-1 rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-700 disabled:opacity-40"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

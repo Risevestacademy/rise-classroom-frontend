@@ -3,7 +3,29 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
 
+const backendApiUrl =
+  process.env.BACKEND_API_URL ??
+  "https://rise-classroom-backend-0r0f.onrender.com/api/v1";
+
 const nextConfig: NextConfig = {
+  /**
+   * Proxy the API under our own origin.
+   *
+   * The backend issues its session cookie as `HttpOnly; SameSite=Lax`, which
+   * browsers refuse to send on cross-site requests — so calling the API
+   * directly from the browser is always unauthenticated. Routing through here
+   * makes those requests first-party, so the cookie is stored for this origin
+   * and sent back automatically.
+   */
+  async rewrites() {
+    return [
+      {
+        source: "/api/backend/:path*",
+        destination: `${backendApiUrl}/:path*`,
+      },
+    ];
+  },
+
   // The per-role sign-in pages were merged into a single /sign-in.
   async redirects() {
     return [

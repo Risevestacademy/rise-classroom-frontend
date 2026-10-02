@@ -1,5 +1,4 @@
 import { api, ApiError } from "@/lib/api";
-import { clearAuthToken, setAuthToken } from "@/lib/auth-token";
 
 export type Role = "SUPERADMIN" | "INSTRUCTOR" | "STUDENT";
 export type UserStatus = "ACTIVE" | "SUSPENDED";
@@ -31,9 +30,24 @@ export type AuthSession = {
   userAgent?: string | null;
 };
 
+/** Shape of `GET /auth/get-session`. */
 export type SessionResponse = {
   user: AuthUser;
   session: AuthSession;
+};
+
+/**
+ * Shape of `POST /auth/sign-in/email`.
+ *
+ * Note this is *not* what the Swagger docs describe: the docs promise a nested
+ * `session` object, but the deployed API returns the token at the top level
+ * alongside `redirect`. The session itself is established by the HttpOnly
+ * cookie in the response, not by anything in this body.
+ */
+export type SignInResponse = {
+  redirect: boolean;
+  token: string;
+  user: AuthUser;
 };
 
 export type Credentials = {
@@ -45,17 +59,8 @@ export type Credentials = {
  * One sign-in endpoint for every role — the backend reads the role off the
  * account, so students, instructors and admins all post here.
  */
-export async function signIn(credentials: Credentials) {
-  const data = await api.post<SessionResponse>(
-    "/auth/sign-in/email",
-    credentials
-  );
-
-  if (data?.session?.token) {
-    setAuthToken(data.session.token);
-  }
-
-  return data;
+export function signIn(credentials: Credentials) {
+  return api.post<SignInResponse>("/auth/sign-in/email", credentials);
 }
 
 /** Returns `null` when there is no active session. */
@@ -63,12 +68,8 @@ export function getSession() {
   return api.get<SessionResponse | null>("/auth/get-session");
 }
 
-export async function signOut() {
-  try {
-    await api.post<{ success: boolean }>("/auth/sign-out");
-  } finally {
-    clearAuthToken();
-  }
+export function signOut() {
+  return api.post<{ success: boolean }>("/auth/sign-out");
 }
 
 /**

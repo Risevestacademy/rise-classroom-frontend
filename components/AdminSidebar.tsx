@@ -23,11 +23,20 @@ import {
   Blocks,
   X,
 } from "lucide-react";
-
+import { Skeleton } from "@/components/ui/skeleton";
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useAdminNav } from "@/components/AdminNavContext";
+import { useQuery } from "@tanstack/react-query";
+import { sessionQuery } from "@/lib/session-query";
+import type { Role } from "@/lib/auth";
+
+const roleLabels: Record<Role, string> = {
+  SUPERADMIN: "Super Admin",
+  INSTRUCTOR: "Instructor",
+  STUDENT: "Student",
+};
 
 interface NavItem {
   title: string;
@@ -75,6 +84,9 @@ const accountNavItems: NavItem[] = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { data: session, isPending } = useQuery(sessionQuery());
+  const user = session?.user;
+  console.log(user)
   const { open, setOpen } = useAdminNav();
 
   React.useEffect(() => {
@@ -93,7 +105,7 @@ export function AdminSidebar() {
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex h-screen w-72 -translate-x-full flex-col border-r border-neutral-300 bg-white transition-transform duration-200 ease-in-out",
-          "lg:static lg:z-auto lg:h-auto lg:min-h-screen lg:w-60 lg:translate-x-0",
+          "lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-60 lg:shrink-0 lg:self-start lg:translate-x-0",
           open && "translate-x-0",
         )}
       >
@@ -161,14 +173,22 @@ export function AdminSidebar() {
           <hr className="my-3 text-neutral-300" />
 
           <div className="flex items-center gap-3 rounded-2xl bg-neutral-100 p-3">
-            <UserAvatar />
+            <UserAvatar user={{name: user?.name ?? "Unknown User", avatar: user?.image ?? "/default-avatar.png"}} isLoading={isPending} />
             <div className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-bold text-neutral-900">
-                Admin A.
-              </span>
-              <span className="mt-0.5 truncate text-xs text-neutral-500">
-                Super Admin
-              </span>
+              {isPending ? (
+                <Skeleton className="h-3 w-20 rounded-full" />
+              ) : (
+                <span className="truncate text-sm font-bold text-neutral-900">
+                  {user?.name ?? "Unknown User"}
+                </span>
+              )}
+              { isPending ? (
+                <Skeleton className="h-2 w-14 rounded-full" />
+              ) : (
+                <span className="mt-0.5 truncate text-xs text-neutral-500">
+                  {roleLabels[user?.role as Role] || "Unknown Role"}
+                </span>
+              )}
             </div>
           </div>
         </div>
