@@ -8,7 +8,7 @@ import { AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OnboardingShell } from "@/components/onboarding/OnboardingShell";
+import { AuthShell } from "@/components/AuthShell";
 import {
   getOnboardingErrorMessage,
   onboardingQueries,
@@ -46,7 +46,7 @@ export function useOnboarding() {
 
 export function OnboardingLoading() {
   return (
-    <OnboardingShell>
+    <AuthShell>
       <Skeleton className="mx-auto my-10 h-[140px] w-full rounded-2xl" />
       <div className="flex flex-col gap-2">
         <Skeleton className="h-8 w-2/3" />
@@ -57,13 +57,13 @@ export function OnboardingLoading() {
         <Skeleton className="h-11 w-full rounded-lg" />
         <Skeleton className="h-11 w-full rounded-full" />
       </div>
-    </OnboardingShell>
+    </AuthShell>
   );
 }
 
 function OnboardingProblem({ message }: { message: string }) {
   return (
-    <OnboardingShell>
+    <AuthShell>
       <div className="my-10 flex flex-col items-center gap-4 text-center">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-semantic-surface-error-badge text-semantic-text-error">
           <AlertCircle className="h-7 w-7" />
@@ -82,7 +82,7 @@ function OnboardingProblem({ message }: { message: string }) {
           Go to sign in
         </Button>
       </div>
-    </OnboardingShell>
+    </AuthShell>
   );
 }
 

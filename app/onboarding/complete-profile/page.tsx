@@ -9,7 +9,7 @@ import { AlertCircle } from "lucide-react"
 import { User } from "@/assets/icons"
 import { FormField } from "@/components/ui/field"
 import { Button } from "@/components/ui/button"
-import { OnboardingShell } from "@/components/onboarding/OnboardingShell"
+import { AuthShell } from "@/components/AuthShell"
 import {
   OnboardingLoading,
   useOnboarding,
@@ -206,7 +206,7 @@ export default function CompleteProfilePage() {
           : "Go to your dashboard"
 
   return (
-    <OnboardingShell>
+    <AuthShell>
       <div className="mx-auto flex w-full items-center justify-center">
         <Image
           src="/onboarding.png"
@@ -273,6 +273,6 @@ export default function CompleteProfilePage() {
           </div>
         )}
       </form>
-    </OnboardingShell>
+    </AuthShell>
   )
 }

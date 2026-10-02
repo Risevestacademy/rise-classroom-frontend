@@ -46,6 +46,20 @@ const nextConfig: NextConfig = {
         destination: "/onboarding",
         permanent: true,
       },
+      // Forgot and reset password live on one route. The backend's reset email
+      // links to /reset-password?token=…, so that keeps working (the token
+      // carries over). Temporary, so browsers don't cache it if the email's
+      // link ever changes.
+      {
+        source: "/reset-password",
+        destination: "/forgot-password",
+        permanent: false,
+      },
+      {
+        source: "/:role(student|instructor)/forgot-password",
+        destination: "/forgot-password",
+        permanent: true,
+      },
     ];
   },
 };

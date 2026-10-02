@@ -1,7 +1,7 @@
 import { Logo } from "@/assets/logo";
 
-/** Brand panel on the left, the current onboarding step on the right. */
-export function OnboardingShell({ children }: { children: React.ReactNode }) {
+/** Brand panel on the left, the current step on the right. Shared by the signed-out flows. */
+export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-[100vh] bg-neutral-100 lg:flex lg:items-center lg:justify-center lg:p-4">
       <div className="mx-auto w-full md:w-[100vw] lg:grid lg:grid-cols-2 lg:overflow-hidden">
