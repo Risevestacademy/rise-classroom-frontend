@@ -1,12 +1,12 @@
+"use client";
+
+import { useQueries, useQuery } from "@tanstack/react-query";
 import {
   Users,
   Layers,
-  Magnet,
+  GraduationCap,
+  MailWarning,
   AlertCircle,
-  PenTool,
-  Code2,
-  Database,
-  Smartphone,
   CheckCircle2,
   ChevronDown,
   ArrowUpRight,
@@ -14,79 +14,74 @@ import {
 
 import { cn } from "@/lib/utils";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AdminTopNav } from "@/components/AdminTopNav";
+import { adminQueries } from "@/lib/admin";
+import { sessionQuery } from "@/lib/session-query";
 
-const metrics = [
-  {
-    title: "Participants",
-    value: "80",
-    description: "Total active participants",
-    icon: Users,
-    iconWrapperClassName: "bg-primary-50 text-primary-500",
-  },
-  {
-    title: "Active Tracks",
-    value: "4",
-    description: "Design · Frontend · Backend · Mobile Engineering",
-    icon: Layers,
-    iconWrapperClassName:
-      "bg-semantic-surface-success-badge text-semantic-text-success",
-  },
-  {
-    title: "Engagement",
-    value: "86%",
-    description: "This week",
-    icon: Magnet,
-    iconWrapperClassName: "bg-[#FDEAFC] text-[#960B93]",
-  },
-  {
-    title: "At Risk",
-    value: "14",
-    description: "Students needing attention",
-    icon: AlertCircle,
-    iconWrapperClassName:
-      "bg-semantic-surface-error-badge text-semantic-text-error",
-    trend: "5 new this week",
-  },
-];
-
-const trackHealth = [
-  { label: "Design", value: 91, icon: PenTool, className: "text-primary-500" },
-  {
-    label: "Frontend",
-    value: 82,
-    icon: Code2,
-    className: "text-semantic-text-info",
-  },
-  { label: "Backend", value: 74, icon: Database, className: "text-[#960B93]" },
-  {
-    label: "Mobile Engineering",
-    value: 88,
-    icon: Smartphone,
-    className: "text-[#7C3AED]",
-  },
-];
-
-const recentActivity = [
-  { title: "New student enrolled in Frontend Track", time: "12 minutes ago" },
-  {
-    title: "Instructor submitted grading for Backend cohort",
-    time: "1 hour ago",
-  },
-  {
-    title: "Mentor added feedback on Mobile Engineering project",
-    time: "3 hours ago",
-  },
-  { title: "Track milestone completed for Design cohort", time: "Yesterday" },
-];
-
-const upcomingActivities = [
-  { title: "Live Q&A — Frontend Track", date: "Today, 4:00 PM" },
-  { title: "Assignment deadline — Backend cohort", date: "Tomorrow, 11:59 PM" },
-  { title: "Mentor check-in — Mobile Engineering", date: "Fri, 2:00 PM" },
-];
+function greeting(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+}
 
 export default function AdminDashboardPage() {
+  const session = useQuery(sessionQuery());
+
+  const activeStudents = useQuery(
+    adminQueries.userCount({ role: "STUDENT", status: "ACTIVE" })
+  );
+  const onboardedStudents = useQuery(
+    adminQueries.userCount({
+      role: "STUDENT",
+      onboardingStatus: "COMPLETED",
+    })
+  );
+  const instructors = useQuery(
+    adminQueries.userCount({ role: "INSTRUCTOR", status: "ACTIVE" })
+  );
+  const pendingInvites = useQuery(
+    adminQueries.userCount({ onboardingStatus: "INVITED" })
+  );
+  const suspended = useQuery(adminQueries.userCount({ status: "SUSPENDED" }));
+  const activeTracks = useQuery(adminQueries.tracks("ACTIVE"));
+
+  const tracks = activeTracks.data ?? [];
+
+  // One cheap count per track, each cached under its own key.
+  const trackCounts = useQueries({
+    queries: tracks.map((track) =>
+      adminQueries.userCount({ role: "STUDENT", trackId: track.id })
+    ),
+  });
+
+  const adminName = session.data?.user.firstName ?? "Admin";
+
+  const onboardedShare =
+    activeStudents.data && activeStudents.data > 0 && onboardedStudents.data !== undefined
+      ? Math.round((onboardedStudents.data / activeStudents.data) * 100)
+      : 0;
+
+  const attentionItems = [
+    {
+      label: "Invites not yet accepted",
+      count: pendingInvites.data ?? 0,
+      href: "/admin/instructors",
+      icon: MailWarning,
+      className: "bg-semantic-surface-warning-badge text-semantic-text-warning",
+    },
+    {
+      label: "Suspended accounts",
+      count: suspended.data ?? 0,
+      href: "/admin/instructors",
+      icon: AlertCircle,
+      className: "bg-semantic-surface-error-badge text-semantic-text-error",
+    },
+  ].filter((item) => item.count > 0);
+
+  const attentionPending = pendingInvites.isPending || suspended.isPending;
+
   return (
     <>
       <AdminTopNav />
@@ -95,7 +90,11 @@ export default function AdminDashboardPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-neutral-900">
-                Good Morning, Admin
+                {session.isPending ? (
+                  <Skeleton className="h-8 w-64" />
+                ) : (
+                  `${greeting()}, ${adminName}`
+                )}
               </h1>
               <p className="mt-1 text-sm text-neutral-500">
                 Here&apos;s what&apos;s happening across your program
@@ -105,58 +104,96 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {metrics.map((metric) => (
-              <MetricCard key={metric.title} {...metric} />
-            ))}
+            <MetricCard
+              title="Participants"
+              value={activeStudents.data}
+              isPending={activeStudents.isPending}
+              isError={activeStudents.isError}
+              description="Total active participants"
+              icon={Users}
+              iconWrapperClassName="bg-primary-50 text-primary-500"
+            />
+            <MetricCard
+              title="Active Tracks"
+              value={tracks.length}
+              isPending={activeTracks.isPending}
+              isError={activeTracks.isError}
+              description={
+                tracks.length
+                  ? tracks.map((track) => track.name).join(" · ")
+                  : "No active tracks yet"
+              }
+              icon={Layers}
+              iconWrapperClassName="bg-semantic-surface-success-badge text-semantic-text-success"
+            />
+            <MetricCard
+              title="Instructors"
+              value={instructors.data}
+              isPending={instructors.isPending}
+              isError={instructors.isError}
+              description="Active across all tracks"
+              icon={GraduationCap}
+              iconWrapperClassName="bg-[#FDEAFC] text-[#960B93]"
+            />
+            <MetricCard
+              title="Pending Invites"
+              value={pendingInvites.data}
+              isPending={pendingInvites.isPending}
+              isError={pendingInvites.isError}
+              description="Invited but not yet onboarded"
+              icon={MailWarning}
+              iconWrapperClassName="bg-semantic-surface-error-badge text-semantic-text-error"
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <DashboardCard
-              title="Program Health"
-              subtitle="Overall program health across all tracks"
+              title="Onboarding Progress"
+              subtitle="How far participants have got through onboarding"
               action={<WeekFilter />}
             >
               <div className="flex flex-col gap-8 sm:flex-row sm:items-center">
-                <CircularProgress value={84}>
-                  <div className="flex flex-col items-center">
-                    <span className="text-3xl font-bold text-neutral-900">
-                      84%
-                    </span>
-                    <span className="text-xs text-neutral-500">
-                      Overall health
-                    </span>
-                  </div>
-                </CircularProgress>
+                {onboardedStudents.isPending || activeStudents.isPending ? (
+                  <Skeleton className="h-[168px] w-[168px] shrink-0 rounded-full" />
+                ) : (
+                  <CircularProgress value={onboardedShare}>
+                    <div className="flex flex-col items-center">
+                      <span className="text-3xl font-bold text-neutral-900">
+                        {onboardedShare}%
+                      </span>
+                      <span className="text-xs text-neutral-500">
+                        Onboarded
+                      </span>
+                    </div>
+                  </CircularProgress>
+                )}
 
                 <div className="flex-1 space-y-4">
                   <h3 className="text-sm font-semibold text-neutral-900">
-                    Track Health
+                    Participants per Track
                   </h3>
-                  {trackHealth.map((track) => (
-                    <div
-                      key={track.label}
-                      className="flex items-center gap-2 sm:gap-3"
-                    >
-                      <track.icon
-                        className={cn("h-4 w-4 shrink-0", track.className)}
-                      />
-                      <span className="w-20 shrink-0 truncate text-sm text-neutral-700 sm:w-36">
-                        {track.label}
-                      </span>
-                      <div className="h-2 flex-1 rounded-full bg-neutral-200">
-                        <div
-                          className={cn(
-                            "h-2 rounded-full bg-current",
-                            track.className,
-                          )}
-                          style={{ width: `${track.value}%` }}
-                        />
+
+                  {activeTracks.isPending ? (
+                    Array.from({ length: 4 }).map((_, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <Skeleton className="h-4 w-20 sm:w-36" />
+                        <Skeleton className="h-2 flex-1" />
+                        <Skeleton className="h-4 w-8" />
                       </div>
-                      <span className="w-10 shrink-0 text-right text-sm font-medium text-neutral-900">
-                        {track.value}%
-                      </span>
-                    </div>
-                  ))}
+                    ))
+                  ) : tracks.length === 0 ? (
+                    <p className="text-sm text-neutral-500">
+                      No active tracks to report on yet.
+                    </p>
+                  ) : (
+                    <TrackBars
+                      tracks={tracks}
+                      counts={trackCounts.map((query) => ({
+                        value: query.data,
+                        isPending: query.isPending,
+                      }))}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -173,15 +210,49 @@ export default function AdminDashboardPage() {
               title="Attention Required"
               subtitle="Items that may need your attention"
             >
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-semantic-surface-success-badge text-semantic-text-success">
-                  <CheckCircle2 className="h-6 w-6" />
+              {attentionPending ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-16 w-full rounded-lg" />
+                  <Skeleton className="h-16 w-full rounded-lg" />
                 </div>
-                <p className="font-semibold text-neutral-900">All caught up!</p>
-                <p className="max-w-64 text-sm text-neutral-500">
-                  There are no pending items that need your attention right now.
-                </p>
-              </div>
+              ) : attentionItems.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-semantic-surface-success-badge text-semantic-text-success">
+                    <CheckCircle2 className="h-6 w-6" />
+                  </div>
+                  <p className="font-semibold text-neutral-900">
+                    All caught up!
+                  </p>
+                  <p className="max-w-64 text-sm text-neutral-500">
+                    There are no pending items that need your attention right
+                    now.
+                  </p>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {attentionItems.map((item) => (
+                    <li
+                      key={item.label}
+                      className="flex items-center gap-3 rounded-lg border border-neutral-200 px-4 py-3"
+                    >
+                      <span
+                        className={cn(
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                          item.className
+                        )}
+                      >
+                        <item.icon className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-neutral-900">
+                          {item.count} {item.label}
+                        </p>
+                      </div>
+                      <ArrowUpRight className="h-4 w-4 shrink-0 text-neutral-400" />
+                    </li>
+                  ))}
+                </ul>
+              )}
             </DashboardCard>
           </div>
 
@@ -189,61 +260,84 @@ export default function AdminDashboardPage() {
             <DashboardCard
               title="Recent Activity"
               subtitle="What's happening across your program"
-              action={
-                <button
-                  type="button"
-                  className="flex items-center gap-1 text-sm font-medium text-primary-500"
-                >
-                  View all
-                  <ArrowUpRight className="h-4 w-4" />
-                </button>
-              }
             >
-              <ul className="space-y-4">
-                {recentActivity.map((item) => (
-                  <li key={item.title} className="flex items-start gap-3">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-500" />
-                    <div>
-                      <p className="text-sm text-neutral-900">{item.title}</p>
-                      <p className="text-xs text-neutral-500">{item.time}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <EmptyPanel message="An activity feed will appear here once the API exposes one." />
             </DashboardCard>
 
             <DashboardCard
               title="Upcoming Activities"
               subtitle="What's coming up next"
-              action={
-                <button
-                  type="button"
-                  className="flex items-center gap-1 text-sm font-medium text-primary-500"
-                >
-                  Schedule activity
-                </button>
-              }
             >
-              <ul className="space-y-4">
-                {upcomingActivities.map((item) => (
-                  <li
-                    key={item.title}
-                    className="flex flex-col gap-1 rounded-lg border border-neutral-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-                  >
-                    <p className="text-sm font-medium text-neutral-900">
-                      {item.title}
-                    </p>
-                    <p className="text-xs whitespace-nowrap text-neutral-500">
-                      {item.date}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+              <EmptyPanel message="Scheduled sessions will appear here once the API exposes them." />
             </DashboardCard>
           </div>
         </div>
       </main>
     </>
+  );
+}
+
+function TrackBars({
+  tracks,
+  counts,
+}: {
+  tracks: { id: string; name: string }[];
+  counts: { value?: number; isPending: boolean }[];
+}) {
+  const palette = [
+    "text-primary-500",
+    "text-semantic-text-info",
+    "text-[#960B93]",
+    "text-[#7C3AED]",
+  ];
+
+  // Bars are scaled against the busiest track so the comparison stays readable
+  // whatever the absolute headcounts are.
+  const largest = Math.max(1, ...counts.map((count) => count.value ?? 0));
+
+  return (
+    <>
+      {tracks.map((track, index) => {
+        const count = counts[index];
+        const className = palette[index % palette.length];
+
+        return (
+          <div key={track.id} className="flex items-center gap-2 sm:gap-3">
+            <span className="w-20 shrink-0 truncate text-sm text-neutral-700 sm:w-36">
+              {track.name}
+            </span>
+            {count?.isPending ? (
+              <>
+                <Skeleton className="h-2 flex-1" />
+                <Skeleton className="h-4 w-8 shrink-0" />
+              </>
+            ) : (
+              <>
+                <div className="h-2 flex-1 rounded-full bg-neutral-200">
+                  <div
+                    className={cn("h-2 rounded-full bg-current", className)}
+                    style={{
+                      width: `${((count?.value ?? 0) / largest) * 100}%`,
+                    }}
+                  />
+                </div>
+                <span className="w-10 shrink-0 text-right text-sm font-medium text-neutral-900">
+                  {count?.value ?? 0}
+                </span>
+              </>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function EmptyPanel({ message }: { message: string }) {
+  return (
+    <div className="flex flex-1 items-center justify-center py-10 text-center">
+      <p className="max-w-72 text-sm text-neutral-500">{message}</p>
+    </div>
   );
 }
 
@@ -262,15 +356,17 @@ function WeekFilter() {
 function MetricCard({
   title,
   value,
+  isPending,
+  isError,
   description,
-  trend,
   icon: Icon,
   iconWrapperClassName,
 }: {
   title: string;
-  value: string;
+  value?: number;
+  isPending: boolean;
+  isError: boolean;
   description: string;
-  trend?: string;
   icon: React.ElementType;
   iconWrapperClassName: string;
 }) {
@@ -279,20 +375,26 @@ function MetricCard({
       <div
         className={cn(
           "flex h-10 w-10 items-center justify-center rounded-lg",
-          iconWrapperClassName,
+          iconWrapperClassName
         )}
       >
         <Icon className="h-5 w-5" />
       </div>
       <div>
         <p className="text-sm text-neutral-500">{title}</p>
-        <p className="text-2xl font-bold text-neutral-900">{value}</p>
+        {isPending ? (
+          <Skeleton className="mt-1 h-8 w-16" />
+        ) : (
+          <p className="text-2xl font-bold text-neutral-900">
+            {isError ? "—" : (value ?? 0)}
+          </p>
+        )}
       </div>
-      <p className="text-sm text-neutral-500">{description}</p>
-      {trend && (
-        <p className="flex items-center gap-1 text-xs font-medium text-semantic-text-error">
-          <ArrowUpRight className="h-3.5 w-3.5" />
-          {trend}
+      {isPending ? (
+        <Skeleton className="h-4 w-full" />
+      ) : (
+        <p className="line-clamp-2 text-sm text-neutral-500">
+          {isError ? "Couldn't load this figure." : description}
         </p>
       )}
     </div>
