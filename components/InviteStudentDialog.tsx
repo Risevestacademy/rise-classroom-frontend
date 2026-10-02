@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import { z } from "zod";
 import {
   Plus,
   UserPlus,
@@ -31,11 +32,37 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { cohorts, tracks, type Student } from "@/app/admin/students/data";
+import type { Student } from "@/app/admin/students/data";
+import {
+  getOnboardErrorMessage,
+  getProgramOptionsErrorMessage,
+  listCohorts,
+  listTracks,
+  onboardUser,
+  type Cohort,
+  type Track,
+} from "@/lib/admin";
 
 const maxFileSize = 10 * 1024 * 1024;
 const defaultCohort = "Cohort 2026";
-const defaultTrack = "Design";
+
+const inviteDetailsSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required.")
+    .email("Please input valid email address."),
+  firstName: z.string().trim().min(1, "First name is required."),
+  lastName: z.string().trim().min(1, "Last name is required."),
+});
+
+type InviteDetails = z.infer<typeof inviteDetailsSchema>;
+type InviteDetailsErrors = Partial<Record<keyof InviteDetails, string>>;
+
+type ProgramOptions =
+  | { status: "loading" }
+  | { status: "ready"; cohorts: Cohort[]; tracks: Track[] }
+  | { status: "error"; message: string };
 
 const bulkPreview: Pick<Student, "name" | "email" | "track">[] = [
   { name: "Esther Howard", email: "esther.howard@rise.edu", track: "Design" },
@@ -109,8 +136,19 @@ export function InviteStudentDialog({
   const [email, setEmail] = React.useState("");
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
-  const [cohort, setCohort] = React.useState(defaultCohort);
-  const [track, setTrack] = React.useState(defaultTrack);
+  const [detailsErrors, setDetailsErrors] = React.useState<InviteDetailsErrors>(
+    {},
+  );
+
+  const [programOptions, setProgramOptions] = React.useState<ProgramOptions>({
+    status: "loading",
+  });
+  const [cohortId, setCohortId] = React.useState("");
+  const [trackId, setTrackId] = React.useState("");
+
+  const [submitting, setSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [emailSent, setEmailSent] = React.useState(true);
 
   const [upload, setUpload] = React.useState<UploadState>({ status: "idle" });
   const [selectedRows, setSelectedRows] =
@@ -131,8 +169,12 @@ export function InviteStudentDialog({
     setEmail("");
     setFirstName("");
     setLastName("");
-    setCohort(defaultCohort);
-    setTrack(defaultTrack);
+    setDetailsErrors({});
+    setCohortId("");
+    setTrackId("");
+    setSubmitting(false);
+    setSubmitError(null);
+    setEmailSent(true);
     setUpload({ status: "idle" });
     setSelectedRows(selectAllRows());
   }
@@ -140,6 +182,87 @@ export function InviteStudentDialog({
   function handleOpenChange(next: boolean) {
     setOpen(next);
     if (!next) reset();
+  }
+
+  async function loadProgramOptions() {
+    setProgramOptions({ status: "loading" });
+
+    try {
+      const [cohorts, tracks] = await Promise.all([
+        listCohorts({ status: "ONGOING" }),
+        listTracks({ status: "ACTIVE" }),
+      ]);
+
+      setProgramOptions({ status: "ready", cohorts, tracks });
+      setCohortId((current) => current || cohorts[0]?.id || "");
+      setTrackId((current) => current || tracks[0]?.id || "");
+    } catch (error) {
+      setProgramOptions({
+        status: "error",
+        message: getProgramOptionsErrorMessage(error),
+      });
+    }
+  }
+
+  function handleOpen() {
+    setOpen(true);
+    loadProgramOptions();
+  }
+
+  function handleDetailsNext() {
+    const result = inviteDetailsSchema.safeParse({
+      email,
+      firstName,
+      lastName,
+    });
+
+    if (!result.success) {
+      const fieldErrors = result.error.flatten().fieldErrors;
+      setDetailsErrors({
+        email: fieldErrors.email?.[0],
+        firstName: fieldErrors.firstName?.[0],
+        lastName: fieldErrors.lastName?.[0],
+      });
+      return;
+    }
+
+    setDetailsErrors({});
+    setStep("single-program");
+  }
+
+  async function handleSendInvite() {
+    if (!selectedCohort || !selectedTrack) return;
+
+    setSubmitError(null);
+    setSubmitting(true);
+
+    try {
+      const result = await onboardUser({
+        cohortId: selectedCohort.id,
+        trackId: selectedTrack.id,
+        role: "STUDENT",
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+      });
+
+      onInvited([
+        {
+          name: result.user.name,
+          email: result.user.email,
+          track: selectedTrack.name,
+          cohort: selectedCohort.name,
+          status: "Pending",
+          joined: "--",
+        },
+      ]);
+      setEmailSent(result.emailSent);
+      setStep("single-success");
+    } catch (error) {
+      setSubmitError(getOnboardErrorMessage(error));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function handleFile(file: File) {
@@ -170,7 +293,15 @@ export function InviteStudentDialog({
     setUpload({ status: "idle" });
   }
 
-  const fullName = `${firstName} ${lastName}`.trim() || "New Student";
+  const fullName = `${firstName.trim()} ${lastName.trim()}`;
+  const selectedCohort =
+    programOptions.status === "ready"
+      ? programOptions.cohorts.find((cohort) => cohort.id === cohortId)
+      : undefined;
+  const selectedTrack =
+    programOptions.status === "ready"
+      ? programOptions.tracks.find((track) => track.id === trackId)
+      : undefined;
   const selectedCount = selectedRows.filter(Boolean).length;
   const tracksSummary = React.useMemo(() => {
     const counts = new Map<string, number>();
@@ -183,7 +314,7 @@ export function InviteStudentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <Button size="medium" onClick={() => setOpen(true)} className="gap-2">
+      <Button size="medium" onClick={handleOpen} className="gap-2">
         <Plus className="h-4 w-4" />
         Invite students
       </Button>
@@ -201,20 +332,32 @@ export function InviteStudentDialog({
             email={email}
             firstName={firstName}
             lastName={lastName}
-            onEmailChange={setEmail}
-            onFirstNameChange={setFirstName}
-            onLastNameChange={setLastName}
+            errors={detailsErrors}
+            onEmailChange={(value) => {
+              setEmail(value);
+              setDetailsErrors((prev) => ({ ...prev, email: undefined }));
+            }}
+            onFirstNameChange={(value) => {
+              setFirstName(value);
+              setDetailsErrors((prev) => ({ ...prev, firstName: undefined }));
+            }}
+            onLastNameChange={(value) => {
+              setLastName(value);
+              setDetailsErrors((prev) => ({ ...prev, lastName: undefined }));
+            }}
             onCancel={() => handleOpenChange(false)}
-            onNext={() => setStep("single-program")}
+            onNext={handleDetailsNext}
           />
         )}
 
         {step === "single-program" && (
           <ProgramDetailsStep
-            cohort={cohort}
-            track={track}
-            onCohortChange={setCohort}
-            onTrackChange={setTrack}
+            options={programOptions}
+            cohortId={cohortId}
+            trackId={trackId}
+            onCohortChange={setCohortId}
+            onTrackChange={setTrackId}
+            onRetry={loadProgramOptions}
             onCancel={() => handleOpenChange(false)}
             onNext={() => setStep("single-review")}
           />
@@ -223,29 +366,27 @@ export function InviteStudentDialog({
         {step === "single-review" && (
           <SingleReviewStep
             name={fullName}
-            email={email}
-            cohort={cohort}
-            track={track}
-            onBack={() => setStep("single-program")}
-            onSend={() => {
-              onInvited([
-                {
-                  name: fullName,
-                  email,
-                  track,
-                  cohort,
-                  status: "Pending",
-                  joined: "--",
-                },
-              ]);
-              setStep("single-success");
+            email={email.trim()}
+            cohort={selectedCohort?.name ?? ""}
+            track={selectedTrack?.name ?? ""}
+            submitting={submitting}
+            error={submitError}
+            onBack={() => {
+              setSubmitError(null);
+              setStep("single-program");
             }}
+            onSend={handleSendInvite}
           />
         )}
 
         {step === "single-success" && (
           <SuccessStep
-            message={`${fullName} has been invited to join Rise Classroom. They will receive an email with instructions to create their account.`}
+            title={emailSent ? "Invitation sent!" : "Student added"}
+            message={
+              emailSent
+                ? `${fullName} has been invited to join Rise Classroom. They will receive an email with instructions to create their account.`
+                : `${fullName} was added, but the invitation email failed to send. They won't get their onboarding link until the invite is resent.`
+            }
             onInviteAnother={reset}
             onViewStudents={() => handleOpenChange(false)}
           />
@@ -301,6 +442,7 @@ export function InviteStudentDialog({
 
         {step === "bulk-success" && (
           <SuccessStep
+            title="Invitation sent!"
             message={`${selectedCount} students have been invited to join Rise Classroom. They will receive an email with instructions to create their account.`}
             onInviteAnother={reset}
             onViewStudents={() => handleOpenChange(false)}
@@ -401,6 +543,7 @@ function SingleFormStep({
   email,
   firstName,
   lastName,
+  errors,
   onEmailChange,
   onFirstNameChange,
   onLastNameChange,
@@ -410,14 +553,13 @@ function SingleFormStep({
   email: string;
   firstName: string;
   lastName: string;
+  errors: InviteDetailsErrors;
   onEmailChange: (value: string) => void;
   onFirstNameChange: (value: string) => void;
   onLastNameChange: (value: string) => void;
   onCancel: () => void;
   onNext: () => void;
 }) {
-  const canContinue = /^\S+@\S+\.\S+$/.test(email.trim());
-
   return (
     <>
       <DialogHeader>
@@ -429,6 +571,8 @@ function SingleFormStep({
         <FormField
           label="Email Address"
           required
+          invalid={Boolean(errors.email)}
+          error={errors.email}
           inputProps={{
             type: "email",
             placeholder: "rise@email.com",
@@ -440,6 +584,9 @@ function SingleFormStep({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="First name"
+            required
+            invalid={Boolean(errors.firstName)}
+            error={errors.firstName}
             inputProps={{
               placeholder: "e.g Sarah",
               value: firstName,
@@ -449,6 +596,9 @@ function SingleFormStep({
           />
           <FormField
             label="Last name"
+            required
+            invalid={Boolean(errors.lastName)}
+            error={errors.lastName}
             inputProps={{
               placeholder: "e.g Johnson",
               value: lastName,
@@ -463,7 +613,7 @@ function SingleFormStep({
         <Button variant="secondary" size="medium" onClick={onCancel}>
           Cancel
         </Button>
-        <Button size="medium" disabled={!canContinue} onClick={onNext}>
+        <Button size="medium" onClick={onNext}>
           Next
         </Button>
       </DialogFooter>
@@ -479,7 +629,7 @@ function SimpleSelect({
 }: {
   label: string;
   value: string;
-  options: string[];
+  options: { value: string; label: string }[];
   onChange: (value: string) => void;
 }) {
   const id = React.useId();
@@ -498,8 +648,8 @@ function SimpleSelect({
           className="h-11 w-full appearance-none rounded-lg border border-neutral-300 bg-transparent px-3 pr-9 text-sm text-neutral-900 outline-none focus:border-primary-500"
         >
           {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
@@ -510,20 +660,27 @@ function SimpleSelect({
 }
 
 function ProgramDetailsStep({
-  cohort,
-  track,
+  options,
+  cohortId,
+  trackId,
   onCohortChange,
   onTrackChange,
+  onRetry,
   onCancel,
   onNext,
 }: {
-  cohort: string;
-  track: string;
+  options: ProgramOptions;
+  cohortId: string;
+  trackId: string;
   onCohortChange: (value: string) => void;
   onTrackChange: (value: string) => void;
+  onRetry: () => void;
   onCancel: () => void;
   onNext: () => void;
 }) {
+  const canContinue =
+    options.status === "ready" && Boolean(cohortId) && Boolean(trackId);
+
   return (
     <>
       <DialogHeader>
@@ -534,25 +691,60 @@ function ProgramDetailsStep({
       </DialogHeader>
 
       <div className="mt-6 flex flex-col gap-6">
-        <SimpleSelect
-          label="Cohort"
-          value={cohort}
-          options={cohorts}
-          onChange={onCohortChange}
-        />
-        <SimpleSelect
-          label="Track"
-          value={track}
-          options={tracks}
-          onChange={onTrackChange}
-        />
+        {options.status === "loading" && (
+          <p className="flex items-center gap-2 text-sm text-neutral-500">
+            <Loader className="h-4 w-4 animate-spin text-primary-500" />
+            Loading cohorts and tracks...
+          </p>
+        )}
+
+        {options.status === "error" && (
+          <div className="flex flex-col items-start gap-3">
+            <ErrorMessage message={options.message} />
+            <Button variant="secondary" size="medium" onClick={onRetry}>
+              Try again
+            </Button>
+          </div>
+        )}
+
+        {options.status === "ready" && (
+          <>
+            {options.cohorts.length > 0 ? (
+              <SimpleSelect
+                label="Cohort"
+                value={cohortId}
+                options={options.cohorts.map((cohort) => ({
+                  value: cohort.id,
+                  label: cohort.name,
+                }))}
+                onChange={onCohortChange}
+              />
+            ) : (
+              <ErrorMessage message="There are no ongoing cohorts. Create one before inviting students." />
+            )}
+
+            {options.tracks.length > 0 ? (
+              <SimpleSelect
+                label="Track"
+                value={trackId}
+                options={options.tracks.map((track) => ({
+                  value: track.id,
+                  label: track.name,
+                }))}
+                onChange={onTrackChange}
+              />
+            ) : (
+              <ErrorMessage message="There are no active tracks. Create one before inviting students." />
+            )}
+          </>
+        )}
       </div>
 
       <DialogFooter className="sm:justify-end">
         <Button variant="secondary" size="medium" onClick={onCancel}>
           Cancel
         </Button>
-        <Button size="medium" onClick={onNext}>
+        <Button size="medium" disabled={!canContinue} onClick={onNext}>
           Next
         </Button>
       </DialogFooter>
@@ -565,6 +757,8 @@ function SingleReviewStep({
   email,
   cohort,
   track,
+  submitting,
+  error,
   onBack,
   onSend,
 }: {
@@ -572,6 +766,8 @@ function SingleReviewStep({
   email: string;
   cohort: string;
   track: string;
+  submitting: boolean;
+  error: string | null;
   onBack: () => void;
   onSend: () => void;
 }) {
@@ -606,23 +802,48 @@ function SingleReviewStep({
         </div>
       </div>
 
+      {error && (
+        <div className="mt-4">
+          <ErrorMessage message={error} />
+        </div>
+      )}
+
       <DialogFooter className="sm:justify-end">
-        <Button variant="secondary" size="medium" onClick={onBack}>
+        <Button
+          variant="secondary"
+          size="medium"
+          disabled={submitting}
+          onClick={onBack}
+        >
           Back
         </Button>
-        <Button size="medium" onClick={onSend}>
-          Send Invitation
+        <Button size="medium" disabled={submitting} onClick={onSend}>
+          {submitting && <Loader className="h-4 w-4 animate-spin" />}
+          {submitting ? "Sending..." : "Send Invitation"}
         </Button>
       </DialogFooter>
     </>
   );
 }
 
+function ErrorMessage({ message }: { message: string }) {
+  return (
+    <p
+      role="alert"
+      className="rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+    >
+      {message}
+    </p>
+  );
+}
+
 function SuccessStep({
+  title,
   message,
   onInviteAnother,
   onViewStudents,
 }: {
+  title: string;
   message: string;
   onInviteAnother: () => void;
   onViewStudents: () => void;
@@ -632,9 +853,7 @@ function SuccessStep({
       <span className="flex h-20 w-20 items-center justify-center rounded-full bg-semantic-surface-success-badge">
         <CheckCircle2 className="h-10 w-10 text-semantic-text-success" />
       </span>
-      <h2 className="mt-6 text-xl font-bold text-neutral-900">
-        Invitation sent!
-      </h2>
+      <h2 className="mt-6 text-xl font-bold text-neutral-900">{title}</h2>
       <p className="mt-2 max-w-sm text-sm text-neutral-500">{message}</p>
 
       <div className="mt-6 flex w-full flex-col-reverse gap-3 sm:w-auto sm:flex-row sm:items-center">

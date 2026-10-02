@@ -12,16 +12,6 @@ export type Student = {
   location?: string;
 };
 
-export const cohorts = [
-  "Cohort 2024",
-  "Cohort 2025",
-  "Cohort 2026",
-  "Cohort 2027",
-  "Cohort 2028",
-];
-
-export const tracks = ["Design", "Frontend", "Backend", "Mobile Engineering"];
-
 export const initialStudents: Student[] = [
   {
     id: "aishat-lawal",
