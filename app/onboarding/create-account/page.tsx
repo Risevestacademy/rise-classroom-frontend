@@ -5,23 +5,17 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Field } from "@base-ui/react/field"
-import { Check, X } from "lucide-react"
 
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Hint } from "@/components/ui/hint"
 import { PasswordVisibilityToggle } from "@/components/ui/password-visibility-toggle"
-import { OnboardingShell } from "@/components/onboarding/OnboardingShell"
+import { AuthShell } from "@/components/AuthShell"
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter"
 import { useOnboarding } from "@/components/onboarding/OnboardingProvider"
 import { SquareLock } from "@/assets/icons"
-import {
-  passwordRequirement,
-  passwordStrengthMeta,
-  strengthSegments,
-  evaluatePassword,
-} from "@/lib/password-strength"
+import { evaluatePassword } from "@/lib/password-strength"
 
 export default function CreateAccountPage() {
   const router = useRouter()
@@ -35,7 +29,7 @@ export default function CreateAccountPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [agreed, setAgreed] = useState(Boolean(savedPassword))
 
-  const { allRequirementsMet, strength, filledSegments } = useMemo(
+  const { allRequirementsMet } = useMemo(
     () => evaluatePassword(password),
     [password]
   )
@@ -53,7 +47,7 @@ export default function CreateAccountPage() {
   }
 
   return (
-    <OnboardingShell>
+    <AuthShell>
       <div className="mx-auto flex h-[140px] my-10 w-full items-center justify-center">
         <Image className="rounded-2xl" src="/create-account.png" alt="Create your account" width={500} height={0} />
       </div>
@@ -95,47 +89,7 @@ export default function CreateAccountPage() {
             }
           />
 
-          <div className="mt-1 flex gap-1">
-            {Array.from({ length: strengthSegments }).map((_, index) => (
-              <span
-                key={index}
-                className={cn(
-                  "h-1 flex-1 rounded-full transition-colors",
-                  index < filledSegments
-                    ? strength && passwordStrengthMeta[strength].barColor
-                    : "bg-neutral-300"
-                )}
-              />
-            ))}
-          </div>
-
-          <p className="mt-1.5 text-xs text-neutral-600">
-            {strength ? passwordStrengthMeta[strength].label : "Must contain at least;"}
-          </p>
-          <ul className="flex flex-col gap-1">
-            {passwordRequirement.map((requirement) => {
-              const met = requirement.test(password)
-              return (
-                <li key={requirement.key} className="flex items-center gap-1.5 text-xs">
-                  <span
-                    className={cn(
-                      "flex size-3.5 shrink-0 items-center justify-center rounded-full text-neutral-50",
-                      met ? "bg-semantic-text-success" : "bg-neutral-300"
-                    )}
-                  >
-                    {met ? (
-                      <Check className="size-2.5" strokeWidth={3} />
-                    ) : (
-                      <X className="size-2.5" strokeWidth={3} />
-                    )}
-                  </span>
-                  <span className={met ? "text-neutral-700" : "text-neutral-500"}>
-                    {requirement.label}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
+          <PasswordStrengthMeter password={password} />
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -185,6 +139,6 @@ export default function CreateAccountPage() {
           </Link>
         </p>
       </form>
-    </OnboardingShell>
+    </AuthShell>
   )
 }

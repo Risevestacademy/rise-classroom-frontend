@@ -196,7 +196,7 @@ function SignInForm() {
               </Field.Root>
 
               <div className="text-right text-sm">
-                <Link href="/reset-password" className="font-medium text-primary-500 hover:underline">
+                <Link href="/forgot-password" className="font-medium text-primary-500 hover:underline">
                   Forgot Password?
                 </Link>
               </div>

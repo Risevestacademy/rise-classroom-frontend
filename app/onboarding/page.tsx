@@ -3,14 +3,14 @@
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
-import { OnboardingShell } from "@/components/onboarding/OnboardingShell"
+import { AuthShell } from "@/components/AuthShell"
 import { useOnboarding } from "@/components/onboarding/OnboardingProvider"
 
 export default function OnboardingInvitePage() {
   const { details, isInstructor, hrefFor } = useOnboarding()
 
   return (
-    <OnboardingShell>
+    <AuthShell>
       <h1 className="text-xl font-bold text-neutral-900">
         Hi {details.firstName}, you&apos;ve been invited to Rise Classroom
         {isInstructor ? " as an instructor" : ""}
@@ -33,6 +33,6 @@ export default function OnboardingInvitePage() {
           Continue
         </Button>
       </div>
-    </OnboardingShell>
+    </AuthShell>
   )
 }
