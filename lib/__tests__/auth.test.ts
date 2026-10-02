@@ -165,16 +165,16 @@ describe("landingPathFor", () => {
     );
   });
 
-  it("sends invited users to finish their profile first", () => {
+  it("sends invited users to onboarding", () => {
     expect(
       landingPathFor(
         makeUser({ role: "INSTRUCTOR", onboardingStatus: "INVITED" })
       )
-    ).toBe("/instructor/complete-profile");
+    ).toBe("/onboarding");
 
     expect(
       landingPathFor(makeUser({ role: "STUDENT", onboardingStatus: "INVITED" }))
-    ).toBe("/student/complete-profile");
+    ).toBe("/onboarding");
   });
 });
 
