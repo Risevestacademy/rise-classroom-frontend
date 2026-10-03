@@ -8,11 +8,12 @@ import {
   Radar,
   BookOpen,
   ClipboardList,
+  NotebookText,
   MessageSquare,
   Settings,
   X,
 } from "lucide-react";
-
+import { BagPack } from "@/assets/icons";
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "@/components/UserMenu";
@@ -32,6 +33,8 @@ const overviewNavItems: NavItem[] = [
 const learningNavItems: NavItem[] = [
   { title: "My Tracks", href: "/student/my-tracks", icon: BookOpen },
   { title: "Assignments", href: "/student/assignments", icon: ClipboardList },
+  { title: "Lessons", href: "/student/lessons", icon: NotebookText },
+  { title: "My BagPack", href: "/student/my-bagpack", icon: BagPack },
 ];
 
 const communicationNavItems: NavItem[] = [

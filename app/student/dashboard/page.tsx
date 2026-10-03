@@ -7,10 +7,11 @@ import {
   Calendar,
   ArrowRight,
   ClipboardList,
+  ChevronRight,
   Radar,
   BookOpen,
 } from "lucide-react";
-
+import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
@@ -111,9 +112,9 @@ export default function StudentDashboardPage() {
                   <Skeleton className="mt-1.5 h-3 w-24" />
                 ) : (
                   enrollment && (
-                    <p className="text-sm font-medium text-primary-500">
+                    <Badge variant="light" size="sm" className="bg-semantic-surface-brand text-primary-500 ">
                       {enrollment.track.name}
-                    </p>
+                    </Badge>
                   )
                 )}
               </>
@@ -125,14 +126,14 @@ export default function StudentDashboardPage() {
           <button
             type="button"
             aria-label="Calendar"
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-300 text-neutral-500 hover:text-neutral-700"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-50 text-neutral-500 hover:text-neutral-700"
           >
             <Calendar className="h-5 w-5" />
           </button>
           <button
             type="button"
             aria-label="Notifications"
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-300 text-neutral-500 hover:text-neutral-700"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-50 text-neutral-500 hover:text-neutral-700"
           >
             <Bell className="h-5 w-5" />
           </button>
@@ -148,9 +149,19 @@ export default function StudentDashboardPage() {
           {progress.isPending ? (
             <Panel>
               <Skeleton className="h-[90px] w-full rounded-lg" />
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-3 w-28" />
-              <Skeleton className="h-2 w-full rounded-full" />
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-5 shrink-0 items-center gap-[2px]">
+                  {Array.from({ length: 24 }, (_, index) => (
+                    <Skeleton key={index} className="h-full w-[3px] rounded-[1px]" />
+                  ))}
+                </div>
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="ml-auto h-9 w-9 shrink-0 rounded-full" />
+              </div>
             </Panel>
           ) : notEnrolled || (!progress.isError && !enrollment) ? (
             <EmptyPanel
@@ -190,22 +201,36 @@ export default function StudentDashboardPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="h-2 flex-1 rounded-full bg-neutral-300">
-                  <div
-                    className="h-2 rounded-full bg-semantic-text-success"
-                    style={{ width: `${enrollment.progress.percentage}%` }}
-                  />
+              <div className="flex items-center gap-3">
+                <div
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={enrollment.progress.percentage}
+                  className="flex h-5 shrink-0 items-center gap-[2px]"
+                >
+                  {Array.from({ length: 24 }, (_, index) => (
+                    <span
+                      key={index}
+                      className={cn(
+                        "h-full w-[3px] rounded-[1px]",
+                        index <
+                          Math.round((enrollment.progress.percentage / 100) * 24)
+                          ? "bg-semantic-text-success"
+                          : "bg-neutral-300",
+                      )}
+                    />
+                  ))}
                 </div>
-                <span className="shrink-0 text-xs font-medium text-neutral-700">
+                <span className="shrink-0 text-sm text-neutral-700">
                   {enrollment.progress.percentage}% Complete
                 </span>
                 <button
                   type="button"
                   aria-label="Continue lesson"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-500 text-white"
+                  className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-500 text-white"
                 >
-                  <ArrowRight className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             </Panel>
@@ -292,7 +317,7 @@ export default function StudentDashboardPage() {
           </div>
 
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-500 text-white">
-            <ArrowRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" />
           </span>
         </Link>
       </section>
