@@ -3,12 +3,27 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, House, FileText, Settings, Blocks } from "lucide-react";
+import {
+  LayoutDashboard,
+  FolderKanban,
+  Users,
+  FolderOpen,
+  FileCheck,
+  Video,
+  BookOpen,
+  CalendarDays,
+  TrendingUp,
+  BarChart3,
+  Megaphone,
+  MessageSquare,
+  Bell,
+  Settings,
+  Blocks,
+} from "lucide-react";
 
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "@/components/UserMenu";
-
 
 interface NavItem {
   title: string;
@@ -21,27 +36,27 @@ const overviewNavItems: NavItem[] = [
 ];
 
 const programNavItems: NavItem[] = [
-  { title: "My Tracks", href: "/instructor/my-tracks", icon: House },
-  { title: "Students", href: "/instructor/students", icon: House },
-  { title: "Content", href: "/instructor/content", icon: FileText },
+  { title: "My Tracks", href: "/instructor/my-tracks", icon: FolderKanban },
+  { title: "Students", href: "/instructor/students", icon: Users },
+  { title: "Content", href: "/instructor/content", icon: FolderOpen },
 ];
 
 const teachingNavItems: NavItem[] = [
-  { title: "Assignments", href: "/instructor/assignments", icon: House },
-  { title: "Live Sessions", href: "/instructor/live-sessions", icon: FileText },
-  { title: "Curriculum", href: "/instructor/curriculum", icon: FileText },
-  { title: "Calendar", href: "/instructor/calendar", icon: FileText },
+  { title: "Assignments", href: "/instructor/assignments", icon: FileCheck },
+  { title: "Live Sessions", href: "/instructor/live-sessions", icon: Video },
+  { title: "Curriculum", href: "/instructor/curriculum", icon: BookOpen },
+  { title: "Calendar", href: "/instructor/calendar", icon: CalendarDays },
 ];
 
 const insightsNavItems: NavItem[] = [
-  { title: "Student Progress", href: "/instructor/student-progress", icon: House, },
-  { title: "Reports", href: "/instructor/reports", icon: FileText },
+  { title: "Student Progress", href: "/instructor/student-progress", icon: TrendingUp },
+  { title: "Reports", href: "/instructor/reports", icon: BarChart3 },
 ];
 
 const communicationNavItems: NavItem[] = [
-  { title: "Announcements", href: "/instructor/announcements", icon: House },
-  { title: "Messages", href: "/instructor/messages", icon: FileText },
-  { title: "Notifications", href: "/instructor/notifications", icon: FileText },
+  { title: "Announcements", href: "/instructor/announcements", icon: Megaphone },
+  { title: "Messages", href: "/instructor/messages", icon: MessageSquare },
+  { title: "Notifications", href: "/instructor/notifications", icon: Bell },
 ];
 
 const accountNavItems: NavItem[] = [
@@ -49,7 +64,7 @@ const accountNavItems: NavItem[] = [
   { title: "Integration", href: "/instructor/integration", icon: Blocks },
 ];
 
-export function Sidebar() {
+export function InstructorSidebar() {
   const pathname = usePathname();
 
   return (
@@ -67,71 +82,12 @@ export function Sidebar() {
 
       <hr className="text-neutral-300 mx-4" />
 
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-        <div className="space-y-1">
-          <p className="px-3 text-xs font-medium uppercase tracking-wider text-neutral-500 mb-2">
-            Overview
-          </p>
-          {overviewNavItems.map((item) => (
-            <SidebarNavItem
-              key={item.href}
-              item={item}
-              isActive={pathname === item.href}
-            />
-          ))}
-        </div>
-
-        <div className="space-y-1">
-          <p className="px-3 text-xs font-medium uppercase tracking-wider text-neutral-500 mb-2">
-            Program
-          </p>
-          {programNavItems.map((item) => (
-            <SidebarNavItem
-              key={item.href}
-              item={item}
-              isActive={pathname === item.href}
-            />
-          ))}
-        </div>
-
-        <div className="space-y-1">
-          <p className="px-3 text-xs font-medium uppercase tracking-wider text-neutral-500 mb-2">
-            Teaching
-          </p>
-          {teachingNavItems.map((item) => (
-            <SidebarNavItem
-              key={item.href}
-              item={item}
-              isActive={pathname === item.href}
-            />
-          ))}
-        </div>
-
-        <div className="space-y-1">
-          <p className="px-3 text-xs font-medium uppercase tracking-wider text-neutral-500 mb-2">
-            Insights
-          </p>
-          {insightsNavItems.map((item) => (
-            <SidebarNavItem
-              key={item.href}
-              item={item}
-              isActive={pathname === item.href}
-            />
-          ))}
-        </div>
-
-        <div className="space-y-1">
-          <p className="px-3 text-xs font-medium uppercase tracking-wider text-neutral-500 mb-2">
-            Communication
-          </p>
-          {communicationNavItems.map((item) => (
-            <SidebarNavItem
-              key={item.href}
-              item={item}
-              isActive={pathname === item.href}
-            />
-          ))}
-        </div>
+            <div className="flex-1 min-h-0 px-3 py-4 space-y-6 overflow-y-auto">
+        <NavSection label="Overview" items={overviewNavItems} pathname={pathname} />
+        <NavSection label="Program" items={programNavItems} pathname={pathname} />
+        <NavSection label="Teaching" items={teachingNavItems} pathname={pathname} />
+        <NavSection label="Insights" items={insightsNavItems} pathname={pathname} />
+        <NavSection label="Communication" items={communicationNavItems} pathname={pathname} />
       </div>
 
       <div className="px-3.5 mb-3">
@@ -150,6 +106,31 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+  );
+}
+
+function NavSection({
+  label,
+  items,
+  pathname,
+}: {
+  label: string;
+  items: NavItem[];
+  pathname: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="mb-2 px-3 text-xs font-medium tracking-wider text-neutral-500 uppercase">
+        {label}
+      </p>
+      {items.map((item) => (
+        <SidebarNavItem
+          key={item.href}
+          item={item}
+          isActive={pathname.startsWith(item.href)}
+        />
+      ))}
+    </div>
   );
 }
 
