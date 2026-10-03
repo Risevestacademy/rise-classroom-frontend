@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { instructorQueries, type WeeklyTaskStatus } from "@/lib/instructor";
 import { sessionQuery } from "@/lib/session-query";
 
 const metrics = [
@@ -118,7 +117,6 @@ function greeting(date = new Date()) {
 
 export default function DashboardOverview() {
    const session = useQuery(sessionQuery());
-  const myTracks = useQuery(instructorQueries.myTracks());
    const instructorName = session.data?.user.firstName ?? "Instructor";
 
   return (
@@ -129,7 +127,7 @@ export default function DashboardOverview() {
             {greeting()}, {instructorName}
           </h1>
           <p className="text-sm text-neutral-500 mt-0.5">
-            Here's what's happening in your tracks today.
+            Here&apos;s what&apos;s happening in your tracks today.
           </p>
         </div>
         <button className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-xs hover:bg-neutral-200">
@@ -285,7 +283,7 @@ export default function DashboardOverview() {
               <h2 className="text-base font-bold text-neutral-900">
                 Recent Activities
               </h2>
-              <p className="text-xs text-neutral-500">What's coming up next</p>
+              <p className="text-xs text-neutral-500">What&apos;s coming up next</p>
             </div>
             <button className="flex items-center gap-1.5 text-xs font-semibold text-primary-500 hover:text-primary-600 hover:underline">
               <span>Schedule an activity</span>

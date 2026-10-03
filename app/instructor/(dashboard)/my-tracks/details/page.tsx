@@ -4,14 +4,10 @@ import * as React from "react";
 
 import {
   ChevronDown,
-  FileText,
-  Plus,
   Calendar,
   FileClock
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Search } from "@/assets/icons";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
