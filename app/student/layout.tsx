@@ -13,7 +13,7 @@ export default function StudentLayout({
       <StudentNavProvider>
         <div className="flex min-h-screen w-full">
           <StudentSidebar />
-          <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col bg-neutral-50/50">
+          <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col bg-neutral-100">
             <StudentTopBar />
             <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
           </div>
