@@ -13,15 +13,22 @@ import { cn } from "@/lib/utils";
 const WEEK_LABEL = "Week 30 · Sep 21-27";
 const DAYS_LEFT = 3;
 
+/*
+ * PENDING-BACKEND: "What went well?" (wentWell) and "What will you do
+ * differently?" (doDifferently) are hidden because the weekly-metrics API has
+ * no field to store them yet. To bring them back, search this file for
+ * PENDING-BACKEND and uncomment every match (type, defaults, sample history,
+ * form view and history view), then map them in the save payload.
+ */
 type Answers = {
   focus: string;
   achieve: string;
   mentorNotes: string;
   progress: string;
   kpis: string;
-  wentWell: string;
+  // wentWell: string; // PENDING-BACKEND(wentWell)
   didntGoWell: string;
-  doDifferently: string;
+  // doDifferently: string; // PENDING-BACKEND(doDifferently)
 };
 
 const EMPTY_ANSWERS: Answers = {
@@ -30,9 +37,9 @@ const EMPTY_ANSWERS: Answers = {
   mentorNotes: "",
   progress: "",
   kpis: "",
-  wentWell: "",
+  // wentWell: "", // PENDING-BACKEND(wentWell)
   didntGoWell: "",
-  doDifferently: "",
+  // doDifferently: "", // PENDING-BACKEND(doDifferently)
 };
 
 const PROMPT_COUNT = Object.keys(EMPTY_ANSWERS).length;
@@ -58,10 +65,12 @@ const HISTORY: HistoryEntry[] = [
         "My mentor was able to guide my understanding of the concept of system design.",
       progress: "On track — most components are documented and reviewed.",
       kpis: "Shipped 3 components to the design library.",
-      wentWell: "I finally understood how variants work in the design system.",
+      // PENDING-BACKEND(wentWell)
+      // wentWell: "I finally understood how variants work in the design system.",
       didntGoWell:
         "I spent too long on a problem I could have asked for help with sooner.",
-      doDifferently: "Ask my mentor for feedback earlier in the week.",
+      // PENDING-BACKEND(doDifferently)
+      // doDifferently: "Ask my mentor for feedback earlier in the week.",
     },
   },
   {
@@ -297,12 +306,14 @@ function FormView({
       </Section>
 
       <Section label="Weekly Reflection">
+        {/* PENDING-BACKEND(wentWell): uncomment once weekly metrics store it.
         <ReflectionField
           label="What went well?"
           placeholder="Example: I finally understood how variants work in the design system"
           value={answers.wentWell}
           onChange={(value) => update("wentWell", value)}
         />
+        */}
 
         <ReflectionField
           label="What didn't go well?"
@@ -311,12 +322,14 @@ function FormView({
           onChange={(value) => update("didntGoWell", value)}
         />
 
+        {/* PENDING-BACKEND(doDifferently): uncomment once weekly metrics store it.
         <ReflectionField
           label="What will you do differently?"
           placeholder="Example: Ask my mentor for feedback earlier in the week"
           value={answers.doDifferently}
           onChange={(value) => update("doDifferently", value)}
         />
+        */}
       </Section>
     </div>
   );
@@ -548,6 +561,7 @@ function HistoryDetailView({
       </Section>
 
       <Section label="Weekly Reflection">
+        {/* PENDING-BACKEND(wentWell): uncomment once weekly metrics store it.
         <ReflectionField
           label="What went well?"
           placeholder=""
@@ -555,6 +569,7 @@ function HistoryDetailView({
           onChange={() => {}}
           disabled
         />
+        */}
         <ReflectionField
           label="What didn't go well?"
           placeholder=""
@@ -562,6 +577,7 @@ function HistoryDetailView({
           onChange={() => {}}
           disabled
         />
+        {/* PENDING-BACKEND(doDifferently): uncomment once weekly metrics store it.
         <ReflectionField
           label="What will you do differently?"
           placeholder=""
@@ -569,6 +585,7 @@ function HistoryDetailView({
           onChange={() => {}}
           disabled
         />
+        */}
       </Section>
     </div>
   );
