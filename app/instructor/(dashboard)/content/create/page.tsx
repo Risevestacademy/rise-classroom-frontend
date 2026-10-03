@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense } from "react";
+import { CreateModulePage } from "@/components/instructor-dashboard/CreateModulePage";
 import { useSearchParams } from "next/navigation";
-import { CreateModulePage } from "@/components/CreateModulePage";
-// import { CreateLessonPage } from "@/components/CreateLessonPage";
-// import { CreateResourcePage } from "@/components/CreateTrackForm";
+import { Suspense } from "react";
+// import { CreateLessonPage } from "@/components/instructor-dashboard/CreateLessonPage";
+// import { CreateResourcePage } from "@/components/instructor-dashboard/CreateResourcePage";
 
 function CreatePageContent() {
   const searchParams = useSearchParams();
