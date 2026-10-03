@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { api, type Envelope, type Paginated } from "@/lib/api";
+import { api, ApiError, type Envelope, type Paginated } from "@/lib/api";
 import type { OnboardingStatus, Role, UserStatus } from "@/lib/auth";
 
 export type TrackStatus = "ACTIVE" | "SUSPENDED";
@@ -33,6 +33,7 @@ export type AdminUser = {
   onboardingStatus: OnboardingStatus;
   onboardedAt?: string | null;
   createdAt: string;
+  emailVerified?: boolean;
   instructorTrack?: InstructorAssignment[];
   studentProfile?: StudentMembership[];
 };
@@ -45,6 +46,29 @@ export type InviteUserInput = {
   firstName: string;
   lastName: string;
   email: string;
+};
+
+export type InviteUserResult = {
+  outcome: "invited";
+  emailSent: boolean;
+  user: AdminUser;
+};
+
+export type BulkInviteResult = {
+  summary: {
+    total: number;
+    invited: number;
+    failed: number;
+    emailsNotSent: number;
+  };
+  results: {
+    index: number;
+    email: string | null;
+    outcome: "invited" | "failed";
+    userId?: string;
+    emailSent?: boolean;
+    error?: string;
+  }[];
 };
 
 export type Track = {
@@ -87,6 +111,11 @@ async function listUsers(filters: UserFilters = {}) {
   return data;
 }
 
+async function getUser(id: string) {
+  const { data } = await api.get<Envelope<AdminUser>>(`/admin/users/${id}`);
+  return data;
+}
+
 /**
  * Just the number of matching users. Asks for a single row and reads the
  * `total` off the pagination envelope, so a headline figure doesn't pull down
@@ -113,6 +142,30 @@ async function listCohorts(status?: CohortStatus) {
   return data;
 }
 
+async function getCohort(id: string) {
+  const { data } = await api.get<Envelope<Cohort>>(`/admin/cohorts/${id}`);
+  return data;
+}
+
+export type CreateCohortInput = {
+  name: string;
+  year: string;
+  startDate: string;
+  endDate: string;
+};
+
+export type UpdateCohortInput = Partial<
+  CreateCohortInput & { status: CohortStatus }
+>;
+
+export function createCohort(input: CreateCohortInput) {
+  return api.post<Envelope<Cohort>>("/admin/cohorts", input);
+}
+
+export function updateCohort(id: string, input: UpdateCohortInput) {
+  return api.patch<Envelope<Cohort>>(`/admin/cohorts/${id}`, input);
+}
+
 /** Payload for `POST /admin/tracks` — the API requires `description` as a
  * string even when empty, so callers can't omit it. */
 export type CreateTrackInput = {
@@ -125,15 +178,84 @@ export function createTrack(input: CreateTrackInput) {
 }
 
 export function inviteUser(input: InviteUserInput) {
-  return api.post<Envelope<AdminUser>>("/admin/users", input);
+  return api.post<Envelope<InviteUserResult>>("/admin/users", input);
 }
 
 export function inviteUsersBulk(users: InviteUserInput[]) {
-  return api.post<Envelope<unknown>>("/admin/users/bulk", { users });
+  return api.post<Envelope<BulkInviteResult>>("/admin/users/bulk", { users });
 }
 
 export function resendInvite(userId: string) {
   return api.post<Envelope<unknown>>(`/admin/users/${userId}/resend-invite`);
+}
+
+function getAdminAccessErrorMessage(error: ApiError) {
+  if (error.status === 401) {
+    return "Your session has expired. Please sign in again.";
+  }
+
+  if (error.status === 403) {
+    return "Only super admins can do this. Check that your account is active.";
+  }
+
+  return null;
+}
+
+export function getProgramOptionsErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return "We couldn't reach the server. Check your connection and try again.";
+  }
+
+  return (
+    getAdminAccessErrorMessage(error) ??
+    "We couldn't load cohorts and tracks. Please try again."
+  );
+}
+
+export function getInviteErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return "We couldn't reach the server. Check your connection and try again.";
+  }
+
+  const accessMessage = getAdminAccessErrorMessage(error);
+  if (accessMessage) return accessMessage;
+
+  if (error.status === 404) {
+    return "That cohort or track no longer exists. Go back and pick another one.";
+  }
+
+  if (error.status === 409) {
+    return "Someone with this email already has an account. If they were invited earlier, resend their invite instead.";
+  }
+
+  if (error.status >= 500) {
+    return "We couldn't send the invitation. Please try again.";
+  }
+
+  return error.message || "We couldn't send the invitation. Please try again.";
+}
+
+export function getCohortErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return "We couldn't reach the server. Check your connection and try again.";
+  }
+
+  const accessMessage = getAdminAccessErrorMessage(error);
+  if (accessMessage) return accessMessage;
+
+  if (error.status === 404) {
+    return "This cohort no longer exists. Refresh the page to see the latest list.";
+  }
+
+  if (error.status === 409) {
+    return "A cohort with this name already exists. Choose a different name.";
+  }
+
+  if (error.status >= 500) {
+    return "We couldn't save the cohort. Please try again.";
+  }
+
+  return error.message || "We couldn't save the cohort. Please try again.";
 }
 
 /** The cohort and track names shown against a user, whatever their role. */
@@ -161,10 +283,13 @@ export function assignmentsFor(user: AdminUser) {
 
 export const adminKeys = {
   users: (filters: UserFilters = {}) => ["admin", "users", filters] as const,
+  user: (id: string) => ["admin", "users", "detail", id] as const,
   userCount: (filters: UserFilters = {}) =>
     ["admin", "users", "count", filters] as const,
   tracks: (status?: TrackStatus) => ["admin", "tracks", status] as const,
   cohorts: (status?: CohortStatus) => ["admin", "cohorts", status] as const,
+  cohort: (id: string) => ["admin", "cohorts", "detail", id] as const,
+  allCohorts: () => ["admin", "cohorts"] as const,
 };
 
 export const adminQueries = {
@@ -172,6 +297,12 @@ export const adminQueries = {
     queryOptions({
       queryKey: adminKeys.users(filters),
       queryFn: () => listUsers(filters),
+    }),
+
+  user: (id: string) =>
+    queryOptions({
+      queryKey: adminKeys.user(id),
+      queryFn: () => getUser(id),
     }),
 
   userCount: (filters: UserFilters = {}) =>
@@ -194,5 +325,11 @@ export const adminQueries = {
       queryKey: adminKeys.cohorts(status),
       queryFn: () => listCohorts(status),
       staleTime: 5 * 60_000,
+    }),
+
+  cohort: (id: string) =>
+    queryOptions({
+      queryKey: adminKeys.cohort(id),
+      queryFn: () => getCohort(id),
     }),
 };

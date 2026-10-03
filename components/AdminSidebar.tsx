@@ -152,7 +152,7 @@ export function AdminSidebar() {
               <SidebarNavItem
                 key={item.href}
                 item={item}
-                isActive={pathname === item.href}
+                isActive={isActivePath(pathname, item.href)}
               />
             ))}
           </div>
@@ -184,7 +184,7 @@ function NavSection({
         <SidebarNavItem
           key={item.href}
           item={item}
-          isActive={pathname === item.href}
+          isActive={isActivePath(pathname, item.href)}
         />
       ))}
     </div>
@@ -214,4 +214,8 @@ function SidebarNavItem({
       <span className="truncate">{item.title}</span>
     </Link>
   );
+}
+
+function isActivePath(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
