@@ -3,10 +3,10 @@
 import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  ChevronDown
+  ChevronDown,
+  Calendar
 } from "lucide-react";
-
-import { Search, Calendar } from "@/assets/icons";
+import { Search } from "@/assets/icons";
 
 export default function MyTracks() {
   const router = useRouter();

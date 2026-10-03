@@ -7,12 +7,11 @@ import {
   ChevronDown,
   FileText,
   Plus,
+  Calendar
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
-
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Search, Calendar } from "@/assets/icons";
+import { Search } from "@/assets/icons";
 
 export default function Content() {
   const router = useRouter();
@@ -104,7 +103,7 @@ interface EmptyStateProps {
   description: string;
   buttonLabel: string;
   onAction?: () => void;
-  icon?: LucideIcon;
+  icon?: React.ElementType;
 }
 
 function EmptyState({

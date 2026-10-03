@@ -6,11 +6,12 @@ import {
   ChevronDown,
   FileText,
   Plus,
+  Calendar,
+  FileClock
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Search, Calendar } from "@/assets/icons";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Search } from "@/assets/icons";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,9 @@ export default function TrackDetails() {
     { name: "Remaining", value: data.inProgress + data.notStarted, color: "#E6F2F3" },
   ];
 
+  const triggerClassName =
+    "relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-900 data-[state=active]:bg-transparent data-[state=active]:text-neutral-900 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:opacity-0 data-[state=active]:after:opacity-100";
+
   return (
     <div className="flex flex-col bg-neutral-100 p-6 space-y-6">
       <div id="heading" className="flex flex-row w-full items-center justify-between">
@@ -76,37 +80,23 @@ export default function TrackDetails() {
       <div>
         <Tabs defaultValue="overview">
           <TabsList variant="line" className="h-auto gap-8 bg-transparent p-0 justify-start rounded-none">
-            <TabsTrigger
-              value="overview"
-              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-900 data-[state=active]:bg-transparent data-[state=active]:text-neutral-900 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:opacity-0 data-[state=active]:after:opacity-100"
-            >
+            <TabsTrigger value="overview" className={triggerClassName}>
               Overview
             </TabsTrigger>
-            <TabsTrigger
-              value="content"
-              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-900 data-[state=active]:bg-transparent data-[state=active]:text-neutral-900 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary-500 after:opacity-0 data-[state=active]:after:opacity-100"
-            >
+            <TabsTrigger value="content" className={triggerClassName}>
               Content
             </TabsTrigger>
-            <TabsTrigger
-              value="assignments"
-              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-900 data-[state=active]:bg-transparent data-[state=active]:text-neutral-900 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary-500 after:opacity-0 data-[state=active]:after:opacity-100"
-            >
+            <TabsTrigger value="assignments" className={triggerClassName}>
               Assignments
             </TabsTrigger>
-            <TabsTrigger
-              value="students"
-              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-900 data-[state=active]:bg-transparent data-[state=active]:text-neutral-900 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary-500 after:opacity-0 data-[state=active]:after:opacity-100"
-            >
+            <TabsTrigger value="students" className={triggerClassName}>
               Students
             </TabsTrigger>
-            <TabsTrigger
-              value="progress"
-              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-900 data-[state=active]:bg-transparent data-[state=active]:text-neutral-900 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary-500 after:opacity-0 data-[state=active]:after:opacity-100"
-            >
+            <TabsTrigger value="progress" className={triggerClassName}>
               Progress
             </TabsTrigger>
           </TabsList>
+
           <TabsContent value="overview" className="mt-8">
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div className="w-full rounded-2xl border border-neutral-100 bg-white p-6 shadow-xs">
@@ -156,9 +146,10 @@ export default function TrackDetails() {
                   </div>
                 </div>
               </div>
+
               <div className="w-full rounded-2xl border border-neutral-100 bg-white p-6 shadow-xs">
                 <h3 className="mb-4 text-base font-semibold text-neutral-900">
-                  Track progress
+                  Upcoming tasks
                 </h3>
                 {upcomingItems && upcomingItems.length > 0 ? (
                   <div className="divide-y divide-neutral-200">
@@ -200,20 +191,11 @@ export default function TrackDetails() {
               </div>
             </div>
           </TabsContent>
-          <TabsContent value="content" className="mt-4">
 
-          </TabsContent>
-
-          <TabsContent value="assignments" className="mt-4">
-
-          </TabsContent>
-          <TabsContent value="students" className="mt-4">
-
-          </TabsContent>
-
-          <TabsContent value="progress" className="mt-4">
-
-          </TabsContent>
+          <TabsContent value="content" className="mt-4" />
+          <TabsContent value="assignments" className="mt-4" />
+          <TabsContent value="students" className="mt-4" />
+          <TabsContent value="progress" className="mt-4" />
         </Tabs>
       </div>
     </div>

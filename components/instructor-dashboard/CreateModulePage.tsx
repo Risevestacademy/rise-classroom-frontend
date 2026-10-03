@@ -1,11 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Calendar } from "lucide-react";
 
-import { Calendar } from "@/assets/icons";
 import { Field } from "@base-ui/react/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +15,8 @@ export const createModuleSchema = z.object({
   name: z.string().min(1, "Module Name is required."),
   description: z.string().min(1, "Module Description is required."),
   objective: z.string().optional(),
-  numberOfLessons: z.coerce
-    .number({ invalid_type_error: "Number of Lessons is required" })
+  numberOfLessons: z
+    .number({ message: "Number of Lessons is required" })
     .int("Lessons must be a whole number")
     .positive("Lessons must be greater than 0")
     .min(1, "Number of Lessons is required"),
@@ -36,10 +35,11 @@ export function CreateModulePage() {
       name: "",
       description: "",
       objective: "",
+      numberOfLessons: 1,
     },
   });
 
-  const onSubmit = async (data: CreateModuleFormValues) => {
+  const onSubmit: SubmitHandler<CreateModuleFormValues> = async (data) => {
     console.log("Form Submitted:", data);
   };
 
@@ -65,10 +65,9 @@ export function CreateModulePage() {
         <Field.Root className="flex flex-col gap-1.5" invalid={Boolean(errors.name)}>
           <label className="text-sm font-medium text-neutral-800">
             Module name <span className="text-red-500">*</span>
-            </label>
+          </label>
           <Input
             {...register("name")}
-            type="text"
             disabled={isSubmitting}
             placeholder="User Research"
           />
@@ -78,7 +77,7 @@ export function CreateModulePage() {
         <Field.Root className="flex flex-col gap-1.5" invalid={Boolean(errors.description)}>
           <label className="text-sm font-medium text-neutral-800">
             Description <span className="text-red-500">*</span>
-            </label>
+          </label>
           <Textarea
             {...register("description")}
             disabled={isSubmitting}
@@ -96,7 +95,6 @@ export function CreateModulePage() {
           </label>
           <Input
             {...register("objective")}
-            type="text"
             disabled={isSubmitting}
             placeholder="Learn conducting primary qualitative research"
           />
@@ -111,10 +109,9 @@ export function CreateModulePage() {
         >
           <label className="text-sm font-medium text-neutral-800">
             Number of lessons <span className="text-red-500">*</span>
-            </label>
+          </label>
           <Input
-            {...register("numberOfLessons")}
-            type="number"
+            {...register("numberOfLessons", { valueAsNumber: true })}
             disabled={isSubmitting}
             placeholder="5"
           />
