@@ -103,21 +103,21 @@ export default function StudentsPage() {
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         {studentsQuery.isError ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-            <Users className="h-12 w-12 text-neutral-300" />
-            <p className="font-semibold text-neutral-900">
+            <Users className="h-12 w-12 text-neutral-200" />
+            <p className="font-semibold text-neutral-800">
               Couldn&apos;t load students
             </p>
-            <p className="max-w-80 text-sm text-neutral-500">
+            <p className="max-w-80 text-sm text-neutral-400">
               {studentsQuery.error.message}
             </p>
           </div>
         ) : showEmptyState ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-            <Users className="h-14 w-14 text-primary-500" strokeWidth={1.5} />
-            <p className="text-xl font-semibold text-neutral-900">
+            <Users className="h-14 w-14 text-brand-primary" strokeWidth={1.5} />
+            <p className="text-xl font-semibold text-neutral-800">
               No students yet
             </p>
-            <p className="max-w-80 text-sm text-neutral-500">
+            <p className="max-w-80 text-sm text-neutral-400">
               Students will appear here once they&apos;ve been invited to your
               program
             </p>
@@ -129,17 +129,17 @@ export default function StudentsPage() {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-neutral-900">
+                <h1 className="text-2xl font-bold text-neutral-800">
                   Students
                 </h1>
-                <p className="mt-1 text-sm text-neutral-500">
+                <p className="mt-1 text-sm text-neutral-400">
                   Manage students across your program
                 </p>
               </div>
               <InviteStudentDialog />
             </div>
 
-            <div className="rounded-xl border border-neutral-300 bg-white">
+            <div className="rounded-xl border border-neutral-200 bg-white">
               <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   {studentsQuery.isPending ? (
@@ -149,10 +149,10 @@ export default function StudentsPage() {
                     </>
                   ) : (
                     <>
-                      <p className="text-lg font-semibold text-neutral-900">
+                      <p className="text-lg font-semibold text-neutral-800">
                         {total} student{total === 1 ? "" : "s"}
                       </p>
-                      <p className="text-sm text-neutral-500">
+                      <p className="text-sm text-neutral-400">
                         {activeQuery.data ?? 0} Active ·{" "}
                         {pendingQuery.data ?? 0} Pending
                       </p>
@@ -161,7 +161,7 @@ export default function StudentsPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-neutral-400 sm:flex-none">
+                  <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-neutral-200 px-3 text-neutral-300 sm:flex-none">
                     <Search className="h-4 w-4 shrink-0" />
                     <input
                       type="search"
@@ -172,12 +172,12 @@ export default function StudentsPage() {
                         setPage(1);
                       }}
                       placeholder="Search by name or email"
-                      className="w-full min-w-0 bg-transparent text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none sm:w-56"
+                      className="w-full min-w-0 bg-transparent text-sm text-neutral-800 placeholder:text-neutral-300 focus:outline-none sm:w-56"
                     />
                   </div>
                   <button
                     type="button"
-                    className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-500"
+                    className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-neutral-200 px-3 text-sm font-medium text-neutral-400"
                   >
                     <Filter className="h-4 w-4" />
                     <span className="hidden sm:inline">Filter</span>
@@ -187,7 +187,7 @@ export default function StudentsPage() {
 
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead className="bg-neutral-200 text-xs tracking-wider text-neutral-700 uppercase">
+                  <thead className="bg-neutral-100 text-xs tracking-wider text-neutral-600 uppercase">
                     <tr>
                       <th className="w-12 px-5 py-3">
                         <Checkbox
@@ -210,7 +210,7 @@ export default function StudentsPage() {
                   <tbody>
                     {studentsQuery.isPending ? (
                       Array.from({ length: 5 }).map((_, index) => (
-                        <tr key={index} className="border-t border-neutral-200">
+                        <tr key={index} className="border-t border-neutral-100">
                           <td className="px-5 py-4">
                             <Skeleton className="h-4 w-4" />
                           </td>
@@ -241,10 +241,10 @@ export default function StudentsPage() {
                         </tr>
                       ))
                     ) : students.length === 0 ? (
-                      <tr className="border-t border-neutral-200">
+                      <tr className="border-t border-neutral-100">
                         <td
                           colSpan={7}
-                          className="px-5 py-10 text-center text-sm text-neutral-500"
+                          className="px-5 py-10 text-center text-sm text-neutral-400"
                         >
                           No students match &ldquo;{debouncedSearch}&rdquo;.
                         </td>
@@ -260,7 +260,7 @@ export default function StudentsPage() {
                           <tr
                             key={student.id}
                             onClick={() => router.push(href)}
-                            className="cursor-pointer border-t border-neutral-200 hover:bg-neutral-100"
+                            className="cursor-pointer border-t border-neutral-100 hover:bg-neutral-50"
                           >
                             <td
                               className="px-5 py-4"
@@ -282,20 +282,20 @@ export default function StudentsPage() {
                                   <Link
                                     href={href}
                                     onClick={(event) => event.stopPropagation()}
-                                    className="font-medium text-neutral-900 hover:underline"
+                                    className="font-medium text-neutral-800 hover:underline"
                                   >
                                     {name}
                                   </Link>
-                                  <p className="text-neutral-500">
+                                  <p className="text-neutral-400">
                                     {student.email}
                                   </p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-5 py-4 text-neutral-700">
+                            <td className="px-5 py-4 text-neutral-600">
                               {tracks.join(", ") || "—"}
                             </td>
-                            <td className="px-5 py-4 text-neutral-700">
+                            <td className="px-5 py-4 text-neutral-600">
                               {cohorts.join(", ") || "—"}
                             </td>
                             <td className="px-5 py-4">
@@ -303,7 +303,7 @@ export default function StudentsPage() {
                                 {status.label}
                               </Badge>
                             </td>
-                            <td className="px-5 py-4 text-neutral-700">
+                            <td className="px-5 py-4 text-neutral-600">
                               {formatJoined(student)}
                             </td>
                             <td
@@ -313,7 +313,7 @@ export default function StudentsPage() {
                               <button
                                 type="button"
                                 aria-label="Row actions"
-                                className="text-neutral-500 hover:text-neutral-700"
+                                className="text-neutral-400 hover:text-neutral-600"
                               >
                                 <MoreHorizontal className="h-4 w-4" />
                               </button>
@@ -327,8 +327,8 @@ export default function StudentsPage() {
               </div>
 
               {totalPages > 1 && (
-                <div className="flex items-center justify-between gap-4 border-t border-neutral-200 p-5">
-                  <p className="text-sm text-neutral-500">
+                <div className="flex items-center justify-between gap-4 border-t border-neutral-100 p-5">
+                  <p className="text-sm text-neutral-400">
                     Page {page} of {totalPages}
                   </p>
                   <div className="flex items-center gap-2">
@@ -336,7 +336,7 @@ export default function StudentsPage() {
                       type="button"
                       onClick={() => setPage((current) => current - 1)}
                       disabled={page <= 1 || studentsQuery.isFetching}
-                      className="flex h-9 items-center gap-1 rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-700 disabled:opacity-40"
+                      className="flex h-9 items-center gap-1 rounded-lg border border-neutral-200 px-3 text-sm font-medium text-neutral-600 disabled:opacity-40"
                     >
                       <ChevronLeft className="h-4 w-4" />
                       Previous
@@ -345,7 +345,7 @@ export default function StudentsPage() {
                       type="button"
                       onClick={() => setPage((current) => current + 1)}
                       disabled={page >= totalPages || studentsQuery.isFetching}
-                      className="flex h-9 items-center gap-1 rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-700 disabled:opacity-40"
+                      className="flex h-9 items-center gap-1 rounded-lg border border-neutral-200 px-3 text-sm font-medium text-neutral-600 disabled:opacity-40"
                     >
                       Next
                       <ChevronRight className="h-4 w-4" />

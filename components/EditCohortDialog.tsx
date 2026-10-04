@@ -61,7 +61,7 @@ export function EditCohortDialog({
         type="button"
         aria-label={`Edit ${cohortName}`}
         onClick={() => setOpen(true)}
-        className="text-neutral-400 hover:text-neutral-700"
+        className="text-neutral-300 hover:text-neutral-600"
       >
         <Pencil className="h-4 w-4" />
       </button>

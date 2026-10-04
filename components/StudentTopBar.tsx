@@ -11,12 +11,12 @@ export function StudentTopBar() {
   const { setOpen } = useStudentNav();
 
   return (
-    <header className="flex h-16 items-center gap-3 border-b border-neutral-300 bg-white px-4 lg:hidden">
+    <header className="flex h-16 items-center gap-3 border-b border-neutral-200 bg-white px-4 lg:hidden">
       <button
         type="button"
         aria-label="Open menu"
         onClick={() => setOpen(true)}
-        className="text-neutral-500 hover:text-neutral-700"
+        className="text-neutral-400 hover:text-neutral-600"
       >
         <Menu className="h-5 w-5" />
       </button>

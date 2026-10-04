@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
 
 const avatarColors = [
-  "bg-semantic-surface-warning-badge text-semantic-text-warning",
-  "bg-semantic-surface-info-badge text-semantic-text-info",
-  "bg-semantic-surface-success-badge text-semantic-text-success",
-  "bg-primary-50 text-primary-500",
+  "bg-surface-warning-badge text-text-warning",
+  "bg-surface-info-badge text-text-info",
+  "bg-surface-success-badge text-text-success",
+  "bg-surface-brand text-brand-primary",
 ];
 
 function getInitials(name: string) {

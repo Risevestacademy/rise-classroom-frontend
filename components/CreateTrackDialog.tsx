@@ -33,7 +33,7 @@ function ErrorNote({ children }: { children: React.ReactNode }) {
   return (
     <p
       role="alert"
-      className="mt-4 flex items-start gap-2 rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+      className="mt-4 flex items-start gap-2 rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
     >
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
       <span>{children}</span>
@@ -207,17 +207,17 @@ function ReviewStep({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mt-6 rounded-xl border border-neutral-300 p-5">
-        <div className="flex items-center gap-3 border-b border-neutral-200 pb-4">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 text-primary-500">
+      <div className="mt-6 rounded-xl border border-neutral-200 p-5">
+        <div className="flex items-center gap-3 border-b border-neutral-100 pb-4">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-brand text-brand-primary">
             <Hash className="h-5 w-5" />
           </span>
-          <p className="truncate font-semibold text-neutral-900">{name}</p>
+          <p className="truncate font-semibold text-neutral-800">{name}</p>
         </div>
 
         <div className="pt-4 text-sm">
-          <span className="text-neutral-500">Description:</span>
-          <p className="mt-1 text-neutral-900">
+          <span className="text-neutral-400">Description:</span>
+          <p className="mt-1 text-neutral-800">
             {description.trim() || "No description added."}
           </p>
         </div>
@@ -253,13 +253,13 @@ function SuccessStep({
 }) {
   return (
     <div className="flex flex-col items-center py-4 text-center">
-      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-semantic-surface-success-badge">
-        <CheckCircle2 className="h-10 w-10 text-semantic-text-success" />
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-surface-success-badge">
+        <CheckCircle2 className="h-10 w-10 text-text-success" />
       </span>
-      <h2 className="mt-6 text-xl font-bold text-neutral-900">
+      <h2 className="mt-6 text-xl font-bold text-neutral-800">
         Track created successfully
       </h2>
-      <p className="mt-2 max-w-sm text-sm text-neutral-500">
+      <p className="mt-2 max-w-sm text-sm text-neutral-400">
         The {name} track has been added to your program.
       </p>
 

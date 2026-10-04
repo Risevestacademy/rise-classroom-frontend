@@ -13,17 +13,17 @@ export type Rgb = readonly [number, number, number];
 
 /** Mirrors the tokens in app/globals.css — canvas can't read Tailwind classes. */
 export const PALETTE = {
-  ink: "#111819", // neutral-900
-  muted: "#647274", // neutral-500
-  faint: "#CBD5D6", // neutral-400
+  ink: "#111819", // neutral-700
+  muted: "#647274", // neutral-300
+  faint: "#CBD5D6", // neutral-200
   white: "#FFFFFF",
-  teal: [13, 109, 120] as Rgb, // primary-500
-  tint50: [231, 240, 242] as Rgb, // primary-50
-  tint100: [180, 210, 213] as Rgb, // primary-100
-  tint200: [144, 188, 193] as Rgb, // primary-200
-  tint300: [93, 157, 165] as Rgb, // primary-300
-  success: [4, 120, 87] as Rgb, // success-500
-  warning: [180, 83, 9] as Rgb, // warning-500
+  teal: [13, 109, 120] as Rgb, // brand-primary
+  tint50: [232, 245, 246] as Rgb, // surface-brand
+  tint100: [180, 210, 213] as Rgb, // decorative tint (not a design token)
+  tint200: [144, 188, 193] as Rgb, // decorative tint (not a design token)
+  tint300: [93, 157, 165] as Rgb, // decorative tint (not a design token)
+  success: [46, 125, 50] as Rgb, // icon-success
+  warning: [138, 97, 0] as Rgb, // icon-warning
 };
 
 export type Rect = { x: number; y: number; w: number; h: number };

@@ -29,7 +29,7 @@ export function CircularProgress({
           strokeWidth={strokeWidth}
           fill="none"
           stroke="currentColor"
-          className={cn("text-neutral-200", trackClassName)}
+          className={cn("text-neutral-100", trackClassName)}
         />
         <circle
           cx={size / 2}
@@ -41,7 +41,7 @@ export function CircularProgress({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className={cn("text-primary-500", progressClassName)}
+          className={cn("text-brand-primary", progressClassName)}
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">

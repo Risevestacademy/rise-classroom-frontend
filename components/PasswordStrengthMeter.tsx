@@ -22,13 +22,13 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
               "h-1 flex-1 rounded-full transition-colors",
               index < filledSegments
                 ? strength && passwordStrengthMeta[strength].barColor
-                : "bg-neutral-300"
+                : "bg-neutral-200"
             )}
           />
         ))}
       </div>
 
-      <p className="mt-1.5 text-xs text-neutral-600">
+      <p className="mt-1.5 text-xs text-neutral-500">
         {strength
           ? passwordStrengthMeta[strength].label
           : "Must contain at least;"}
@@ -43,8 +43,8 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
             >
               <span
                 className={cn(
-                  "flex size-3.5 shrink-0 items-center justify-center rounded-full text-neutral-50",
-                  met ? "bg-semantic-text-success" : "bg-neutral-300"
+                  "flex size-3.5 shrink-0 items-center justify-center rounded-full text-neutral-0",
+                  met ? "bg-text-success" : "bg-neutral-200"
                 )}
               >
                 {met ? (
@@ -53,7 +53,7 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
                   <X className="size-2.5" strokeWidth={3} />
                 )}
               </span>
-              <span className={met ? "text-neutral-700" : "text-neutral-500"}>
+              <span className={met ? "text-neutral-600" : "text-neutral-400"}>
                 {requirement.label}
               </span>
             </li>

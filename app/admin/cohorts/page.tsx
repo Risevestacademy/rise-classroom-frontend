@@ -55,21 +55,21 @@ export default function CohortsPage() {
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         {cohortsQuery.isError ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-            <Layers className="h-12 w-12 text-neutral-300" />
-            <p className="font-semibold text-neutral-900">
+            <Layers className="h-12 w-12 text-neutral-200" />
+            <p className="font-semibold text-neutral-800">
               Couldn&apos;t load cohorts
             </p>
-            <p className="max-w-80 text-sm text-neutral-500">
+            <p className="max-w-80 text-sm text-neutral-400">
               {cohortsQuery.error.message}
             </p>
           </div>
         ) : showEmptyState ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-            <Layers className="h-12 w-12 text-neutral-300" />
-            <p className="font-semibold text-neutral-900">
+            <Layers className="h-12 w-12 text-neutral-200" />
+            <p className="font-semibold text-neutral-800">
               No cohorts created yet.
             </p>
-            <p className="max-w-80 text-sm text-neutral-500">
+            <p className="max-w-80 text-sm text-neutral-400">
               A cohort is a group of students and instructors who go through the
               program together. Create your first cohort to start inviting
               people.
@@ -82,8 +82,8 @@ export default function CohortsPage() {
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-neutral-900">Cohorts</h1>
-                <p className="mt-1 text-sm text-neutral-500">
+                <h1 className="text-2xl font-bold text-neutral-800">Cohorts</h1>
+                <p className="mt-1 text-sm text-neutral-400">
                   Create and manage cohorts. Each cohort groups the students and
                   instructors taking the program over the same period.
                 </p>
@@ -91,8 +91,8 @@ export default function CohortsPage() {
               <CreateCohortDialog />
             </div>
 
-            <div className="rounded-xl border border-neutral-300 bg-white">
-              <div className="flex flex-col gap-4 border-b border-neutral-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-xl border border-neutral-200 bg-white">
+              <div className="flex flex-col gap-4 border-b border-neutral-100 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   {allCohortsQuery.isPending ? (
                     <>
@@ -101,11 +101,11 @@ export default function CohortsPage() {
                     </>
                   ) : (
                     <>
-                      <p className="font-semibold text-neutral-900">
+                      <p className="font-semibold text-neutral-800">
                         {allCohorts.length} Cohort
                         {allCohorts.length === 1 ? "" : "s"}
                       </p>
-                      <p className="text-sm text-neutral-500">
+                      <p className="text-sm text-neutral-400">
                         {countWithStatus("ONGOING")} Ongoing ·{" "}
                         {countWithStatus("COMPLETED")} Completed ·{" "}
                         {countWithStatus("TERMINATED")} Terminated
@@ -124,7 +124,7 @@ export default function CohortsPage() {
                           CohortStatus | undefined,
                       )
                     }
-                    className="h-10 w-full appearance-none rounded-lg border border-neutral-300 bg-transparent py-2 pr-9 pl-3 text-sm font-medium text-neutral-700 outline-none focus:border-primary-500 sm:w-44"
+                    className="h-10 w-full appearance-none rounded-lg border border-neutral-200 bg-transparent py-2 pr-9 pl-3 text-sm font-medium text-neutral-600 outline-none focus:border-brand-primary sm:w-44"
                   >
                     {statusFilters.map((option) => (
                       <option key={option.label} value={option.value ?? ""}>
@@ -132,13 +132,13 @@ export default function CohortsPage() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                 </div>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[720px] text-left text-sm">
-                  <thead className="text-xs tracking-wider text-neutral-500 uppercase">
+                  <thead className="text-xs tracking-wider text-neutral-400 uppercase">
                     <tr>
                       <th className="px-5 py-3">Cohort</th>
                       <th className="px-5 py-3">Duration</th>
@@ -150,7 +150,7 @@ export default function CohortsPage() {
                   <tbody>
                     {cohortsQuery.isPending ? (
                       Array.from({ length: 5 }).map((_, index) => (
-                        <tr key={index} className="border-t border-neutral-200">
+                        <tr key={index} className="border-t border-neutral-100">
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
                               <Skeleton className="h-9 w-9 rounded-full" />
@@ -175,10 +175,10 @@ export default function CohortsPage() {
                         </tr>
                       ))
                     ) : cohorts.length === 0 ? (
-                      <tr className="border-t border-neutral-200">
+                      <tr className="border-t border-neutral-100">
                         <td
                           colSpan={5}
-                          className="px-5 py-10 text-center text-sm text-neutral-500"
+                          className="px-5 py-10 text-center text-sm text-neutral-400"
                         >
                           No cohorts match this filter.
                         </td>
@@ -187,24 +187,24 @@ export default function CohortsPage() {
                       cohorts.map((cohort) => (
                         <tr
                           key={cohort.id}
-                          className="border-t border-neutral-200"
+                          className="border-t border-neutral-100"
                         >
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-500">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-brand text-brand-primary">
                                 <Layers className="h-4 w-4" />
                               </span>
                               <div className="min-w-0">
-                                <p className="font-medium text-neutral-900">
+                                <p className="font-medium text-neutral-800">
                                   {cohort.name}
                                 </p>
-                                <p className="text-xs text-neutral-500">
+                                <p className="text-xs text-neutral-400">
                                   Year {cohort.year}
                                 </p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-5 py-4 text-neutral-700">
+                          <td className="px-5 py-4 text-neutral-600">
                             {formatCohortDate(cohort.startDate)} –{" "}
                             {formatCohortDate(cohort.endDate)}
                           </td>
@@ -213,7 +213,7 @@ export default function CohortsPage() {
                               {cohortStatusLabels[cohort.status]}
                             </Badge>
                           </td>
-                          <td className="px-5 py-4 text-neutral-500">
+                          <td className="px-5 py-4 text-neutral-400">
                             {formatCreatedDate(cohort.createdAt)}
                           </td>
                           <td className="px-5 py-4">

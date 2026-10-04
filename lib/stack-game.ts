@@ -16,6 +16,12 @@ export const GRADUATION_WEEK = 52;
 /** Close enough to count as a clean drop, in pixels. */
 export const PERFECT_TOLERANCE = 4;
 
+/**
+ * Anything narrower than this is a miss. Otherwise just clipping the edge
+ * leaves a sliver too thin to see or land on, and the run carries on with it.
+ */
+export const MIN_OVERLAP = 8;
+
 export function resolveDrop(
   below: Slab,
   moving: Slab,
@@ -29,7 +35,7 @@ export function resolveDrop(
   const right = Math.min(below.x + below.width, moving.x + moving.width);
   const overlap = right - left;
 
-  if (overlap <= 0) return { kind: "miss" };
+  if (overlap < MIN_OVERLAP) return { kind: "miss" };
 
   const offcut =
     moving.x < below.x

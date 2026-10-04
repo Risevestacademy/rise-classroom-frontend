@@ -22,12 +22,12 @@ function TextareaWrapper({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-lg text-neutral-900 border border-neutral-300 bg-transparent transition-colors",
-        "has-[textarea:placeholder-shown]:border-neutral-300 has-[textarea:placeholder-shown]:text-neutral-500",
-        "hover:bg-neutral-200",
-        "has-[textarea:focus]:border-primary-500",
-        "has-[[data-disabled]]:border-neutral-300 has-[[data-disabled]]:bg-transparent has-[[data-disabled]]:text-interactive-destructive-disabled-text/30",
-        "has-[[data-invalid]]:border-semantic-border-error has-[[data-invalid]]:bg-transparent has-[[data-invalid]]:text-semantic-text-error",
+        "flex flex-col rounded-lg text-neutral-800 border border-neutral-200 bg-transparent transition-colors",
+        "has-[textarea:placeholder-shown]:border-neutral-200 has-[textarea:placeholder-shown]:text-neutral-400",
+        "hover:bg-neutral-100",
+        "has-[textarea:focus]:border-brand-primary",
+        "has-[[data-disabled]]:border-neutral-200 has-[[data-disabled]]:bg-transparent has-[[data-disabled]]:text-text-disabled/30",
+        "has-[[data-invalid]]:border-border-error has-[[data-invalid]]:bg-transparent has-[[data-invalid]]:text-text-error",
         className
       )}
       {...props}
@@ -61,7 +61,7 @@ function Textarea({
         className={cn(
           "min-h-16 w-full resize-y p-3 outline-none",
           "text-base md:text-sm",
-          "placeholder:text-neutral-500",
+          "placeholder:text-neutral-400",
           "disabled:cursor-not-allowed",
           className
         )}
@@ -73,7 +73,7 @@ function Textarea({
       />
 
       {showCount && maxLength !== undefined && (
-        <span className="self-end px-3 pb-2 text-xs text-neutral-500">
+        <span className="self-end px-3 pb-2 text-xs text-neutral-400">
           {currentLength}/{maxLength}
         </span>
       )}

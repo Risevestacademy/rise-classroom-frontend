@@ -11,15 +11,15 @@ export default function OnboardingInvitePage() {
 
   return (
     <AuthShell>
-      <h1 className="text-xl font-bold text-neutral-900">
+      <h1 className="text-xl font-bold text-neutral-800">
         Hi {details.firstName}, you&apos;ve been invited to Rise Classroom
         {isInstructor ? " as an instructor" : ""}
       </h1>
 
-      <div className="h-[350px] w-full rounded-2xl bg-[#e8f5f6]" />
+      <div className="h-[350px] w-full rounded-2xl bg-surface-brand" />
 
       <div className="flex flex-col gap-6">
-        <p className="text-lg font-semibold text-neutral-900">
+        <p className="text-lg font-semibold text-neutral-800">
           Your account is almost ready. Let&apos;s get you set up.
         </p>
 
