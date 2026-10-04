@@ -53,8 +53,8 @@ export default function CreateAccountPage() {
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Create your account</h1>
-        <p className="mt-1 text-sm text-neutral-600">
+        <h1 className="text-2xl font-bold text-neutral-800">Create your account</h1>
+        <p className="mt-1 text-sm text-neutral-500">
           {isInstructor
             ? "Set up your account to get started with Rise Classroom."
             : "Set up your account to start your learning journey with Rise Classroom"}
@@ -63,13 +63,13 @@ export default function CreateAccountPage() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <Field.Root className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-neutral-800">Email Address</label>
+          <label className="text-sm font-medium text-neutral-700">Email Address</label>
           <Input type="email" value={details.email} disabled readOnly />
           <Hint>Pre-filled from the invitation and not editable</Hint>
         </Field.Root>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="password" className="text-sm font-medium text-neutral-800">
+          <label htmlFor="password" className="text-sm font-medium text-neutral-700">
             Password
           </label>
           <Input
@@ -93,7 +93,7 @@ export default function CreateAccountPage() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="confirm-password" className="text-sm font-medium text-neutral-800">
+          <label htmlFor="confirm-password" className="text-sm font-medium text-neutral-700">
             Confirm Password
           </label>
           <Input
@@ -113,11 +113,11 @@ export default function CreateAccountPage() {
             }
           />
           {confirmPassword.length > 0 && !passwordsMatch && (
-            <p className="text-xs text-semantic-text-error">Passwords don&apos;t match.</p>
+            <p className="text-xs text-text-error">Passwords don&apos;t match.</p>
           )}
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-neutral-700">
+        <label className="flex items-center gap-2 text-sm text-neutral-600">
           <Checkbox checked={agreed} onCheckedChange={setAgreed} />
           I agree to the Terms of Use and Privacy Policy
         </label>
@@ -132,9 +132,9 @@ export default function CreateAccountPage() {
           Create Account
         </Button>
 
-        <p className="text-center text-sm text-neutral-600">
+        <p className="text-center text-sm text-neutral-500">
           Already have an account?{" "}
-          <Link href="/sign-in" className="font-medium text-primary-500 hover:underline">
+          <Link href="/sign-in" className="font-medium text-brand-primary hover:underline">
             Sign in
           </Link>
         </p>

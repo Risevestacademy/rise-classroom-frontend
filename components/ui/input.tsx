@@ -67,12 +67,12 @@ function InputWrapper({
     <div
       className={cn(
         sizeVariant[size],
-        "flex items-center rounded-lg text-neutral-900 border border-neutral-300 bg-transparent transition-colors",
-        "has-[input:placeholder-shown]:border-neutral-300 has-[input:placeholder-shown]:text-neutral-500",
-        "hover:bg-neutral-200",
-        "has-[input:focus]:border-primary-500",
-        "has-[[data-disabled]]:border-neutral-300 has-[[data-disabled]]:bg-transparent has-[[data-disabled]]:text-interactive-destructive-disabled-text/30",
-        "has-[[data-invalid]]:border-semantic-border-error has-[[data-invalid]]:bg-transparent has-[[data-invalid]]:text-semantic-text-error",
+        "flex items-center rounded-lg text-neutral-800 border border-neutral-200 bg-transparent transition-colors",
+        "has-[input:placeholder-shown]:border-neutral-200 has-[input:placeholder-shown]:text-neutral-400",
+        "hover:bg-neutral-100",
+        "has-[input:focus]:border-brand-primary",
+        "has-[[data-disabled]]:border-neutral-200 has-[[data-disabled]]:bg-transparent has-[[data-disabled]]:text-text-disabled/30",
+        "has-[[data-invalid]]:border-border-error has-[[data-invalid]]:bg-transparent has-[[data-invalid]]:text-text-error",
         className
       )}
       {...props}

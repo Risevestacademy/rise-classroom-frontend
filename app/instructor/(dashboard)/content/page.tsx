@@ -18,29 +18,29 @@ export default function Content() {
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-col bg-neutral-100 p-6 space-y-6">
+    <div className="flex flex-col bg-neutral-50 p-6 space-y-6">
       <div id="heading" className="flex flex-row w-full items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-neutral-800 tracking-tight">
             Content
           </h1>
-          <p className="text-sm text-neutral-500 mt-0.5">
+          <p className="text-sm text-neutral-400 mt-0.5">
             Manage your modules, lessons and resources
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-xs hover:bg-neutral-200">
-          <Calendar className="h-3.5 w-3.5 text-neutral-500" />
+        <button className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-0 px-3 py-1.5 text-xs font-medium text-neutral-600 shadow-xs hover:bg-neutral-100">
+          <Calendar className="h-3.5 w-3.5 text-neutral-400" />
           <span>This week</span>
-          <ChevronDown className="h-3.5 w-3.5 text-neutral-400" />
+          <ChevronDown className="h-3.5 w-3.5 text-neutral-300" />
         </button>
       </div>
 
-      <div className=" flex flex-row h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-neutral-400 md:flex md:w-48 lg:w-64">
+      <div className=" flex flex-row h-10 items-center gap-2 rounded-lg border border-neutral-200 px-3 text-neutral-300 md:flex md:w-48 lg:w-64">
         <Search />
         <input
           type="search"
           placeholder="Search tracks"
-          className="w-full bg-transparent text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+          className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-300 focus:outline-none"
         />
       </div>
 
@@ -49,19 +49,19 @@ export default function Content() {
           <TabsList variant="line" className="h-auto gap-8 bg-transparent p-0 justify-start rounded-none">
             <TabsTrigger
               value="modules"
-              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-900 data-[state=active]:bg-transparent data-[state=active]:text-neutral-900 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:opacity-0 data-[state=active]:after:opacity-100"
+              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-400 shadow-none transition-none hover:text-neutral-800 data-[state=active]:bg-transparent data-[state=active]:text-neutral-800 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-primary after:opacity-0 data-[state=active]:after:opacity-100"
             >
               Modules
             </TabsTrigger>
             <TabsTrigger
               value="lessons"
-              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-900 data-[state=active]:bg-transparent data-[state=active]:text-neutral-900 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary-500 after:opacity-0 data-[state=active]:after:opacity-100"
+              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-400 shadow-none transition-none hover:text-neutral-800 data-[state=active]:bg-transparent data-[state=active]:text-neutral-800 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand-primary after:opacity-0 data-[state=active]:after:opacity-100"
             >
               Lessons
             </TabsTrigger>
             <TabsTrigger
               value="resources"
-              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-900 data-[state=active]:bg-transparent data-[state=active]:text-neutral-900 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary-500 after:opacity-0 data-[state=active]:after:opacity-100"
+              className="relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-400 shadow-none transition-none hover:text-neutral-800 data-[state=active]:bg-transparent data-[state=active]:text-neutral-800 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand-primary after:opacity-0 data-[state=active]:after:opacity-100"
             >
               Resources
             </TabsTrigger>
@@ -116,13 +116,13 @@ function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-2xl bg-white shadow-xs">
-        <Icon className="h-10 w-10 text-primary-500" />
+        <Icon className="h-10 w-10 text-brand-primary" />
       </div>
-      <h3 className="text-base font-bold text-neutral-900">{title}</h3>
-      <p className="mt-1 max-w-xs text-xs text-neutral-500">{description}</p>
+      <h3 className="text-base font-bold text-neutral-800">{title}</h3>
+      <p className="mt-1 max-w-xs text-xs text-neutral-400">{description}</p>
       <Button
         onClick={onAction}
-        className="mt-6 gap-2 rounded-md bg-primary-500 px-5 text-xs text-neutral-50 hover:bg-primary-600 cursor-pointer"
+        className="mt-6 gap-2 rounded-md bg-brand-primary px-5 text-xs text-neutral-0 hover:bg-interactive-primary-hover cursor-pointer"
       >
         <Plus className="h-4 w-4" />
         <span>{buttonLabel}</span>

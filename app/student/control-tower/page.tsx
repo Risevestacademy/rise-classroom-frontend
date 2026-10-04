@@ -194,7 +194,7 @@ function ControlTower({
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         {/* Card chrome only from xl up; on mobile the content sits flat on the page. */}
-        <div className="xl:col-span-2 xl:rounded-xl xl:border xl:border-neutral-300 xl:bg-white xl:p-6">
+        <div className="xl:col-span-2 xl:rounded-xl xl:border xl:border-neutral-200 xl:bg-white xl:p-6">
           {view.name === "form" && (
             <FormView
               weekLabel={weekLabel}
@@ -231,24 +231,24 @@ function ControlTower({
 
         {/* Right-hand column is desktop only; mobile shows the status inline in FormView. */}
         <div className="hidden flex-col gap-6 xl:flex">
-          <div className="rounded-xl border border-neutral-300 bg-white p-5">
-            <p className="text-sm font-semibold text-neutral-900">
+          <div className="rounded-xl border border-neutral-200 bg-white p-5">
+            <p className="text-sm font-semibold text-neutral-800">
               This week · {weekLabel}
             </p>
-            <div className="mt-3 flex items-center gap-2 text-sm text-neutral-500">
+            <div className="mt-3 flex items-center gap-2 text-sm text-neutral-400">
               <Clock className="h-4 w-4" />
               {current && current.status !== "DRAFT"
                 ? `Week ${statusMeta[current.status].label.toLowerCase()}`
                 : `Week in progress · ${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}
             </div>
 
-            <div className="mt-4 h-2 w-full rounded-full bg-neutral-200">
+            <div className="mt-4 h-2 w-full rounded-full bg-neutral-100">
               <div
-                className="h-2 rounded-full bg-primary-500"
+                className="h-2 rounded-full bg-brand-primary"
                 style={{ width: `${(answeredCount / PROMPT_COUNT) * 100}%` }}
               />
             </div>
-            <p className="mt-2 text-xs text-neutral-500">
+            <p className="mt-2 text-xs text-neutral-400">
               {answeredCount} of {PROMPT_COUNT} prompts answered
             </p>
           </div>
@@ -264,24 +264,24 @@ function MentorCard({ mentor }: { mentor: ControlTowerMentor | null }) {
   const person = mentor ? mentorDisplay(mentor) : null;
 
   return (
-    <div className="rounded-xl border border-neutral-300 bg-white p-5">
-      <p className="text-sm font-semibold text-neutral-900">Your mentor</p>
+    <div className="rounded-xl border border-neutral-200 bg-white p-5">
+      <p className="text-sm font-semibold text-neutral-800">Your mentor</p>
       {person ? (
         <div className="mt-3 flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-50 text-sm font-semibold text-primary-500">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-brand text-sm font-semibold text-brand-primary">
             {person.initials}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-neutral-900">
+            <p className="truncate text-sm font-medium text-neutral-800">
               {person.name}
             </p>
             {person.email && (
-              <p className="truncate text-xs text-neutral-500">{person.email}</p>
+              <p className="truncate text-xs text-neutral-400">{person.email}</p>
             )}
           </div>
         </div>
       ) : (
-        <p className="mt-2 text-sm text-neutral-500">
+        <p className="mt-2 text-sm text-neutral-400">
           You haven&apos;t been paired with a mentor yet. You can still fill in
           your week — they&apos;ll see it once you&apos;re matched.
         </p>
@@ -329,15 +329,15 @@ function FormView({
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl">
+            <h1 className="text-xl font-bold text-neutral-800 sm:text-2xl">
               Control Tower
             </h1>
             {/* Mobile shows the week label (matches Figma); desktop shows the
                 description since the week label lives in the side card. */}
-            <p className="mt-0.5 text-sm text-neutral-500 xl:hidden">
+            <p className="mt-0.5 text-sm text-neutral-400 xl:hidden">
               This week · {weekLabel}
             </p>
-            <p className="mt-1 hidden text-sm text-neutral-500 xl:block">
+            <p className="mt-1 hidden text-sm text-neutral-400 xl:block">
               Set your goals, track your progress, and reflect on your week.
             </p>
           </div>
@@ -363,27 +363,27 @@ function FormView({
 
         {/* Mobile week status (desktop has the side card). */}
         <div className="flex flex-col items-start gap-2 xl:hidden">
-          <p className="text-sm text-neutral-700">
+          <p className="text-sm text-neutral-600">
             {locked ? "Week submitted" : "Week in progress"}
           </p>
           {!locked && (
-            <span className="rounded-full bg-[#FFF3D6] px-2.5 py-1 text-xs font-medium text-[#8A5A00]">
+            <span className="rounded-full bg-surface-warning-badge px-2.5 py-1 text-xs font-medium text-text-warning">
               {daysLeft} day{daysLeft === 1 ? "" : "s"} left
             </span>
           )}
         </div>
 
         {showHowItWorks && (
-          <div className="relative rounded-lg border border-neutral-300 bg-white p-4 pr-10 text-sm text-neutral-700">
+          <div className="relative rounded-lg border border-neutral-200 bg-white p-4 pr-10 text-sm text-neutral-600">
             <button
               type="button"
               aria-label="Close"
               onClick={() => setShowHowItWorks(false)}
-              className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-200"
+              className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100"
             >
               <X className="h-4 w-4" />
             </button>
-            <p className="font-semibold text-neutral-900">
+            <p className="font-semibold text-neutral-800">
               How Control Tower works
             </p>
             <p className="mt-1">
@@ -395,8 +395,8 @@ function FormView({
         )}
 
         {locked && current && (
-          <p className="flex items-start gap-2 rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-3 text-sm text-neutral-700">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-semantic-text-success" />
+          <p className="flex items-start gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-text-success" />
             {current.status === "SUBMITTED"
               ? "You've submitted this week. Your mentor will review it and add notes from your check-in."
               : "Your mentor has reviewed this week."}
@@ -406,7 +406,7 @@ function FormView({
         {saveError && (
           <p
             role="alert"
-            className="flex items-start gap-2 rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+            className="flex items-start gap-2 rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             {saveError}
@@ -483,7 +483,7 @@ function FormView({
       </Section>
 
       {!locked && (
-        <div className="flex flex-col gap-2 border-t border-neutral-200 pt-6">
+        <div className="flex flex-col gap-2 border-t border-neutral-100 pt-6">
           <Button
             size="lg"
             className="w-full rounded-full"
@@ -492,7 +492,7 @@ function FormView({
           >
             {isSaving ? "Submitting…" : "Submit week"}
           </Button>
-          <p className="text-center text-xs text-neutral-500">
+          <p className="text-center text-xs text-neutral-400">
             {canSubmit
               ? "Your mentor reviews it next — you won't be able to edit this week after submitting."
               : "Answer every prompt to submit your week."}
@@ -581,7 +581,7 @@ function HeaderMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-200/60"
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100/60"
       >
         <MoreVertical className="h-5 w-5" />
       </button>
@@ -589,13 +589,13 @@ function HeaderMenu({
       {open && (
         <div
           role="menu"
-          className="absolute top-full right-0 z-20 mt-2 w-64 rounded-2xl border border-neutral-200 bg-white p-2 shadow-lg"
+          className="absolute top-full right-0 z-20 mt-2 w-64 rounded-2xl border border-neutral-100 bg-white p-2 shadow-lg"
         >
           <button
             type="button"
             role="menuitem"
             onClick={() => choose(onViewHistory)}
-            className="w-full rounded-xl px-4 py-3 text-left text-sm text-neutral-900 hover:bg-neutral-200/60"
+            className="w-full rounded-xl px-4 py-3 text-left text-sm text-neutral-800 hover:bg-neutral-100/60"
           >
             View previous weeks
           </button>
@@ -603,7 +603,7 @@ function HeaderMenu({
             type="button"
             role="menuitem"
             onClick={() => choose(onHowItWorks)}
-            className="w-full rounded-xl px-4 py-3 text-left text-sm text-neutral-900 hover:bg-neutral-200/60"
+            className="w-full rounded-xl px-4 py-3 text-left text-sm text-neutral-800 hover:bg-neutral-100/60"
           >
             How Control Tower works
           </button>
@@ -629,15 +629,15 @@ function HistoryListView({
           type="button"
           aria-label="Back"
           onClick={onBack}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-200"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-neutral-900">
+          <h1 className="text-xl font-bold text-neutral-800">
             Previous weeks
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="mt-1 text-sm text-neutral-400">
             Review your goals, progress, mentor notes, and reflections from
             previous weeks.
           </p>
@@ -646,10 +646,10 @@ function HistoryListView({
 
       {history.length === 0 ? (
         <div className="flex flex-col items-center gap-1 py-16 text-center">
-          <p className="text-sm font-medium text-neutral-900">
+          <p className="text-sm font-medium text-neutral-800">
             No previous weeks yet
           </p>
-          <p className="max-w-xs text-sm text-neutral-500">
+          <p className="max-w-xs text-sm text-neutral-400">
             Weeks you&apos;ve filled in will appear here once they&apos;re over.
           </p>
         </div>
@@ -660,13 +660,13 @@ function HistoryListView({
               key={entry.id}
               type="button"
               onClick={() => onSelect(entry)}
-              className="flex items-center justify-between rounded-lg border border-neutral-300 px-4 py-3 text-left hover:bg-neutral-200/60"
+              className="flex items-center justify-between rounded-lg border border-neutral-200 px-4 py-3 text-left hover:bg-neutral-100/60"
             >
               <div>
-                <p className="text-sm font-medium text-neutral-900">
+                <p className="text-sm font-medium text-neutral-800">
                   Week of {formatWeekRange(entry.weekStart, entry.weekEnd)}
                 </p>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-400">
                   {countAnswered(toAnswers(entry))} of {PROMPT_COUNT} prompts
                   answered
                 </p>
@@ -696,13 +696,13 @@ function HistoryDetailView({
           type="button"
           aria-label="Back"
           onClick={onBack}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-200"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="flex flex-1 items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-neutral-900">
+            <p className="text-sm font-semibold text-neutral-800">
               Week of {formatWeekRange(entry.weekStart, entry.weekEnd)}
             </p>
           </div>
@@ -784,19 +784,19 @@ function HistoryDetailView({
 const statusMeta: Record<WeeklyMetricStatus, { label: string; className: string }> = {
   DRAFT: {
     label: "Missed",
-    className: "bg-[#FDECEA] text-semantic-text-error",
+    className: "bg-surface-error-badge text-text-error",
   },
   SUBMITTED: {
     label: "Submitted",
-    className: "bg-semantic-surface-info-badge text-semantic-text-info",
+    className: "bg-surface-info-badge text-text-info",
   },
   REVIEWED: {
     label: "Reviewed",
-    className: "bg-[#E8F5E9] text-semantic-text-success",
+    className: "bg-surface-success-badge text-text-success",
   },
   COMPLETED: {
     label: "Completed",
-    className: "bg-[#E8F5E9] text-semantic-text-success",
+    className: "bg-surface-success-badge text-text-success",
   },
 };
 
@@ -816,7 +816,7 @@ function StatusBadge({ status }: { status: WeeklyMetricStatus }) {
 function ControlTowerSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-      <div className="flex flex-col gap-6 xl:col-span-2 xl:rounded-xl xl:border xl:border-neutral-300 xl:bg-white xl:p-6">
+      <div className="flex flex-col gap-6 xl:col-span-2 xl:rounded-xl xl:border xl:border-neutral-200 xl:bg-white xl:p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-2">
             <Skeleton className="h-8 w-48" />
@@ -841,10 +841,10 @@ function ControlTowerSkeleton() {
 
 function ProblemPanel({ title, message }: { title: string; message: string }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-neutral-300 bg-white px-6 py-16 text-center">
-      <AlertCircle className="h-10 w-10 text-neutral-300" />
-      <p className="font-semibold text-neutral-900">{title}</p>
-      <p className="max-w-sm text-sm text-neutral-500">{message}</p>
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-neutral-200 bg-white px-6 py-16 text-center">
+      <AlertCircle className="h-10 w-10 text-neutral-200" />
+      <p className="font-semibold text-neutral-800">{title}</p>
+      <p className="max-w-sm text-sm text-neutral-400">{message}</p>
     </div>
   );
 }
@@ -857,8 +857,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border-t border-neutral-200 pt-6">
-      <p className="mb-4 text-sm font-semibold text-primary-500">{label}</p>
+    <div className="border-t border-neutral-100 pt-6">
+      <p className="mb-4 text-sm font-semibold text-brand-primary">{label}</p>
       <div className="flex flex-col gap-6">{children}</div>
     </div>
   );

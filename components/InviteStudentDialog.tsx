@@ -485,7 +485,7 @@ function ChoiceCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-start gap-3 rounded-xl border border-neutral-300 p-5 text-left hover:border-primary-500"
+      className="flex flex-col items-start gap-3 rounded-xl border border-neutral-200 p-5 text-left hover:border-brand-primary"
     >
       <span
         className={cn(
@@ -495,10 +495,10 @@ function ChoiceCard({
       >
         <Icon className="h-5 w-5" />
       </span>
-      <span className="font-semibold text-neutral-900">{title}</span>
-      <span className="flex w-full items-end justify-between gap-4 text-sm text-neutral-500">
+      <span className="font-semibold text-neutral-800">{title}</span>
+      <span className="flex w-full items-end justify-between gap-4 text-sm text-neutral-400">
         {description}
-        <ArrowRight className="h-4 w-4 shrink-0 text-neutral-900" />
+        <ArrowRight className="h-4 w-4 shrink-0 text-neutral-800" />
       </span>
     </button>
   );
@@ -523,14 +523,14 @@ function ChoiceStep({
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <ChoiceCard
           icon={UserPlus}
-          iconClassName="bg-semantic-surface-success-badge text-semantic-text-success"
+          iconClassName="bg-surface-success-badge text-text-success"
           title="Invite Individually"
           description="Add one student at a time"
           onClick={onSingle}
         />
         <ChoiceCard
           icon={Upload}
-          iconClassName="bg-semantic-surface-info-badge text-semantic-text-info"
+          iconClassName="bg-surface-info-badge text-text-info"
           title="Upload CSV"
           description="Invite multiple students at once"
           onClick={onBulk}
@@ -545,7 +545,7 @@ function ChoiceStep({
           height={150}
           className="h-auto w-56 sm:w-64"
         />
-        <p className="text-center text-sm text-neutral-500 sm:mb-6 sm:max-w-64 sm:text-left">
+        <p className="text-center text-sm text-neutral-400 sm:mb-6 sm:max-w-64 sm:text-left">
           Students will receive an email invitation to join Rise Classroom and
           complete their profile.
         </p>
@@ -651,16 +651,16 @@ function SimpleSelect({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-neutral-900">
+      <label htmlFor={id} className="text-sm font-medium text-neutral-800">
         {label}
-        <span className="text-semantic-text-error"> *</span>
+        <span className="text-text-error"> *</span>
       </label>
       <div className="relative">
         <select
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 w-full appearance-none rounded-lg border border-neutral-300 bg-transparent px-3 pr-9 text-sm text-neutral-900 outline-none focus:border-primary-500"
+          className="h-11 w-full appearance-none rounded-lg border border-neutral-200 bg-transparent px-3 pr-9 text-sm text-neutral-800 outline-none focus:border-brand-primary"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -668,7 +668,7 @@ function SimpleSelect({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
       </div>
     </div>
   );
@@ -691,8 +691,8 @@ function ProgramFields({
 }) {
   if (options.status === "loading") {
     return (
-      <p className="flex items-center gap-2 text-sm text-neutral-500">
-        <Loader className="h-4 w-4 animate-spin text-primary-500" />
+      <p className="flex items-center gap-2 text-sm text-neutral-400">
+        <Loader className="h-4 w-4 animate-spin text-brand-primary" />
         Loading cohorts and tracks...
       </p>
     );
@@ -824,25 +824,25 @@ function SingleReviewStep({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mt-6 rounded-xl border border-neutral-300 p-5">
+      <div className="mt-6 rounded-xl border border-neutral-200 p-5">
         <div className="flex items-center gap-3 pb-6">
           <InitialsAvatar
             name={name}
-            className="h-12 w-12 bg-semantic-surface-warning-badge text-base text-semantic-text-warning"
+            className="h-12 w-12 bg-surface-warning-badge text-base text-text-warning"
           />
           <div className="min-w-0">
-            <p className="truncate font-semibold text-neutral-900">{name}</p>
-            <p className="truncate text-sm text-neutral-500">{email}</p>
+            <p className="truncate font-semibold text-neutral-800">{name}</p>
+            <p className="truncate text-sm text-neutral-400">{email}</p>
           </div>
         </div>
 
         <div className="flex items-center justify-between text-sm">
-          <span className="text-neutral-500">Cohort:</span>
-          <span className="font-medium text-neutral-900">{cohort}</span>
+          <span className="text-neutral-400">Cohort:</span>
+          <span className="font-medium text-neutral-800">{cohort}</span>
         </div>
         <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-neutral-500">Track:</span>
-          <span className="font-medium text-neutral-900">{track}</span>
+          <span className="text-neutral-400">Track:</span>
+          <span className="font-medium text-neutral-800">{track}</span>
         </div>
       </div>
 
@@ -874,7 +874,7 @@ function ErrorMessage({ message }: { message: string }) {
   return (
     <p
       role="alert"
-      className="rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+      className="rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
     >
       {message}
     </p>
@@ -922,11 +922,11 @@ function SuccessStep({
 }) {
   return (
     <div className="flex flex-col items-center py-4 text-center">
-      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-semantic-surface-success-badge">
-        <CheckCircle2 className="h-10 w-10 text-semantic-text-success" />
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-surface-success-badge">
+        <CheckCircle2 className="h-10 w-10 text-text-success" />
       </span>
-      <h2 className="mt-6 text-xl font-bold text-neutral-900">{title}</h2>
-      <p className="mt-2 max-w-sm text-sm text-neutral-500">{message}</p>
+      <h2 className="mt-6 text-xl font-bold text-neutral-800">{title}</h2>
+      <p className="mt-2 max-w-sm text-sm text-neutral-400">{message}</p>
       <SuccessActions
         onInviteAnother={onInviteAnother}
         onViewStudents={onViewStudents}
@@ -996,21 +996,21 @@ function BulkUploadStep({
           className={cn(
             "mt-6 flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-10 text-center",
             dragging
-              ? "border-primary-500 bg-primary-50"
-              : "border-neutral-300",
+              ? "border-brand-primary bg-surface-brand"
+              : "border-neutral-200",
           )}
         >
-          <CloudUpload className="h-6 w-6 text-neutral-500" />
-          <p className="mt-2 font-medium text-neutral-900">
+          <CloudUpload className="h-6 w-6 text-neutral-400" />
+          <p className="mt-2 font-medium text-neutral-800">
             Choose a file or drag & drop it here.
           </p>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-neutral-400">
             CSV with first name, last name and email columns, up to 10 MB.
           </p>
           <Button
             variant="secondary"
             size="sm"
-            className="mt-3 border-neutral-300"
+            className="mt-3 border-neutral-200"
             onClick={() => inputRef.current?.click()}
           >
             Browse File
@@ -1053,42 +1053,42 @@ function FileCard({
   onRetry: () => void;
 }) {
   return (
-    <div className="mt-6 rounded-xl border border-neutral-300 p-4">
+    <div className="mt-6 rounded-xl border border-neutral-200 p-4">
       <div className="flex items-start gap-3">
-        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center text-neutral-400">
+        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center text-neutral-300">
           <FileText className="h-9 w-9" strokeWidth={1.25} />
-          <span className="absolute bottom-0.5 -left-1 rounded bg-semantic-text-error px-1 text-[9px] font-bold text-neutral-50">
+          <span className="absolute bottom-0.5 -left-1 rounded bg-text-error px-1 text-[9px] font-bold text-neutral-0">
             CSV
           </span>
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-neutral-900">
+          <p className="truncate text-sm font-medium text-neutral-800">
             {upload.file.name}
           </p>
-          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-500">
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-400">
             {formatSize(upload.file.size)} ·
             {upload.status === "completed" ? (
               <>
-                <CircleCheck className="h-3.5 w-3.5 text-semantic-text-success" />
-                <span className="text-neutral-900">
+                <CircleCheck className="h-3.5 w-3.5 text-text-success" />
+                <span className="text-neutral-800">
                   {rowCount} student{rowCount === 1 ? "" : "s"} found
                 </span>
               </>
             ) : (
               <>
-                <CircleAlert className="h-3.5 w-3.5 text-semantic-text-error" />
-                <span className="text-neutral-900">Failed</span>
+                <CircleAlert className="h-3.5 w-3.5 text-text-error" />
+                <span className="text-neutral-800">Failed</span>
               </>
             )}
           </p>
           {upload.status === "failed" && (
             <>
-              <p className="mt-1 text-xs text-neutral-500">{upload.reason}</p>
+              <p className="mt-1 text-xs text-neutral-400">{upload.reason}</p>
               <button
                 type="button"
                 onClick={onRetry}
-                className="mt-1 text-xs font-medium text-semantic-text-error underline"
+                className="mt-1 text-xs font-medium text-text-error underline"
               >
                 Try Again
               </button>
@@ -1100,7 +1100,7 @@ function FileCard({
           type="button"
           aria-label="Remove file"
           onClick={onRemove}
-          className="text-neutral-500 hover:text-neutral-900"
+          className="text-neutral-400 hover:text-neutral-800"
         >
           <X className="h-4 w-4" />
         </button>
@@ -1144,7 +1144,7 @@ function BulkReviewStep({
 
       <div className="mt-6 max-h-80 overflow-auto">
         <table className="w-full min-w-[480px] text-left text-sm">
-          <thead className="sticky top-0 bg-neutral-200 text-xs tracking-wider text-neutral-500 uppercase">
+          <thead className="sticky top-0 bg-neutral-100 text-xs tracking-wider text-neutral-400 uppercase">
             <tr>
               <th className="w-10 rounded-l-lg px-4 py-3">
                 <Checkbox
@@ -1166,7 +1166,7 @@ function BulkReviewStep({
               return (
                 <tr
                   key={`${row.email}-${index}`}
-                  className="border-b border-neutral-200"
+                  className="border-b border-neutral-100"
                 >
                   <td className="px-4 py-3">
                     <Checkbox
@@ -1178,12 +1178,12 @@ function BulkReviewStep({
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <InitialsAvatar name={name} className="h-8 w-8" />
-                      <span className="font-medium text-neutral-900">
+                      <span className="font-medium text-neutral-800">
                         {name}
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-neutral-700">{row.email}</td>
+                  <td className="px-4 py-3 text-neutral-600">{row.email}</td>
                 </tr>
               );
             })}
@@ -1192,7 +1192,7 @@ function BulkReviewStep({
       </div>
 
       <DialogFooter className="justify-between">
-        <span className="text-sm text-neutral-500">
+        <span className="text-sm text-neutral-400">
           {selectedCount} selected
         </span>
         <div className="flex items-center gap-3">
@@ -1242,7 +1242,7 @@ function BulkConfirmStep({
         <DialogTitle>Confirm and send</DialogTitle>
         <DialogDescription>
           You&apos;re about to invite{" "}
-          <span className="font-semibold text-neutral-900">
+          <span className="font-semibold text-neutral-800">
             {selectedCount} selected student{selectedCount === 1 ? "" : "s"}.
           </span>{" "}
           Choose the cohort and track they&apos;ll all join.
@@ -1314,18 +1314,18 @@ function BulkResultStep({
         className={cn(
           "flex h-20 w-20 items-center justify-center rounded-full",
           invited > 0
-            ? "bg-semantic-surface-success-badge"
-            : "bg-semantic-surface-error-badge",
+            ? "bg-surface-success-badge"
+            : "bg-surface-error-badge",
         )}
       >
         {invited > 0 ? (
-          <CheckCircle2 className="h-10 w-10 text-semantic-text-success" />
+          <CheckCircle2 className="h-10 w-10 text-text-success" />
         ) : (
-          <CircleAlert className="h-10 w-10 text-semantic-text-error" />
+          <CircleAlert className="h-10 w-10 text-text-error" />
         )}
       </span>
-      <h2 className="mt-6 text-xl font-bold text-neutral-900">{title}</h2>
-      <p className="mt-2 max-w-sm text-sm text-neutral-500">
+      <h2 className="mt-6 text-xl font-bold text-neutral-800">{title}</h2>
+      <p className="mt-2 max-w-sm text-sm text-neutral-400">
         {invited} student{invited === 1 ? " was" : "s were"} invited
         {failed > 0 && ` and ${failed} couldn't be`}.
         {emailsNotSent > 0 &&
@@ -1333,16 +1333,16 @@ function BulkResultStep({
       </p>
 
       {failures.length > 0 && (
-        <ul className="mt-4 max-h-40 w-full overflow-auto rounded-lg border border-neutral-300 text-left text-sm">
+        <ul className="mt-4 max-h-40 w-full overflow-auto rounded-lg border border-neutral-200 text-left text-sm">
           {failures.map((row) => (
             <li
               key={row.index}
-              className="border-b border-neutral-200 px-4 py-2 last:border-b-0"
+              className="border-b border-neutral-100 px-4 py-2 last:border-b-0"
             >
-              <p className="font-medium text-neutral-900">
+              <p className="font-medium text-neutral-800">
                 {row.email ?? `Row ${row.index + 1}`}
               </p>
-              <p className="text-xs text-semantic-text-error">
+              <p className="text-xs text-text-error">
                 {row.error ?? "Couldn't be invited."}
               </p>
             </li>

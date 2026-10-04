@@ -116,13 +116,13 @@ function SignInForm() {
   };
 
   return (
-    <main className="min-h-[100vh] bg-neutral-100 lg:flex lg:items-center lg:justify-center lg:p-4">
+    <main className="min-h-[100vh] bg-neutral-50 lg:flex lg:items-center lg:justify-center lg:p-4">
       <div className="mx-auto w-full md:w-[100vw] lg:grid lg:grid-cols-2 lg:overflow-hidden ">
-        <div className="relative hidden flex-col justify-between rounded-lg bg-primary-500 p-10 lg:flex">
+        <div className="relative hidden flex-col justify-between rounded-lg bg-brand-primary p-10 lg:flex">
           <div className="flex flex-1 items-center justify-center">
             <Logo variant="white" size="lg" />
           </div>
-          <p className="text-4xl [word-spacing:0.8rem] leading-tight font-bold text-neutral-50">
+          <p className="text-4xl [word-spacing:0.8rem] leading-tight font-bold text-neutral-0">
             Learn. Practice. Progress.
           </p>
         </div>
@@ -138,8 +138,8 @@ function SignInForm() {
             </div>
 
             <div>
-              <h1 className="text-2xl font-bold text-neutral-900">Welcome Back</h1>
-              <p className="mt-1 text-sm text-neutral-600">
+              <h1 className="text-2xl font-bold text-neutral-800">Welcome Back</h1>
+              <p className="mt-1 text-sm text-neutral-500">
                 Sign in to your Classroom account to continue
               </p>
             </div>
@@ -148,7 +148,7 @@ function SignInForm() {
               {formError && (
                 <p
                   role="alert"
-                  className="rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+                  className="rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
                 >
                   {formError}
                 </p>
@@ -158,7 +158,7 @@ function SignInForm() {
                 className="flex flex-col gap-1.5"
                 invalid={Boolean(errors.email)}
               >
-                <label className="text-sm font-medium text-neutral-800">Email Address</label>
+                <label className="text-sm font-medium text-neutral-700">Email Address</label>
                 <Input
                   type="email"
                   value={email}
@@ -173,7 +173,7 @@ function SignInForm() {
                 className="flex flex-col gap-1.5"
                 invalid={Boolean(errors.password)}
               >
-                <label htmlFor="password" className="text-sm font-medium text-neutral-800">
+                <label htmlFor="password" className="text-sm font-medium text-neutral-700">
                   Password
                 </label>
                 <Input
@@ -196,7 +196,7 @@ function SignInForm() {
               </Field.Root>
 
               <div className="text-right text-sm">
-                <Link href="/forgot-password" className="font-medium text-primary-500 hover:underline">
+                <Link href="/forgot-password" className="font-medium text-brand-primary hover:underline">
                   Forgot Password?
                 </Link>
               </div>
@@ -211,9 +211,9 @@ function SignInForm() {
                 {submitting ? "Signing in…" : "Sign in"}
               </Button>
 
-              <p className="text-center text-sm text-neutral-600">
+              <p className="text-center text-sm text-neutral-500">
                 Haven&apos;t been invited?{" "}
-                <Link href="#" className="font-medium text-primary-500 hover:underline">
+                <Link href="#" className="font-medium text-brand-primary hover:underline">
                   Contact Support
                 </Link>
               </p>

@@ -178,12 +178,12 @@ function ReviewStep({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mt-6 rounded-xl border border-neutral-300 p-5">
-        <div className="flex items-center gap-3 border-b border-neutral-200 pb-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-500">
+      <div className="mt-6 rounded-xl border border-neutral-200 p-5">
+        <div className="flex items-center gap-3 border-b border-neutral-100 pb-4">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-brand text-brand-primary">
             <Layers className="h-5 w-5" />
           </span>
-          <p className="truncate font-semibold text-neutral-900">
+          <p className="truncate font-semibold text-neutral-800">
             {values.name.trim()}
           </p>
         </div>
@@ -194,14 +194,14 @@ function ReviewStep({
               key={row.label}
               className="flex items-center justify-between text-sm"
             >
-              <span className="text-neutral-500">{row.label}:</span>
-              <span className="font-medium text-neutral-900">{row.value}</span>
+              <span className="text-neutral-400">{row.label}:</span>
+              <span className="font-medium text-neutral-800">{row.value}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <p className="mt-3 text-xs text-neutral-500">
+      <p className="mt-3 text-xs text-neutral-400">
         New cohorts start as ongoing, so you can invite students and instructors
         right away.
       </p>
@@ -236,13 +236,13 @@ function SuccessStep({
 }) {
   return (
     <div className="flex flex-col items-center py-4 text-center">
-      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-semantic-surface-success-badge">
-        <CheckCircle2 className="h-10 w-10 text-semantic-text-success" />
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-surface-success-badge">
+        <CheckCircle2 className="h-10 w-10 text-text-success" />
       </span>
-      <h2 className="mt-6 text-xl font-bold text-neutral-900">
+      <h2 className="mt-6 text-xl font-bold text-neutral-800">
         Cohort created successfully
       </h2>
-      <p className="mt-2 max-w-sm text-sm text-neutral-500">
+      <p className="mt-2 max-w-sm text-sm text-neutral-400">
         {name} has been added to your program. You can now invite students and
         instructors to it.
       </p>

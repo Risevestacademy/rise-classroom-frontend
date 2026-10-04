@@ -26,25 +26,25 @@ export function AdminTopNav({
   const user = session?.user;
 
   return (
-    <header className="flex h-16 items-center justify-between gap-3 border-b border-neutral-300 bg-white px-4 py-3 sm:px-6">
+    <header className="flex h-16 items-center justify-between gap-3 border-b border-neutral-200 bg-white px-4 py-3 sm:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
           aria-label="Open menu"
           onClick={() => setOpen(true)}
-          className="text-neutral-500 hover:text-neutral-700 lg:hidden"
+          className="text-neutral-400 hover:text-neutral-600 lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
 
-        <div className="flex min-w-0 items-center gap-1.5 truncate text-sm text-neutral-500">
+        <div className="flex min-w-0 items-center gap-1.5 truncate text-sm text-neutral-400">
           {breadcrumb.map((item, index) => (
             <span key={item} className="flex items-center gap-1.5">
-              {index > 0 && <span className="text-neutral-400">/</span>}
+              {index > 0 && <span className="text-neutral-300">/</span>}
               <span
                 className={
                   index === breadcrumb.length - 1
-                    ? "font-medium text-neutral-900"
+                    ? "font-medium text-neutral-800"
                     : undefined
                 }
               >
@@ -56,19 +56,19 @@ export function AdminTopNav({
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-        <div className="hidden h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-neutral-400 md:flex md:w-48 lg:w-64">
+        <div className="hidden h-10 items-center gap-2 rounded-lg border border-neutral-200 px-3 text-neutral-300 md:flex md:w-48 lg:w-64">
           <Search />
           <input
             type="search"
             placeholder="Search"
-            className="w-full bg-transparent text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+            className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-300 focus:outline-none"
           />
         </div>
 
         <button
           type="button"
           aria-label="Calendar"
-          className="hidden text-neutral-500 hover:text-neutral-700 sm:block"
+          className="hidden text-neutral-400 hover:text-neutral-600 sm:block"
         >
           <Calendar />
         </button>
@@ -76,12 +76,12 @@ export function AdminTopNav({
         <button
           type="button"
           aria-label="Notifications"
-          className="text-neutral-500 hover:text-neutral-700"
+          className="text-neutral-400 hover:text-neutral-600"
         >
           <Bell className="h-5 w-5" />
         </button>
 
-        <div className="flex items-center gap-2.5 border-l border-neutral-300 pl-2 sm:pl-4">
+        <div className="flex items-center gap-2.5 border-l border-neutral-200 pl-2 sm:pl-4">
           <UserAvatar
             user={{
               name: user?.name ?? "Account",
@@ -96,10 +96,10 @@ export function AdminTopNav({
             </div>
           ) : (
             <div className="hidden flex-col sm:flex">
-              <span className="text-sm font-bold text-neutral-900">
+              <span className="text-sm font-bold text-neutral-800">
                 {user?.displayName ?? user?.name ?? "Account"}
               </span>
-              <span className="text-xs text-neutral-500">
+              <span className="text-xs text-neutral-400">
                 {user ? roleLabels[user.role] : "Not signed in"}
               </span>
             </div>

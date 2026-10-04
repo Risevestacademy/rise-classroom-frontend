@@ -69,15 +69,15 @@ export function InstructorNavbar() {
   );
 
   return (
-    <header className="flex h-16 w-full items-center justify-between border-b border-neutral-300 px-6">
+    <header className="flex h-16 w-full items-center justify-between border-b border-neutral-200 px-6">
       <nav className="flex items-center gap-2 text-sm">
         {activeSection && (
           <>
-            <span className="font-medium text-neutral-500">
+            <span className="font-medium text-neutral-400">
               {activeSection.label}
             </span>
-            <ChevronRight className="h-4 w-4 text-neutral-400" />
-            <span className="font-semibold text-neutral-900">
+            <ChevronRight className="h-4 w-4 text-neutral-300" />
+            <span className="font-semibold text-neutral-800">
               {activeItem?.title}
             </span>
           </>
@@ -85,19 +85,19 @@ export function InstructorNavbar() {
       </nav>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-        <div className="hidden h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-neutral-400 md:flex md:w-48 lg:w-64">
+        <div className="hidden h-10 items-center gap-2 rounded-lg border border-neutral-200 px-3 text-neutral-300 md:flex md:w-48 lg:w-64">
           <Search />
           <input
             type="search"
             placeholder="Search"
-            className="w-full bg-transparent text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+            className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-300 focus:outline-none"
           />
         </div>
 
         <button
           type="button"
           aria-label="Calendar"
-          className="hidden text-neutral-500 hover:text-neutral-700 sm:block"
+          className="hidden text-neutral-400 hover:text-neutral-600 sm:block"
         >
           <Calendar />
         </button>
@@ -105,12 +105,12 @@ export function InstructorNavbar() {
         <button
           type="button"
           aria-label="Notifications"
-          className="text-neutral-500 hover:text-neutral-700"
+          className="text-neutral-400 hover:text-neutral-600"
         >
           <Bell className="h-5 w-5" />
         </button>
 
-        <div className="flex items-center gap-2.5 border-l border-neutral-300 pl-2 sm:pl-4">
+        <div className="flex items-center gap-2.5 border-l border-neutral-200 pl-2 sm:pl-4">
           <UserAvatar
           user={{
             name: user?.name ?? "Account",
@@ -119,8 +119,8 @@ export function InstructorNavbar() {
           isLoading={isPending}
         />
           <div className="hidden flex-col sm:flex">
-            <span className="text-sm font-bold text-neutral-900">{user?.name}</span>
-            <span className="text-xs text-neutral-500">{user?.role}</span>
+            <span className="text-sm font-bold text-neutral-800">{user?.name}</span>
+            <span className="text-xs text-neutral-400">{user?.role}</span>
           </div>
         </div>
       </div>

@@ -78,7 +78,7 @@ export function ErrorNote({ children }: { children: React.ReactNode }) {
   return (
     <p
       role="alert"
-      className="mt-4 flex items-start gap-2 rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+      className="mt-4 flex items-start gap-2 rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
     >
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
       <span>{children}</span>
@@ -171,7 +171,7 @@ export function CohortStatusSelect({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-neutral-900">
+      <label htmlFor={id} className="text-sm font-medium text-neutral-800">
         Status
       </label>
       <div className="relative">
@@ -179,7 +179,7 @@ export function CohortStatusSelect({
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value as CohortStatus)}
-          className="h-11 w-full appearance-none rounded-lg border border-neutral-300 bg-transparent px-3 pr-9 text-sm text-neutral-900 outline-none focus:border-primary-500"
+          className="h-11 w-full appearance-none rounded-lg border border-neutral-200 bg-transparent px-3 pr-9 text-sm text-neutral-800 outline-none focus:border-brand-primary"
         >
           {Object.entries(cohortStatusLabels).map(([status, label]) => (
             <option key={status} value={status}>
@@ -187,10 +187,10 @@ export function CohortStatusSelect({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
       </div>
       {value !== "ONGOING" && (
-        <p className="text-xs text-neutral-500">
+        <p className="text-xs text-neutral-400">
           Students and instructors can only be invited to ongoing cohorts.
         </p>
       )}

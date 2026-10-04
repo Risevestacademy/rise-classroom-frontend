@@ -47,23 +47,23 @@ export function CreateModulePage() {
     <>
       <div id="heading" className="flex flex-row w-full items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-neutral-800 tracking-tight">
             Create new module
           </h1>
         </div>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-xs hover:bg-neutral-200"
+          className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-0 px-3 py-1.5 text-xs font-medium text-neutral-600 shadow-xs hover:bg-neutral-100"
         >
-          <Calendar className="h-3.5 w-3.5 text-neutral-500" />
+          <Calendar className="h-3.5 w-3.5 text-neutral-400" />
           <span>This week</span>
-          <ChevronDown className="h-3.5 w-3.5 text-neutral-400" />
+          <ChevronDown className="h-3.5 w-3.5 text-neutral-300" />
         </button>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5" noValidate>
         <Field.Root className="flex flex-col gap-1.5" invalid={Boolean(errors.name)}>
-          <label className="text-sm font-medium text-neutral-800">
+          <label className="text-sm font-medium text-neutral-700">
             Module name <span className="text-red-500">*</span>
           </label>
           <Input
@@ -75,14 +75,14 @@ export function CreateModulePage() {
         </Field.Root>
 
         <Field.Root className="flex flex-col gap-1.5" invalid={Boolean(errors.description)}>
-          <label className="text-sm font-medium text-neutral-800">
+          <label className="text-sm font-medium text-neutral-700">
             Description <span className="text-red-500">*</span>
           </label>
           <Textarea
             {...register("description")}
             disabled={isSubmitting}
             placeholder="Brief overview of what this module covers..."
-            className="min-h-[100px] rounded-md border border-neutral-300 p-2.5 text-sm"
+            className="min-h-[100px] rounded-md border border-neutral-200 p-2.5 text-sm"
           />
           {errors.description?.message && (
             <Error match={true}>{errors.description.message}</Error>
@@ -90,8 +90,8 @@ export function CreateModulePage() {
         </Field.Root>
 
         <Field.Root className="flex flex-col gap-1.5" invalid={Boolean(errors.objective)}>
-          <label className="text-sm font-medium text-neutral-800">
-            Learning Objective <span className="text-neutral-400 font-normal">(Optional)</span>
+          <label className="text-sm font-medium text-neutral-700">
+            Learning Objective <span className="text-neutral-300 font-normal">(Optional)</span>
           </label>
           <Input
             {...register("objective")}
@@ -107,7 +107,7 @@ export function CreateModulePage() {
           className="flex flex-col gap-1.5"
           invalid={Boolean(errors.numberOfLessons)}
         >
-          <label className="text-sm font-medium text-neutral-800">
+          <label className="text-sm font-medium text-neutral-700">
             Number of lessons <span className="text-red-500">*</span>
           </label>
           <Input

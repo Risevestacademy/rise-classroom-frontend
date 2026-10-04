@@ -96,9 +96,9 @@ function ConfirmProgramStep({
   memberships: OnboardingDetails["memberships"]
 }) {
   return (
-    <div className="space-y-5 rounded-xl bg-primary-50 p-5">
+    <div className="space-y-5 rounded-xl bg-surface-brand p-5">
       {memberships.length === 0 ? (
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-neutral-500">
           You haven&apos;t been assigned to a cohort or track yet. Your program
           admin can add you once your account is set up.
         </p>
@@ -109,17 +109,17 @@ function ConfirmProgramStep({
             className="space-y-5"
           >
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-neutral-900">Cohort</p>
-              <p className="text-sm text-neutral-600">{membership.cohort}</p>
+              <p className="text-sm font-semibold text-neutral-800">Cohort</p>
+              <p className="text-sm text-neutral-500">{membership.cohort}</p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-neutral-900">Track</p>
-              <p className="text-sm text-neutral-600">{membership.track}</p>
+              <p className="text-sm font-semibold text-neutral-800">Track</p>
+              <p className="text-sm text-neutral-500">{membership.track}</p>
             </div>
           </div>
         ))
       )}
-      <h2 className="pt-2 text-lg font-bold text-neutral-900">Is everything correct?</h2>
+      <h2 className="pt-2 text-lg font-bold text-neutral-800">Is everything correct?</h2>
     </div>
   )
 }
@@ -127,8 +127,8 @@ function ConfirmProgramStep({
 function WelcomeStep() {
   return (
     <>
-      <div className="aspect-square w-full rounded-2xl bg-primary-50" />
-      <p className="text-base font-medium text-neutral-900">
+      <div className="aspect-square w-full rounded-2xl bg-surface-brand" />
+      <p className="text-base font-medium text-neutral-800">
         Learn, track progress, complete assignments, and stay connected.
       </p>
     </>
@@ -218,8 +218,8 @@ export default function CompleteProfilePage() {
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-neutral-600">{subtitle}</p>}
+        <h1 className="text-2xl font-bold text-neutral-800">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>}
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -236,7 +236,7 @@ export default function CompleteProfilePage() {
         {finish.isError && (
           <p
             role="alert"
-            className="flex items-start gap-2 rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+            className="flex items-start gap-2 rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{getOnboardingErrorMessage(finish.error)}</span>
@@ -255,18 +255,18 @@ export default function CompleteProfilePage() {
         </Button>
 
         {step === 2 && (
-          <div className="flex flex-col items-center gap-2 text-center text-sm text-neutral-600">
+          <div className="flex flex-col items-center gap-2 text-center text-sm text-neutral-500">
             <button
               type="button"
               disabled={finish.isPending}
               onClick={() => setStep(1)}
-              className="font-medium text-primary-500 hover:underline disabled:opacity-50"
+              className="font-medium text-brand-primary hover:underline disabled:opacity-50"
             >
               Back
             </button>
             <p>
               Something&apos;s wrong?{" "}
-              <a href="#" className="font-medium text-primary-500 hover:underline">
+              <a href="#" className="font-medium text-brand-primary hover:underline">
                 Contact support
               </a>
             </p>

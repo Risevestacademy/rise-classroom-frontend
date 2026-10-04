@@ -17,17 +17,17 @@ function DialogContent({
 }) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-neutral-900/50 transition-opacity data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+      <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-neutral-800/50 transition-opacity data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
       <DialogPrimitive.Popup
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 max-h-[85vh] w-[648px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-neutral-300 bg-white p-4 shadow-lg outline-none sm:p-6",
+          "fixed top-1/2 left-1/2 z-50 max-h-[85vh] w-[648px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg outline-none sm:p-6",
           "data-[ending-style]:opacity-0 data-[ending-style]:scale-95 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 transition-all",
           className,
         )}
         {...props}
       >
         {showClose && (
-          <DialogPrimitive.Close className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-200 sm:top-6 sm:right-6">
+          <DialogPrimitive.Close className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 sm:top-6 sm:right-6">
             <X className="h-5 w-5" />
           </DialogPrimitive.Close>
         )}
@@ -49,7 +49,7 @@ function DialogTitle({
 }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn("text-xl font-bold text-neutral-900", className)}
+      className={cn("text-xl font-bold text-neutral-800", className)}
       {...props}
     />
   );
@@ -61,7 +61,7 @@ function DialogDescription({
 }: React.ComponentProps<typeof DialogPrimitive.Description>) {
   return (
     <DialogPrimitive.Description
-      className={cn("text-sm text-neutral-500", className)}
+      className={cn("text-sm text-neutral-400", className)}
       {...props}
     />
   );

@@ -37,7 +37,7 @@ function FormError({ children }: { children: React.ReactNode }) {
   return (
     <p
       role="alert"
-      className="flex items-start gap-2 rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+      className="flex items-start gap-2 rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
     >
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
       <span>{children}</span>
@@ -56,8 +56,8 @@ function StatusIcon({
     <span
       className={
         tone === "success"
-          ? "flex h-14 w-14 items-center justify-center rounded-full bg-semantic-surface-success-badge text-semantic-text-success"
-          : "flex h-14 w-14 items-center justify-center rounded-full bg-semantic-surface-error-badge text-semantic-text-error"
+          ? "flex h-14 w-14 items-center justify-center rounded-full bg-surface-success-badge text-text-success"
+          : "flex h-14 w-14 items-center justify-center rounded-full bg-surface-error-badge text-text-error"
       }
     >
       {children}
@@ -67,9 +67,9 @@ function StatusIcon({
 
 function BackToSignIn({ prefix }: { prefix?: string }) {
   return (
-    <p className="text-center text-sm text-neutral-600">
+    <p className="text-center text-sm text-neutral-500">
       {prefix && `${prefix} `}
-      <Link href="/sign-in" className="font-medium text-primary-500 hover:underline">
+      <Link href="/sign-in" className="font-medium text-brand-primary hover:underline">
         Back to Sign In
       </Link>
     </p>
@@ -107,10 +107,10 @@ function RequestResetLink() {
           <MailCheck className="h-7 w-7" />
         </StatusIcon>
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Check your email</h1>
-          <p className="mt-1 text-sm text-neutral-600">
+          <h1 className="text-2xl font-bold text-neutral-800">Check your email</h1>
+          <p className="mt-1 text-sm text-neutral-500">
             If an account exists for{" "}
-            <span className="font-medium text-neutral-800">{sentTo}</span>, we&apos;ve
+            <span className="font-medium text-neutral-700">{sentTo}</span>, we&apos;ve
             sent a link to reset your password. It expires in 30 minutes.
           </p>
         </div>
@@ -138,8 +138,8 @@ function RequestResetLink() {
   return (
     <>
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Forgot your password?</h1>
-        <p className="mt-1 text-sm text-neutral-600">
+        <h1 className="text-2xl font-bold text-neutral-800">Forgot your password?</h1>
+        <p className="mt-1 text-sm text-neutral-500">
           Enter the email address associated with your Rise Classroom account
           and we&apos;ll send you a link to reset your password.
         </p>
@@ -147,7 +147,7 @@ function RequestResetLink() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
         <Field.Root className="flex flex-col gap-1.5" invalid={Boolean(fieldError)}>
-          <label htmlFor="email" className="text-sm font-medium text-neutral-800">
+          <label htmlFor="email" className="text-sm font-medium text-neutral-700">
             Email Address
           </label>
           <Input
@@ -242,8 +242,8 @@ function ChooseNewPassword({ token }: { token: string }) {
           <AlertCircle className="h-7 w-7" />
         </StatusIcon>
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">This link isn&apos;t valid</h1>
-          <p className="mt-1 text-sm text-neutral-600">
+          <h1 className="text-2xl font-bold text-neutral-800">This link isn&apos;t valid</h1>
+          <p className="mt-1 text-sm text-neutral-500">
             {getPasswordResetErrorMessage(link.error)} Reset links work once and
             expire after 30 minutes, so request a new one below.
           </p>
@@ -271,8 +271,8 @@ function ChooseNewPassword({ token }: { token: string }) {
           <CheckCircle2 className="h-7 w-7" />
         </StatusIcon>
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Password updated</h1>
-          <p className="mt-1 text-sm text-neutral-600">
+          <h1 className="text-2xl font-bold text-neutral-800">Password updated</h1>
+          <p className="mt-1 text-sm text-neutral-500">
             {signedIn
               ? "Your password has been reset and you're signed in. Any other devices have been signed out."
               : "Your password has been reset. Sign in with your new password to continue."}
@@ -299,21 +299,21 @@ function ChooseNewPassword({ token }: { token: string }) {
   return (
     <>
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Create a new password</h1>
-        <p className="mt-1 text-sm text-neutral-600">
+        <h1 className="text-2xl font-bold text-neutral-800">Create a new password</h1>
+        <p className="mt-1 text-sm text-neutral-500">
           Choose a strong password you haven&apos;t used before.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
         <Field.Root className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-neutral-800">Email Address</label>
+          <label className="text-sm font-medium text-neutral-700">Email Address</label>
           <Input type="email" value={link.data.email} disabled readOnly />
           <Hint>The account this reset link was sent to</Hint>
         </Field.Root>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="password" className="text-sm font-medium text-neutral-800">
+          <label htmlFor="password" className="text-sm font-medium text-neutral-700">
             New Password
           </label>
           <Input
@@ -337,7 +337,7 @@ function ChooseNewPassword({ token }: { token: string }) {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="confirm-password" className="text-sm font-medium text-neutral-800">
+          <label htmlFor="confirm-password" className="text-sm font-medium text-neutral-700">
             Confirm New Password
           </label>
           <Input
@@ -358,7 +358,7 @@ function ChooseNewPassword({ token }: { token: string }) {
             }}
           />
           {confirmPassword.length > 0 && !passwordsMatch && (
-            <p className="text-xs text-semantic-text-error">Passwords don&apos;t match.</p>
+            <p className="text-xs text-text-error">Passwords don&apos;t match.</p>
           )}
         </div>
 

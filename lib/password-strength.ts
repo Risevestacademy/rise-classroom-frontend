@@ -33,17 +33,17 @@ const passwordStrengthMeta: Record<
 > = {
   weak: {
     filledSegments: 2,
-    barColor: "bg-semantic-text-error",
+    barColor: "bg-text-error",
     label: "Weak password. Must contain at least;",
   },
   moderate: {
     filledSegments: 4,
-    barColor: "bg-warning-500",
+    barColor: "bg-icon-warning",
     label: "Moderate password. Must contain at least;",
   },
   strong: {
     filledSegments: 6,
-    barColor: "bg-success-500",
+    barColor: "bg-icon-success",
     label: "Strong password. Your password is secure.",
   },
 }

@@ -30,79 +30,79 @@ const badgeVariants = cva(
         variant: "full",
         status: "neutral",
         class:
-          "bg-neutral-100 border-neutral-300 text-neutral-700 dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-200",
+          "bg-neutral-50 border-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:border-neutral-500 dark:text-neutral-100",
       },
       {
         variant: "stroked",
         status: "neutral",
         class:
-          "bg-transparent border-neutral-300 text-neutral-700 dark:border-neutral-600 dark:text-neutral-200",
+          "bg-transparent border-neutral-200 text-neutral-600 dark:border-neutral-500 dark:text-neutral-100",
       },
       {
         variant: "light",
         status: "neutral",
         class:
-          "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200",
+          "bg-neutral-50 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-100",
       },
       {
         variant: "full",
         status: "success",
-        class: "bg-semantic-surface-success-badge border-semantic-border-success text-semantic-text-success",
+        class: "bg-surface-success-badge border-border-success text-text-success",
       },
       {
         variant: "stroked",
         status: "success",
-        class: "bg-transparent border-semantic-border-success text-semantic-text-success",
+        class: "bg-transparent border-border-success text-text-success",
       },
       {
         variant: "light",
         status: "success",
-        class: "bg-semantic-surface-success-badge text-semantic-text-success",
+        class: "bg-surface-success-badge text-text-success",
       },
       {
         variant: "full",
         status: "warning",
-        class: "bg-semantic-surface-warning-badge border-semantic-border-warning text-semantic-text-warning",
+        class: "bg-surface-warning-badge border-border-warning text-text-warning",
       },
       {
         variant: "stroked",
         status: "warning",
-        class: "bg-transparent border-semantic-border-warning text-semantic-text-warning",
+        class: "bg-transparent border-border-warning text-text-warning",
       },
       {
         variant: "light",
         status: "warning",
-        class: "bg-semantic-surface-warning-badge text-semantic-text-warning",
+        class: "bg-surface-warning-badge text-text-warning",
       },
       {
         variant: "full",
         status: "error",
-        class: "bg-semantic-surface-error-badge border-semantic-border-error text-semantic-text-error",
+        class: "bg-surface-error-badge border-border-error text-text-error",
       },
       {
         variant: "stroked",
         status: "error",
-        class: "bg-transparent border-semantic-border-error text-semantic-text-error",
+        class: "bg-transparent border-border-error text-text-error",
       },
       {
         variant: "light",
         status: "error",
-        class: "bg-semantic-surface-error-badge text-semantic-text-error",
+        class: "bg-surface-error-badge text-text-error",
       },
       {
         variant: "full",
         status: "info",
-        class: "bg-semantic-surface-info-badge border-semantic-border-info text-semantic-text-info",
+        class: "bg-surface-info-badge border-border-info text-text-info",
       },
       {
         variant: "stroked",
         status: "info",
-        class: "bg-transparent border-semantic-border-info text-semantic-text-info",
+        class: "bg-transparent border-border-info text-text-info",
       },
       {
         variant: "light",
         status: "info",
-        class: "bg-semantic-surface-info-badge text-semantic-text-info",
+        class: "bg-surface-info-badge text-text-info",
       },
     ],
     defaultVariants: {
