@@ -16,6 +16,7 @@ import {
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { InviteStudentDialog } from "@/components/InviteStudentDialog";
 import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { UserRowActions } from "@/components/UserRowActions";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -310,13 +311,7 @@ export default function StudentsPage() {
                               className="px-5 py-4"
                               onClick={(event) => event.stopPropagation()}
                             >
-                              <button
-                                type="button"
-                                aria-label="Row actions"
-                                className="text-neutral-400 hover:text-neutral-600"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </button>
+                              <UserRowActions user={student} />
                             </td>
                           </tr>
                         );

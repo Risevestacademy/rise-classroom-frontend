@@ -189,6 +189,41 @@ export function resendInvite(userId: string) {
   return api.post<Envelope<unknown>>(`/admin/users/${userId}/resend-invite`);
 }
 
+export type UpdateUserInput = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  status?: UserStatus;
+};
+
+export type UpdateUserResult = {
+  user: AdminUser;
+  emailSent?: boolean;
+};
+
+export function updateUser(id: string, input: UpdateUserInput) {
+  return api.patch<Envelope<UpdateUserResult>>(`/admin/users/${id}`, input);
+}
+
+export type UserDraft = Pick<
+  AdminUser,
+  "firstName" | "lastName" | "email" | "status"
+>;
+
+export function userChanges(user: AdminUser, draft: UserDraft) {
+  const changes: UpdateUserInput = {};
+  const firstName = draft.firstName.trim();
+  const lastName = draft.lastName.trim();
+  const email = draft.email.trim();
+
+  if (firstName !== user.firstName) changes.firstName = firstName;
+  if (lastName !== user.lastName) changes.lastName = lastName;
+  if (email !== user.email) changes.email = email;
+  if (draft.status !== user.status) changes.status = draft.status;
+
+  return changes;
+}
+
 function getAdminAccessErrorMessage(error: ApiError) {
   if (error.status === 401) {
     return "Your session has expired. Please sign in again.";
@@ -258,7 +293,48 @@ export function getCohortErrorMessage(error: unknown) {
   return error.message || "We couldn't save the cohort. Please try again.";
 }
 
-/** The cohort and track names shown against a user, whatever their role. */
+export function getUpdateUserErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return "We couldn't reach the server. Check your connection and try again.";
+  }
+
+  const accessMessage = getAdminAccessErrorMessage(error);
+  if (accessMessage) return accessMessage;
+
+  if (error.status === 404) {
+    return "This user no longer exists. Refresh the page to see the latest list.";
+  }
+
+  if (error.status === 409) {
+    return "Another account already uses this email address.";
+  }
+
+  if (error.status >= 500) {
+    return "We couldn't save these changes. Please try again.";
+  }
+
+  return error.message || "We couldn't save these changes. Please try again.";
+}
+
+export function getResendInviteErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return "We couldn't reach the server. Check your connection and try again.";
+  }
+
+  const accessMessage = getAdminAccessErrorMessage(error);
+  if (accessMessage) return accessMessage;
+
+  if (error.status === 404) {
+    return "This user no longer exists. Refresh the page to see the latest list.";
+  }
+
+  if (error.status === 502) {
+    return "We couldn't send the email. Please try again.";
+  }
+
+  return error.message || "We couldn't resend the invite. Please try again.";
+}
+
 export function assignmentsFor(user: AdminUser) {
   const tracks = new Set<string>();
   const cohorts = new Set<string>();
@@ -311,8 +387,6 @@ export const adminQueries = {
       queryFn: () => countUsers(filters),
     }),
 
-  // Tracks and cohorts are program structure — they change far less often than
-  // headcounts, so they can sit in cache much longer.
   tracks: (status?: TrackStatus) =>
     queryOptions({
       queryKey: adminKeys.tracks(status),
