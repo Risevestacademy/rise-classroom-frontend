@@ -49,6 +49,12 @@ import {
   type InviteUserInput,
   type Track,
 } from "@/lib/admin";
+import {
+  isSpreadsheetFile,
+  isXlsxFile,
+  readSpreadsheetAsCsv,
+  spreadsheetAccept,
+} from "@/lib/spreadsheet";
 
 const maxFileSize = 10 * 1024 * 1024;
 
@@ -102,9 +108,9 @@ const stepWidth: Record<Step, string> = {
   "bulk-success": "w-[560px]",
 };
 
-function getCsvError(file: File) {
-  if (!file.name.toLowerCase().endsWith(".csv")) {
-    return "Only CSV files are supported";
+function getFileError(file: File) {
+  if (!isSpreadsheetFile(file)) {
+    return "Only CSV or Excel (.xlsx) files are supported";
   }
   if (file.size > maxFileSize) {
     return "File is larger than 10 MB";
@@ -260,14 +266,14 @@ export function InviteStudentDialog() {
   }
 
   async function handleFile(file: File) {
-    const fileError = getCsvError(file);
+    const fileError = getFileError(file);
     if (fileError) {
       setUpload({ status: "failed", file, reason: fileError });
       return;
     }
 
     try {
-      const { rows, skipped } = parseInstructorCsv(await file.text());
+      const { rows, skipped } = parseInstructorCsv(await readSpreadsheetAsCsv(file));
 
       if (rows.length === 0) {
         setUpload({
@@ -294,7 +300,7 @@ export function InviteStudentDialog() {
       setUpload({
         status: "failed",
         file,
-        reason: "That file couldn't be read. Please upload a CSV.",
+        reason: "That file couldn't be read. Please upload a CSV or Excel file.",
       });
     }
   }
@@ -531,7 +537,7 @@ function ChoiceStep({
         <ChoiceCard
           icon={Upload}
           iconClassName="bg-surface-info-badge text-text-info"
-          title="Upload CSV"
+          title="Upload file"
           description="Invite multiple students at once"
           onClick={onBulk}
         />
@@ -969,9 +975,9 @@ function BulkUploadStep({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Upload student CSV</DialogTitle>
+        <DialogTitle>Upload student file</DialogTitle>
         <DialogDescription>
-          Upload a CSV file with student details
+          Upload a CSV or Excel file with student details
           <br />
           we&apos;ll help you assign them to a cohort and track.
         </DialogDescription>
@@ -980,7 +986,7 @@ function BulkUploadStep({
       <input
         ref={inputRef}
         type="file"
-        accept=".csv,text/csv"
+        accept={spreadsheetAccept}
         className="hidden"
         onChange={handleInputChange}
       />
@@ -1005,7 +1011,7 @@ function BulkUploadStep({
             Choose a file or drag & drop it here.
           </p>
           <p className="text-xs text-neutral-400">
-            CSV with first name, last name and email columns, up to 10 MB.
+            CSV or Excel with first name, last name and email columns, up to 10 MB.
           </p>
           <Button
             variant="secondary"
@@ -1058,7 +1064,7 @@ function FileCard({
         <span className="relative flex h-10 w-10 shrink-0 items-center justify-center text-neutral-300">
           <FileText className="h-9 w-9" strokeWidth={1.25} />
           <span className="absolute bottom-0.5 -left-1 rounded bg-text-error px-1 text-[9px] font-bold text-neutral-0">
-            CSV
+            {isXlsxFile(upload.file) ? "XLSX" : "CSV"}
           </span>
         </span>
 
