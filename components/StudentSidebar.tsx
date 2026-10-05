@@ -57,19 +57,19 @@ export function StudentSidebar() {
     <>
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-neutral-900/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-neutral-800/50 lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 -translate-x-full flex-col border-r border-neutral-300 bg-white transition-transform duration-200 ease-in-out",
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 -translate-x-full flex-col border-r border-neutral-200 bg-white transition-transform duration-200 ease-in-out",
           "lg:static lg:z-auto lg:h-auto lg:min-h-screen lg:w-60 lg:translate-x-0",
           open && "translate-x-0",
         )}
       >
-        <div className="flex items-center justify-between gap-2.5 border-b border-neutral-300 px-4 py-5">
+        <div className="flex items-center justify-between gap-2.5 border-b border-neutral-200 px-4 py-5">
           <Link
             href="/student/dashboard"
             className="flex items-center overflow-hidden"
@@ -80,7 +80,7 @@ export function StudentSidebar() {
             type="button"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
-            className="text-neutral-500 hover:text-neutral-700 lg:hidden"
+            className="text-neutral-400 hover:text-neutral-600 lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -115,7 +115,7 @@ export function StudentSidebar() {
             ))}
           </div>
 
-          <hr className="my-3 text-neutral-300" />
+          <hr className="my-3 text-neutral-200" />
 
           <UserMenu variant="muted" />
         </div>
@@ -135,7 +135,7 @@ function NavSection({
 }) {
   return (
     <div className="space-y-1">
-      <p className="mb-2 px-3 text-xs font-medium tracking-wider text-neutral-500 uppercase">
+      <p className="mb-2 px-3 text-xs font-medium tracking-wider text-neutral-400 uppercase">
         {label}
       </p>
       {items.map((item) => (
@@ -164,7 +164,7 @@ function SidebarNavItem({
       className={cn(
         "flex h-10 w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium",
         isActive
-          ? "border-primary-500 bg-[#E8F5F6] text-primary-500"
+          ? "border-brand-primary bg-surface-brand text-brand-primary"
           : "border-transparent text-[#505258]",
       )}
     >

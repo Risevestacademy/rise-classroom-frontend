@@ -386,7 +386,7 @@ function ErrorNote({ children }: { children: React.ReactNode }) {
   return (
     <p
       role="alert"
-      className="mt-4 flex items-start gap-2 rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+      className="mt-4 flex items-start gap-2 rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
     >
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
       <span>{children}</span>
@@ -425,16 +425,16 @@ function ChoiceStep({
           type="button"
           onClick={onSingle}
           disabled={missingProgram}
-          className="flex flex-col items-start gap-3 rounded-xl border border-neutral-300 p-5 text-left hover:border-primary-500 disabled:pointer-events-none disabled:opacity-50"
+          className="flex flex-col items-start gap-3 rounded-xl border border-neutral-200 p-5 text-left hover:border-brand-primary disabled:pointer-events-none disabled:opacity-50"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-semantic-surface-success-badge text-semantic-text-success">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-success-badge text-text-success">
             <UserPlus className="h-5 w-5" />
           </span>
-          <span className="flex w-full items-center justify-between font-semibold text-neutral-900">
+          <span className="flex w-full items-center justify-between font-semibold text-neutral-800">
             Invite Individually
-            <ArrowRight className="h-4 w-4 text-neutral-400" />
+            <ArrowRight className="h-4 w-4 text-neutral-300" />
           </span>
-          <span className="text-sm text-neutral-500">
+          <span className="text-sm text-neutral-400">
             Add one instructor at a time
           </span>
         </button>
@@ -443,16 +443,16 @@ function ChoiceStep({
           type="button"
           onClick={onBulk}
           disabled={missingProgram}
-          className="flex flex-col items-start gap-3 rounded-xl border border-neutral-300 p-5 text-left hover:border-primary-500 disabled:pointer-events-none disabled:opacity-50"
+          className="flex flex-col items-start gap-3 rounded-xl border border-neutral-200 p-5 text-left hover:border-brand-primary disabled:pointer-events-none disabled:opacity-50"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-semantic-surface-info-badge text-semantic-text-info">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-info-badge text-text-info">
             <Upload className="h-5 w-5" />
           </span>
-          <span className="flex w-full items-center justify-between font-semibold text-neutral-900">
+          <span className="flex w-full items-center justify-between font-semibold text-neutral-800">
             Upload CSV
-            <ArrowRight className="h-4 w-4 text-neutral-400" />
+            <ArrowRight className="h-4 w-4 text-neutral-300" />
           </span>
-          <span className="text-sm text-neutral-500">
+          <span className="text-sm text-neutral-400">
             Invite multiple instructors at once
           </span>
         </button>
@@ -465,7 +465,7 @@ function ChoiceStep({
           come back here.
         </ErrorNote>
       ) : (
-        <p className="mt-6 text-sm text-neutral-500">
+        <p className="mt-6 text-sm text-neutral-400">
           Instructors will receive an email invitation to join Rise Classroom
           and complete their profile.
         </p>
@@ -561,15 +561,15 @@ function SimpleSelect({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-neutral-900">
+      <label className="text-sm font-medium text-neutral-800">
         {label}
-        <span className="text-semantic-text-error"> *</span>
+        <span className="text-text-error"> *</span>
       </label>
       <div className="relative">
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 w-full appearance-none rounded-lg border border-neutral-300 bg-transparent px-3 pr-9 text-sm text-neutral-900 outline-none focus:border-primary-500"
+          className="h-11 w-full appearance-none rounded-lg border border-neutral-200 bg-transparent px-3 pr-9 text-sm text-neutral-800 outline-none focus:border-brand-primary"
         >
           {options.map((option) => (
             <option key={option.id} value={option.id}>
@@ -577,7 +577,7 @@ function SimpleSelect({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
       </div>
     </div>
   );
@@ -719,24 +719,24 @@ function SingleReviewStep({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mt-6 rounded-xl border border-neutral-300 p-5">
-        <div className="flex items-center gap-3 border-b border-neutral-200 pb-4">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-50 font-semibold text-primary-500">
+      <div className="mt-6 rounded-xl border border-neutral-200 p-5">
+        <div className="flex items-center gap-3 border-b border-neutral-100 pb-4">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-brand font-semibold text-brand-primary">
             {initials(name)}
           </span>
           <div className="min-w-0">
-            <p className="truncate font-semibold text-neutral-900">{name}</p>
-            <p className="truncate text-sm text-neutral-500">{email}</p>
+            <p className="truncate font-semibold text-neutral-800">{name}</p>
+            <p className="truncate text-sm text-neutral-400">{email}</p>
           </div>
         </div>
 
         <div className="flex items-center justify-between pt-4 text-sm">
-          <span className="text-neutral-500">Cohort:</span>
-          <span className="font-medium text-neutral-900">{cohort}</span>
+          <span className="text-neutral-400">Cohort:</span>
+          <span className="font-medium text-neutral-800">{cohort}</span>
         </div>
         <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-neutral-500">Track:</span>
-          <span className="font-medium text-neutral-900">{track}</span>
+          <span className="text-neutral-400">Track:</span>
+          <span className="font-medium text-neutral-800">{track}</span>
         </div>
       </div>
 
@@ -770,13 +770,13 @@ function SuccessStep({
 }) {
   return (
     <div className="flex flex-col items-center py-4 text-center">
-      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-semantic-surface-success-badge">
-        <CheckCircle2 className="h-10 w-10 text-semantic-text-success" />
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-surface-success-badge">
+        <CheckCircle2 className="h-10 w-10 text-text-success" />
       </span>
-      <h2 className="mt-6 text-xl font-bold text-neutral-900">
+      <h2 className="mt-6 text-xl font-bold text-neutral-800">
         Invitation sent!
       </h2>
-      <p className="mt-2 max-w-sm text-sm text-neutral-500">{message}</p>
+      <p className="mt-2 max-w-sm text-sm text-neutral-400">{message}</p>
 
       <div className="mt-6 flex w-full flex-col-reverse gap-3 sm:w-auto sm:flex-row sm:items-center">
         <Button
@@ -838,14 +838,14 @@ function BulkUploadStep({
         onDrop={handleDrop}
         className={cn(
           "mt-6 flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center",
-          isDragging ? "border-primary-500 bg-primary-50" : "border-neutral-300"
+          isDragging ? "border-brand-primary bg-surface-brand" : "border-neutral-200"
         )}
       >
-        <Upload className="h-6 w-6 text-neutral-400" />
-        <p className="font-medium text-neutral-900">
+        <Upload className="h-6 w-6 text-neutral-300" />
+        <p className="font-medium text-neutral-800">
           Choose a file or drag &amp; drop it here.
         </p>
-        <p className="text-sm text-neutral-500">CSV format only, up to 10 MB.</p>
+        <p className="text-sm text-neutral-400">CSV format only, up to 10 MB.</p>
 
         <input
           ref={inputRef}
@@ -912,10 +912,10 @@ function BulkReviewStep({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-neutral-300">
+      <div className="mt-6 overflow-hidden rounded-xl border border-neutral-200">
         <div className="max-h-80 overflow-auto">
           <table className="w-full min-w-[520px] text-left text-sm">
-            <thead className="bg-neutral-100 text-xs tracking-wider text-neutral-500 uppercase">
+            <thead className="bg-neutral-50 text-xs tracking-wider text-neutral-400 uppercase">
               <tr>
                 <th className="w-10 px-4 py-3" />
                 <th className="px-4 py-3">First name</th>
@@ -927,7 +927,7 @@ function BulkReviewStep({
               {rows.map((row, index) => (
                 <tr
                   key={`${row.email}-${index}`}
-                  className="border-t border-neutral-200"
+                  className="border-t border-neutral-100"
                 >
                   <td className="px-4 py-3">
                     <button
@@ -937,18 +937,18 @@ function BulkReviewStep({
                       className={cn(
                         "flex h-4 w-4 items-center justify-center rounded border",
                         selectedRows[index]
-                          ? "border-primary-500 bg-primary-500 text-white"
-                          : "border-neutral-400"
+                          ? "border-brand-primary bg-brand-primary text-white"
+                          : "border-neutral-300"
                       )}
                     >
                       {selectedRows[index] && <Check className="h-3 w-3" />}
                     </button>
                   </td>
-                  <td className="px-4 py-3 font-medium text-neutral-900">
+                  <td className="px-4 py-3 font-medium text-neutral-800">
                     {row.firstName}
                   </td>
-                  <td className="px-4 py-3 text-neutral-700">{row.lastName}</td>
-                  <td className="px-4 py-3 text-neutral-500">{row.email}</td>
+                  <td className="px-4 py-3 text-neutral-600">{row.lastName}</td>
+                  <td className="px-4 py-3 text-neutral-400">{row.email}</td>
                 </tr>
               ))}
             </tbody>
@@ -957,7 +957,7 @@ function BulkReviewStep({
       </div>
 
       <DialogFooter className="justify-between">
-        <span className="text-sm text-neutral-500">
+        <span className="text-sm text-neutral-400">
           {selectedCount} selected
         </span>
         <div className="flex items-center gap-3">

@@ -10,16 +10,16 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-primary-500 text-neutral-50 hover:bg-interactive-primary-hover focus-visible:bg-interactive-primary-hover disabled:bg-neutral-400 disabled:text-interactive-primary-disabled/30",
+          "bg-brand-primary text-neutral-0 hover:bg-interactive-primary-hover focus-visible:bg-interactive-primary-hover disabled:bg-neutral-300 disabled:text-interactive-primary-disabled/30",
 
         secondary:
-          "bg-neutral-50 text-neutral-600 hover:bg-neutral-400 focus-visible:border focus-visible:border-primary-500 focus-visible:bg-interactive-secondary-focused disabled:bg-interactive-secondary-disabled disabled:text-interactive-secondary-disabled-text/30",
+          "bg-neutral-0 text-neutral-500 hover:bg-neutral-300 focus-visible:border focus-visible:border-brand-primary focus-visible:bg-interactive-secondary-hover disabled:bg-interactive-secondary-disabled disabled:text-text-disabled/30",
 
         tertiary:
-          "bg-neutral-300 text-primary-500 hover:bg-neutral-400 focus-visible:border focus-visible:border-primary-500 focus-visible:bg-interactive-tertiary-focused disabled:bg-interactive-secondary-disabled disabled:text-interactive-secondary-disabled-text/30",
+          "bg-neutral-200 text-brand-primary hover:bg-neutral-300 focus-visible:border focus-visible:border-brand-primary focus-visible:bg-interactive-tertiary-pressed disabled:bg-interactive-secondary-disabled disabled:text-text-disabled/30",
 
         destructive:
-          "bg-interactive-destructive-default text-neutral-50 hover:bg-interactive-destructive-hover focus-visible:border focus-visible:border-primary-500 focus-visible:bg-interactive-destructive-hover disabled:bg-interactive-destructive-disabled disabled:text-interactive-destructive-disabled-text/30",
+          "bg-interactive-destructive-default text-neutral-0 hover:bg-interactive-destructive-hover focus-visible:border focus-visible:border-brand-primary focus-visible:bg-interactive-destructive-hover disabled:bg-interactive-destructive-disabled disabled:text-text-disabled/30",
       },
 
       size: {

@@ -22,29 +22,29 @@ const metrics = [
     label: "Pending reviews",
     value: "2",
     icon: Users,
-    iconBg: "bg-semantic-surface-info-badge",
-    iconColor: "text-semantic-text-info",
+    iconBg: "bg-surface-info-badge",
+    iconColor: "text-text-info",
   },
   {
     label: "Upcoming content",
     value: "3",
     icon: Layers,
-    iconBg: "bg-success-50",
-    iconColor: "text-success-500",
+    iconBg: "bg-surface-success-badge",
+    iconColor: "text-icon-success",
   },
   {
     label: "Student questions",
     value: "1",
     icon: HelpCircle,
-    iconBg: "bg-primary-50",
-    iconColor: "text-primary-500",
+    iconBg: "bg-surface-brand",
+    iconColor: "text-brand-primary",
   },
   {
     label: "Live sessions today",
     value: "0",
     icon: Video,
-    iconBg: "bg-semantic-surface-error-badge",
-    iconColor: "text-semantic-text-error",
+    iconBg: "bg-surface-error-badge",
+    iconColor: "text-text-error",
   },
 ];
 
@@ -65,7 +65,7 @@ const upcomingItems = [
     course: "Product Design",
     badge: "Today 11:59PM",
     badgeStyle:
-      "bg-semantic-surface-error-badge text-semantic-text-error border-semantic-border-error",
+      "bg-surface-error-badge text-text-error border-border-error",
   },
   {
     type: "Content to publish",
@@ -73,14 +73,14 @@ const upcomingItems = [
     course: "Product Design",
     badge: "Tomorrow 10:00AM",
     badgeStyle:
-      "bg-semantic-surface-warning-badge text-semantic-text-warning border-semantic-border-warning",
+      "bg-surface-warning-badge text-text-warning border-border-warning",
   },
   {
     type: "Assignment review",
     title: "UI Design Portfolio",
     course: "Product Design",
     badge: "Oct 2",
-    badgeStyle: "bg-neutral-200 text-neutral-600 border-neutral-300",
+    badgeStyle: "bg-neutral-100 text-neutral-500 border-neutral-200",
   },
 ];
 
@@ -90,21 +90,21 @@ const recentActivities = [
     meta: "Design Thinking • 2h ago",
     badge: "Review",
     badgeStyle:
-      "bg-semantic-surface-warning-badge text-semantic-text-warning border-semantic-border-warning",
+      "bg-surface-warning-badge text-text-warning border-border-warning",
   },
   {
     title: "Aisha Bello received feedback",
     meta: "Product Design • 4h ago",
     badge: "Sent",
     badgeStyle:
-      "bg-semantic-surface-success-badge text-semantic-text-success border-semantic-border-success",
+      "bg-surface-success-badge text-text-success border-border-success",
   },
   {
     title: "New student joined",
     meta: "Product Design • 5h ago",
     badge: "New",
     badgeStyle:
-      "bg-semantic-surface-info-badge text-semantic-text-info border-semantic-border-info",
+      "bg-surface-info-badge text-text-info border-border-info",
   },
 ];
 
@@ -120,20 +120,20 @@ export default function DashboardOverview() {
    const instructorName = session.data?.user.firstName ?? "Instructor";
 
   return (
-    <div className="flex flex-col bg-neutral-100 p-6 space-y-6">
+    <div className="flex flex-col bg-neutral-50 p-6 space-y-6">
       <div id="heading" className="flex flex-row w-full items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+          <h1 className="text-2xl font-bold text-neutral-800 tracking-tight">
             {greeting()}, {instructorName}
           </h1>
-          <p className="text-sm text-neutral-500 mt-0.5">
+          <p className="text-sm text-neutral-400 mt-0.5">
             Here&apos;s what&apos;s happening in your tracks today.
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-xs hover:bg-neutral-200">
-          <Calendar className="h-3.5 w-3.5 text-neutral-500" />
+        <button className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-0 px-3 py-1.5 text-xs font-medium text-neutral-600 shadow-xs hover:bg-neutral-100">
+          <Calendar className="h-3.5 w-3.5 text-neutral-400" />
           <span>This week</span>
-          <ChevronDown className="h-3.5 w-3.5 text-neutral-400" />
+          <ChevronDown className="h-3.5 w-3.5 text-neutral-300" />
         </button>
       </div>
 
@@ -143,7 +143,7 @@ export default function DashboardOverview() {
           return (
             <div
               key={metric.label}
-              className="flex items-start gap-3 rounded-xl border border-neutral-300 bg-neutral-50 h-21 p-4 shadow-xs"
+              className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-neutral-0 h-21 p-4 shadow-xs"
             >
               <div
                 className={cn(
@@ -154,10 +154,10 @@ export default function DashboardOverview() {
                 <Icon className={cn("h-4 w-4", metric.iconColor)} />
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-medium text-neutral-600">
+                <span className="text-xs font-medium text-neutral-500">
                   {metric.label}
                 </span>
-                <span className="text-xl font-bold text-neutral-900 mt-1">
+                <span className="text-xl font-bold text-neutral-800 mt-1">
                   {metric.value}
                 </span>
               </div>
@@ -166,10 +166,10 @@ export default function DashboardOverview() {
         })}
       </div>
 
-      <div className="rounded-2xl border border-neutral-300 bg-neutral-50 p-6 shadow-xs">
+      <div className="rounded-2xl border border-neutral-200 bg-neutral-0 p-6 shadow-xs">
         <div className="mb-4">
-          <h2 className="text-base font-bold text-neutral-900">My Tracks</h2>
-          <p className="text-xs text-neutral-500">
+          <h2 className="text-base font-bold text-neutral-800">My Tracks</h2>
+          <p className="text-xs text-neutral-400">
             Overall progress across the tracks you teach
           </p>
         </div>
@@ -179,31 +179,31 @@ export default function DashboardOverview() {
             {tracks.map((track, idx) => (
               <div
                 key={idx}
-                className="rounded-xl border border-neutral-300 p-5 space-y-4 bg-white"
+                className="rounded-xl border border-neutral-200 p-5 space-y-4 bg-white"
               >
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900">
+                  <h3 className="text-sm font-bold text-neutral-800">
                     {track.title}
                   </h3>
-                  <p className="text-xs text-neutral-500 mt-1">
+                  <p className="text-xs text-neutral-400 mt-1">
                     {track.studentsCount} students • {track.modulesCount} modules
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  <div className="h-2 w-full rounded-full bg-neutral-200 overflow-hidden">
+                  <div className="h-2 w-full rounded-full bg-neutral-100 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-primary-500"
+                      className="h-full rounded-full bg-brand-primary"
                       style={{ width: `${track.progressPercent}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-neutral-800">
+                    <span className="font-semibold text-neutral-700">
                       {track.progressPercent}% complete
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-neutral-600">
-                  <span className="font-medium text-neutral-900">Next:</span>{" "}
+                <p className="text-xs text-neutral-500">
+                  <span className="font-medium text-neutral-800">Next:</span>{" "}
                   {track.nextModule}
                 </p>
               </div>
@@ -212,12 +212,12 @@ export default function DashboardOverview() {
         ) : (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50/60 mb-3">
-              <FileClock className="h-7 w-7 text-[#0D6D78]" />
+              <FileClock className="h-7 w-7 text-brand-primary" />
             </div>
-            <h3 className="text-sm font-semibold text-neutral-900">
+            <h3 className="text-sm font-semibold text-neutral-800">
               No tracks assigned yet
             </h3>
-            <p className="text-xs text-neutral-500 max-w-xs mt-1">
+            <p className="text-xs text-neutral-400 max-w-xs mt-1">
               Once an admin assigns you a track, it will show up here.
             </p>
           </div>
@@ -225,31 +225,31 @@ export default function DashboardOverview() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-neutral-300 bg-neutral-50 p-6 shadow-xs flex flex-col justify-between">
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-0 p-6 shadow-xs flex flex-col justify-between">
           <div className="flex items-start gap-3 mb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-semantic-surface-error-badge text-semantic-text-error">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-error-badge text-text-error">
               <Video className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-neutral-900">Upcoming</h2>
-              <p className="text-xs text-neutral-500">
+              <h2 className="text-base font-bold text-neutral-800">Upcoming</h2>
+              <p className="text-xs text-neutral-400">
                 Items that may need your attention
               </p>
             </div>
           </div>
 
           {upcomingItems && upcomingItems.length > 0 ? (
-            <div className="divide-y divide-neutral-200">
+            <div className="divide-y divide-neutral-100">
               {upcomingItems.map((item, idx) => (
                 <div
                   key={idx}
                   className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0"
                 >
                   <div className="space-y-0.5">
-                    <p className="text-xs font-semibold text-neutral-900">
-                      {item.type} <span className="font-normal text-neutral-400">•</span> {item.title}
+                    <p className="text-xs font-semibold text-neutral-800">
+                      {item.type} <span className="font-normal text-neutral-300">•</span> {item.title}
                     </p>
-                    <p className="text-xs text-neutral-500">{item.course}</p>
+                    <p className="text-xs text-neutral-400">{item.course}</p>
                   </div>
                   <span
                     className={cn(
@@ -265,44 +265,44 @@ export default function DashboardOverview() {
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50/60 mb-3">
-                <FileClock className="h-7 w-7 text-[#0D6D78]" />
+                <FileClock className="h-7 w-7 text-brand-primary" />
               </div>
-              <h3 className="text-sm font-semibold text-neutral-900">
+              <h3 className="text-sm font-semibold text-neutral-800">
                 Nothing coming up
               </h3>
-              <p className="text-xs text-neutral-500 max-w-xs mt-1">
+              <p className="text-xs text-neutral-400 max-w-xs mt-1">
                 Deadlines, content to publish and live sessions appear here.
               </p>
             </div>
           )}
         </div>
 
-        <div className="rounded-2xl border border-neutral-300 bg-neutral-50 p-6 shadow-xs flex flex-col justify-between">
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-0 p-6 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-bold text-neutral-900">
+              <h2 className="text-base font-bold text-neutral-800">
                 Recent Activities
               </h2>
-              <p className="text-xs text-neutral-500">What&apos;s coming up next</p>
+              <p className="text-xs text-neutral-400">What&apos;s coming up next</p>
             </div>
-            <button className="flex items-center gap-1.5 text-xs font-semibold text-primary-500 hover:text-primary-600 hover:underline">
+            <button className="flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:text-interactive-primary-hover hover:underline">
               <span>Schedule an activity</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
           {recentActivities && recentActivities.length > 0 ? (
-            <div className="divide-y divide-neutral-200">
+            <div className="divide-y divide-neutral-100">
               {recentActivities.map((act, idx) => (
                 <div
                   key={idx}
                   className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0"
                 >
                   <div className="space-y-0.5">
-                    <p className="text-xs font-semibold text-neutral-900">
+                    <p className="text-xs font-semibold text-neutral-800">
                       {act.title}
                     </p>
-                    <p className="text-xs text-neutral-500">{act.meta}</p>
+                    <p className="text-xs text-neutral-400">{act.meta}</p>
                   </div>
                   <span
                     className={cn(
@@ -318,12 +318,12 @@ export default function DashboardOverview() {
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50/60 mb-3">
-                <Calendar className="h-7 w-7 text-[#0D6D78]" />
+                <Calendar className="h-7 w-7 text-brand-primary" />
               </div>
-              <h3 className="text-sm font-semibold text-neutral-900">
+              <h3 className="text-sm font-semibold text-neutral-800">
                 No activity yet
               </h3>
-              <p className="text-xs text-neutral-500 max-w-xs mt-1">
+              <p className="text-xs text-neutral-400 max-w-xs mt-1">
                 Submissions, questions and new students appear here.
               </p>
             </div>

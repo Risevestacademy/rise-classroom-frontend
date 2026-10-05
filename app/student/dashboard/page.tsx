@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
   Calendar,
-  ArrowRight,
   ClipboardList,
   ChevronRight,
   Radar,
@@ -43,7 +42,7 @@ function formatDue(value: string) {
 
 function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl bg-neutral-200 p-4">
+    <div className="flex flex-col gap-3 rounded-2xl bg-neutral-100 p-4">
       {children}
     </div>
   );
@@ -61,10 +60,10 @@ function EmptyPanel({
   return (
     <Panel>
       <div className="flex items-start gap-3 py-2">
-        <Icon className="mt-0.5 h-5 w-5 shrink-0 text-neutral-400" />
+        <Icon className="mt-0.5 h-5 w-5 shrink-0 text-neutral-300" />
         <div>
-          <p className="text-sm font-semibold text-neutral-900">{title}</p>
-          <p className="mt-0.5 text-xs text-neutral-500">{message}</p>
+          <p className="text-sm font-semibold text-neutral-800">{title}</p>
+          <p className="mt-0.5 text-xs text-neutral-400">{message}</p>
         </div>
       </div>
     </Panel>
@@ -105,14 +104,14 @@ export default function StudentDashboardPage() {
               </>
             ) : (
               <>
-                <p className="text-sm font-bold text-neutral-900">
+                <p className="text-sm font-bold text-neutral-800">
                   {user?.displayName ?? user?.name ?? "Student"}
                 </p>
                 {progress.isPending ? (
                   <Skeleton className="mt-1.5 h-3 w-24" />
                 ) : (
                   enrollment && (
-                    <Badge variant="light" size="sm" className="bg-semantic-surface-brand text-primary-500 ">
+                    <Badge variant="light" size="sm" className="bg-surface-brand text-brand-primary ">
                       {enrollment.track.name}
                     </Badge>
                   )
@@ -126,14 +125,14 @@ export default function StudentDashboardPage() {
           <button
             type="button"
             aria-label="Calendar"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-50 text-neutral-500 hover:text-neutral-700"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-0 text-neutral-400 hover:text-neutral-600"
           >
             <Calendar className="h-5 w-5" />
           </button>
           <button
             type="button"
             aria-label="Notifications"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-50 text-neutral-500 hover:text-neutral-700"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-0 text-neutral-400 hover:text-neutral-600"
           >
             <Bell className="h-5 w-5" />
           </button>
@@ -142,7 +141,7 @@ export default function StudentDashboardPage() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-neutral-900">
+          <h2 className="mb-3 text-lg font-semibold text-neutral-800">
             Continue Learning
           </h2>
 
@@ -177,23 +176,23 @@ export default function StudentDashboardPage() {
             />
           ) : (
             <Panel>
-              <div className="relative h-[90px] overflow-hidden rounded-lg bg-[#E8F5F6] p-4">
-                <span className="absolute top-3 left-6 h-12 w-12 rounded-full bg-primary-200/60" />
-                <span className="absolute -top-4 left-14 h-16 w-16 rounded-full bg-primary-300/50" />
-                <span className="absolute right-6 bottom-0 h-14 w-14 rounded-full bg-primary-300/40" />
-                <p className="relative text-lg font-bold text-neutral-900">
+              <div className="relative h-[90px] overflow-hidden rounded-lg bg-surface-brand p-4">
+                <span className="absolute top-3 left-6 h-12 w-12 rounded-full bg-brand-primary/25" />
+                <span className="absolute -top-4 left-14 h-16 w-16 rounded-full bg-brand-primary/35" />
+                <span className="absolute right-6 bottom-0 h-14 w-14 rounded-full bg-brand-primary/30" />
+                <p className="relative text-lg font-bold text-neutral-800">
                   {enrollment.track.name}
                 </p>
               </div>
 
               <div>
-                <p className="text-sm font-medium text-neutral-900">
+                <p className="text-sm font-medium text-neutral-800">
                   {enrollment.trackComplete
                     ? "Track complete 🎉"
                     : (enrollment.currentLesson?.title ??
                       "Your first lesson is waiting")}
                 </p>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-neutral-400">
                   {enrollment.currentTopic?.title ?? enrollment.track.description}
                   {" · "}
                   {enrollment.progress.completedLessons} of{" "}
@@ -216,19 +215,19 @@ export default function StudentDashboardPage() {
                         "h-full w-[3px] rounded-[1px]",
                         index <
                           Math.round((enrollment.progress.percentage / 100) * 24)
-                          ? "bg-semantic-text-success"
-                          : "bg-neutral-300",
+                          ? "bg-text-success"
+                          : "bg-neutral-200",
                       )}
                     />
                   ))}
                 </div>
-                <span className="shrink-0 text-sm text-neutral-700">
+                <span className="shrink-0 text-sm text-neutral-600">
                   {enrollment.progress.percentage}% Complete
                 </span>
                 <button
                   type="button"
                   aria-label="Continue lesson"
-                  className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-500 text-white"
+                  className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -238,7 +237,7 @@ export default function StudentDashboardPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-neutral-900">
+          <h2 className="mb-3 text-lg font-semibold text-neutral-800">
             Due This Week
           </h2>
 
@@ -263,17 +262,17 @@ export default function StudentDashboardPage() {
             />
           ) : (
             <Panel>
-              <ul className="flex flex-col divide-y divide-neutral-300">
+              <ul className="flex flex-col divide-y divide-neutral-200">
                 {tasks.data?.items.map((task) => (
                   <li
                     key={task.id}
                     className="flex items-start justify-between gap-3 py-2 first:pt-0 last:pb-0"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-neutral-900">
+                      <p className="truncate text-sm font-semibold text-neutral-800">
                         {task.title}
                       </p>
-                      <p className="mt-0.5 text-xs text-neutral-500">
+                      <p className="mt-0.5 text-xs text-neutral-400">
                         Due {formatDue(task.dueDate)}
                         {task.topic?.title && ` · ${task.topic.title}`}
                       </p>
@@ -293,30 +292,30 @@ export default function StudentDashboardPage() {
       </div>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-neutral-900">
+        <h2 className="mb-3 text-lg font-semibold text-neutral-800">
           Your Week
         </h2>
 
         <Link
           href="/student/control-tower"
-          className="flex items-center justify-between gap-4 rounded-lg border border-neutral-300 bg-white p-4 hover:bg-neutral-200/60"
+          className="flex items-center justify-between gap-4 rounded-lg border border-neutral-200 bg-white p-4 hover:bg-neutral-100/60"
         >
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E8F5F6] text-primary-500">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-brand text-brand-primary">
               <Radar className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-neutral-900">
+              <p className="text-sm font-semibold text-neutral-800">
                 Control Tower
               </p>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-neutral-400">
                 Set your goals, track your progress, and reflect on your
                 week.
               </p>
             </div>
           </div>
 
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-500 text-white">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-primary text-white">
             <ChevronRight className="h-4 w-4" />
           </span>
         </Link>

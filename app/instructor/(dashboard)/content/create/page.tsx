@@ -11,7 +11,7 @@ function CreatePageContent() {
   const type = searchParams.get("type");
 
   return (
-    <div className="flex flex-col bg-neutral-100 p-6 space-y-6">
+    <div className="flex flex-col bg-neutral-50 p-6 space-y-6">
       {type === "modules" && <CreateModulePage />}
       {/* {type === "lessons" && <CreateLessonPage />} */}
       {/* {type === "resources" && <CreateTrackForm />} */}
@@ -21,7 +21,7 @@ function CreatePageContent() {
 
 export default function CreatePage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-neutral-500">Loading form...</div>}>
+    <Suspense fallback={<div className="p-6 text-sm text-neutral-400">Loading form...</div>}>
       <CreatePageContent />
     </Suspense>
   );

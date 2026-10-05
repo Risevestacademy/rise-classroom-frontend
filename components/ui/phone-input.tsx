@@ -56,12 +56,12 @@ function PhoneInput({
         }}
       />
 
-      <span className="h-4 w-px shrink-0 bg-neutral-200" aria-hidden="true" />
+      <span className="h-4 w-px shrink-0 bg-neutral-100" aria-hidden="true" />
 
       <span
         className={cn(
-          "shrink-0 text-sm text-neutral-500",
-          disabled && "text-neutral-300"
+          "shrink-0 text-sm text-neutral-400",
+          disabled && "text-neutral-200"
         )}
       >
         {selected?.dialCode}
@@ -83,8 +83,8 @@ function PhoneInput({
         }}
         placeholder="000 000 0000"
         className={cn(
-          "w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400",
-          "disabled:cursor-not-allowed disabled:text-neutral-400"
+          "w-full bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-300",
+          "disabled:cursor-not-allowed disabled:text-neutral-300"
         )}
         {...props}
       />

@@ -69,14 +69,14 @@ export default function AdminDashboardPage() {
       count: pendingInvites.data ?? 0,
       href: "/admin/instructors",
       icon: MailWarning,
-      className: "bg-semantic-surface-warning-badge text-semantic-text-warning",
+      className: "bg-surface-warning-badge text-text-warning",
     },
     {
       label: "Suspended accounts",
       count: suspended.data ?? 0,
       href: "/admin/instructors",
       icon: AlertCircle,
-      className: "bg-semantic-surface-error-badge text-semantic-text-error",
+      className: "bg-surface-error-badge text-text-error",
     },
   ].filter((item) => item.count > 0);
 
@@ -89,14 +89,14 @@ export default function AdminDashboardPage() {
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-neutral-900">
+              <h1 className="text-2xl font-bold text-neutral-800">
                 {session.isPending ? (
                   <Skeleton className="h-8 w-64" />
                 ) : (
                   `${greeting()}, ${adminName}`
                 )}
               </h1>
-              <p className="mt-1 text-sm text-neutral-500">
+              <p className="mt-1 text-sm text-neutral-400">
                 Here&apos;s what&apos;s happening across your program
               </p>
             </div>
@@ -111,7 +111,7 @@ export default function AdminDashboardPage() {
               isError={activeStudents.isError}
               description="Total active participants"
               icon={Users}
-              iconWrapperClassName="bg-primary-50 text-primary-500"
+              iconWrapperClassName="bg-surface-brand text-brand-primary"
             />
             <MetricCard
               title="Active Tracks"
@@ -124,7 +124,7 @@ export default function AdminDashboardPage() {
                   : "No active tracks yet"
               }
               icon={Layers}
-              iconWrapperClassName="bg-semantic-surface-success-badge text-semantic-text-success"
+              iconWrapperClassName="bg-surface-success-badge text-text-success"
             />
             <MetricCard
               title="Instructors"
@@ -142,7 +142,7 @@ export default function AdminDashboardPage() {
               isError={pendingInvites.isError}
               description="Invited but not yet onboarded"
               icon={MailWarning}
-              iconWrapperClassName="bg-semantic-surface-error-badge text-semantic-text-error"
+              iconWrapperClassName="bg-surface-error-badge text-text-error"
             />
           </div>
 
@@ -158,10 +158,10 @@ export default function AdminDashboardPage() {
                 ) : (
                   <CircularProgress value={onboardedShare}>
                     <div className="flex flex-col items-center">
-                      <span className="text-3xl font-bold text-neutral-900">
+                      <span className="text-3xl font-bold text-neutral-800">
                         {onboardedShare}%
                       </span>
-                      <span className="text-xs text-neutral-500">
+                      <span className="text-xs text-neutral-400">
                         Onboarded
                       </span>
                     </div>
@@ -169,7 +169,7 @@ export default function AdminDashboardPage() {
                 )}
 
                 <div className="flex-1 space-y-4">
-                  <h3 className="text-sm font-semibold text-neutral-900">
+                  <h3 className="text-sm font-semibold text-neutral-800">
                     Participants per Track
                   </h3>
 
@@ -182,7 +182,7 @@ export default function AdminDashboardPage() {
                       </div>
                     ))
                   ) : tracks.length === 0 ? (
-                    <p className="text-sm text-neutral-500">
+                    <p className="text-sm text-neutral-400">
                       No active tracks to report on yet.
                     </p>
                   ) : (
@@ -199,7 +199,7 @@ export default function AdminDashboardPage() {
 
               <button
                 type="button"
-                className="mt-6 flex items-center gap-1 text-sm font-medium text-primary-500"
+                className="mt-6 flex items-center gap-1 text-sm font-medium text-brand-primary"
               >
                 View detailed progress
                 <ArrowUpRight className="h-4 w-4" />
@@ -217,13 +217,13 @@ export default function AdminDashboardPage() {
                 </div>
               ) : attentionItems.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-semantic-surface-success-badge text-semantic-text-success">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-success-badge text-text-success">
                     <CheckCircle2 className="h-6 w-6" />
                   </div>
-                  <p className="font-semibold text-neutral-900">
+                  <p className="font-semibold text-neutral-800">
                     All caught up!
                   </p>
-                  <p className="max-w-64 text-sm text-neutral-500">
+                  <p className="max-w-64 text-sm text-neutral-400">
                     There are no pending items that need your attention right
                     now.
                   </p>
@@ -233,7 +233,7 @@ export default function AdminDashboardPage() {
                   {attentionItems.map((item) => (
                     <li
                       key={item.label}
-                      className="flex items-center gap-3 rounded-lg border border-neutral-200 px-4 py-3"
+                      className="flex items-center gap-3 rounded-lg border border-neutral-100 px-4 py-3"
                     >
                       <span
                         className={cn(
@@ -244,11 +244,11 @@ export default function AdminDashboardPage() {
                         <item.icon className="h-4 w-4" />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-neutral-900">
+                        <p className="text-sm font-medium text-neutral-800">
                           {item.count} {item.label}
                         </p>
                       </div>
-                      <ArrowUpRight className="h-4 w-4 shrink-0 text-neutral-400" />
+                      <ArrowUpRight className="h-4 w-4 shrink-0 text-neutral-300" />
                     </li>
                   ))}
                 </ul>
@@ -285,8 +285,8 @@ function TrackBars({
   counts: { value?: number; isPending: boolean }[];
 }) {
   const palette = [
-    "text-primary-500",
-    "text-semantic-text-info",
+    "text-brand-primary",
+    "text-text-info",
     "text-[#960B93]",
     "text-[#7C3AED]",
   ];
@@ -303,7 +303,7 @@ function TrackBars({
 
         return (
           <div key={track.id} className="flex items-center gap-2 sm:gap-3">
-            <span className="w-20 shrink-0 truncate text-sm text-neutral-700 sm:w-36">
+            <span className="w-20 shrink-0 truncate text-sm text-neutral-600 sm:w-36">
               {track.name}
             </span>
             {count?.isPending ? (
@@ -313,7 +313,7 @@ function TrackBars({
               </>
             ) : (
               <>
-                <div className="h-2 flex-1 rounded-full bg-neutral-200">
+                <div className="h-2 flex-1 rounded-full bg-neutral-100">
                   <div
                     className={cn("h-2 rounded-full bg-current", className)}
                     style={{
@@ -321,7 +321,7 @@ function TrackBars({
                     }}
                   />
                 </div>
-                <span className="w-10 shrink-0 text-right text-sm font-medium text-neutral-900">
+                <span className="w-10 shrink-0 text-right text-sm font-medium text-neutral-800">
                   {count?.value ?? 0}
                 </span>
               </>
@@ -336,7 +336,7 @@ function TrackBars({
 function EmptyPanel({ message }: { message: string }) {
   return (
     <div className="flex flex-1 items-center justify-center py-10 text-center">
-      <p className="max-w-72 text-sm text-neutral-500">{message}</p>
+      <p className="max-w-72 text-sm text-neutral-400">{message}</p>
     </div>
   );
 }
@@ -345,10 +345,10 @@ function WeekFilter() {
   return (
     <button
       type="button"
-      className="flex h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-700"
+      className="flex h-10 items-center gap-2 rounded-lg border border-neutral-200 px-3 text-sm font-medium text-neutral-600"
     >
       This week
-      <ChevronDown className="h-4 w-4 text-neutral-500" />
+      <ChevronDown className="h-4 w-4 text-neutral-400" />
     </button>
   );
 }
@@ -371,7 +371,7 @@ function MetricCard({
   iconWrapperClassName: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-neutral-300 bg-white p-5">
+    <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-5">
       <div
         className={cn(
           "flex h-10 w-10 items-center justify-center rounded-lg",
@@ -381,11 +381,11 @@ function MetricCard({
         <Icon className="h-5 w-5" />
       </div>
       <div>
-        <p className="text-sm text-neutral-500">{title}</p>
+        <p className="text-sm text-neutral-400">{title}</p>
         {isPending ? (
           <Skeleton className="mt-1 h-8 w-16" />
         ) : (
-          <p className="text-2xl font-bold text-neutral-900">
+          <p className="text-2xl font-bold text-neutral-800">
             {isError ? "—" : (value ?? 0)}
           </p>
         )}
@@ -393,7 +393,7 @@ function MetricCard({
       {isPending ? (
         <Skeleton className="h-4 w-full" />
       ) : (
-        <p className="line-clamp-2 text-sm text-neutral-500">
+        <p className="line-clamp-2 text-sm text-neutral-400">
           {isError ? "Couldn't load this figure." : description}
         </p>
       )}
@@ -413,11 +413,11 @@ function DashboardCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col rounded-xl border border-neutral-300 bg-white p-6">
+    <div className="flex flex-1 flex-col rounded-xl border border-neutral-200 bg-white p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
-          <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>
+          <h2 className="text-lg font-semibold text-neutral-800">{title}</h2>
+          <p className="mt-1 text-sm text-neutral-400">{subtitle}</p>
         </div>
         {action}
       </div>

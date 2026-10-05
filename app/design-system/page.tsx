@@ -6,10 +6,10 @@ export default function InputShowcasePage() {
   return (
     <main className="mx-auto max-w-2xl space-y-8 px-6 py-12">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-neutral-900">
+        <h1 className="text-2xl font-bold text-neutral-800">
           Input — Design System Reference
         </h1>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-neutral-400">
           One example per type. Default leading icons apply automatically
           for basic/email/password/date unless overridden.
         </p>
@@ -67,7 +67,7 @@ export default function InputShowcasePage() {
       />
 
       <div className="space-y-4">
-        <h2 className="text-sm font-semibold text-neutral-600">States</h2>
+        <h2 className="text-sm font-semibold text-neutral-500">States</h2>
 
         <FormField
           label="Disabled"

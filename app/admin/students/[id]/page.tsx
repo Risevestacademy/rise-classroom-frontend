@@ -50,11 +50,11 @@ export default function StudentDetailsPage({
 
         {studentQuery.isError && (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-            <UserRound className="h-12 w-12 text-neutral-300" />
-            <p className="font-semibold text-neutral-900">
+            <UserRound className="h-12 w-12 text-neutral-200" />
+            <p className="font-semibold text-neutral-800">
               Couldn&apos;t load this student
             </p>
-            <p className="max-w-80 text-sm text-neutral-500">
+            <p className="max-w-80 text-sm text-neutral-400">
               {studentQuery.error.message}
             </p>
           </div>
@@ -86,7 +86,7 @@ function Card({
   return (
     <section
       className={cn(
-        "flex flex-col rounded-xl border border-neutral-300 bg-white p-5 sm:p-6",
+        "flex flex-col rounded-xl border border-neutral-200 bg-white p-5 sm:p-6",
         className,
       )}
     >
@@ -98,8 +98,8 @@ function Card({
 function CardHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div>
-      <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
-      {subtitle && <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>}
+      <h2 className="text-lg font-semibold text-neutral-800">{title}</h2>
+      {subtitle && <p className="mt-1 text-sm text-neutral-400">{subtitle}</p>}
     </div>
   );
 }
@@ -123,7 +123,7 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
       <div className="flex items-center gap-4">
         <InitialsAvatar name={student.name} className="h-20 w-20 text-2xl" />
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold text-neutral-900">
+          <h1 className="truncate text-2xl font-bold text-neutral-800">
             {name}
           </h1>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -148,9 +148,9 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
         {details.map(({ icon: Icon, value }) => (
           <p
             key={value}
-            className="flex min-w-0 items-center gap-3 text-sm text-neutral-700"
+            className="flex min-w-0 items-center gap-3 text-sm text-neutral-600"
           >
-            <Icon className="h-5 w-5 shrink-0 text-neutral-500" />
+            <Icon className="h-5 w-5 shrink-0 text-neutral-400" />
             <span className="truncate">{value}</span>
           </p>
         ))}
@@ -170,7 +170,7 @@ function EnrollmentCard({ student }: { student: AdminUser }) {
       />
 
       {memberships.length === 0 ? (
-        <p className="mt-6 text-sm text-neutral-500">
+        <p className="mt-6 text-sm text-neutral-400">
           This student isn&apos;t enrolled in a cohort yet.
         </p>
       ) : (
@@ -178,18 +178,18 @@ function EnrollmentCard({ student }: { student: AdminUser }) {
           {memberships.map((membership, index) => (
             <li
               key={membership.cohort?.id ?? index}
-              className="rounded-lg border border-neutral-200 p-4"
+              className="rounded-lg border border-neutral-100 p-4"
             >
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-500">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-brand text-brand-primary">
                   <Layers className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-neutral-900">
+                  <p className="truncate font-medium text-neutral-800">
                     {membership.cohort?.name ?? "Unknown cohort"}
                   </p>
                   {membership.cohort?.year && (
-                    <p className="text-sm text-neutral-500">
+                    <p className="text-sm text-neutral-400">
                       Year {membership.cohort.year}
                     </p>
                   )}
@@ -202,7 +202,7 @@ function EnrollmentCard({ student }: { student: AdminUser }) {
                     key={enrollment.track?.id ?? trackIndex}
                     className="flex items-center justify-between gap-3 text-sm"
                   >
-                    <span className="text-neutral-700">
+                    <span className="text-neutral-600">
                       {enrollment.track?.name ?? "Unknown track"}
                     </span>
                     <Badge variant="light" status="neutral">
@@ -255,16 +255,16 @@ function AccountCard({ student }: { student: AdminUser }) {
             key={row.label}
             className="flex items-center justify-between gap-4 text-sm"
           >
-            <dt className="text-neutral-500">{row.label}</dt>
-            <dd className="font-medium text-neutral-900">{row.value}</dd>
+            <dt className="text-neutral-400">{row.label}</dt>
+            <dd className="font-medium text-neutral-800">{row.value}</dd>
           </div>
         ))}
         {student.emailVerified !== undefined && (
           <div className="flex items-center justify-between gap-4 text-sm">
-            <dt className="text-neutral-500">Email</dt>
-            <dd className="flex items-center gap-1.5 font-medium text-neutral-900">
+            <dt className="text-neutral-400">Email</dt>
+            <dd className="flex items-center gap-1.5 font-medium text-neutral-800">
               {student.emailVerified && (
-                <BadgeCheck className="h-4 w-4 text-semantic-text-success" />
+                <BadgeCheck className="h-4 w-4 text-text-success" />
               )}
               {student.emailVerified ? "Verified" : "Not verified"}
             </dd>

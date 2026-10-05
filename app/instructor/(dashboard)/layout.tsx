@@ -11,7 +11,7 @@ export default function DashboardLayout({
     <AuthGuard role="INSTRUCTOR">
       <div className="flex h-screen w-full overflow-hidden">
         <InstructorSidebar />
-        <main className="flex flex-1 flex-col h-full bg-neutral-100 min-w-0">
+        <main className="flex flex-1 flex-col h-full bg-neutral-50 min-w-0">
           <InstructorNavbar />
           <div className="flex-1 overflow-y-auto">
             {children}

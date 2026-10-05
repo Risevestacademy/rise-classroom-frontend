@@ -13,10 +13,10 @@ import {
 } from "@/lib/stack-game";
 
 /** Mirrors the tokens in app/globals.css — canvas can't read Tailwind classes. */
-const INK = "#111819"; // neutral-900
+const INK = "#111819"; // neutral-700
 const WHITE = [255, 255, 255];
-const TEAL_TINT = [180, 210, 213]; // primary-100
-const TEAL = [13, 109, 120]; // primary-500
+const TEAL_TINT = [180, 210, 213]; // decorative tint (not a design token)
+const TEAL = [13, 109, 120]; // brand-primary
 
 type Phase = "ready" | "playing" | "over" | "won";
 
@@ -44,7 +44,7 @@ function mix(a: number[], b: number[], t: number) {
   return a.map((channel, i) => Math.round(channel + (b[i] - channel) * t));
 }
 
-/** The tower rises through the brand teal: white → primary-100 → primary-500. */
+/** The tower rises through the brand teal: white → teal tint → brand-primary. */
 function fillFor(level: number) {
   const t = Math.min(level / GRADUATION_WEEK, 1);
   const [r, g, b] = t < 0.5 ? mix(WHITE, TEAL_TINT, t / 0.5) : mix(TEAL_TINT, TEAL, (t - 0.5) / 0.5);
@@ -326,14 +326,38 @@ export function StackGame({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
-  function handleKeyDown(event: React.KeyboardEvent) {
-    if (event.key === "Escape") {
-      onClose();
-    } else if ((event.key === " " || event.key === "Enter") && !event.repeat) {
+  // Keys are heard on the window, not the overlay: clicking Start focuses a
+  // button that disappears as play begins, which would otherwise leave focus
+  // on <body> and the overlay deaf to Space.
+  const onCloseRef = React.useRef(onClose);
+  React.useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  React.useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== " " && event.key !== "Enter") return;
+      // Also stops a focused button from treating the same press as a click.
       event.preventDefault();
-      actRef.current();
+      if (!event.repeat) actRef.current();
     }
-  }
+
+    function onKeyUp(event: KeyboardEvent) {
+      // Buttons fire their click for Space on keyup; one press, one action.
+      if (event.key === " ") event.preventDefault();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
 
   return (
     <div
@@ -342,8 +366,7 @@ export function StackGame({ onClose }: { onClose: () => void }) {
       aria-modal="true"
       aria-label="Stack the weeks — a hidden game"
       tabIndex={-1}
-      onKeyDown={handleKeyDown}
-      className="fixed inset-0 z-50 h-dvh bg-semantic-surface-brand outline-none"
+      className="fixed inset-0 z-50 h-dvh bg-surface-brand outline-none"
     >
       <canvas
         ref={canvasRef}
@@ -353,25 +376,25 @@ export function StackGame({ onClose }: { onClose: () => void }) {
 
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-4 px-6 py-5 sm:px-10 sm:py-6">
         <div className="w-full max-w-60">
-          <p className="text-sm text-neutral-500">Stack the weeks</p>
-          <p className="text-2xl font-bold text-neutral-900 tabular-nums">
+          <p className="text-sm text-neutral-400">Stack the weeks</p>
+          <p className="text-2xl font-bold text-neutral-800 tabular-nums">
             Week {weeks}
-            <span className="font-medium text-neutral-400"> / {GRADUATION_WEEK}</span>
+            <span className="font-medium text-neutral-300"> / {GRADUATION_WEEK}</span>
           </p>
-          <div className="mt-3 h-2 w-full rounded-full bg-neutral-300">
+          <div className="mt-3 h-2 w-full rounded-full bg-neutral-200">
             <div
-              className="h-2 rounded-full bg-primary-500 transition-[width] duration-300"
+              className="h-2 rounded-full bg-brand-primary transition-[width] duration-300"
               style={{ width: `${(weeks / GRADUATION_WEEK) * 100}%` }}
             />
           </div>
-          <p className="mt-2 text-xs text-neutral-500">Best: {best} weeks</p>
+          <p className="mt-2 text-xs text-neutral-400">Best: {best} weeks</p>
         </div>
 
         <button
           type="button"
           aria-label="Close game"
           onClick={onClose}
-          className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-200/60"
+          className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100/60"
         >
           <X className="h-5 w-5" />
         </button>
@@ -379,21 +402,21 @@ export function StackGame({ onClose }: { onClose: () => void }) {
 
       {phase !== "playing" && (
         <div className="absolute inset-0 flex items-center justify-center px-6">
-          <div className="w-full max-w-sm rounded-xl border border-neutral-300 bg-white p-6 text-center shadow-lg">
+          <div className="w-full max-w-sm rounded-xl border border-neutral-200 bg-white p-6 text-center shadow-lg">
             {phase === "won" && (
-              <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-semantic-surface-success-badge">
-                <CheckCircle2 className="h-8 w-8 text-semantic-text-success" />
+              <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-surface-success-badge">
+                <CheckCircle2 className="h-8 w-8 text-text-success" />
               </span>
             )}
 
-            <h2 className="text-xl font-bold text-neutral-900">
+            <h2 className="text-xl font-bold text-neutral-800">
               {phase === "ready"
                 ? "Stack the weeks"
                 : phase === "won"
                   ? "You graduated"
                   : `${weeks} week${weeks === 1 ? "" : "s"} stacked`}
             </h2>
-            <p className="mt-2 text-sm text-neutral-600">
+            <p className="mt-2 text-sm text-neutral-500">
               {phase === "ready"
                 ? "The program runs for 52 weeks. Drop each one cleanly — whatever hangs over the edge is gone for good."
                 : phase === "won"
@@ -423,7 +446,7 @@ export function StackGame({ onClose }: { onClose: () => void }) {
                 </Button>
               )}
             </div>
-            <p className="mt-4 text-xs text-neutral-500">
+            <p className="mt-4 text-xs text-neutral-400">
               Tap or press Space to drop · Esc to leave
             </p>
           </div>
