@@ -11,6 +11,99 @@ export const LOGO_BANDS = [
   "M18.4365 26.654C19.1726 26.0163 19.9585 25.4387 20.7869 24.9267C24.6712 22.495 29.2692 21.4605 33.821 21.9939C34.8856 22.1182 35.7845 22.3274 36.8218 22.5696L36.8206 26.0498C35.4679 25.6563 33.8181 25.4625 32.4191 25.3509C26.9377 25.212 22.6977 26.7159 18.4353 30.1175C17.5547 29.4955 16.9304 28.9334 15.9603 28.354C10.7616 25.2498 5.80934 24.6845 0.0301577 26.0513L0.00317383 22.5855C1.70241 22.123 2.88634 21.971 4.63398 21.8728C9.95337 21.6744 14.3205 23.3926 18.4365 26.654Z",
 ] as const;
 
+/**
+ * One vertical slice of a band, in logo viewBox units: its centre and the
+ * size of the box around the band inside the slice. Side by side, a band's
+ * slices rebuild it exactly.
+ */
+export type BandStrip = { band: number; x: number; y: number; w: number; h: number };
+
+/**
+ * Cuts each band into `counts[i]` vertical slices of equal width, trimmed to
+ * where the band actually is. Browser only (canvas + Path2D).
+ */
+export function sampleBandStrips(counts: readonly number[]): BandStrip[] {
+  const scale = 8;
+  const width = LOGO_VIEWBOX.width * scale;
+  const height = LOGO_VIEWBOX.height * scale;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return [];
+
+  const strips: BandStrip[] = [];
+
+  LOGO_BANDS.forEach((d, band) => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.fill(new Path2D(d));
+    const pixels = ctx.getImageData(0, 0, width, height).data;
+
+    // Top and bottom of the band in every pixel column.
+    const tops: number[] = [];
+    const bottoms: number[] = [];
+    let first = -1;
+    let last = -1;
+    for (let x = 0; x < width; x++) {
+      tops[x] = -1;
+      bottoms[x] = -1;
+      for (let y = 0; y < height; y++) {
+        if (pixels[(y * width + x) * 4 + 3] > 8) {
+          if (tops[x] < 0) tops[x] = y;
+          bottoms[x] = y;
+        }
+      }
+      if (tops[x] >= 0) {
+        if (first < 0) first = x;
+        last = x;
+      }
+    }
+    if (first < 0) return;
+
+    const count = counts[band] ?? 0;
+    const span = last + 1 - first;
+    for (let k = 0; k < count; k++) {
+      const c0 = first + Math.round((k / count) * span);
+      const c1 = first + Math.round(((k + 1) / count) * span);
+      let top = Infinity;
+      let bottom = -Infinity;
+      for (let x = c0; x < c1; x++) {
+        if (tops[x] < 0) continue;
+        top = Math.min(top, tops[x]);
+        bottom = Math.max(bottom, bottoms[x]);
+      }
+      if (!Number.isFinite(top) || c1 <= c0) continue;
+      const x0 = c0 / scale;
+      const x1 = c1 / scale;
+      const y0 = top / scale;
+      const y1 = (bottom + 1) / scale;
+      strips.push({ band, x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 });
+    }
+  });
+
+  return strips;
+}
+
+/**
+ * Paints one slice of the mark into its own small canvas, `unit` pixels per
+ * viewBox unit, so it can be drawn anywhere with drawImage.
+ */
+export function renderStrip(strip: BandStrip, unit: number, color: string): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.ceil(strip.w * unit));
+  canvas.height = Math.max(1, Math.ceil(strip.h * unit));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+  ctx.scale(canvas.width / strip.w, canvas.height / strip.h);
+  ctx.translate(-(strip.x - strip.w / 2), -(strip.y - strip.h / 2));
+  ctx.fillStyle = color;
+  ctx.fill(new Path2D(LOGO_BANDS[strip.band]));
+  return canvas;
+}
+
 /** A slot along one band, in logo viewBox units. */
 export type BandSegment = {
   x: number;
