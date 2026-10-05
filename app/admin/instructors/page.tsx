@@ -6,13 +6,13 @@ import {
   Users,
   Search,
   SlidersHorizontal,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { InviteInstructorDialog } from "@/components/InviteInstructorDialog";
+import { UserRowActions } from "@/components/UserRowActions";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminQueries, assignmentsFor, type AdminUser } from "@/lib/admin";
@@ -285,13 +285,7 @@ export default function InstructorsPage() {
                               {formatJoined(instructor)}
                             </td>
                             <td className="px-5 py-4">
-                              <button
-                                type="button"
-                                aria-label="Row actions"
-                                className="text-neutral-300 hover:text-neutral-600"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </button>
+                              <UserRowActions user={instructor} />
                             </td>
                           </tr>
                         );
