@@ -59,6 +59,11 @@ export function easeOutCubic(t: number) {
   return 1 - (1 - t) ** 3;
 }
 
+/** A fast start that settles very softly, for things arriving on load. */
+export function easeOutQuart(t: number) {
+  return 1 - (1 - t) ** 4;
+}
+
 /** Ease out with a small overshoot, for things that land and settle. */
 export function easeOutBack(t: number) {
   const c = 1.4;

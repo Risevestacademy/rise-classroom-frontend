@@ -89,9 +89,15 @@ export function sampleBandStrips(counts: readonly number[]): BandStrip[] {
 
 /**
  * Paints one slice of the mark into its own small canvas, `unit` pixels per
- * viewBox unit, so it can be drawn anywhere with drawImage.
+ * viewBox unit, so it can be drawn anywhere with drawImage. `fill` is a
+ * colour, or a painter that draws in viewBox units and is clipped to the band
+ * (for a photo inside the mark).
  */
-export function renderStrip(strip: BandStrip, unit: number, color: string): HTMLCanvasElement {
+export function renderStrip(
+  strip: BandStrip,
+  unit: number,
+  fill: string | ((ctx: CanvasRenderingContext2D) => void)
+): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.ceil(strip.w * unit));
   canvas.height = Math.max(1, Math.ceil(strip.h * unit));
@@ -99,8 +105,14 @@ export function renderStrip(strip: BandStrip, unit: number, color: string): HTML
   if (!ctx) return canvas;
   ctx.scale(canvas.width / strip.w, canvas.height / strip.h);
   ctx.translate(-(strip.x - strip.w / 2), -(strip.y - strip.h / 2));
-  ctx.fillStyle = color;
-  ctx.fill(new Path2D(LOGO_BANDS[strip.band]));
+  const band = new Path2D(LOGO_BANDS[strip.band]);
+  if (typeof fill === "string") {
+    ctx.fillStyle = fill;
+    ctx.fill(band);
+  } else {
+    ctx.clip(band);
+    fill(ctx);
+  }
   return canvas;
 }
 

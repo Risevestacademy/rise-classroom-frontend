@@ -145,7 +145,18 @@ export function LandingFooter({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 px-6 py-6 text-xs text-neutral-400 sm:px-10 md:px-[6vw]">
-        <span>© {new Date().getFullYear()} Rise Classroom</span>
+        <span>
+          © {new Date().getFullYear()} Rise Academy, a{" "}
+          <a
+            href="https://risevest.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-neutral-300 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white"
+          >
+            Risevest
+          </a>{" "}
+          programme
+        </span>
         <span className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-[#7FC4CB]" />
           Lagos{time && <span className="text-neutral-300 tabular-nums">{time} WAT</span>}

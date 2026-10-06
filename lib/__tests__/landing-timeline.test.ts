@@ -5,6 +5,7 @@ import {
   easeInOutCubic,
   easeInOutSine,
   easeOutBack,
+  easeOutQuart,
   locate,
   ramp,
   stagger,
@@ -77,7 +78,7 @@ describe("stagger", () => {
 
 describe("easing", () => {
   it("starts at 0 and lands on 1", () => {
-    for (const ease of [easeInOutCubic, easeInOutSine, easeOutBack]) {
+    for (const ease of [easeInOutCubic, easeInOutSine, easeOutQuart, easeOutBack]) {
       expect(ease(0)).toBeCloseTo(0);
       expect(ease(1)).toBeCloseTo(1);
     }

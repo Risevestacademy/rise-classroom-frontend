@@ -215,3 +215,23 @@ body {
     transform: translate3d(-50%, 0, 0);
   }
 }
+
+/* Landing page hero: a line that draws down and wipes away, on repeat. */
+@keyframes landing-scroll {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  45% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  55% {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}

@@ -1,9 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { ArrowUpRight, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { Select } from "@base-ui/react/select";
+import { ArrowUpRight, Check, ChevronDown, LoaderCircle } from "lucide-react";
 
-import type { Admissions } from "@/lib/admissions";
+import {
+  joinWaitlist,
+  saveWaitlistReceipt,
+  startApplication,
+  type Admissions,
+  type SeatRequest,
+} from "@/lib/admissions";
 import { cn } from "@/lib/utils";
 
 import { MagneticButton } from "./MagneticButton";
@@ -11,9 +20,80 @@ import { RevealTitle } from "./RevealTitle";
 import { seatUrl, type Chapter } from "./story";
 
 const TRACKS = ["Design", "Frontend", "Backend", "Mobile"] as const;
+type Track = (typeof TRACKS)[number];
+
+/** What each track covers, shown under its name in the picker. */
+const TRACK_DETAIL: Record<Track, string> = {
+  Design: "Research, wireframes and design systems",
+  Frontend: "HTML, CSS, JavaScript and React",
+  Backend: "Python, Node, SQL and APIs",
+  Mobile: "Swift, Kotlin and Flutter",
+};
+
+/**
+ * The track blank in the sentence. Reads as part of the sentence (big teal
+ * word, solid underline, small chevron) and opens a card of the four tracks
+ * with what each covers. Base UI handles keyboard and screen readers, and
+ * submits the choice with the form as `track`.
+ */
+function TrackSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: Track;
+  onChange: (track: Track) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Select.Root
+      name="track"
+      disabled={disabled}
+      value={value}
+      onValueChange={(next) => next && onChange(next as Track)}
+      items={TRACKS.map((track) => ({ value: track, label: track }))}
+    >
+      <Select.Trigger
+        aria-label="Track"
+        className="group/track mx-[0.15em] inline-flex cursor-pointer items-baseline gap-[0.18em] border-b-2 border-brand-primary px-[0.1em] text-brand-primary outline-none transition-colors hover:border-neutral-800 hover:text-neutral-800 focus-visible:bg-brand-surface data-[popup-open]:bg-brand-surface"
+      >
+        <Select.Value />
+        <Select.Icon className="inline-flex self-center">
+          <ChevronDown className="h-[0.55em] w-[0.55em] transition-transform duration-300 group-data-[popup-open]/track:rotate-180" />
+        </Select.Icon>
+      </Select.Trigger>
+
+      <Select.Portal>
+        <Select.Positioner side="bottom" align="start" sideOffset={10} alignItemWithTrigger={false} className="z-50">
+          <Select.Popup className="w-[min(24rem,calc(100vw-2.5rem))] origin-[var(--transform-origin)] rounded-2xl border border-neutral-200 bg-white p-2 shadow-[0_24px_60px_-20px_rgb(17_24_25/0.35)] transition-[transform,opacity] duration-200 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0">
+            <Select.List>
+              {TRACKS.map((track) => (
+                <Select.Item
+                  key={track}
+                  value={track}
+                  className="flex cursor-pointer items-center justify-between gap-4 rounded-xl px-4 py-3 outline-none select-none data-[highlighted]:bg-brand-surface"
+                >
+                  <span>
+                    <Select.ItemText className="block text-lg leading-tight font-bold tracking-[-0.01em] text-neutral-800">
+                      {track}
+                    </Select.ItemText>
+                    <span className="mt-0.5 block text-sm text-neutral-500">{TRACK_DETAIL[track]}</span>
+                  </span>
+                  <Select.ItemIndicator className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-primary text-white">
+                    <Check className="h-3.5 w-3.5" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+              ))}
+            </Select.List>
+          </Select.Popup>
+        </Select.Positioner>
+      </Select.Portal>
+    </Select.Root>
+  );
+}
 
 /* Never put the stipend amount here: it stays a surprise until it arrives. */
-const FACTS = ["12 months", "Virtual, taught live", "Ages 18 to 28, across Africa", "Stipend included"];
+const FACTS = ["Free to join", "12 months", "Virtual, taught live", "Stipend included", "Ages 18 to 28, across Africa"];
 
 /** An inline blank in the sentence: big, underlined, and sized to its text. */
 const blank =
@@ -27,7 +107,7 @@ const blank =
  * scrolls away to the footer.
  */
 export function ApplicationCopy({ chapter, admissions }: { chapter: Chapter; admissions?: Admissions }) {
-  const [track, setTrack] = React.useState<(typeof TRACKS)[number]>("Design");
+  const [track, setTrack] = React.useState<Track>("Design");
   const open = admissions?.cohortsOpen ?? false;
   const cohort = admissions?.cohort?.name;
 
@@ -40,13 +120,30 @@ export function ApplicationCopy({ chapter, admissions }: { chapter: Chapter; adm
       : chapter.kicker;
   const title = open ? "Take your seat." : chapter.title;
 
+  const router = useRouter();
+  const submit = useMutation({
+    mutationFn: (request: SeatRequest) => (open ? startApplication(request) : joinWaitlist(request)),
+    onSuccess: (_, request) => {
+      if (open) {
+        window.location.href = seatUrl(true, request);
+        return;
+      }
+      // The waitlist ends on its own thank-you page.
+      saveWaitlistReceipt(request);
+      router.push("/waitlist/joined");
+    },
+  });
+  const pending = submit.isPending;
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending) return;
     const data = new FormData(event.currentTarget);
-    window.location.href = seatUrl(open, {
-      name: String(data.get("name") ?? ""),
-      email: String(data.get("email") ?? ""),
+    submit.mutate({
+      name: String(data.get("name") ?? "").trim(),
+      email: String(data.get("email") ?? "").trim(),
       track,
+      cohort: cohort ?? null,
     });
   }
 
@@ -79,8 +176,11 @@ export function ApplicationCopy({ chapter, admissions }: { chapter: Chapter; adm
         data-fade
         onSubmit={handleSubmit}
         aria-label={open ? "Apply" : "Join the waitlist"}
+        aria-busy={pending}
         className="mt-8 flex flex-col gap-8 md:mt-12 md:flex-row md:items-end md:justify-between md:gap-12"
       >
+        {/* Locked while it sends, so nothing changes mid-request. */}
+        <fieldset disabled={pending} className="contents">
         <p className="max-w-[64rem] text-[clamp(1.35rem,2.55vw,2.6rem)] leading-[1.55] font-bold tracking-[-0.02em] text-neutral-400">
           Hi, I&apos;m
           <label className="sr-only" htmlFor="waitlist-name">
@@ -95,28 +195,7 @@ export function ApplicationCopy({ chapter, admissions }: { chapter: Chapter; adm
             className={blank}
           />
           {open ? ". I'm applying to the" : ". I'd like to join the"}
-          <span className="relative mx-[0.15em] inline-flex items-baseline">
-            <label className="sr-only" htmlFor="waitlist-track">
-              Track
-            </label>
-            <select
-              id="waitlist-track"
-              name="track"
-              value={track}
-              onChange={(event) => setTrack(event.target.value as (typeof TRACKS)[number])}
-              className="cursor-pointer appearance-none border-b-2 border-brand-primary bg-transparent pr-[1.1em] pl-[0.1em] text-brand-primary outline-none focus-visible:bg-brand-surface"
-            >
-              {TRACKS.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              aria-hidden
-              className="pointer-events-none absolute right-0 bottom-[0.32em] h-[0.7em] w-[0.7em] text-brand-primary"
-            />
-          </span>
+          <TrackSelect value={track} onChange={setTrack} disabled={pending} />
           {open ? (cohort ? `track for ${cohort}. You can reach me at` : "track. You can reach me at") : "track, so write to me at"}
           <label className="sr-only" htmlFor="waitlist-email">
             Your email
@@ -132,16 +211,35 @@ export function ApplicationCopy({ chapter, admissions }: { chapter: Chapter; adm
           />
           {open ? "." : `the moment ${cohort ?? "applications"} ${cohort ? "opens" : "open"}.`}
         </p>
+        </fieldset>
 
-        <MagneticButton
-          type="submit"
-          className="h-[56px] w-full shrink-0 rounded-full bg-brand-primary text-base font-bold text-white md:h-[168px] md:w-[168px] md:text-lg"
-        >
-          <span className="flex items-center justify-center gap-2 text-center leading-tight md:flex-col md:gap-1 md:px-5">
-            {open ? "Start my application" : "Save my seat"}
-            <ArrowUpRight className="h-5 w-5 md:h-6 md:w-6" />
-          </span>
-        </MagneticButton>
+        <div className="flex shrink-0 flex-col items-center gap-3">
+          <MagneticButton
+            type="submit"
+            disabled={pending}
+            aria-label={pending ? (open ? "Starting your application" : "Saving your seat") : undefined}
+            className="h-[56px] w-full shrink-0 rounded-full bg-brand-primary text-base font-bold text-white disabled:cursor-progress md:h-[168px] md:w-[168px] md:text-lg"
+          >
+            <span className="flex items-center justify-center gap-2 text-center leading-tight md:flex-col md:gap-1 md:px-5">
+              {pending ? (
+                <>
+                  <LoaderCircle aria-hidden className="h-5 w-5 animate-spin motion-reduce:animate-none md:h-6 md:w-6" />
+                  {open ? "Starting…" : "Saving…"}
+                </>
+              ) : (
+                <>
+                  {open ? "Start my application" : "Save my seat"}
+                  <ArrowUpRight className="h-5 w-5 md:h-6 md:w-6" />
+                </>
+              )}
+            </span>
+          </MagneticButton>
+          {submit.isError && (
+            <p role="alert" className="max-w-[14rem] text-center text-sm text-text-error">
+              That didn&apos;t go through. Check your connection and try again.
+            </p>
+          )}
+        </div>
       </form>
 
       <ul
