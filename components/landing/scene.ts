@@ -397,16 +397,24 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
   function resize() {
     const w = canvas.clientWidth || 1;
     const h = canvas.clientHeight || 1;
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
+    const nextDpr = Math.min(window.devicePixelRatio || 1, 2);
+    // Phones resize constantly as the browser bar slides in and out. Only
+    // touch the canvas when its size really changed: reallocating it wipes it.
+    const width = Math.round(w * nextDpr);
+    const height = Math.round(h * nextDpr);
+    if (width === canvas.width && height === canvas.height && nextDpr === dpr && pieces.length) return;
+    dpr = nextDpr;
+    canvas.width = width;
+    canvas.height = height;
     L = computeLayout(w, h);
     fitHero();
 
     const key = L.mobile ? "mobile" : "desktop";
     pieceSets[key] ??= buildPieces(sampleBandStrips(L.mobile ? [40, 32, 26] : [64, 52, 42]));
-    pieces = pieceSets[key];
-    offsets = pieces.map(() => ({ x: 0, y: 0, vx: 0, vy: 0, spin: 0, vspin: 0 }));
+    if (pieces !== pieceSets[key]) {
+      pieces = pieceSets[key];
+      offsets = pieces.map(() => ({ x: 0, y: 0, vx: 0, vy: 0, spin: 0, vspin: 0 }));
+    }
     paintSprites();
   }
 
@@ -416,9 +424,22 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     const unit = Math.max(L.hero.k, L.end.k) * dpr;
     const photos = heroPhotos.map((photo) => (ready(photo.img) ? photo.img.src : "")).join("|");
     if (pieces.length === 0) return;
-    if (unit === spriteUnit && photos === spritePhotos && sprites.length === pieces.length) return;
+    // drawImage scales slices smoothly, so small size changes (a phone's
+    // browser bar) reuse them. Re-cutting hundreds of canvases mid-scroll is
+    // what hits iOS's canvas memory limit and makes the page flicker.
+    const closeEnough = spriteUnit > 0 && unit <= spriteUnit * 1.15 && unit >= spriteUnit * 0.6;
+    if (closeEnough && photos === spritePhotos && sprites.length === pieces.length) return;
     spriteUnit = unit;
     spritePhotos = photos;
+    // Give the old slices' memory back now rather than whenever GC runs; iOS
+    // counts it against the page until then.
+    for (const sprite of sprites) {
+      for (const old of [sprite.teal, sprite.grey, ...sprite.photos]) {
+        if (!old) continue;
+        old.width = 0;
+        old.height = 0;
+      }
+    }
 
     // Each portrait fills the whole mark, like a face seen through blinds:
     // eyes in the top band, mouth in the middle, chin in the bottom. The face
@@ -555,6 +576,30 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
   }
 
   /** A round portrait with a white ring; falls back to `fallback` until it loads. */
+  /**
+   * Each face, cropped and teal-toned once into its own small canvas. Canvas
+   * filters are slow on Safari, so doing this every frame for a dozen faces
+   * made iPhones stutter.
+   */
+  const faceCache = new Map<HTMLImageElement, HTMLCanvasElement>();
+  const FACE_PX = 192;
+
+  function faceSprite(img: HTMLImageElement, focus?: Person["focus"]) {
+    let sprite = faceCache.get(img);
+    if (!sprite) {
+      sprite = document.createElement("canvas");
+      sprite.width = FACE_PX;
+      sprite.height = FACE_PX;
+      const c = sprite.getContext("2d");
+      if (c) {
+        const box = { x: 0, y: 0, w: FACE_PX, h: FACE_PX };
+        duotone(c, box, () => cover(c, img, box, focus, { zoom: 1.6 }));
+      }
+      faceCache.set(img, sprite);
+    }
+    return sprite;
+  }
+
   function face(photo: Photo | HTMLImageElement | null, x: number, y: number, r: number, fallback: string) {
     const img = photo instanceof HTMLImageElement ? photo : photo?.img;
     const focus = photo instanceof HTMLImageElement ? undefined : photo?.focus;
@@ -565,9 +610,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     ctx.fill();
     if (img && ready(img)) {
       ctx.clip();
-      // Zoom in on the face rather than the whole photo.
-      const box = { x: x - r, y: y - r, w: r * 2, h: r * 2 };
-      duotone(ctx, box, () => cover(ctx, img, box, focus, { zoom: 1.6 }));
+      ctx.drawImage(faceSprite(img, focus), x - r, y - r, r * 2, r * 2);
     }
     ctx.restore();
     ctx.beginPath();
@@ -1370,8 +1413,11 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       shine.addColorStop(Math.min(Math.max(sweep, 0), 1), "#EEF3F3");
       shine.addColorStop(Math.min(Math.max(sweep + 0.15, 0), 1), "#CBD5D6");
       shine.addColorStop(1, "#CBD5D6");
+      // Soft-edged with a matching shadow rather than a blur filter, which
+      // is slow on Safari.
       ctx.save();
-      ctx.filter = `blur(${Math.max(1, w * 0.006)}px)`;
+      ctx.shadowColor = "#CBD5D6";
+      ctx.shadowBlur = Math.max(2, w * 0.012);
       fillRound(ctx, bx, ay - bh / 2, bw, bh, bh / 2, shine);
       ctx.restore();
     }

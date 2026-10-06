@@ -131,6 +131,8 @@ export function LandingPage() {
     if (!stage || !canvas || !copy) return;
 
     gsap.registerPlugin(ScrollTrigger);
+    // Don't re-measure everything when a phone's browser bar slides in or out.
+    ScrollTrigger.config({ ignoreMobileResize: true });
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const scene = createScene(canvas, { reduced });
     sceneRef.current = scene;
@@ -322,11 +324,25 @@ export function LandingPage() {
     };
     gsap.ticker.add(render);
 
+    // Resizes are coalesced to one per frame and redrawn straight away, so a
+    // resized (and so wiped) canvas never reaches the screen blank. The
+    // timeline is only re-measured for real changes, not a browser bar.
+    let resizeFrame = 0;
+    let measured = { w: 0, h: 0 };
     const observer = new ResizeObserver(() => {
-      scene?.resize();
-      measureSlot();
-      measureHero();
-      ScrollTrigger.refresh();
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        scene?.resize();
+        measureSlot();
+        measureHero();
+        render(gsap.ticker.time);
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        if (w !== measured.w || Math.abs(h - measured.h) > 160) {
+          measured = { w, h };
+          ScrollTrigger.refresh();
+        }
+      });
     });
     observer.observe(canvas);
     // The heading moves once the real font arrives.
@@ -336,6 +352,7 @@ export function LandingPage() {
     });
 
     return () => {
+      cancelAnimationFrame(resizeFrame);
       observer.disconnect();
       cancelled = true;
       introTween?.kill();
