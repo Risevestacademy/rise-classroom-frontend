@@ -4,9 +4,9 @@ import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
+import { StatusSelect } from "@/components/ui/status-select";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,11 @@ import type { UserStatus } from "@/lib/auth";
 const nameSchema = z.string().trim().min(1);
 const emailSchema = z.string().trim().email();
 
+const userStatusLabels: Record<UserStatus, string> = {
+  ACTIVE: "Active",
+  SUSPENDED: "Suspended",
+};
+
 type EditUserDialogProps = {
   user: AdminUser;
   open: boolean;
@@ -38,7 +43,7 @@ type EditUserDialogProps = {
 export function EditUserDialog(props: EditUserDialogProps) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="w-[520px]">
+      <DialogContent className="w-130">
         {props.open && <EditUserForm {...props} />}
       </DialogContent>
     </Dialog>
@@ -164,30 +169,12 @@ function EditUserForm({ user, onOpenChange, isSelf }: EditUserDialogProps) {
           }}
         />
 
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-neutral-800">Status</p>
-          <div className="grid grid-cols-2 gap-2">
-            {(["ACTIVE", "SUSPENDED"] as const).map((option) => {
-              const disabled = option === "SUSPENDED" && suspendBlocked;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  aria-pressed={status === option}
-                  disabled={disabled}
-                  onClick={() => setStatus(option)}
-                  className={cn(
-                    "h-10 rounded-lg border text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                    status === option
-                      ? "border-brand-primary bg-brand-primary text-neutral-0"
-                      : "border-neutral-200 text-neutral-600 hover:bg-neutral-50",
-                  )}
-                >
-                  {option === "ACTIVE" ? "Active" : "Suspended"}
-                </button>
-              );
-            })}
-          </div>
+        <StatusSelect
+          value={status}
+          onChange={setStatus}
+          options={userStatusLabels}
+          disabledOptions={suspendBlocked ? ["SUSPENDED"] : undefined}
+        >
           {suspendBlocked ? (
             <p className="text-xs text-neutral-400">
               You can&apos;t suspend your own account.
@@ -197,7 +184,7 @@ function EditUserForm({ user, onOpenChange, isSelf }: EditUserDialogProps) {
               Suspending signs them out everywhere.
             </p>
           ) : null}
-        </div>
+        </StatusSelect>
       </div>
 
       {save.isError && (
