@@ -14,6 +14,7 @@ const PROGRAM: { label: string; chapter: ChapterId }[] = [
   { label: "Mentors", chapter: "mentor" },
   { label: "Stipend", chapter: "stipend" },
   { label: "After Rise", chapter: "next" },
+  { label: "Rise Classroom", chapter: "classroom" },
 ];
 
 const MARQUEE = ["Learn", "Practice", "Progress"];
@@ -146,7 +147,7 @@ export function LandingFooter({
 
       <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 px-6 py-6 text-xs text-neutral-400 sm:px-10 md:px-[6vw]">
         <span>
-          © {new Date().getFullYear()} Rise Academy, a{" "}
+          © {new Date().getFullYear()} Rise Classroom · Rise Academy is a{" "}
           <a
             href="https://risevest.com"
             target="_blank"

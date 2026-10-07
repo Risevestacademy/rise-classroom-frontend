@@ -229,8 +229,15 @@ export function LandingPage() {
       blocks.forEach((el, i) => {
         const id = CHAPTERS[i].id;
         const current = i === index;
+        // Rise Classroom keeps its copy up while the app is still open.
         const out = easeInOutSine(
-          id === "end" ? 0 : id === "hero" ? ramp(local, 0.14, 0.4) : ramp(local, 0.78, 0.98)
+          id === "end"
+            ? 0
+            : id === "hero"
+              ? ramp(local, 0.14, 0.4)
+              : id === "classroom"
+                ? ramp(local, 0.86, 0.97)
+                : ramp(local, 0.78, 0.98)
         );
         const visible = current ? 1 - out : 0;
 
@@ -246,8 +253,9 @@ export function LandingPage() {
         // application waits for the mark to shrink into its heading.
         // Door copy waits for its door to step into place.
         const settles = id === "end" || id === "rise" || id === "partner" || id === "own";
-        const wordsAt = settles ? 0.3 : 0.12;
-        const fadeAt = settles ? 0.42 : 0.28;
+        // Rise Classroom's copy waits for the mark to become the app icon.
+        const wordsAt = settles ? 0.3 : id === "classroom" ? 0.16 : 0.12;
+        const fadeAt = settles ? 0.42 : id === "classroom" ? 0.3 : 0.28;
         words.forEach((word, k) => {
           const t =
             id === "hero"

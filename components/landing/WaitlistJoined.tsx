@@ -58,7 +58,7 @@ export function WaitlistJoined() {
       />
 
       <header className="relative">
-        <Link href="/" aria-label="Rise Academy home" className="inline-flex rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-white">
+        <Link href="/" aria-label="Rise Classroom home" className="inline-flex rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-white">
           <Logo variant="white" size="sm" />
         </Link>
       </header>
@@ -109,13 +109,18 @@ export function WaitlistJoined() {
           ))}
         </ol>
 
-        <div className="mt-8 flex flex-wrap items-center gap-3">
+        <p className="mt-6 text-sm text-white/70">
+          When your cohort starts, you&apos;ll find everything in{" "}
+          <span className="font-bold text-white">Rise Classroom</span>.
+        </p>
+
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <Link
             href="/"
             className="group inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-sm font-bold text-brand-primary transition-colors outline-none hover:bg-brand-surface focus-visible:ring-4 focus-visible:ring-white/40"
           >
             <ArrowLeft aria-hidden className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-0.5" />
-            Back to Rise Academy
+            Back to Rise Classroom
           </Link>
           <button
             type="button"

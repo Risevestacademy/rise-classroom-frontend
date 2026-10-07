@@ -29,6 +29,8 @@ export type Testimonial = {
 };
 
 export type LandingPeople = {
+  /** Whose Rise Classroom the story opens near the end. */
+  student: Person;
   /** The people the Rise mark shows on the opening screen, one at a time. */
   hero: Person[];
   /** Faces in the week-one cohort. */
@@ -52,22 +54,23 @@ const person = (
   track: Track,
   file: string,
   focus: Person["focus"] = { x: 0.5, y: 0.35 },
-  fileFormat: "jpg" | "png" | "webp" = "jpg"
+  fileFormat: "jpg" | "png" | "webp" | "jpeg" = "jpg"
 ): Person => ({ name, role, track, photo: `/landing/people/${file}.${fileFormat}`, focus });
 
-const CHIJIOKE = person("Chijioke", "Student", "Frontend", "chijioke", { x: 0.524, y: 0.354, w: 0.255 }, "webp");
+const CHIJIOKE = person("Chijioke", "Student", "Frontend", "chijioke", { x: 0.529, y: 0.358, w: 0.515 }, "webp");
 const PEACE = person("Peace", "Mentor", "Frontend", "peace", { x: 0.48, y: 0.46, w: 0.285 });
-const CHINYERE = person("Chinyere", "Student", "Backend", "chinyere", { x: 0.54, y: 0.4, w: 0.26 });
-const GABRIEL = person("Gabriel", "Student", "Mobile", "gabriel", { x: 0.48, y: 0.3 });
-const ETIM = person("Etim", "Student", "Design", "etim", { x: 0.55, y: 0.33 });
+const CHINYERE = person("Chinyere", "Student", "Backend", "chinyere", { x: 0.462, y: 0.348, w: 0.535 }, "jpeg");
+const GABRIEL = person("Gabriel", "Student", "Mobile", "gabriel", { x: 0.481, y: 0.599, w: 0.47 });
+const MICHEAL = person("Micheal", "Student", "Design", "micheal", { x: 0.498, y: 0.515, w: 0.54 });
 const IYOBOSA = person("Iyobosa", "Student", "Frontend", "iyobosa", { x: 0.45, y: 0.32 });
-const MAC_DAVID = person("Mac David", "Instructor", "Backend", "mac-david", { x: 0.48, y: 0.2 });
+const MAC_DAVID = person("Mac David", "Instructor", "Backend", "mac-david", { x: 0.506, y: 0.244, w: 0.175 });
 
 const MOCK_PEOPLE: LandingPeople = {
-  hero: [CHIJIOKE, PEACE, CHINYERE],
+  student: MICHEAL,
+  hero: [CHIJIOKE, PEACE, MICHEAL, GABRIEL, IYOBOSA, CHINYERE, MAC_DAVID],
   cohort: [
     GABRIEL.photo,
-    ETIM.photo,
+    MICHEAL.photo,
     IYOBOSA.photo,
     CHINYERE.photo,
     CHIJIOKE.photo,
@@ -98,7 +101,7 @@ const MOCK_PEOPLE: LandingPeople = {
     },
     {
       chapter: "together",
-      person: ETIM,
+      person: MICHEAL,
       quote: "Designing next to engineers changed how I design. Now I know what's hard to build.",
     },
     {

@@ -21,6 +21,7 @@ export type ChapterId =
   | "partner"
   | "own"
   | "home"
+  | "classroom"
   | "end";
 
 /**
@@ -71,9 +72,9 @@ export const CHAPTERS: readonly Chapter[] = [
     screens: 2,
     align: "left",
     rail: "Rise",
-    kicker: "Rise Academy, by Risevest",
+    kicker: "Rise Classroom · Rise Academy, by Risevest",
     title: "In twelve months, you'll ship real products.",
-    body: "A free, virtual programme for designers and engineers: live classes, a mentor and a stipend. Here are some of the people already doing it.",
+    body: "Rise Academy is a free, year-long virtual programme for designers and engineers: live classes, a mentor and a stipend, all in one place. Here are some of the people already doing it.",
   },
   {
     id: "track",
@@ -136,7 +137,7 @@ export const CHAPTERS: readonly Chapter[] = [
     rail: "Classes",
     kicker: "Every week · Live",
     title: "You'll never stay stuck for long.",
-    body: "Live classes every week. Ask anything, get unstuck the same day.",
+    body: "Live classes every week, recorded if you miss one. Ask anything, get unstuck the same day.",
   },
   {
     id: "mentor",
@@ -145,7 +146,7 @@ export const CHAPTERS: readonly Chapter[] = [
     rail: "Mentor",
     kicker: "All year · 1:1",
     title: "Someone in your corner all year.",
-    body: "One person in your corner from week one: code reviews, career advice and the odd pep talk.",
+    body: "One person in your corner from week one: code reviews, career advice and the odd pep talk. They see your progress week by week.",
   },
   {
     id: "stipend",
@@ -209,6 +210,17 @@ export const CHAPTERS: readonly Chapter[] = [
     rail: "Rise",
     kicker: "Whichever door you pick",
     title: "Wherever you go, you go as Rise.",
+  },
+  // Everything the story promised lives in one app. The mark becomes its
+  // icon, opens into the student's Rise Classroom, and closes back into the mark.
+  {
+    id: "classroom",
+    screens: 3,
+    align: "left",
+    rail: "Classroom",
+    kicker: "Rise Classroom",
+    title: "All of it, at your fingertips.",
+    body: "Your classes, assignments, mentor and progress through all 52 weeks, in one place, from day one.",
   },
   {
     id: "end",

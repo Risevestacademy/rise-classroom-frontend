@@ -92,7 +92,7 @@ export function HeroCopy({
       >
         {chapter.kicker && (
           <p data-fade className="mb-4 text-sm font-medium text-white/70 md:mb-6" style={{ opacity: 0 }}>
-            Rise Academy, by{" "}
+            <span className="font-bold text-white">Rise Classroom</span> · Rise Academy, by{" "}
             <a
               href="https://risevest.com"
               target="_blank"

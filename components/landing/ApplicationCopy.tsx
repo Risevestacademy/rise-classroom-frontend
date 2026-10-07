@@ -113,10 +113,10 @@ export function ApplicationCopy({ chapter, admissions }: { chapter: Chapter; adm
 
   const kicker = open
     ? cohort
-      ? `Applications are open · ${cohort}`
-      : "Applications are open"
+      ? `Rise Academy · ${cohort} is open`
+      : "Rise Academy · Applications are open"
     : cohort
-      ? `${cohort} · Opening soon`
+      ? `Rise Academy · ${cohort} opens soon`
       : chapter.kicker;
   const title = open ? "Take your seat." : chapter.title;
 

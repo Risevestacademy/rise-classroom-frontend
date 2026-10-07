@@ -2,7 +2,9 @@
  * The landing page canvas. One teal piece is the student: it starts inside
  * the Rise mark, joins a grey cohort, picks a track, becomes a design file, a
  * web page, an API and an app, gets taught, gets a mentor, gets paid, ships
- * with the other tracks, and finally flies home into the mark.
+ * with the other tracks, and finally flies home into the mark. Then the mark
+ * becomes the Rise Classroom app icon and opens into the app where all of it
+ * happens.
  *
  * Everything drawn is a pure function of scroll progress (0..1), plus a little
  * idle motion from `time` that is switched off for reduced motion.
@@ -30,7 +32,7 @@ import {
   staggerAt,
 } from "@/lib/landing-timeline";
 
-import type { LandingPeople, Person } from "@/lib/people";
+import type { LandingPeople, Person, Track } from "@/lib/people";
 
 import { CHAPTERS, type ChapterId, type CopyAlign } from "./story";
 
@@ -71,7 +73,7 @@ export const SPANS = chapterSpans(CHAPTERS.map((chapter) => chapter.screens));
  * Where reduced motion parks each chapter: the logo whole in the hero, the
  * mark sealed in week 52, and everything else fully built with its copy up.
  */
-const REST: Partial<Record<ChapterId, number>> = { hero: 0, home: 0.95, end: 1 };
+const REST: Partial<Record<ChapterId, number>> = { hero: 0, home: 0.95, classroom: 0.62, end: 1 };
 
 /** Which chapter we're in and how far through it, for the canvas and copy. */
 export function storyPosition(progress: number, reduced: boolean) {
@@ -1395,7 +1397,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       ctx.restore();
 
       const tx = nx + pad + icon + nw * 0.05;
-      text("RISE ACADEMY", tx, ny + pad + icon * 0.3, size(0.036), C.muted, { weight: 600 });
+      text("RISE CLASSROOM", tx, ny + pad + icon * 0.3, size(0.036), C.muted, { weight: 600 });
       text("now", nx + nw - pad, ny + pad + icon * 0.3, size(0.036), C.muted, { weight: 500, align: "right" });
       text("Credit alert", tx, ny + pad + icon * 0.95, size(0.055), C.ink, { weight: 700 });
       text("Your stipend has landed.", tx, ny + nh * 0.6, size(0.045), C.ink2, { weight: 500 });
@@ -2106,6 +2108,995 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     ctx.restore();
   }
 
+  /* ---------------- Rise Classroom ---------------- */
+
+  /**
+   * Rise Classroom's screens are drawn in iPhone points (390 × 844), laid out
+   * from the app's Figma, then scaled onto the phone as one object.
+   */
+  const APP = { w: 390, h: 844, r: 55, bezel: 11 } as const;
+
+  const UI = {
+    bg: "#F7F9F9",
+    card: "#EEF2F2",
+    ink: "#111819",
+    ink2: "#3D4A4D",
+    muted: "#6B787A",
+    hint: "#8A9597",
+    chip: "#E3F3F4",
+    banner: "#E3F2F3",
+    green: "#2E7D32",
+    grey: "#A3ABB0",
+    blue: "#1D5BA6",
+    blueBg: "#E6F0FB",
+    blueLine: "#B9D3F0",
+    amber: "#8A6400",
+    amberBg: "#FBF1CF",
+    amberLine: "#EED58A",
+    tab: "#5D6B6E",
+    red: "#D92D20",
+  } as const;
+
+  /** The app's body type; headings use the page's own face, as in the Figma. */
+  const work = (() => {
+    const family = getComputedStyle(document.documentElement).getPropertyValue("--font-work-sans").trim();
+    return family ? `${family}, ${sans}` : sans;
+  })();
+
+  /** What's in the student's Rise Classroom this week, by track. Mock content. */
+  type AppContent = {
+    next: string;
+    course: string;
+    lesson: string;
+    latest: [string, string];
+    due: string;
+    submit: string;
+  };
+
+  const APP_CONTENT: Record<Track, AppContent> = {
+    Design: {
+      next: "Design Systems & Components",
+      course: "Design Systems",
+      lesson: "Buttons & Text Input",
+      latest: ["Auto layout in Figma", "Colour and typography"],
+      due: "Landing page wireframe",
+      submit: "Submit a Figma link",
+    },
+    Frontend: {
+      next: "React: State & Effects",
+      course: "React",
+      lesson: "Forms that feel right",
+      latest: ["Fetching data in React", "Accessible components"],
+      due: "Build a pricing page",
+      submit: "Submit a GitHub link",
+    },
+    Backend: {
+      next: "APIs & Authentication",
+      course: "Databases",
+      lesson: "SQL joins in practice",
+      latest: ["REST APIs with Node", "Caching with Redis"],
+      due: "Build a login API",
+      submit: "Submit a GitHub link",
+    },
+    Mobile: {
+      next: "Navigation in Flutter",
+      course: "Flutter",
+      lesson: "Layouts that adapt",
+      latest: ["State with Riverpod", "Lists that scroll fast"],
+      due: "Build a habit tracker",
+      submit: "Submit a GitHub link",
+    },
+  };
+
+  let student: Photo | null = null;
+
+  /** Where the app icon sits on the phone's home screen, in points. */
+  const ICON = { x: 195, y: 372, size: 84 };
+  /** How far the home screen scrolls to show what's due. */
+  const HOME_SCROLL = 96;
+
+  type Rect = { x: number; y: number; w: number; h: number };
+
+  /**
+   * Notes that point into the app, one beat of the scroll each, tying it back
+   * to the story: the classes, the progress, the deadlines, the recordings
+   * and the mentor. `view` 0 is the home screen, 1 the lessons screen.
+   */
+  type Callout = {
+    from: number;
+    to: number;
+    view: 0 | 1;
+    /** Stays put while the home screen scrolls (the tab bar). */
+    fixed?: boolean;
+    title: string;
+    body: string;
+    /** The one-line version for phones. */
+    short: string;
+    target: Rect;
+    r: number;
+  };
+
+  const CALLOUTS: Callout[] = [
+    {
+      from: 0.45,
+      to: 0.58,
+      view: 0,
+      title: "Live classes",
+      body: "Join in one tap, wherever you are.",
+      short: "Join live classes in one tap",
+      target: { x: 32, y: 251, w: 326, h: 40 },
+      r: 10,
+    },
+    {
+      from: 0.53,
+      to: 0.67,
+      view: 0,
+      title: "Your progress",
+      body: "See exactly how far you've come.",
+      short: "See how far you've come",
+      target: { x: 16, y: 399, w: 358, h: 197 },
+      r: 20,
+    },
+    {
+      from: 0.59,
+      to: 0.67,
+      view: 0,
+      title: "Deadlines",
+      body: "Every assignment, never a surprise.",
+      short: "Never miss a deadline",
+      target: { x: 16, y: 652, w: 358, h: 92 },
+      r: 20,
+    },
+    {
+      from: 0.73,
+      to: 0.87,
+      view: 1,
+      title: "Every class, recorded",
+      body: "Missed one? Catch up any time.",
+      short: "Every class, recorded",
+      target: { x: 16, y: 211, w: 358, h: 208 },
+      r: 14,
+    },
+    {
+      from: 0.79,
+      to: 0.87,
+      view: 1,
+      fixed: true,
+      title: "Your mentor",
+      body: "A message away, all year.",
+      short: "Your mentor, a message away",
+      target: { x: 229, y: 746, w: 66, h: 51 },
+      r: 25,
+    },
+  ];
+
+  function calloutAlpha(c: Callout, t: number) {
+    return ramp(t, c.from, c.from + 0.025) * (1 - ramp(t, c.to - 0.025, c.to));
+  }
+
+  function calloutTarget(c: Callout, scroll: number): Rect {
+    return { ...c.target, y: c.target.y - (c.fixed || c.view === 1 ? 0 : scroll) };
+  }
+
+  /** The phone's screen, on the copy's opposite side; under the copy's top on phones. */
+  function phoneBox(): Box {
+    const ratio = APP.w / APP.h;
+    // On phones it takes what's left above the copy (about 360px with its note).
+    const h = L.mobile
+      ? Math.min(L.h * 0.52, (L.w * 0.6) / ratio, L.h - 360)
+      : Math.min(L.h * 0.76, (L.w * 0.3) / ratio);
+    const w = h * ratio;
+    const cx = L.mobile ? L.w / 2 : L.w * 0.63;
+    const cy = L.mobile ? 76 + h / 2 : L.h * 0.53;
+    return { x: cx - w / 2, y: cy - h / 2, w, h, r: (APP.r / APP.w) * w };
+  }
+
+  function scaleBox(box: Box, k: number): Box {
+    const w = box.w * k;
+    const h = box.h * k;
+    return { x: box.x + (box.w - w) / 2, y: box.y + (box.h - h) / 2, w, h, r: box.r * k };
+  }
+
+  /** Text in the app's points; returns its width. */
+  function say(
+    value: string,
+    x: number,
+    y: number,
+    size: number,
+    color: string,
+    { weight = 400, align = "left", family = work }: { weight?: number; align?: CanvasTextAlign; family?: string } = {}
+  ) {
+    ctx.font = `${weight} ${size}px ${family}`;
+    ctx.textAlign = align;
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = color;
+    ctx.fillText(value, x, y);
+    return ctx.measureText(value).width;
+  }
+
+  function measure(value: string, size: number, weight = 400, family = work) {
+    ctx.font = `${weight} ${size}px ${family}`;
+    return ctx.measureText(value).width;
+  }
+
+  /** A pill label; `x` is its left edge, or its right edge when aligned right. */
+  function pill(
+    label: string,
+    x: number,
+    y: number,
+    h: number,
+    size: number,
+    colors: { fill: string; line?: string; text: string },
+    align: "left" | "right" = "left"
+  ) {
+    const w = measure(label, size, 500) + h * 0.95;
+    const left = align === "left" ? x : x - w;
+    fillRound(ctx, left, y, w, h, h / 2, colors.fill);
+    if (colors.line) {
+      roundRect(ctx, left + 0.5, y + 0.5, w - 1, h - 1, h / 2);
+      ctx.strokeStyle = colors.line;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    say(label, left + w / 2, y + h / 2 + 0.5, size, colors.text, { weight: 500, align: "center" });
+    return w;
+  }
+
+  type Glyph =
+    | "calendar"
+    | "bell"
+    | "person"
+    | "video"
+    | "play"
+    | "right"
+    | "up"
+    | "down"
+    | "file"
+    | "search"
+    | "check"
+    | "home"
+    | "book"
+    | "tasks"
+    | "chat";
+
+  /** The app's line icons, drawn `s` points across. */
+  function glyph(kind: Glyph, x: number, y: number, s: number, color: string, { width = 1.6, filled = false } = {}) {
+    const h = s / 2;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    switch (kind) {
+      case "calendar":
+        ctx.roundRect(x - h, y - h * 0.8, s, s * 0.9, s * 0.2);
+        ctx.moveTo(x - h, y - h * 0.2);
+        ctx.lineTo(x + h, y - h * 0.2);
+        ctx.moveTo(x - h * 0.45, y - h * 1.05);
+        ctx.lineTo(x - h * 0.45, y - h * 0.6);
+        ctx.moveTo(x + h * 0.45, y - h * 1.05);
+        ctx.lineTo(x + h * 0.45, y - h * 0.6);
+        ctx.stroke();
+        ctx.beginPath();
+        for (const [dx, dy] of [
+          [-0.45, 0.22],
+          [0, 0.22],
+          [0.45, 0.22],
+          [-0.45, 0.58],
+          [0, 0.58],
+        ]) {
+          ctx.moveTo(x + dx * h + s * 0.06, y + dy * h);
+          ctx.arc(x + dx * h, y + dy * h, s * 0.06, 0, Math.PI * 2);
+        }
+        ctx.fill();
+        break;
+      case "bell":
+        ctx.moveTo(x - h * 0.8, y + h * 0.45);
+        ctx.lineTo(x - h * 0.62, y + h * 0.2);
+        ctx.lineTo(x - h * 0.62, y - h * 0.15);
+        ctx.arc(x, y - h * 0.15, h * 0.62, Math.PI, 0);
+        ctx.lineTo(x + h * 0.62, y + h * 0.2);
+        ctx.lineTo(x + h * 0.8, y + h * 0.45);
+        ctx.closePath();
+        ctx.moveTo(x - h * 0.22, y + h * 0.72);
+        ctx.quadraticCurveTo(x, y + h * 0.92, x + h * 0.22, y + h * 0.72);
+        ctx.stroke();
+        break;
+      case "person":
+        ctx.arc(x, y - h * 0.38, h * 0.42, 0, Math.PI * 2);
+        ctx.moveTo(x - h * 0.85, y + h * 0.95);
+        ctx.quadraticCurveTo(x - h * 0.85, y + h * 0.2, x, y + h * 0.2);
+        ctx.quadraticCurveTo(x + h * 0.85, y + h * 0.2, x + h * 0.85, y + h * 0.95);
+        ctx.stroke();
+        break;
+      case "video":
+        ctx.roundRect(x - h, y - h * 0.6, s * 0.68, s * 0.6, s * 0.14);
+        ctx.moveTo(x + h * 0.36, y - h * 0.15);
+        ctx.lineTo(x + h, y - h * 0.5);
+        ctx.lineTo(x + h, y + h * 0.5);
+        ctx.lineTo(x + h * 0.36, y + h * 0.15);
+        ctx.stroke();
+        break;
+      case "play":
+        ctx.moveTo(x - h * 0.55, y - h * 0.75);
+        ctx.lineTo(x + h * 0.75, y);
+        ctx.lineTo(x - h * 0.55, y + h * 0.75);
+        ctx.closePath();
+        ctx.stroke();
+        break;
+      case "right":
+        ctx.moveTo(x - h * 0.3, y - h * 0.6);
+        ctx.lineTo(x + h * 0.3, y);
+        ctx.lineTo(x - h * 0.3, y + h * 0.6);
+        ctx.stroke();
+        break;
+      case "up":
+      case "down": {
+        const d = kind === "up" ? 1 : -1;
+        ctx.moveTo(x - h * 0.6, y + h * 0.3 * d);
+        ctx.lineTo(x, y - h * 0.3 * d);
+        ctx.lineTo(x + h * 0.6, y + h * 0.3 * d);
+        ctx.stroke();
+        break;
+      }
+      case "file":
+        ctx.moveTo(x - h * 0.6, y - h);
+        ctx.lineTo(x + h * 0.2, y - h);
+        ctx.lineTo(x + h * 0.65, y - h * 0.55);
+        ctx.lineTo(x + h * 0.65, y + h);
+        ctx.lineTo(x - h * 0.6, y + h);
+        ctx.closePath();
+        ctx.moveTo(x - h * 0.25, y + h * 0.05);
+        ctx.lineTo(x + h * 0.3, y + h * 0.05);
+        ctx.moveTo(x - h * 0.25, y + h * 0.45);
+        ctx.lineTo(x + h * 0.3, y + h * 0.45);
+        ctx.stroke();
+        break;
+      case "search":
+        ctx.arc(x - h * 0.15, y - h * 0.15, h * 0.6, 0, Math.PI * 2);
+        ctx.moveTo(x + h * 0.3, y + h * 0.3);
+        ctx.lineTo(x + h * 0.85, y + h * 0.85);
+        ctx.stroke();
+        break;
+      case "check":
+        ctx.arc(x, y, h * 0.9, 0, Math.PI * 2);
+        ctx.moveTo(x - h * 0.4, y);
+        ctx.lineTo(x - h * 0.1, y + h * 0.32);
+        ctx.lineTo(x + h * 0.42, y - h * 0.3);
+        ctx.stroke();
+        break;
+      case "home":
+        ctx.moveTo(x, y - h * 0.9);
+        ctx.lineTo(x + h * 0.85, y - h * 0.25);
+        ctx.lineTo(x + h * 0.85, y + h * 0.6);
+        ctx.quadraticCurveTo(x + h * 0.85, y + h * 0.85, x + h * 0.6, y + h * 0.85);
+        ctx.lineTo(x - h * 0.6, y + h * 0.85);
+        ctx.quadraticCurveTo(x - h * 0.85, y + h * 0.85, x - h * 0.85, y + h * 0.6);
+        ctx.lineTo(x - h * 0.85, y - h * 0.25);
+        ctx.closePath();
+        if (filled) ctx.fill();
+        else ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x - h * 0.3, y + h * 0.28);
+        ctx.quadraticCurveTo(x, y + h * 0.52, x + h * 0.3, y + h * 0.28);
+        ctx.strokeStyle = filled ? C.white : color;
+        ctx.stroke();
+        break;
+      case "book":
+        ctx.moveTo(x, y - h * 0.55);
+        ctx.quadraticCurveTo(x - h * 0.45, y - h * 0.85, x - h * 0.95, y - h * 0.65);
+        ctx.lineTo(x - h * 0.95, y + h * 0.65);
+        ctx.quadraticCurveTo(x - h * 0.45, y + h * 0.45, x, y + h * 0.8);
+        ctx.quadraticCurveTo(x + h * 0.45, y + h * 0.45, x + h * 0.95, y + h * 0.65);
+        ctx.lineTo(x + h * 0.95, y - h * 0.65);
+        ctx.quadraticCurveTo(x + h * 0.45, y - h * 0.85, x, y - h * 0.55);
+        ctx.lineTo(x, y + h * 0.8);
+        ctx.stroke();
+        break;
+      case "tasks":
+        ctx.roundRect(x - h * 0.8, y - h * 0.9, h * 1.6, h * 1.8, h * 0.3);
+        for (const dy of [-0.4, 0, 0.4]) {
+          ctx.moveTo(x - h * 0.35, y + dy * h);
+          ctx.lineTo(x + h * 0.4, y + dy * h);
+        }
+        ctx.stroke();
+        break;
+      case "chat":
+        ctx.arc(x, y - h * 0.05, h * 0.85, Math.PI * 0.72, Math.PI * 0.72 + Math.PI * 1.85);
+        ctx.lineTo(x - h * 0.85, y + h * 0.85);
+        ctx.closePath();
+        ctx.moveTo(x - h * 0.38, y - h * 0.22);
+        ctx.lineTo(x + h * 0.38, y - h * 0.22);
+        ctx.moveTo(x - h * 0.38, y + h * 0.14);
+        ctx.lineTo(x + h * 0.14, y + h * 0.14);
+        ctx.stroke();
+        break;
+    }
+    ctx.restore();
+  }
+
+  /** The same teal wallpaper as payday's lock screen: it's the same phone. */
+  function wallpaper() {
+    const wall = ctx.createLinearGradient(0, 0, 0, APP.h);
+    wall.addColorStop(0, "#0A4E56");
+    wall.addColorStop(1, "#11818D");
+    ctx.fillStyle = wall;
+    ctx.fillRect(0, 0, APP.w, APP.h);
+    const mk = (APP.w * 0.8) / LOGO_VIEWBOX.width;
+    ctx.save();
+    ctx.globalAlpha *= 0.1;
+    ctx.translate(APP.w * 0.1, APP.h * 0.56);
+    ctx.scale(mk, mk);
+    ctx.fillStyle = C.white;
+    for (const path of bandPaths) ctx.fill(path);
+    ctx.restore();
+  }
+
+  function statusBar(color: string) {
+    say("9:41", 54, 29, 16, color, { weight: 600, align: "center", family: sans });
+    for (let k = 0; k < 4; k++) {
+      const bar = 4 + k * 2.4;
+      fillRound(ctx, 288 + k * 4.6, 34 - bar, 3, bar, 1, color);
+    }
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = "round";
+    for (const r of [6.5, 10.5]) {
+      ctx.beginPath();
+      ctx.arc(322, 35, r, -Math.PI * 0.75, -Math.PI * 0.25);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(322, 33.5, 1.6, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.globalAlpha *= 0.45;
+    roundRect(ctx, 340.5, 23, 25, 12, 3.5);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+    fillRound(ctx, 342.5, 25, 17, 8, 2, color);
+    fillRound(ctx, 366.5, 27, 1.8, 4, 1, color);
+  }
+
+  /** A round photo, in points; pale until it loads. */
+  function avatar(photo: Photo | null, x: number, y: number, r: number) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = "#D5DCDD";
+    ctx.fill();
+    if (photo && ready(photo.img)) {
+      ctx.clip();
+      cover(ctx, photo.img, { x: x - r, y: y - r, w: r * 2, h: r * 2 }, photo.focus, { zoom: 1.5 });
+    }
+    ctx.restore();
+  }
+
+  /**
+   * The home screen, as in the Figma: who you are, your next live class,
+   * the course you're part-way through, and what's due. `scroll` is how far
+   * it has scrolled, `fill` how far the progress bar has grown, `pressed`
+   * how hard the Join button is being tapped.
+   */
+  function homeScreen(appear: number, scroll: number, fill: number, pressed: number) {
+    const content = APP_CONTENT[student?.person?.track ?? "Backend"];
+    const block = (k: number, paint: () => void) => {
+      const g = easeOutCubic(stagger(appear, k, 5, 0.6));
+      if (g <= 0) return;
+      ctx.save();
+      ctx.globalAlpha *= g;
+      ctx.translate(0, (1 - g) * 18 - scroll);
+      paint();
+      ctx.restore();
+    };
+
+    block(0, () => {
+      avatar(student, 36, 93, 20);
+      say(student?.person?.name ?? "You", 62, 80, 17, UI.ink, { weight: 500 });
+      pill(student?.person?.track ?? "Backend", 60, 91.5, 23.5, 13.5, { fill: UI.chip, text: C.teal });
+      for (const [x, kind] of [
+        [300, "calendar"],
+        [352, "bell"],
+      ] as const) {
+        ctx.beginPath();
+        ctx.arc(x, 93, 22, 0, Math.PI * 2);
+        ctx.fillStyle = C.white;
+        ctx.fill();
+        glyph(kind, x, 93, 17, UI.ink);
+      }
+    });
+
+    block(1, () => {
+      fillRound(ctx, 16, 139, 358, 204, 20, UI.card);
+      say("Next Class", 32, 163, 12.5, C.teal, { weight: 500 });
+      say(content.next, 32, 192, 19.5, UI.ink, { weight: 500, family: sans });
+      glyph("calendar", 40, 222, 13, UI.muted, { width: 1.4 });
+      const when = say("Today · 6:00 pm", 53, 222, 13.5, UI.muted);
+      glyph("person", 53 + when + 22, 222, 13, UI.muted, { width: 1.4 });
+      say(instructor?.person?.name ?? "Your instructor", 53 + when + 34, 222, 13.5, UI.muted);
+
+      fillRound(ctx, 32, 251, 326, 40, 10, rgba(mixRGB(TEAL, [6, 72, 80], pressed), 1));
+      const label = measure("Join Class", 15.5, 500);
+      const left = 195 - (label + 28) / 2;
+      glyph("video", left + 9, 271, 18, C.white, { width: 1.7 });
+      say("Join Class", left + 28, 271.5, 15.5, C.white, { weight: 500 });
+      const more = measure("View Schedule", 14.5, 500);
+      say("View Schedule", 188, 313, 14.5, C.teal, { weight: 500, align: "center" });
+      glyph("right", 188 + more / 2 + 12, 313, 12, C.teal, { width: 1.8 });
+    });
+
+    block(2, () => {
+      say("Continue Learning", 16, 381, 18.5, UI.ink, { weight: 500, family: sans });
+      fillRound(ctx, 16, 399, 358, 197, 20, UI.card);
+      ctx.save();
+      roundRect(ctx, 32, 415, 326, 59, 10);
+      ctx.clip();
+      ctx.fillStyle = UI.banner;
+      ctx.fillRect(32, 415, 326, 59);
+      ctx.fillStyle = C.teal;
+      for (const [cx, cy, r] of [
+        [150.6, 415, 22.8],
+        [69.6, 473.7, 23.2],
+        [259.5, 481.2, 21],
+      ]) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      say(content.course, 342, 444.5, 20, UI.ink, { weight: 600, family: sans, align: "right" });
+      say(content.lesson, 32, 497, 15.5, UI.ink, { weight: 500 });
+      say("Week 16 · Lesson 2", 32, 520, 13.5, UI.ink2);
+      // The bar grows as you watch: from where you were to where you are.
+      const percent = lerp(35, 60, fill);
+      const lit = Math.round((20 * percent) / 100);
+      for (let k = 0; k < 20; k++) fillRound(ctx, 32 + k * 5.95, 540, 4.2, 19, 2.1, k < lit ? UI.green : UI.grey);
+      say(`${Math.round(percent)}% Complete`, 158, 550, 15, UI.ink2);
+      ctx.beginPath();
+      ctx.arc(338, 550, 20, 0, Math.PI * 2);
+      ctx.fillStyle = C.teal;
+      ctx.fill();
+      glyph("right", 338, 550, 13, C.white, { width: 2 });
+    });
+
+    block(3, () => {
+      say("Due soon", 16, 634, 18.5, UI.ink, { weight: 500, family: sans });
+      say("See all", 374, 634, 14.5, C.teal, { weight: 500, align: "right" });
+      fillRound(ctx, 16, 652, 358, 92, 20, C.white);
+      ctx.beginPath();
+      ctx.arc(52, 698, 20, 0, Math.PI * 2);
+      ctx.fillStyle = UI.card;
+      ctx.fill();
+      glyph("file", 52, 698, 16, UI.ink);
+      say(content.due, 84, 687, 14, UI.ink, { weight: 500 });
+      say(content.submit, 84, 709, 12.5, UI.muted);
+      pill("Due in 1 day", 358, 686, 24, 12.5, { fill: UI.amberBg, line: UI.amberLine, text: UI.amber }, "right");
+    });
+  }
+
+  /** The lessons screen: this week open, the weeks before folded up. */
+  function lessonsScreen(appear: number) {
+    const track = student?.person?.track ?? "Backend";
+    const content = APP_CONTENT[track];
+    const block = (k: number, paint: () => void) => {
+      const g = easeOutCubic(stagger(appear, k, 5, 0.5));
+      if (g <= 0) return;
+      ctx.save();
+      ctx.globalAlpha *= g;
+      ctx.translate(0, (1 - g) * 14);
+      paint();
+      ctx.restore();
+    };
+
+    block(0, () => {
+      say("Lessons", 16, 87, 26, UI.ink, { weight: 500, family: sans });
+      say(`${track} track · Week 18 of 52`, 16, 117, 13.5, UI.muted);
+      fillRound(ctx, 16, 147, 358, 44, 10, C.white);
+      roundRect(ctx, 16.5, 147.5, 357, 43, 10);
+      ctx.strokeStyle = "#DCE3E4";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      glyph("search", 38, 169, 15, UI.muted);
+      say("Search lessons by topic", 56, 169.5, 13.5, UI.hint);
+    });
+
+    block(1, () => {
+      ctx.save();
+      roundRect(ctx, 16, 211, 358, 208, 14);
+      ctx.clip();
+      ctx.fillStyle = C.white;
+      ctx.fillRect(16, 211, 358, 208);
+      ctx.fillStyle = UI.card;
+      ctx.fillRect(16, 211, 358, 55);
+      ctx.restore();
+      roundRect(ctx, 16.5, 211.5, 357, 207, 14);
+      ctx.strokeStyle = UI.card;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      const week = say("Week 18", 32, 239, 16, UI.ink, { weight: 500, family: sans });
+      pill("This week", 32 + week + 8, 227.5, 23, 12, { fill: UI.blueBg, line: UI.blueLine, text: UI.blue });
+      glyph("up", 349, 239, 12, UI.ink, { width: 1.8 });
+
+      const row = (y: number, title: string, sub: string, watched: boolean) => {
+        fillRound(ctx, 32, y, 72, 48, 8, UI.card);
+        glyph("play", 68, y + 24, 16, C.teal, { width: 2 });
+        say(title, 116, y + 12, 14, UI.ink, { weight: 500 });
+        say(sub, 116, y + 33, 11.5, UI.muted);
+        if (watched) {
+          const w = say("Watched", 357, y + 12, 12, UI.green, { weight: 500, align: "right" });
+          glyph("check", 357 - w - 10, y + 12, 13, UI.green, { width: 1.4 });
+        } else {
+          pill("New", 357, y + 1, 23, 12, { fill: UI.blueBg, line: UI.blueLine, text: UI.blue }, "right");
+        }
+      };
+      row(283, content.latest[0], "Lesson 2 · Sat, 10 Oct", false);
+      ctx.fillStyle = "#E2E8E8";
+      ctx.fillRect(32, 343, 326, 1);
+      row(355, content.latest[1], "Lesson 1 · Wed, 7 Oct", true);
+    });
+
+    const folded = (k: number, y: number, title: string, sub: string, color: string) =>
+      block(k, () => {
+        fillRound(ctx, 16, y, 358, 70, 14, UI.card);
+        say(title, 32, y + 24, 16, UI.ink, { weight: 500, family: sans });
+        say(sub, 32, y + 48, 12.5, color);
+        glyph("down", 349, y + 35, 12, UI.ink, { width: 1.8 });
+      });
+    folded(2, 431, "Week 17", "2 lessons · All watched", UI.muted);
+    folded(3, 513, "Week 16", "2 lessons · 1 not watched", UI.amber);
+    folded(4, 595, "Weeks 1 to 15", "30 lessons · All watched", UI.muted);
+  }
+
+  /** The floating tab bar; `view` slides its highlight from Home to Lessons. */
+  function tabBar(appear: number, view: number, badge: number) {
+    const g = easeOutCubic(stagger(appear, 4, 5, 0.6));
+    if (g <= 0) return;
+    ctx.save();
+    ctx.globalAlpha *= g;
+    ctx.translate(0, (1 - g) * 18);
+    fillRound(ctx, 16, 741, 358, 61, 30.5, "rgba(238,242,242,0.97)");
+    const xs = [61, 128, 195, 262, 329];
+    fillRound(ctx, lerp(xs[0], xs[1], view) - 37, 746, 74, 51, 25.5, C.white);
+    const tabs: [Glyph, string][] = [
+      ["home", "Home"],
+      ["book", "Lessons"],
+      ["tasks", "Tasks"],
+      ["chat", "Chats"],
+      ["person", "You"],
+    ];
+    tabs.forEach(([kind, label], k) => {
+      const on = (k === 0 ? 1 - view : k === 1 ? view : 0) > 0.5;
+      const color = on ? C.teal : UI.tab;
+      glyph(kind, xs[k], 764, 20, color, { width: 1.6, filled: on && kind === "home" });
+      say(label, xs[k], 786, 11.5, color, { weight: on ? 500 : 400, align: "center" });
+    });
+    // A message from the mentor arrives.
+    if (badge > 0) {
+      const r = 7.5 * badge;
+      ctx.beginPath();
+      ctx.arc(274, 755, r, 0, Math.PI * 2);
+      ctx.fillStyle = UI.red;
+      ctx.fill();
+      ctx.strokeStyle = C.white;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      say("1", 274, 755.5, 10 * badge, C.white, { weight: 600, align: "center" });
+    }
+    ctx.restore();
+  }
+
+  /** A fingertip on the glass: a soft press, then a ripple. In canvas pixels. */
+  function touch(at: Point, k: number, unit: number) {
+    if (k <= 0 || k >= 1) return;
+    const show = Math.sin(Math.PI * k);
+    const r = 19 * unit * (1.05 - 0.12 * Math.sin(Math.PI * clamp01(k * 1.6 - 0.3)));
+    ctx.save();
+    ctx.globalAlpha = show * 0.9;
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = rgba(INK, 0.22);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = 1.5 * L.px;
+    ctx.stroke();
+    const ripple = ramp(k, 0.35, 1);
+    if (ripple > 0) {
+      ctx.globalAlpha = (1 - ripple) * 0.6;
+      ctx.beginPath();
+      ctx.arc(at.x, at.y, r * (1 + ripple * 1.4), 0, Math.PI * 2);
+      ctx.strokeStyle = C.teal;
+      ctx.lineWidth = 2 * L.px;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * The payoff: the mark the story has followed becomes the Rise Classroom
+   * app icon on the student's phone, opens into the app, and the scroll
+   * walks through it (the live class, progress, deadlines, recordings, the
+   * mentor). Then the app closes back into the mark, ready for the last screen.
+   */
+  function drawClassroom(local: number, time: number) {
+    const t = local;
+    const arrive = easeOutCubic(ramp(t, 0.02, 0.18));
+    const leave = easeInOutSine(ramp(t, 0.9, 1));
+    const S = scaleBox(phoneBox(), lerp(0.94, 1, arrive) * lerp(1, 0.96, leave));
+    const u = S.w / APP.w;
+    const at = (x: number, y: number): Point => ({ x: S.x + x * u, y: S.y + y * u });
+    const phone = arrive * (1 - leave);
+
+    const grow = easeOutBack(ramp(t, 0.1, 0.18));
+    const press = Math.sin(Math.PI * ramp(t, 0.215, 0.27));
+    const launch = easeInOutCubic(ramp(t, 0.26, 0.4));
+    const splashOut = easeInOutSine(ramp(t, 0.38, 0.42));
+    const appear = ramp(t, 0.405, 0.52);
+    const closing = easeInOutSine(ramp(t, 0.86, 0.9));
+    const view = easeInOutCubic(ramp(t, 0.675, 0.72));
+    const scroll = HOME_SCROLL * easeInOutCubic(ramp(t, 0.53, 0.6));
+    const fill = easeOutCubic(ramp(t, 0.54, 0.6));
+    const badge = easeOutBack(ramp(t, 0.78, 0.82));
+    const joinPress = Math.sin(Math.PI * ramp(t, 0.475, 0.51));
+
+    // The icon, in points: it grows behind the mark, dips when tapped, then
+    // opens out into the whole screen.
+    const side = ICON.size * grow * (1 - 0.08 * press);
+    const tile = {
+      x: lerp(ICON.x - side / 2, 0, launch),
+      y: lerp(ICON.y - side / 2, 0, launch),
+      w: lerp(side, APP.w, launch),
+      h: lerp(side, APP.h, launch),
+      r: lerp(side * 0.225, APP.r, launch),
+    };
+    const shown = CALLOUTS.map((c) => ({ c, a: calloutAlpha(c, t) * phone })).filter(({ a }) => a > 0.003);
+
+    if (phone > 0.003) {
+      ctx.save();
+      ctx.globalAlpha = phone;
+      const b = APP.bezel * u;
+      // The body is a ring around the screen, so a half-faded phone never
+      // shows dark through its screen.
+      ctx.save();
+      ctx.shadowColor = rgba(INK, 0.22);
+      // Kept small on phones: big blurs every frame are costly on iOS.
+      ctx.shadowBlur = (L.mobile ? 28 : 60) * L.px;
+      ctx.shadowOffsetY = 28 * L.px;
+      ctx.beginPath();
+      ctx.roundRect(S.x - b, S.y - b, S.w + b * 2, S.h + b * 2, S.r + b);
+      ctx.roundRect(S.x, S.y, S.w, S.h, S.r);
+      ctx.fillStyle = "#0B1213";
+      ctx.fill("evenodd");
+      ctx.restore();
+      roundRect(ctx, S.x - b + 1, S.y - b + 1, S.w + b * 2 - 2, S.h + b * 2 - 2, S.r + b - 1);
+      ctx.strokeStyle = "rgba(255,255,255,0.14)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.translate(S.x, S.y);
+      ctx.scale(u, u);
+      roundRect(ctx, 0, 0, APP.w, APP.h, APP.r);
+      ctx.clip();
+
+      if (launch < 1) wallpaper();
+      // Until it opens, the icon travels with the mark, drawn further down.
+      if (launch > 0) fillRound(ctx, tile.x, tile.y, tile.w, tile.h, tile.r, rgba(mixRGB(WHITE, [247, 249, 249], launch), 1));
+      const label = ramp(t, 0.15, 0.22) * (1 - ramp(launch, 0, 0.25));
+      if (label > 0) {
+        ctx.save();
+        ctx.globalAlpha *= label;
+        say("Rise Classroom", ICON.x, ICON.y + ICON.size / 2 + 16, 13, C.white, { weight: 500, align: "center" });
+        ctx.restore();
+      }
+
+      const ui = 1 - closing;
+      if (appear > 0 && ui > 0) {
+        ctx.save();
+        ctx.globalAlpha *= ui;
+        // Tapping Lessons cross-fades the screens with a small slide.
+        if (view < 1) {
+          ctx.save();
+          ctx.globalAlpha *= 1 - view;
+          ctx.translate(-24 * view, 0);
+          homeScreen(appear, scroll, fill, joinPress);
+          ctx.restore();
+        }
+        if (view > 0) {
+          ctx.save();
+          ctx.globalAlpha *= view;
+          ctx.translate(24 * (1 - view), 0);
+          lessonsScreen(ramp(t, 0.69, 0.76));
+          ctx.restore();
+        }
+        // Content scrolls under the status bar.
+        ctx.save();
+        ctx.globalAlpha *= easeOutCubic(appear);
+        ctx.fillStyle = UI.bg;
+        ctx.fillRect(0, 0, APP.w, 52);
+        ctx.restore();
+        tabBar(appear, view, badge);
+        // What each note points at, ringed.
+        for (const { c, a } of shown) {
+          const r = calloutTarget(c, scroll);
+          const pulse = reduced ? 1 : 0.7 + 0.3 * Math.sin(time * 3);
+          ctx.save();
+          ctx.globalAlpha *= a;
+          fillRound(ctx, r.x - 4, r.y - 4, r.w + 8, r.h + 8, c.r + 4, rgba(TEAL, 0.06));
+          roundRect(ctx, r.x - 4, r.y - 4, r.w + 8, r.h + 8, c.r + 4);
+          ctx.strokeStyle = rgba(TEAL, 0.9 * pulse);
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+
+      const onApp = launch > 0.5;
+      statusBar(onApp ? UI.ink : C.white);
+      fillRound(ctx, 136, 11, 118, 34, 17, "#000000");
+      fillRound(ctx, 135, 831, 120, 4.5, 2.25, onApp ? UI.ink : C.white);
+      ctx.restore();
+    }
+
+    // The mark: from the middle of the page into the icon, out onto the
+    // splash screen, gone while the app is open, then back to the middle.
+    const end = { x: L.end.x + (LOGO_VIEWBOX.width * L.end.k) / 2, y: L.end.y + (LOGO_VIEWBOX.height * L.end.k) / 2, w: LOGO_VIEWBOX.width * L.end.k };
+    const splash = { ...at(APP.w / 2, APP.h / 2), w: APP.w * 0.34 * u };
+    let mark: { x: number; y: number; w: number };
+    let markAlpha: number;
+    if (t < 0.86) {
+      const inIcon = at(lerp(ICON.x, APP.w / 2, launch), lerp(ICON.y, APP.h / 2, launch));
+      const icon = { ...inIcon, w: lerp(ICON.size * 0.6 * (1 - 0.08 * press), APP.w * 0.34, launch) * u };
+      const move = easeInOutCubic(ramp(t, 0, 0.17));
+      mark = { x: lerp(end.x, icon.x, move), y: lerp(end.y, icon.y, move), w: lerp(end.w, icon.w, move) };
+      // The splash is gone before the home screen arrives.
+      mark.w *= 1 - 0.25 * splashOut;
+      markAlpha = 1 - splashOut;
+    } else {
+      mark = { x: lerp(splash.x, end.x, leave), y: lerp(splash.y, end.y, leave), w: lerp(splash.w, end.w, leave) };
+      markAlpha = closing;
+    }
+    // On its way in, the mark picks up the white tile that makes it the app
+    // icon, so it lands on the phone already an icon.
+    if (launch === 0 && grow > 0) {
+      const tileSide = (mark.w / 0.6) * grow;
+      ctx.save();
+      ctx.shadowColor = rgba(INK, 0.16 * clamp01(grow));
+      ctx.shadowBlur = 24 * L.px;
+      ctx.shadowOffsetY = 10 * L.px;
+      fillRound(ctx, mark.x - tileSide / 2, mark.y - tileSide / 2, tileSide, tileSide, tileSide * 0.225, C.white);
+      ctx.restore();
+    }
+    if (markAlpha > 0.003) {
+      const k = mark.w / LOGO_VIEWBOX.width;
+      ctx.save();
+      ctx.globalAlpha = markAlpha;
+      drawLogo({ x: mark.x - mark.w / 2, y: mark.y - (LOGO_VIEWBOX.height * k) / 2, k }, C.teal);
+      ctx.restore();
+    }
+
+    if (!reduced) {
+      ctx.save();
+      ctx.globalAlpha = phone;
+      touch(at(ICON.x, ICON.y), ramp(t, 0.2, 0.285), u);
+      touch(at(195, 271), ramp(t, 0.465, 0.525), u);
+      touch(at(128, 771), ramp(t, 0.645, 0.7), u);
+      ctx.restore();
+    }
+
+    drawCallouts(S, u, shown, scroll);
+  }
+
+  /**
+   * The notes beside the phone, each with a line to what it points at. Where
+   * there's no room beside it (phones, narrow screens), one short note at a
+   * time sits under the phone instead.
+   */
+  function drawCallouts(S: Box, u: number, shown: { c: Callout; a: number }[], scroll: number) {
+    if (shown.length === 0) return;
+    const b = APP.bezel * u;
+    const px = L.px;
+    const left = S.x + S.w + b + 40 * px;
+    const room = L.w - 64 - left;
+
+    if (!L.mobile && room >= 190 * px) {
+      const ch = 66 * px;
+      const gap = 12 * px;
+      const cards = shown
+        .map(({ c, a }) => {
+          const r = calloutTarget(c, scroll);
+          // Most notes point at the right edge of what they're about; the
+          // tab bar's are pointed at from above, clear of the other tabs.
+          const target = c.fixed
+            ? { x: S.x + (r.x + r.w / 2) * u, y: S.y + r.y * u }
+            : { x: S.x + (r.x + r.w) * u, y: S.y + (r.y + r.h / 2) * u };
+          const want = c.fixed ? target.y - 70 * px : target.y;
+          const y = Math.min(Math.max(want, S.y + ch / 2), S.y + S.h - ch / 2);
+          return { c, a, target, y };
+        })
+        .sort((p, q) => p.y - q.y);
+      cards.forEach((card, k) => {
+        if (k > 0) card.y = Math.max(card.y, cards[k - 1].y + ch + gap);
+      });
+
+      for (const { c, a, target, y } of cards) {
+        const e = easeOutCubic(a);
+        const x = left + (1 - e) * 16 * px;
+        const top = y - ch / 2;
+        // Sized to its words, within the room there is.
+        ctx.font = font(15, 700);
+        const titleW = ctx.measureText(c.title).width;
+        ctx.font = font(13, 500, work);
+        const cw = Math.min(Math.max(titleW, ctx.measureText(c.body).width) + 44 * px, room);
+        ctx.save();
+        ctx.globalAlpha = a;
+
+        // The line from the note to what it's about.
+        const from = { x: x - 4 * px, y };
+        const tip = c.fixed ? { x: target.x, y: target.y - 4 * px } : { x: target.x + 6 * px, y: target.y };
+        const to = { x: lerp(from.x, tip.x, e), y: lerp(from.y, tip.y, e) };
+        ctx.strokeStyle = rgba(TEAL, 0.85);
+        ctx.lineWidth = 1.5 * px;
+        strokeLine(ctx, from, to);
+        ctx.beginPath();
+        ctx.arc(to.x, to.y, 4 * px, 0, Math.PI * 2);
+        ctx.fillStyle = C.teal;
+        ctx.fill();
+        ctx.strokeStyle = C.white;
+        ctx.lineWidth = 2 * px;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.shadowColor = rgba(INK, 0.1);
+        ctx.shadowBlur = 24 * px;
+        ctx.shadowOffsetY = 8 * px;
+        fillRound(ctx, x, top, cw, ch, 14 * px, C.white);
+        ctx.restore();
+        roundRect(ctx, x + 0.5, top + 0.5, cw - 1, ch - 1, 14 * px);
+        ctx.strokeStyle = C.faint;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        fillRound(ctx, x + 12 * px, top + 15 * px, 3 * px, ch - 30 * px, 1.5 * px, C.teal);
+        text(c.title, x + 24 * px, top + 24 * px, 15, C.ink, { weight: 700 });
+        text(c.body, x + 24 * px, top + 45 * px, 13, C.muted, { weight: 500, family: work });
+        ctx.restore();
+      }
+      return;
+    }
+
+    // One note at a time: a later one takes over from the one before.
+    let cover = 0;
+    for (let k = shown.length - 1; k >= 0; k--) {
+      const { c, a } = shown[k];
+      const alpha = a * (1 - cover);
+      cover = Math.max(cover, a);
+      if (alpha <= 0.003) continue;
+      const size = L.mobile ? 12.5 : 13.5;
+      ctx.font = font(size, 600);
+      const w = ctx.measureText(c.short).width + 44 * px;
+      const h = 34 * px;
+      const x = S.x + S.w / 2 - w / 2;
+      const y = S.y + S.h + b + 14 * px + (1 - easeOutCubic(alpha)) * 8 * px;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.shadowColor = rgba(INK, 0.12);
+      ctx.shadowBlur = 18 * px;
+      ctx.shadowOffsetY = 6 * px;
+      fillRound(ctx, x, y, w, h, h / 2, C.white);
+      ctx.shadowColor = "transparent";
+      ctx.beginPath();
+      ctx.arc(x + 18 * px, y + h / 2, 4 * px, 0, Math.PI * 2);
+      ctx.fillStyle = C.teal;
+      ctx.fill();
+      text(c.short, x + 30 * px, y + h / 2 + 0.5, size, C.ink);
+      ctx.restore();
+    }
+  }
+
+
   /* ---------------- frame ---------------- */
 
   let intro = 1;
@@ -2128,6 +3119,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     drawPieces(index, local, time);
     drawCard(index, local, time);
     drawMark(index, local);
+    if (CHAPTERS[index].id === "classroom") drawClassroom(local, time);
   }
 
   resize();
@@ -2144,7 +3136,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       paintSprites();
     },
     setPeople(people) {
-      heroPhotos = people.hero.slice(0, 3).map((person) => photoOf(person, 1200));
+      heroPhotos = people.hero.slice(0, 7).map((person) => photoOf(person, 1200));
       const first = heroPhotos[0]?.img;
       if (!first) markHeroReady();
       else if (ready(first)) markHeroReady();
@@ -2154,6 +3146,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       }
       cohortPhotos = people.cohort.slice(0, 11).map((src) => load(src, 256));
       instructor = photoOf(people.instructor);
+      student = photoOf(people.student);
       mentor = photoOf(people.mentor);
       paintSprites();
     },
