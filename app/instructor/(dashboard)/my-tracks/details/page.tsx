@@ -126,12 +126,8 @@ export default function TrackDetails() {
       : 0;
 
   const chartData = [
-    { name: "Completed", value: progressData.completed, color: "#0D6D78" },
-    {
-      name: "Remaining",
-      value: progressData.inProgress + progressData.notStarted,
-      color: "#E8F5F6",
-    },
+    { name: "Completed", value: data.completed, color: "var(--color-brand-primary)" },
+    { name: "Remaining", value: data.inProgress + data.notStarted, color: "var(--color-brand-100)" },
   ];
 
   const upcomingItems =

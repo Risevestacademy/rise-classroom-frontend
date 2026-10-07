@@ -6,18 +6,18 @@
 
 @theme inline {
   /*
-   * Colours — mirrors the Figma design tokens (Light.tokens.json).
+   * Colours — mirrors the Figma design tokens (design-tokens/Light.tokens.json).
    * Names follow the token path: --color-{group}-{name}.
    */
   --color-neutral-*: initial; /* drop Tailwind's default neutral scale so only design shades exist */
 
   /* Primitive · Brand */
-  --color-brand-surface: #E8F5F6;
+  --color-brand-surface: #F5F6FF;
   --color-brand-on-primary: #FFFFFF;
-  --color-brand-primary: #0D6D78;
-  --color-brand-primary-hover: #0B5D67;
-  --color-brand-primary-pressed: #094D55;
-  --color-brand-primary-disabled: #CBD5D6;
+  --color-brand-primary: #080D38; /* brand-950 */
+  --color-brand-primary-hover: #10164F; /* brand-900 */
+  --color-brand-primary-pressed: #20286F; /* brand-800 */
+  --color-brand-primary-disabled: #D5D9FF; /* brand-200 */
   --color-brand-secondary-default: #FFFFFF;
   --color-brand-secondary-hover: #F3F6F6;
   --color-brand-secondary-pressed: #E7ECEC;
@@ -31,12 +31,26 @@
   --color-brand-destructive-pressed: #991B1B;
   --color-brand-destructive-disabled: #FECACA;
 
+  /* Primitive · Brand Night Indigo ramp */
+  --color-brand-50: #F5F6FF;
+  --color-brand-100: #E9EBFF;
+  --color-brand-200: #D5D9FF;
+  --color-brand-300: #B8BFFF;
+  --color-brand-400: #929BFF;
+  --color-brand-500: #6C77E6;
+  --color-brand-600: #4F59C7;
+  --color-brand-700: #3540A3;
+  --color-brand-800: #20286F;
+  --color-brand-900: #10164F;
+  --color-brand-950: #080D38;
+
   /* Primitive · Neutral */
   --color-neutral-0: #FFFFFF;
   --color-neutral-50: #F8FAFA;
   --color-neutral-100: #F1F4F4;
   --color-neutral-200: #E2E8E8;
   --color-neutral-300: #CBD5D6;
+  --color-neutral-350: #A8B2B3;
   --color-neutral-400: #647274;
   --color-neutral-500: #475355;
   --color-neutral-600: #344043;
@@ -69,7 +83,7 @@
   --color-surface-background: #F8FAFA; /* neutral-50 */
   --color-surface-default: #FFFFFF; /* neutral-0 */
   --color-surface-subtle: #F1F4F4; /* neutral-100 */
-  --color-surface-brand: #E8F5F6; /* brand-surface */
+  --color-surface-brand: #F5F6FF; /* brand-surface */
   --color-surface-success-badge: #E8F5E9;
   --color-surface-warning-badge: #FFF4D6;
   --color-surface-error-badge: #FDEAEA;
@@ -79,7 +93,7 @@
   /* Semantic · Border */
   --color-border-default: #E2E8E8; /* neutral-200 */
   --color-border-strong: #CBD5D6; /* neutral-300 */
-  --color-border-focus: #0D6D78; /* brand-primary */
+  --color-border-focus: #080D38; /* brand-primary */
   --color-border-accessible: #647274; /* neutral-400 */
   --color-border-success: #B7DDB9;
   --color-border-warning: #F0D58A;
@@ -91,8 +105,8 @@
   --color-text-primary: #111819; /* neutral-800 */
   --color-text-secondary: #475355; /* neutral-500 */
   --color-text-muted: #647274; /* neutral-400 */
-  --color-text-disabled: #9CA3AF;
-  --color-text-brand: #0D6D78; /* brand-primary */
+  --color-text-disabled: #A8B2B3; /* neutral-350 */
+  --color-text-brand: #080D38; /* brand-950 */
   --color-text-success: #2E7D32;
   --color-text-warning: #8A6100;
   --color-text-error: #C62828;
@@ -102,9 +116,9 @@
   /* Semantic · Icon */
   --color-icon-primary: #111819; /* neutral-800 */
   --color-icon-secondary: #475355; /* neutral-500 */
-  --color-icon-brand: #0D6D78; /* brand-primary */
-  --color-icon-white: #FFFFFF;
-  --color-icon-disabled: #9CA3AF; /* text-disabled */
+  --color-icon-brand: #080D38; /* brand-primary */
+  --color-icon-white: #FFFFFF; /* neutral-0 */
+  --color-icon-disabled: #A8B2B3; /* text-disabled */
   --color-icon-muted: #647274; /* text-muted */
   --color-icon-success: #2E7D32;
   --color-icon-warning: #8A6100;
@@ -113,11 +127,11 @@
   --color-icon-default: #344043;
 
   /* Semantic · Interactive */
-  --color-interactive-primary-default: #0D6D78;
-  --color-interactive-primary-hover: #0B5D67;
-  --color-interactive-primary-pressed: #094D55;
-  --color-interactive-primary-disabled: #CBD5D6;
-  --color-interactive-primary-text: #FFFFFF;
+  --color-interactive-primary-default: #080D38; /* brand-primary */
+  --color-interactive-primary-hover: #10164F; /* brand-primary-hover */
+  --color-interactive-primary-pressed: #20286F; /* brand-primary-pressed */
+  --color-interactive-primary-disabled: #D5D9FF; /* brand-primary-disabled */
+  --color-interactive-primary-text: #FFFFFF; /* brand-on-primary */
   --color-interactive-secondary-default: #FFFFFF;
   --color-interactive-secondary-hover: #F3F6F6;
   --color-interactive-secondary-pressed: #E7ECEC;
@@ -127,12 +141,12 @@
   --color-interactive-tertiary-hover: #F3F6F6;
   --color-interactive-tertiary-pressed: #E7ECEC;
   --color-interactive-tertiary-disabled: #FFFFFF;
-  --color-interactive-tertiary-text: #0D6D78; /* text-brand */
+  --color-interactive-tertiary-text: #080D38; /* text-brand */
   --color-interactive-destructive-default: #DC2626;
   --color-interactive-destructive-hover: #B91C1C;
   --color-interactive-destructive-pressed: #991B1B;
   --color-interactive-destructive-disabled: #FECACA;
-  --color-interactive-destructive-text: #FFFFFF;
+  --color-interactive-destructive-text: #FFFFFF; /* neutral-0 */
 
   /* Font */
   --font-tomato: var(--font-tomato-grotesk), system-ui, sans-serif;
@@ -189,4 +203,3 @@
 body {
   font-family: var(--font-tomato);
 }
-

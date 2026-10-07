@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 const logoVariant = {
   teal: {
     src: "/classroom-logo-teal.svg",
-    textColor: "text-primary-500",
+    textColor: "text-text-brand",
   },
   white: {
     src: "/classroom-logo-white.svg",
