@@ -298,7 +298,7 @@ export function LandingPage() {
         introDone = intro.t >= 1;
       }
 
-      // The hero's teal field gives way to the white story as the mark bursts.
+      // The hero's brand field gives way to the white story as the mark bursts.
       const field = index === 0 ? 1 - easeInOutSine(ramp(local, 0.1, 0.42)) : 0;
       if (fieldRef.current) fieldRef.current.style.opacity = String(field);
       // The progress rail stays out of the hero's composition.
@@ -311,9 +311,9 @@ export function LandingPage() {
       }
 
       // On the hero the header keeps its opening look (white, no background)
-      // until the mark has scattered and the teal has gone.
+      // until the mark has scattered and the brand field has gone.
       const inHero = index === 0 && local < 0.42;
-      // The header turns white over the teal hero, the teal payday screen and the footer.
+      // The header turns white over the brand hero, the brand payday screen and the footer.
       const dark =
         inHero ||
         (index === STIPEND && local > 0.16) ||

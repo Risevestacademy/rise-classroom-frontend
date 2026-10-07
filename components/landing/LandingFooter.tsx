@@ -83,7 +83,7 @@ export function LandingFooter({
 
       <div className="grid gap-14 px-6 pt-[96px] pb-[72px] sm:px-10 md:grid-cols-12 md:gap-8 md:px-[6vw] md:pt-[128px]">
         <div className="md:col-span-6">
-          <p className="text-xs font-medium tracking-[0.16em] text-[#7FC4CB] uppercase">Rise Classroom</p>
+          <p className="text-xs font-medium tracking-[0.16em] text-brand-300 uppercase">Rise Classroom</p>
           <p className="mt-5 max-w-[14ch] text-[clamp(2.25rem,4.6vw,4.5rem)] leading-[0.98] font-bold tracking-[-0.035em]">
             Your seat is waiting.
           </p>
@@ -112,7 +112,7 @@ export function LandingFooter({
                   onClick={() => onJump(item.chapter)}
                   className="group flex cursor-pointer items-baseline gap-3 text-xl font-bold text-neutral-300 transition-colors outline-none hover:text-white focus-visible:text-white md:text-2xl"
                 >
-                  <span className="w-5 text-[11px] font-medium text-neutral-500 transition-colors group-hover:text-[#7FC4CB]">
+                  <span className="w-5 text-[11px] font-medium text-neutral-500 transition-colors group-hover:text-brand-300">
                     0{k + 1}
                   </span>
                   <span className="transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-1.5">
@@ -159,7 +159,7 @@ export function LandingFooter({
           programme
         </span>
         <span className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#7FC4CB]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-300" />
           Lagos{time && <span className="text-neutral-300 tabular-nums">{time} WAT</span>}
         </span>
         <button

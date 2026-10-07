@@ -25,7 +25,7 @@ function Word({ children, className }: { children: React.ReactNode; className?: 
 }
 
 /**
- * The opening screen, on a teal field, composed like a magazine cover. The
+ * The opening screen, on a brand indigo field, composed like a magazine cover. The
  * Rise mark is the artwork: as large as the screen allows, with one real
  * person's portrait filling all three bands, cycling slowly between people.
  * The canvas draws it into `[data-hero-mark]`; a photo caption sits in the
@@ -105,7 +105,7 @@ export function HeroCopy({
         )}
         <h1 className="text-[clamp(2.4rem,10vw,3.5rem)] leading-[0.94] font-bold tracking-[-0.045em] text-white md:text-[clamp(2.5rem,4.3vw,5.75rem)]">
           {words.map((word, k) => (
-            <Word key={k} className={split >= 0 && k >= split ? "text-[#9AD3D8]" : undefined}>
+            <Word key={k} className={split >= 0 && k >= split ? "text-brand-300" : undefined}>
               {word}
             </Word>
           ))}
@@ -130,7 +130,7 @@ export function HeroCopy({
             <button
               type="button"
               onClick={onSeat}
-              className="group inline-flex h-12 cursor-pointer items-center gap-2 rounded-full bg-white px-6 text-sm font-bold text-brand-primary transition-colors outline-none hover:bg-[#E8F5F6] focus-visible:ring-4 focus-visible:ring-white/40"
+              className="group inline-flex h-12 cursor-pointer items-center gap-2 rounded-full bg-white px-6 text-sm font-bold text-brand-primary transition-colors outline-none hover:bg-brand-surface focus-visible:ring-4 focus-visible:ring-white/40"
             >
               {open ? "Apply now" : "Join the waitlist"}
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />

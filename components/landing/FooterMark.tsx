@@ -10,8 +10,8 @@ type Slat = {
   hy: number;
   w: number;
   h: number;
-  /** The slice of the mark, painted in teal and in the lighter hover teal. */
-  teal: HTMLCanvasElement;
+  /** The slice of the mark, in brand indigo and in the lighter hover indigo. */
+  brand: HTMLCanvasElement;
   light: HTMLCanvasElement;
   /** Where it is now, and how fast it's moving. */
   x: number;
@@ -74,8 +74,8 @@ export function FooterMark() {
           hy,
           w: seg.w * k,
           h: seg.h * k,
-          teal: renderStrip(seg, k * dpr, "#0D6D78"),
-          light: renderStrip(seg, k * dpr, "#7FC4CB"),
+          brand: renderStrip(seg, k * dpr, "#6C77E6"),
+          light: renderStrip(seg, k * dpr, "#B8BFFF"),
           x: hx,
           y: hy,
           vx: 0,
@@ -98,7 +98,7 @@ export function FooterMark() {
         ctx.setTransform(dpr * cos, dpr * sin, -dpr * sin, dpr * cos, dpr * slat.x, dpr * slat.y);
         ctx.globalAlpha = 1;
         // A hair wider than the slice, so no seams show between neighbours.
-        ctx.drawImage(slat.teal, -slat.w / 2 - 0.35, -slat.h / 2, slat.w + 0.7, slat.h);
+        ctx.drawImage(slat.brand, -slat.w / 2 - 0.35, -slat.h / 2, slat.w + 0.7, slat.h);
         if (moved > 0.01) {
           ctx.globalAlpha = moved;
           ctx.drawImage(slat.light, -slat.w / 2, -slat.h / 2, slat.w, slat.h);

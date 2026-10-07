@@ -18,7 +18,7 @@ const STEPS = [
 const noSubscription = () => () => {};
 
 /**
- * The thank-you page after joining the waitlist. On the same teal as the
+ * The thank-you page after joining the waitlist. On the same indigo as the
  * landing page's opening screen, so it feels like the end of the same story.
  * Shows back the name, email and track they just gave, from this tab's
  * storage; anyone who lands here directly gets the same page without them.
@@ -76,13 +76,13 @@ export function WaitlistJoined() {
             <>
               See you soon,
               <br />
-              <span className="text-[#9AD3D8]">{firstName}.</span>
+              <span className="text-brand-300">{firstName}.</span>
             </>
           ) : (
             <>
               You&apos;re on
               <br />
-              <span className="text-[#9AD3D8]">the list.</span>
+              <span className="text-brand-300">the list.</span>
             </>
           )}
         </h1>

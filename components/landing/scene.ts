@@ -1,5 +1,5 @@
 /**
- * The landing page canvas. One teal piece is the student: it starts inside
+ * The landing page canvas. One brand piece is the student: it starts inside
  * the Rise mark, joins a grey cohort, picks a track, becomes a design file, a
  * web page, an API and an app, gets taught, gets a mentor, gets paid, ships
  * with the other tracks, and finally flies home into the mark. Then the mark
@@ -94,7 +94,7 @@ const INDEX = Object.fromEntries(CHAPTERS.map((chapter, i) => [chapter.id, i])) 
 type RGB = readonly [number, number, number];
 
 const INK: RGB = [17, 24, 25];
-const TEAL: RGB = [13, 109, 120];
+const BRAND: RGB = [8, 13, 56];
 const GREY: RGB = [203, 213, 214];
 const WHITE: RGB = [255, 255, 255];
 
@@ -106,9 +106,9 @@ const C = {
   faint: "#E2E8E8",
   wash: "#F1F4F4",
   paper: "#F8FAFA",
-  teal: "#0D6D78",
-  tint: "#E8F5F6",
-  tint2: "#B4D2D5",
+  brand: "#080D38",
+  tint: "#F5F6FF",
+  tint2: "#D5D9FF",
   white: "#FFFFFF",
 } as const;
 
@@ -196,7 +196,7 @@ type Piece = {
   r: [number, number, number, number, number];
   /** Place in line when the mark bursts, from the centre outwards. */
   order: number;
-  teal: boolean;
+  brand: boolean;
   dot: boolean;
 };
 
@@ -213,7 +213,7 @@ type Pose = {
   o: number;
   /** 1 draws the piece as its slice of the mark, 0 as a plain capsule. */
   m: number;
-  /** How much of the slice shows the photo inside the mark rather than teal. */
+  /** How much of the slice shows the photo inside the mark rather than brand. */
   ph?: number;
 };
 
@@ -234,7 +234,7 @@ function buildPieces(segments: BandStrip[]): Piece[] {
       seg,
       r,
       order: clamp01(distance * 0.85 + r[0] * 0.15),
-      teal: i === 0 || r[1] < 0.32,
+      brand: i === 0 || r[1] < 0.32,
       dot: r[2] < 0.3,
     };
   });
@@ -392,9 +392,9 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
   let L: Layout = computeLayout(1, 1);
   const pieceSets: Partial<Record<"mobile" | "desktop", Piece[]>> = {};
   let pieces: Piece[] = [];
-  /** Each piece's slice of the mark, painted once per size, in teal and grey. */
-  /** Per slice: flat teal, flat grey, and its part of each hero portrait. */
-  let sprites: { teal: HTMLCanvasElement; grey: HTMLCanvasElement; photos: (HTMLCanvasElement | null)[] }[] = [];
+  /** Each piece's slice of the mark, painted once per size, in brand and grey. */
+  /** Per slice: flat brand, flat grey, and its part of each hero portrait. */
+  let sprites: { brand: HTMLCanvasElement; grey: HTMLCanvasElement; photos: (HTMLCanvasElement | null)[] }[] = [];
 
   function resize() {
     const w = canvas.clientWidth || 1;
@@ -436,7 +436,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     // Give the old slices' memory back now rather than whenever GC runs; iOS
     // counts it against the page until then.
     for (const sprite of sprites) {
-      for (const old of [sprite.teal, sprite.grey, ...sprite.photos]) {
+      for (const old of [sprite.brand, sprite.grey, ...sprite.photos]) {
         if (!old) continue;
         old.width = 0;
         old.height = 0;
@@ -455,12 +455,12 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     });
 
     sprites = pieces.map((piece) => ({
-      teal: renderStrip(piece.seg, unit, C.teal),
+      brand: renderStrip(piece.seg, unit, C.brand),
       grey: renderStrip(piece.seg, unit, C.line),
       photos: frames.map((frame) =>
         frame
           ? renderStrip(piece.seg, unit, (c) =>
-              duotone(c, mark, () =>
+              grade(c, () =>
                 cover(c, frame.photo.img, mark, frame.photo.focus, { zoom: frame.zoom, at: { x: 0.5, y: 0.35 } })
               )
             )
@@ -558,28 +558,22 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
   }
 
   /**
-   * Turns whatever was just drawn in `box` into a teal duotone: deep teal
-   * shadows, pale teal highlights. Every photo on the page shares it, so the
-   * people read as part of the brand rather than pasted in.
+   * Draws a photo in its own colours with one light grade shared by every
+   * photo on the page (a little less saturation, a little more contrast), so
+   * the people look like one shoot. Tinting skin with the near-black indigo
+   * brand made them look like an old filter, so the brand stays in the
+   * shapes around the photos, never on the faces.
    */
-  function duotone(c: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }, paint: () => void) {
+  function grade(c: CanvasRenderingContext2D, paint: () => void) {
     c.save();
-    c.filter = "grayscale(1) contrast(1.22) brightness(1.08)";
+    c.filter = "saturate(0.9) contrast(1.06)";
     paint();
-    c.restore();
-    c.save();
-    c.globalCompositeOperation = "multiply";
-    c.fillStyle = "#C2E7EA";
-    c.fillRect(box.x, box.y, box.w, box.h);
-    c.globalCompositeOperation = "screen";
-    c.fillStyle = "#03292E";
-    c.fillRect(box.x, box.y, box.w, box.h);
     c.restore();
   }
 
   /** A round portrait with a white ring; falls back to `fallback` until it loads. */
   /**
-   * Each face, cropped and teal-toned once into its own small canvas. Canvas
+   * Each face, cropped and graded once into its own small canvas. Canvas
    * filters are slow on Safari, so doing this every frame for a dozen faces
    * made iPhones stutter.
    */
@@ -595,7 +589,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       const c = sprite.getContext("2d");
       if (c) {
         const box = { x: 0, y: 0, w: FACE_PX, h: FACE_PX };
-        duotone(c, box, () => cover(c, img, box, focus, { zoom: 1.6 }));
+        grade(c, () => cover(c, img, box, focus, { zoom: 1.6 }));
       }
       faceCache.set(img, sprite);
     }
@@ -701,7 +695,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       h: seg.h * frame.k,
       a: 0,
       r: 0,
-      c: TEAL,
+      c: BRAND,
       o: 1,
       m: 1,
     };
@@ -718,7 +712,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       h: p.seg.h * L.hero.k * shrink,
       a: (r0 - 0.5) * 1.4 + (r1 - 0.5) * 0.4,
       r: 0.3,
-      c: p.teal ? TEAL : GREY,
+      c: p.brand ? BRAND : GREY,
       o: 0.92,
       m: 1,
     };
@@ -728,7 +722,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     const p = pieces[i];
     let logo = logoPose(p, L.hero);
     // Whole, the mark is three windows onto real people. Until the photos
-    // arrive it shows pale, so it never vanishes into the teal field.
+    // arrive it shows pale, so it never vanishes into the brand field.
     logo.ph = 1;
     logo.c = GREY;
 
@@ -882,7 +876,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       h: p.seg.h * L.end.k * 0.45,
       a: (r2 - 0.5) * 9 * t,
       r: 0.3,
-      c: r3 < 0.5 ? WHITE : [154, 211, 216],
+      c: r3 < 0.5 ? WHITE : [184, 191, 255],
       o: 1 - ramp(t, 0.55, 1),
       m: 1,
     };
@@ -909,13 +903,13 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       h: p.seg.h * L.end.k * (0.35 + r3 * 0.25),
       a: (r4 - 0.5) * 0.6,
       r: 0.4,
-      c: p.teal ? TEAL : GREY,
+      c: p.brand ? BRAND : GREY,
       o: 1,
       m: 1,
     };
     const fly = easeInOutSine(staggerAt(ramp(local, 0.08, 0.74), p.order, 0.55));
     const pose = mixPose(start, logoPose(p, L.end), fly)!;
-    pose.c = mixRGB(start.c, TEAL, fly);
+    pose.c = mixRGB(start.c, BRAND, fly);
     pose.y -= Math.sin(fly * Math.PI) * 0.45 * s * (r3 - 0.25);
     pose.a += Math.sin(fly * Math.PI) * (r4 - 0.5) * 1.6;
     pose.o = appear * fade;
@@ -928,10 +922,10 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     const sin = Math.sin(pose.a);
     ctx.setTransform(dpr * cos, dpr * sin, -dpr * sin, dpr * cos, dpr * pose.x, dpr * pose.y);
 
-    // As a slice of the mark: its real shape, blended from grey to teal.
+    // As a slice of the mark: its real shape, blended from grey to brand.
     const sprite = sprites[i];
     if (pose.m > 0.01 && sprite) {
-      const teal = clamp01((GREY[1] - pose.c[1]) / (GREY[1] - TEAL[1]));
+      const brand = clamp01((GREY[1] - pose.c[1]) / (GREY[1] - BRAND[1]));
       // A hair wider than the slice, so neighbours never show a seam.
       const w = pose.w + 0.7;
       const x = -w / 2;
@@ -940,13 +934,13 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       const next = sprite.photos[slide.next];
       const photo = current ? clamp01(pose.ph ?? 0) : 0;
       const flat = 1 - photo;
-      if (flat > 0.01 && teal < 0.99) {
-        ctx.globalAlpha = pose.o * pose.m * flat * (1 - teal);
+      if (flat > 0.01 && brand < 0.99) {
+        ctx.globalAlpha = pose.o * pose.m * flat * (1 - brand);
         ctx.drawImage(sprite.grey, x, y, w, pose.h);
       }
-      if (flat > 0.01 && teal > 0.01) {
-        ctx.globalAlpha = pose.o * pose.m * flat * teal;
-        ctx.drawImage(sprite.teal, x, y, w, pose.h);
+      if (flat > 0.01 && brand > 0.01) {
+        ctx.globalAlpha = pose.o * pose.m * flat * brand;
+        ctx.drawImage(sprite.brand, x, y, w, pose.h);
       }
       if (photo > 0.01 && current) {
         ctx.globalAlpha = pose.o * pose.m * photo;
@@ -991,7 +985,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     const w = 34 * L.px;
     const h = 18 * L.px;
     const y = top - 10 * L.px - h;
-    fillRound(ctx, x - w / 2, y, w, h, h / 2, C.teal);
+    fillRound(ctx, x - w / 2, y, w, h, h / 2, C.brand);
     text("You", x, y + h / 2 + 0.5, 10.5, C.white, { align: "center" });
     ctx.restore();
   }
@@ -1046,10 +1040,10 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       ctx.shadowColor = rgba(INK, 0.12 * device);
       ctx.shadowBlur = 40 * L.px * device;
       ctx.shadowOffsetY = 18 * L.px * device;
-      fillRound(ctx, box.x, box.y, box.w, box.h, box.r, rgba(mixRGB(TEAL, WHITE, device), 1));
+      fillRound(ctx, box.x, box.y, box.w, box.h, box.r, rgba(mixRGB(BRAND, WHITE, device), 1));
       ctx.restore();
     } else {
-      fillRound(ctx, box.x, box.y, box.w, box.h, box.r, C.teal);
+      fillRound(ctx, box.x, box.y, box.w, box.h, box.r, C.brand);
     }
     if (device > 0.01) {
       roundRect(ctx, box.x, box.y, box.w, box.h, box.r);
@@ -1126,7 +1120,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       { x: x + pad + w * 0.3, y: y + h * 0.7, w: w * 0.27, h: h * 0.2, r: 6 },
       { x: x + pad + w * 0.6, y: y + h * 0.7, w: w * 0.28, h: h * 0.2, r: 6 },
     ];
-    const fills = [C.wash, C.ink2, C.line, C.teal, C.tint, C.wash, C.wash, C.wash];
+    const fills = [C.wash, C.ink2, C.line, C.brand, C.tint, C.wash, C.wash, C.wash];
 
     parts.forEach((part, k) => {
       const g = easeOutCubic(stagger(b, k, parts.length, 0.7));
@@ -1138,7 +1132,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     if (sel > 0) {
       const img = parts[4];
       ctx.globalAlpha = alpha * sel;
-      ctx.strokeStyle = C.teal;
+      ctx.strokeStyle = C.brand;
       ctx.lineWidth = 1.2 * L.px;
       ctx.strokeRect(img.x, img.y, img.w, img.h);
       const hs = 5 * L.px;
@@ -1175,24 +1169,24 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     ctx.lineTo(x + 4.5 * u, y + 12 * u);
     ctx.lineTo(x + 11 * u, y + 12 * u);
     ctx.closePath();
-    ctx.fillStyle = C.teal;
+    ctx.fillStyle = C.brand;
     ctx.fill();
     ctx.strokeStyle = C.white;
     ctx.lineWidth = 1.2 * u;
     ctx.stroke();
     const tw = 30 * u;
     const th = 16 * u;
-    fillRound(ctx, x + 10 * u, y + 15 * u, tw, th, th / 2, C.teal);
+    fillRound(ctx, x + 10 * u, y + 15 * u, tw, th, th / 2, C.brand);
     text("You", x + 10 * u + tw / 2, y + 15 * u + th / 2 + 0.5, 9.5, C.white, { align: "center" });
   }
 
   const CODE: [number, string][][] = [
     [[0.18, C.tint2], [0.3, "#E2E8E8"]],
-    [[0.08, C.line], [0.22, C.tint2], [0.2, "#7FC4CB"]],
+    [[0.08, C.line], [0.22, C.tint2], [0.2, "#B8BFFF"]],
     [[0.12, C.line], [0.4, "#E2E8E8"]],
-    [[0.12, C.line], [0.18, "#7FC4CB"], [0.24, C.tint2]],
+    [[0.12, C.line], [0.18, "#B8BFFF"], [0.24, C.tint2]],
     [[0.2, C.line], [0.3, "#E2E8E8"]],
-    [[0.12, C.line], [0.16, C.tint2], [0.34, "#7FC4CB"]],
+    [[0.12, C.line], [0.16, C.tint2], [0.34, "#B8BFFF"]],
     [[0.08, C.line], [0.26, "#E2E8E8"]],
     [[0.18, C.tint2]],
   ];
@@ -1231,7 +1225,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     });
     const at = caret as Point | null;
     if (at && b < 1 && Math.sin(time * 8) > -0.2) {
-      ctx.fillStyle = "#7FC4CB";
+      ctx.fillStyle = "#B8BFFF";
       ctx.fillRect(at.x, at.y - lineH * 0.05, 1.5 * L.px, lineH * 0.52);
     }
 
@@ -1249,7 +1243,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     item(0, px0 + pw * 0.08, top + h * 0.08, pw * 0.84, h * 0.08, 3, C.wash);
     item(1, px0 + pw * 0.08, top + h * 0.24, pw * 0.6, h * 0.09, 3, C.ink2);
     item(2, px0 + pw * 0.08, top + h * 0.37, pw * 0.42, h * 0.07, 3, C.line);
-    item(3, px0 + pw * 0.08, top + h * 0.5, pw * 0.26, h * 0.1, h * 0.05, C.teal);
+    item(3, px0 + pw * 0.08, top + h * 0.5, pw * 0.26, h * 0.1, h * 0.05, C.brand);
     item(4, px0 + pw * 0.08, top + h * 0.68, pw * 0.4, h * 0.24, 6, C.tint);
     item(5, px0 + pw * 0.52, top + h * 0.68, pw * 0.4, h * 0.24, 6, C.wash);
     ctx.restore();
@@ -1273,7 +1267,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
 
       ctx.beginPath();
       ctx.arc(cx, y + rowH * 0.3, r, 0, Math.PI * 2);
-      ctx.fillStyle = loaded > 0.5 ? (k === 0 ? C.teal : C.tint2) : rgba(GREY, 0.5 + 0.3 * shimmer);
+      ctx.fillStyle = loaded > 0.5 ? (k === 0 ? C.brand : C.tint2) : rgba(GREY, 0.5 + 0.3 * shimmer);
       ctx.fill();
 
       const w1 = box.w * (0.32 + ((k * 37) % 20) / 100);
@@ -1307,7 +1301,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     // Progress through the year. No money on this screen, on purpose.
     const cardY = y + h * 0.19;
     const cardH = h * 0.2;
-    fillRound(ctx, x + pad, cardY, w - pad * 2, cardH, 10 * L.px, C.teal);
+    fillRound(ctx, x + pad, cardY, w - pad * 2, cardH, 10 * L.px, C.brand);
     fillRound(ctx, x + pad * 1.6, cardY + cardH * 0.22, w * 0.3, cardH * 0.13, 2, "rgba(255,255,255,0.75)");
     const track = w - pad * 3.2;
     fillRound(ctx, x + pad * 1.6, cardY + cardH * 0.66, track, cardH * 0.1, cardH * 0.05, "rgba(255,255,255,0.25)");
@@ -1332,7 +1326,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     for (let k = 0; k < 4; k++) {
       ctx.beginPath();
       ctx.arc(x + w * (0.2 + k * 0.2), y + h * 0.95, w * 0.03, 0, Math.PI * 2);
-      ctx.fillStyle = k === 0 ? C.teal : C.line;
+      ctx.fillStyle = k === 0 ? C.brand : C.line;
       ctx.fill();
     }
     ctx.restore();
@@ -1352,8 +1346,8 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     const size = (share: number) => (w * share) / L.px;
 
     const wall = ctx.createLinearGradient(x, y, x, y + h);
-    wall.addColorStop(0, "#0A4E56");
-    wall.addColorStop(1, "#11818D");
+    wall.addColorStop(0, "#080D38");
+    wall.addColorStop(1, "#3540A3");
     ctx.fillStyle = wall;
     ctx.fillRect(x, y, w, h);
 
@@ -1367,7 +1361,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     for (const path of bandPaths) ctx.fill(path);
     ctx.restore();
 
-    fillRound(ctx, x + w * 0.36, y + h * 0.022, w * 0.28, h * 0.028, h * 0.014, "#06343A");
+    fillRound(ctx, x + w * 0.36, y + h * 0.022, w * 0.28, h * 0.028, h * 0.014, "#04071F");
     text("Payday", x + w / 2, y + h * 0.12, size(0.055), "rgba(255,255,255,0.75)", { align: "center", weight: 500 });
     text("11:00", x + w / 2, y + h * 0.2, size(0.2), C.white, { align: "center", weight: 700 });
 
@@ -1387,7 +1381,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
 
       const pad = nw * 0.07;
       const icon = nw * 0.12;
-      fillRound(ctx, nx + pad, ny + pad, icon, icon, icon * 0.26, C.teal);
+      fillRound(ctx, nx + pad, ny + pad, icon, icon, icon * 0.26, C.brand);
       const ik = (icon * 0.66) / LOGO_VIEWBOX.width;
       ctx.save();
       ctx.translate(nx + pad + icon * 0.17, ny + pad + (icon - LOGO_VIEWBOX.height * ik) / 2);
@@ -1461,7 +1455,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
         const on = k === chosen;
         ctx.setLineDash([2 * L.px, 7 * L.px]);
         ctx.lineDashOffset = on ? -(time * 24 + local * 120) : 0;
-        ctx.strokeStyle = on ? C.teal : C.line;
+        ctx.strokeStyle = on ? C.brand : C.line;
         ctx.lineWidth = (on ? 2.2 : 1.6) * L.px;
         ctx.lineCap = "round";
         strokeQuad(ctx, fork.origin, fork.control, fork.end, reveal);
@@ -1473,9 +1467,9 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
           ctx.globalAlpha *= tag;
           ctx.beginPath();
           ctx.arc(fork.end.x, fork.end.y, 4 * L.px, 0, Math.PI * 2);
-          ctx.fillStyle = on ? C.teal : C.line;
+          ctx.fillStyle = on ? C.brand : C.line;
           ctx.fill();
-          text(labels[k], fork.end.x, fork.end.y - 18 * L.px, L.mobile ? 11 : 14, on ? C.teal : C.muted, {
+          text(labels[k], fork.end.x, fork.end.y - 18 * L.px, L.mobile ? 11 : 14, on ? C.brand : C.muted, {
             align: "center",
           });
           ctx.restore();
@@ -1512,7 +1506,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
         const t = back ? 1 - phase : phase;
         ctx.beginPath();
         ctx.arc(lerp(from.x, to.x, t), lerp(from.y, to.y, t), 3.2 * L.px, 0, Math.PI * 2);
-        ctx.fillStyle = C.teal;
+        ctx.fillStyle = C.brand;
         ctx.fill();
       });
 
@@ -1561,7 +1555,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
             const blink = reduced || Math.sin(time * 5 + k * 2 + node.x) > 0;
             ctx.beginPath();
             ctx.arc(x + w * 0.16, ry + (h / 2 - 2 * L.px) / 2, 2.6 * L.px, 0, Math.PI * 2);
-            ctx.fillStyle = blink ? C.teal : C.line;
+            ctx.fillStyle = blink ? C.brand : C.line;
             ctx.fill();
           }
         }
@@ -1590,7 +1584,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
         [0.1, 0.3, 0.5, C.ink2],
         [0.1, 0.48, 0.34, C.line],
         [0.1, 0.64, 0.42, C.line],
-        [0.62, 0.3, 0.28, C.teal],
+        [0.62, 0.3, 0.28, C.brand],
       ].forEach(([fx, fy, fw, fill], k) => {
         const g = stagger(write, k, 4, 0.5);
         fillRound(ctx, bx + bw * (fx as number), by + bh * (fy as number), bw * (fw as number) * g, bh * 0.07, 2, fill as string);
@@ -1603,7 +1597,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       fillRound(ctx, bx + 8 * L.px, by - ch - 8 * L.px, cw, ch, ch / 2, C.ink);
       ctx.beginPath();
       ctx.arc(bx + 8 * L.px + ch * 0.55, by - ch / 2 - 8 * L.px, 3.2 * L.px, 0, Math.PI * 2);
-      ctx.fillStyle = rgba([127, 196, 203], pulse);
+      ctx.fillStyle = rgba([146, 155, 255], pulse);
       ctx.fill();
       text("LIVE", bx + 8 * L.px + cw * 0.6, by - ch / 2 - 8 * L.px + 0.5, 9.5, C.white, { align: "center" });
 
@@ -1621,7 +1615,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       if (reach > 0) {
         ctx.setLineDash([3 * L.px, 8 * L.px]);
         ctx.lineDashOffset = -(local * 160 + time * 30);
-        ctx.strokeStyle = C.teal;
+        ctx.strokeStyle = C.brand;
         ctx.lineWidth = 1.8 * L.px;
         ctx.lineCap = "round";
         strokeLine(ctx, { x: I.x + iw, y: I.y }, { x: lerp(I.x + iw, student.x - 0.08 * s, reach), y: lerp(I.y, student.y - 0.04 * s, reach) });
@@ -1644,7 +1638,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
 
       // Where they've walked.
       ctx.setLineDash([2 * L.px, 8 * L.px]);
-      ctx.strokeStyle = rgba(TEAL, 0.45);
+      ctx.strokeStyle = rgba(BRAND, 0.45);
       ctx.lineWidth = 2 * L.px;
       ctx.lineCap = "round";
       strokeLine(ctx, { x: startX, y: ground }, { x: student.x + 0.05 * s, y: ground });
@@ -1654,7 +1648,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       face(mentor, mx, my, mw * 0.95, C.white);
       ctx.beginPath();
       ctx.arc(mx, my, mw * 0.95 + 3 * L.px, 0, Math.PI * 2);
-      ctx.strokeStyle = C.teal;
+      ctx.strokeStyle = C.brand;
       ctx.lineWidth = 2 * L.px;
       ctx.stroke();
       if (mentor?.person) {
@@ -1705,7 +1699,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       // A design frame.
       fillRound(ctx, x + pad, y + h * 0.16, w * 0.46, h * 0.1, 3, C.ink2);
       fillRound(ctx, x + pad, y + h * 0.32, w * 0.32, h * 0.08, 3, C.line);
-      fillRound(ctx, x + pad, y + h * 0.5, w * 0.2, h * 0.12, h * 0.06, C.teal);
+      fillRound(ctx, x + pad, y + h * 0.5, w * 0.2, h * 0.12, h * 0.06, C.brand);
       fillRound(ctx, x + w * 0.6, y + h * 0.16, w * 0.32, h * 0.66, 6, C.tint);
     } else if (kind === 1) {
       // A browser.
@@ -1721,7 +1715,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
         fillRound(ctx, x + pad, ry, w - pad * 2, h * 0.2, 4, C.wash);
         ctx.beginPath();
         ctx.arc(x + pad * 2, ry + h * 0.1, 2.6 * L.px, 0, Math.PI * 2);
-        ctx.fillStyle = k === 1 ? C.teal : C.tint2;
+        ctx.fillStyle = k === 1 ? C.brand : C.tint2;
         ctx.fill();
         fillRound(ctx, x + pad * 3, ry + h * 0.08, w * 0.3, h * 0.04, 2, C.line);
       }
@@ -1737,7 +1731,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       roundRect(ctx, px0, py0, pw, ph, pw * 0.16);
       ctx.strokeStyle = C.ink2;
       ctx.stroke();
-      fillRound(ctx, px0 + pw * 0.12, py0 + ph * 0.16, pw * 0.76, ph * 0.22, 5, C.teal);
+      fillRound(ctx, px0 + pw * 0.12, py0 + ph * 0.16, pw * 0.76, ph * 0.22, 5, C.brand);
       fillRound(ctx, px0 + pw * 0.12, py0 + ph * 0.46, pw * 0.34, ph * 0.18, 4, C.wash);
       fillRound(ctx, px0 + pw * 0.54, py0 + ph * 0.46, pw * 0.34, ph * 0.18, 4, C.wash);
     }
@@ -1747,7 +1741,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     const r = Math.max(10 * L.px, w * 0.07);
     ctx.beginPath();
     ctx.arc(x + w - r * 0.4, y + r * 0.4, r, 0, Math.PI * 2);
-    ctx.fillStyle = C.teal;
+    ctx.fillStyle = C.brand;
     ctx.fill();
     ctx.strokeStyle = C.white;
     ctx.lineWidth = 2 * L.px;
@@ -1797,7 +1791,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
         ctx.save();
         ctx.globalAlpha *= lock;
         roundRect(ctx, A.x - cw - 6 * L.px, A.y - ch - 6 * L.px, cw * 2 + 12 * L.px, ch * 2 + 12 * L.px, 14 * L.px);
-        ctx.strokeStyle = C.teal;
+        ctx.strokeStyle = C.brand;
         ctx.lineWidth = 2 * L.px;
         ctx.stroke();
         ctx.restore();
@@ -1813,7 +1807,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
         ctx.translate(bx + bw / 2, by + bh / 2);
         ctx.scale(badge, badge);
         ctx.translate(-(bx + bw / 2), -(by + bh / 2));
-        fillRound(ctx, bx, by, bw, bh, bh / 2, C.teal);
+        fillRound(ctx, bx, by, bw, bh, bh / 2, C.brand);
         ctx.strokeStyle = C.white;
         ctx.lineWidth = 2 * L.px;
         ctx.lineCap = "round";
@@ -1913,12 +1907,12 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
 
     // The chosen door glows and gets a ring.
     ctx.save();
-    ctx.shadowColor = rgba(TEAL, 0.35 * focus);
+    ctx.shadowColor = rgba(BRAND, 0.35 * focus);
     ctx.shadowBlur = 50 * L.px * focus;
     ctx.shadowOffsetY = 20 * L.px * focus;
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, radii);
-    ctx.fillStyle = k === 0 ? C.teal : C.white;
+    ctx.fillStyle = k === 0 ? C.brand : C.white;
     ctx.fill();
     ctx.restore();
     if (k !== 0) {
@@ -1932,7 +1926,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       const o = 7 * L.px;
       ctx.beginPath();
       ctx.roundRect(x - o, y - o, w + o * 2, h + o * 2, [arch + o, arch + o, 14 * L.px, 14 * L.px]);
-      ctx.strokeStyle = rgba(TEAL, focus);
+      ctx.strokeStyle = rgba(BRAND, focus);
       ctx.lineWidth = 2 * L.px;
       ctx.stroke();
     }
@@ -1988,14 +1982,14 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       strokeLine(ctx, { x: left, y: base }, { x: left + cw, y: base });
       ctx.beginPath();
       pts.forEach((pt, m) => (m ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
-      ctx.strokeStyle = C.teal;
+      ctx.strokeStyle = C.brand;
       ctx.lineWidth = 2.4 * L.px;
       ctx.lineJoin = "round";
       ctx.stroke();
       const tip = pts[pts.length - 1];
       ctx.beginPath();
       ctx.arc(tip.x, tip.y, 4 * L.px, 0, Math.PI * 2);
-      ctx.fillStyle = C.teal;
+      ctx.fillStyle = C.brand;
       ctx.fill();
     }
     ctx.restore();
@@ -2003,7 +1997,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     // Name above the door.
     ctx.save();
     ctx.globalAlpha *= rise * place.alpha;
-    text(DOOR_LABELS[k], cx, y - 22 * L.px, L.mobile ? 10.5 : 13, focus > 0.5 ? C.teal : C.muted, { align: "center" });
+    text(DOOR_LABELS[k], cx, y - 22 * L.px, L.mobile ? 10.5 : 13, focus > 0.5 ? C.brand : C.muted, { align: "center" });
     ctx.restore();
   }
 
@@ -2061,7 +2055,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
   /* ---------------- the stipend ---------------- */
 
   /**
-   * Payday turns the whole stage brand teal, like the opening screen: a
+   * Payday turns the whole stage brand indigo, like the opening screen: a
    * celebration, with the phone glowing softly in the middle of it.
    */
   function drawStipendField(index: number, local: number) {
@@ -2072,7 +2066,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
           ? 1 - easeInOutSine(ramp(local, 0.04, 0.32))
           : 0;
     if (field <= 0) return;
-    ctx.fillStyle = rgba(TEAL, field);
+    ctx.fillStyle = rgba(BRAND, field);
     ctx.fillRect(0, 0, L.w, L.h);
     const P = anchor(INDEX.stipend);
     const glow = ctx.createRadialGradient(P.x, P.y, 0, P.x, P.y, L.s * 2.2);
@@ -2104,7 +2098,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     }
     ctx.save();
     ctx.globalAlpha = seal;
-    drawLogo(frame, C.teal);
+    drawLogo(frame, C.brand);
     ctx.restore();
   }
 
@@ -2123,8 +2117,8 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     ink2: "#3D4A4D",
     muted: "#6B787A",
     hint: "#8A9597",
-    chip: "#E3F3F4",
-    banner: "#E3F2F3",
+    chip: "#E9EBFF",
+    banner: "#E9EBFF",
     green: "#2E7D32",
     grey: "#A3ABB0",
     blue: "#1D5BA6",
@@ -2517,11 +2511,11 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     ctx.restore();
   }
 
-  /** The same teal wallpaper as payday's lock screen: it's the same phone. */
+  /** The same brand wallpaper as payday's lock screen: it's the same phone. */
   function wallpaper() {
     const wall = ctx.createLinearGradient(0, 0, 0, APP.h);
-    wall.addColorStop(0, "#0A4E56");
-    wall.addColorStop(1, "#11818D");
+    wall.addColorStop(0, "#080D38");
+    wall.addColorStop(1, "#3540A3");
     ctx.fillStyle = wall;
     ctx.fillRect(0, 0, APP.w, APP.h);
     const mk = (APP.w * 0.8) / LOGO_VIEWBOX.width;
@@ -2597,7 +2591,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     block(0, () => {
       avatar(student, 36, 93, 20);
       say(student?.person?.name ?? "You", 62, 80, 17, UI.ink, { weight: 500 });
-      pill(student?.person?.track ?? "Backend", 60, 91.5, 23.5, 13.5, { fill: UI.chip, text: C.teal });
+      pill(student?.person?.track ?? "Backend", 60, 91.5, 23.5, 13.5, { fill: UI.chip, text: C.brand });
       for (const [x, kind] of [
         [300, "calendar"],
         [352, "bell"],
@@ -2612,21 +2606,21 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
 
     block(1, () => {
       fillRound(ctx, 16, 139, 358, 204, 20, UI.card);
-      say("Next Class", 32, 163, 12.5, C.teal, { weight: 500 });
+      say("Next Class", 32, 163, 12.5, C.brand, { weight: 500 });
       say(content.next, 32, 192, 19.5, UI.ink, { weight: 500, family: sans });
       glyph("calendar", 40, 222, 13, UI.muted, { width: 1.4 });
       const when = say("Today · 6:00 pm", 53, 222, 13.5, UI.muted);
       glyph("person", 53 + when + 22, 222, 13, UI.muted, { width: 1.4 });
       say(instructor?.person?.name ?? "Your instructor", 53 + when + 34, 222, 13.5, UI.muted);
 
-      fillRound(ctx, 32, 251, 326, 40, 10, rgba(mixRGB(TEAL, [6, 72, 80], pressed), 1));
+      fillRound(ctx, 32, 251, 326, 40, 10, rgba(mixRGB(BRAND, [32, 40, 111], pressed), 1));
       const label = measure("Join Class", 15.5, 500);
       const left = 195 - (label + 28) / 2;
       glyph("video", left + 9, 271, 18, C.white, { width: 1.7 });
       say("Join Class", left + 28, 271.5, 15.5, C.white, { weight: 500 });
       const more = measure("View Schedule", 14.5, 500);
-      say("View Schedule", 188, 313, 14.5, C.teal, { weight: 500, align: "center" });
-      glyph("right", 188 + more / 2 + 12, 313, 12, C.teal, { width: 1.8 });
+      say("View Schedule", 188, 313, 14.5, C.brand, { weight: 500, align: "center" });
+      glyph("right", 188 + more / 2 + 12, 313, 12, C.brand, { width: 1.8 });
     });
 
     block(2, () => {
@@ -2637,7 +2631,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       ctx.clip();
       ctx.fillStyle = UI.banner;
       ctx.fillRect(32, 415, 326, 59);
-      ctx.fillStyle = C.teal;
+      ctx.fillStyle = C.brand;
       for (const [cx, cy, r] of [
         [150.6, 415, 22.8],
         [69.6, 473.7, 23.2],
@@ -2658,14 +2652,14 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       say(`${Math.round(percent)}% Complete`, 158, 550, 15, UI.ink2);
       ctx.beginPath();
       ctx.arc(338, 550, 20, 0, Math.PI * 2);
-      ctx.fillStyle = C.teal;
+      ctx.fillStyle = C.brand;
       ctx.fill();
       glyph("right", 338, 550, 13, C.white, { width: 2 });
     });
 
     block(3, () => {
       say("Due soon", 16, 634, 18.5, UI.ink, { weight: 500, family: sans });
-      say("See all", 374, 634, 14.5, C.teal, { weight: 500, align: "right" });
+      say("See all", 374, 634, 14.5, C.brand, { weight: 500, align: "right" });
       fillRound(ctx, 16, 652, 358, 92, 20, C.white);
       ctx.beginPath();
       ctx.arc(52, 698, 20, 0, Math.PI * 2);
@@ -2723,7 +2717,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
 
       const row = (y: number, title: string, sub: string, watched: boolean) => {
         fillRound(ctx, 32, y, 72, 48, 8, UI.card);
-        glyph("play", 68, y + 24, 16, C.teal, { width: 2 });
+        glyph("play", 68, y + 24, 16, C.brand, { width: 2 });
         say(title, 116, y + 12, 14, UI.ink, { weight: 500 });
         say(sub, 116, y + 33, 11.5, UI.muted);
         if (watched) {
@@ -2770,7 +2764,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     ];
     tabs.forEach(([kind, label], k) => {
       const on = (k === 0 ? 1 - view : k === 1 ? view : 0) > 0.5;
-      const color = on ? C.teal : UI.tab;
+      const color = on ? C.brand : UI.tab;
       glyph(kind, xs[k], 764, 20, color, { width: 1.6, filled: on && kind === "home" });
       say(label, xs[k], 786, 11.5, color, { weight: on ? 500 : 400, align: "center" });
     });
@@ -2808,7 +2802,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       ctx.globalAlpha = (1 - ripple) * 0.6;
       ctx.beginPath();
       ctx.arc(at.x, at.y, r * (1 + ripple * 1.4), 0, Math.PI * 2);
-      ctx.strokeStyle = C.teal;
+      ctx.strokeStyle = C.brand;
       ctx.lineWidth = 2 * L.px;
       ctx.stroke();
     }
@@ -2924,9 +2918,9 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
           const pulse = reduced ? 1 : 0.7 + 0.3 * Math.sin(time * 3);
           ctx.save();
           ctx.globalAlpha *= a;
-          fillRound(ctx, r.x - 4, r.y - 4, r.w + 8, r.h + 8, c.r + 4, rgba(TEAL, 0.06));
+          fillRound(ctx, r.x - 4, r.y - 4, r.w + 8, r.h + 8, c.r + 4, rgba(BRAND, 0.06));
           roundRect(ctx, r.x - 4, r.y - 4, r.w + 8, r.h + 8, c.r + 4);
-          ctx.strokeStyle = rgba(TEAL, 0.9 * pulse);
+          ctx.strokeStyle = rgba(BRAND, 0.9 * pulse);
           ctx.lineWidth = 2;
           ctx.stroke();
           ctx.restore();
@@ -2974,7 +2968,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       const k = mark.w / LOGO_VIEWBOX.width;
       ctx.save();
       ctx.globalAlpha = markAlpha;
-      drawLogo({ x: mark.x - mark.w / 2, y: mark.y - (LOGO_VIEWBOX.height * k) / 2, k }, C.teal);
+      drawLogo({ x: mark.x - mark.w / 2, y: mark.y - (LOGO_VIEWBOX.height * k) / 2, k }, C.brand);
       ctx.restore();
     }
 
@@ -3038,12 +3032,12 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
         const from = { x: x - 4 * px, y };
         const tip = c.fixed ? { x: target.x, y: target.y - 4 * px } : { x: target.x + 6 * px, y: target.y };
         const to = { x: lerp(from.x, tip.x, e), y: lerp(from.y, tip.y, e) };
-        ctx.strokeStyle = rgba(TEAL, 0.85);
+        ctx.strokeStyle = rgba(BRAND, 0.85);
         ctx.lineWidth = 1.5 * px;
         strokeLine(ctx, from, to);
         ctx.beginPath();
         ctx.arc(to.x, to.y, 4 * px, 0, Math.PI * 2);
-        ctx.fillStyle = C.teal;
+        ctx.fillStyle = C.brand;
         ctx.fill();
         ctx.strokeStyle = C.white;
         ctx.lineWidth = 2 * px;
@@ -3059,7 +3053,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
         ctx.strokeStyle = C.faint;
         ctx.lineWidth = 1;
         ctx.stroke();
-        fillRound(ctx, x + 12 * px, top + 15 * px, 3 * px, ch - 30 * px, 1.5 * px, C.teal);
+        fillRound(ctx, x + 12 * px, top + 15 * px, 3 * px, ch - 30 * px, 1.5 * px, C.brand);
         text(c.title, x + 24 * px, top + 24 * px, 15, C.ink, { weight: 700 });
         text(c.body, x + 24 * px, top + 45 * px, 13, C.muted, { weight: 500, family: work });
         ctx.restore();
@@ -3089,7 +3083,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
       ctx.shadowColor = "transparent";
       ctx.beginPath();
       ctx.arc(x + 18 * px, y + h / 2, 4 * px, 0, Math.PI * 2);
-      ctx.fillStyle = C.teal;
+      ctx.fillStyle = C.brand;
       ctx.fill();
       text(c.short, x + 30 * px, y + h / 2 + 0.5, size, C.ink);
       ctx.restore();

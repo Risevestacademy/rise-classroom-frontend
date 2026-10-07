@@ -31,7 +31,7 @@ const TRACK_DETAIL: Record<Track, string> = {
 };
 
 /**
- * The track blank in the sentence. Reads as part of the sentence (big teal
+ * The track blank in the sentence. Reads as part of the sentence (big brand
  * word, solid underline, small chevron) and opens a card of the four tracks
  * with what each covers. Base UI handles keyboard and screen readers, and
  * submits the choice with the form as `track`.

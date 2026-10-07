@@ -49,16 +49,16 @@ const page = `<!doctype html>
   body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #111819; color: #fff; display: grid; grid-template-columns: 1fr 420px; height: 100vh; }
   #stage { position: relative; display: grid; place-items: center; overflow: hidden; padding: 24px; }
   #photo { max-width: 100%; max-height: calc(100vh - 48px); cursor: crosshair; display: block; }
-  .dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid #fff; background: #0D6D78; pointer-events: none; }
-  .face { position: absolute; border: 1px dashed #9AD3D8; pointer-events: none; }
+  .dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid #fff; background: #080D38; pointer-events: none; }
+  .face { position: absolute; border: 1px dashed #B8BFFF; pointer-events: none; }
   aside { background: #1F292B; padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow: auto; }
   h1 { font-size: 18px; margin: 0; }
   ol { margin: 0; padding-left: 18px; color: #CBD5D6; }
-  canvas { width: 100%; background: #0D6D78; border-radius: 8px; }
+  canvas { width: 100%; background: #080D38; border-radius: 8px; }
   label { display: grid; gap: 6px; color: #CBD5D6; }
   input[type=range] { width: 100%; }
   pre { margin: 0; padding: 12px; background: #111819; border-radius: 8px; font-size: 15px; white-space: pre-wrap; }
-  button { font: inherit; font-weight: 600; padding: 10px 16px; border: 0; border-radius: 999px; background: #fff; color: #0D6D78; cursor: pointer; }
+  button { font: inherit; font-weight: 600; padding: 10px 16px; border: 0; border-radius: 999px; background: #fff; color: #080D38; cursor: pointer; }
   .muted { color: #9AA6A8; font-size: 13px; }
 </style>
 </head>
@@ -156,7 +156,7 @@ function drawPreview() {
   const c = preview.getContext("2d");
   const k = preview.width / MARK.w;
   c.setTransform(1, 0, 0, 1, 0, 0);
-  c.fillStyle = "#0D6D78";
+  c.fillStyle = "#080D38";
   c.fillRect(0, 0, preview.width, preview.height);
   if (!photo.naturalWidth) return;
   c.setTransform(k, 0, 0, k, 0, (preview.height - MARK.h * k) / 2);
@@ -176,17 +176,10 @@ function drawPreview() {
   const h = ih * scale;
   const x = Math.min(0, Math.max(MARK.w - w, AT.x * MARK.w - f.x * w));
   const y = Math.min(0, Math.max(MARK.h - h, AT.y * MARK.h - f.y * h));
-  c.filter = "grayscale(1) contrast(1.22) brightness(1.08)";
+  c.filter = "saturate(0.9) contrast(1.06)";
   c.drawImage(photo, x, y, w, h);
   c.filter = "none";
-  c.globalCompositeOperation = "multiply";
-  c.fillStyle = "#C2E7EA";
-  c.fillRect(0, 0, MARK.w, MARK.h);
-  c.globalCompositeOperation = "screen";
-  c.fillStyle = "#03292E";
-  c.fillRect(0, 0, MARK.w, MARK.h);
   c.restore();
-  c.globalCompositeOperation = "source-over";
 }
 
 photo.addEventListener("load", update);
