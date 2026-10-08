@@ -1,9 +1,12 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
+
 import { AuthShell } from "@/components/AuthShell"
+
 import { useOnboarding } from "@/components/onboarding/OnboardingProvider"
 
 export default function OnboardingInvitePage() {
@@ -16,7 +19,15 @@ export default function OnboardingInvitePage() {
         {isInstructor ? " as an instructor" : ""}
       </h1>
 
-      <div className="h-[350px] w-full rounded-2xl bg-surface-brand" />
+      <div className="relative h-[350px] w-full overflow-hidden rounded-2xl">
+        <Image
+          src="/illustrations/onboarding-invite.svg"
+          alt=""
+          fill
+          className="object-cover"
+          priority
+        />
+      </div>
 
       <div className="flex flex-col gap-6">
         <p className="text-lg font-semibold text-neutral-800">

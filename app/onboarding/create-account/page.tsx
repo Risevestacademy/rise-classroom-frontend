@@ -49,7 +49,7 @@ export default function CreateAccountPage() {
   return (
     <AuthShell>
       <div className="mx-auto flex h-[140px] my-10 w-full items-center justify-center">
-        <Image className="rounded-2xl" src="/create-account.png" alt="Create your account" width={500} height={0} />
+        <Image className="rounded-2xl" src="/illustrations/create-account.png" alt="Create your account" width={500} height={0} />
       </div>
 
       <div>
