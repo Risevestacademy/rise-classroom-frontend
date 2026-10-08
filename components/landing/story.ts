@@ -14,12 +14,12 @@ export type ChapterId =
   | "mobile"
   | "taught"
   | "mentor"
-  | "stipend"
+  // | "stipend"
   | "together"
-  | "next"
-  | "rise"
-  | "partner"
-  | "own"
+  // | "next"
+  // | "rise"
+  // | "partner"
+  // | "own"
   | "home"
   | "classroom"
   | "end";
@@ -74,7 +74,7 @@ export const CHAPTERS: readonly Chapter[] = [
     rail: "Rise",
     kicker: "Rise Classroom · Rise Academy, by Risevest",
     title: "In twelve months, you'll ship real products.",
-    body: "Rise Academy is a free, year-long virtual programme for designers and engineers: live classes, a mentor and a stipend, all in one place. Here are some of the people already doing it.",
+    body: "Rise Academy is a free, year-long virtual programme for designers and engineers: live classes, a mentor and real projects, all in one place. Here are some of the people already doing it.",
   },
   {
     id: "track",
@@ -148,16 +148,18 @@ export const CHAPTERS: readonly Chapter[] = [
     title: "Someone in your corner all year.",
     body: "One person in your corner from week one: code reviews, career advice and the odd pep talk. They see your progress week by week.",
   },
-  {
-    id: "stipend",
-    screens: 1,
-    align: "left",
-    rail: "Stipend",
-    kicker: "Yes, really",
-    title: "You get paid to learn.",
-    body: "Every student gets a stipend. How much? You'll find out from your first credit alert.",
-    dark: true,
-  },
+  // Off the landing page: Rise Classroom doesn't handle the stipend, so the
+  // page doesn't promise it here. It's still answered in the FAQ.
+  // {
+  //   id: "stipend",
+  //   screens: 1,
+  //   align: "left",
+  //   rail: "Stipend",
+  //   kicker: "Yes, really",
+  //   title: "You get paid to learn.",
+  //   body: "Every student gets a stipend. How much? You'll find out from your first credit alert.",
+  //   dark: true,
+  // },
   {
     id: "together",
     screens: 2,
@@ -167,48 +169,51 @@ export const CHAPTERS: readonly Chapter[] = [
     title: "You'll graduate with work you shipped, not just a certificate.",
     body: "Designers and engineers from every track build real products together, the way real teams do.",
   },
-  {
-    id: "next",
-    screens: 1,
-    align: "bottom",
-    rail: "Week 52",
-    kicker: "Week 52 · Graduation",
-    title: "Week 52: you're ready to work.",
-    body: "Twelve months of shipped work opens three doors. Where you go next is up to you.",
-  },
-  {
-    id: "rise",
-    screens: 1,
-    align: "right",
-    rail: "Risevest",
-    kicker: "Door 01 · Risevest",
-    title: "Join the team that trained you.",
-    body: "Top graduates can be offered a role at Risevest, building real products on a real team.",
-  },
-  {
-    id: "partner",
-    screens: 1,
-    align: "right",
-    rail: "Partners",
-    kicker: "Door 02 · Hiring partners",
-    title: "Get hired by our partners.",
-    body: "We introduce graduates to partner companies looking for exactly what you've learned to build.",
-  },
-  {
-    id: "own",
-    screens: 1,
-    align: "right",
-    rail: "Your path",
-    kicker: "Door 03 · Your own path",
-    title: "Or build something of your own.",
-    body: "Leave with the skills, a portfolio and a network that has watched you ship. Plenty of good things start right after Rise.",
-  },
+  // Off the landing page: life after graduation (a role at Risevest, hiring
+  // partners, your own path) happens outside Rise Classroom, so the page
+  // doesn't sell it here. It's still answered in the FAQ.
+  // {
+  //   id: "next",
+  //   screens: 1,
+  //   align: "bottom",
+  //   rail: "Week 52",
+  //   kicker: "Week 52 · Graduation",
+  //   title: "Week 52: you're ready to work.",
+  //   body: "Twelve months of shipped work opens three doors. Where you go next is up to you.",
+  // },
+  // {
+  //   id: "rise",
+  //   screens: 1,
+  //   align: "right",
+  //   rail: "Risevest",
+  //   kicker: "Door 01 · Risevest",
+  //   title: "Join the team that trained you.",
+  //   body: "Top graduates can be offered a role at Risevest, building real products on a real team.",
+  // },
+  // {
+  //   id: "partner",
+  //   screens: 1,
+  //   align: "right",
+  //   rail: "Partners",
+  //   kicker: "Door 02 · Hiring partners",
+  //   title: "Get hired by our partners.",
+  //   body: "We introduce graduates to partner companies looking for exactly what you've learned to build.",
+  // },
+  // {
+  //   id: "own",
+  //   screens: 1,
+  //   align: "right",
+  //   rail: "Your path",
+  //   kicker: "Door 03 · Your own path",
+  //   title: "Or build something of your own.",
+  //   body: "Leave with the skills, a portfolio and a network that has watched you ship. Plenty of good things start right after Rise.",
+  // },
   {
     id: "home",
     screens: 2,
     align: "bottom",
     rail: "Rise",
-    kicker: "Whichever door you pick",
+    kicker: "Week 52 · Graduation",
     title: "Wherever you go, you go as Rise.",
   },
   // Everything the story promised lives in one app. The mark becomes its

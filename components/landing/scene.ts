@@ -1,8 +1,8 @@
 /**
  * The landing page canvas. One brand piece is the student: it starts inside
  * the Rise mark, joins a grey cohort, picks a track, becomes a design file, a
- * web page, an API and an app, gets taught, gets a mentor, gets paid, ships
- * with the other tracks, and finally flies home into the mark. Then the mark
+ * web page, an API and an app, gets taught, gets a mentor, ships with the
+ * other tracks, and finally flies home into the mark. Then the mark
  * becomes the Rise Classroom app icon and opens into the app where all of it
  * happens.
  *
@@ -313,18 +313,6 @@ type Form = { device: boolean; x: number; y: number; w: number; h: number; r: nu
 
 const PERSON = { w: 0.07, h: 0.18 };
 
-/** The three doors after graduation, in units of `s`: size, spacing, and where the student stands. */
-const DOOR = { w: 0.54, h: 0.82, gap: 0.7, studentY: 0.56 };
-
-/**
- * On a door's own chapter it steps forward: this much bigger, alone on the
- * copy's opposite side, with the student standing under it.
- */
-const DOOR_FOCUSED = { scale: 1.35, studentY: 0.69 };
-
-/** Which door each chapter is about; -1 is none yet. */
-const DOOR_FOCUS: Partial<Record<ChapterId, number>> = { next: -1, rise: 0, partner: 1, own: 2 };
-
 function formFor(id: ChapterId, local: number): Form | null {
   const person = (x: number, y: number, w = PERSON.w, h = PERSON.h): Form => ({
     device: false,
@@ -355,22 +343,10 @@ function formFor(id: ChapterId, local: number): Form | null {
       return device(0, -0.45, 1.15, 0.72, 0.04);
     case "mobile":
       return device(0, 0, 0.56, 1.12, 0.09);
-    // Payday: the student is a phone, and the credit alert lands on it.
-    // Big enough to read the alert: it is the picture on this screen.
-    case "stipend":
-      return device(0, 0, 1.25, 2.5, 0.16);
     case "taught":
       return person(0.42, 0.3, 0.1, 0.26);
     case "mentor":
       return person(0.12 + easeInOutCubic(ramp(local, 0.3, 1)) * 0.35, 0.2, 0.1, 0.26);
-    // The student waits under the row of doors, then stands under
-    // whichever door has stepped forward.
-    case "next":
-      return person(0, DOOR.studentY, 0.08, 0.2);
-    case "rise":
-    case "partner":
-    case "own":
-      return person(0, DOOR_FOCUSED.studentY, 0.08, 0.2);
     default:
       return null;
   }
@@ -849,44 +825,16 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
         return i > 0 && i < COHORT ? trackPose(i, local, A) : null;
       case "taught":
         return i > 0 && i < COHORT ? listenPose(i, A) : null;
-      case "stipend":
-        return confettiPose(i, local, A);
       default:
         return null;
     }
   }
 
-  /**
-   * When the credit alert lands, shards of the mark burst up from it like
-   * confetti and fall away.
-   */
-  function confettiPose(i: number, local: number, A: Point): Pose | null {
-    if (i >= 48 || reduced) return null;
-    const p = pieces[i];
-    const [r0, r1, r2, r3] = p.r;
-    // Starts the moment the alert lands on the phone.
-    const t = ramp(local, 0.58 + r3 * 0.04, 1);
-    if (t <= 0) return null;
-    const s = L.s;
-    const from = { x: A.x + (r0 - 0.5) * 0.8 * s, y: A.y - 0.3 * s };
-    return {
-      x: from.x + (r0 - 0.5) * 3.2 * s * t,
-      y: from.y - (0.9 + r1 * 1.1) * s * t + 2.6 * s * t * t,
-      w: p.seg.w * L.end.k * 0.8,
-      h: p.seg.h * L.end.k * 0.45,
-      a: (r2 - 0.5) * 9 * t,
-      r: 0.3,
-      c: r3 < 0.5 ? WHITE : [184, 191, 255],
-      o: 1 - ramp(t, 0.55, 1),
-      m: 1,
-    };
-  }
-
-  /** The doors break into pieces, and the pieces fly home into the mark. */
+  /** The shipped product breaks into pieces, and the pieces fly home into the mark. */
   function homePose(i: number, local: number): Pose | null {
     const p = pieces[i];
     const [r0, r1, r2, r3, r4] = p.r;
-    const B = anchor(INDEX.own);
+    const B = anchor(INDEX.together);
     const s = L.s;
 
     const appear = ramp(local, r2 * 0.1, 0.08 + r2 * 0.1);
@@ -894,11 +842,10 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     const fade = 1 - ramp(local, 0.82, 0.94);
     if (appear * fade <= 0) return null;
 
-    // Start inside the last door, the one still standing.
-    const size = DOOR_FOCUSED.scale * s * 0.9;
+    // Start inside the product the four tracks just shipped (see togetherEnv).
     const start: Pose = {
-      x: B.x + (r0 - 0.5) * DOOR.w * size,
-      y: B.y + (r1 - 0.5) * DOOR.h * size,
+      x: B.x + (r0 - 0.5) * 1.9 * s,
+      y: B.y + (r1 - 0.5) * 1.24 * s,
       w: p.seg.w * L.end.k * (0.7 + r3 * 0.4),
       h: p.seg.h * L.end.k * (0.35 + r3 * 0.25),
       a: (r4 - 0.5) * 0.6,
@@ -1026,12 +973,6 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     }
     if (alpha <= 0) return;
 
-    if (id === "stipend" && !reduced) {
-      // Buzzes as the alert lands.
-      const buzz = ramp(local, 0.57, 0.6) * (1 - ramp(local, 0.6, 0.74));
-      box = { ...box, x: box.x + Math.sin(time * 70) * 3.5 * L.px * buzz };
-    }
-
     ctx.save();
     ctx.globalAlpha = alpha;
 
@@ -1063,8 +1004,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     ctx.restore();
 
     if (id === "design") frameLabel(box, ramp(local, 0.3, 0.48));
-    // At the doors the student stands right under them, so no tag there.
-    if (device < 0.99 && DOOR_FOCUS[id] === undefined) youLabel(box.x + box.w / 2, box.y, 1 - device);
+    if (device < 0.99) youLabel(box.x + box.w / 2, box.y, 1 - device);
 
     ctx.restore();
   }
@@ -1332,108 +1272,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     ctx.restore();
   };
 
-  /**
-   * Payday on the student's phone: a lock screen, then a credit alert from
-   * Rise drops in. The amount is a shimmering blur, never a number: students
-   * find out what it is when the first one arrives.
-   */
-  const lockScreen: Painter = (ctx, box, b, alpha, time) => {
-    if (alpha <= 0) return;
-    ctx.save();
-    ctx.globalAlpha *= alpha;
-    const { x, y, w, h } = box;
-    // Sizes are shares of the phone's width, so it scales as one object.
-    const size = (share: number) => (w * share) / L.px;
-
-    const wall = ctx.createLinearGradient(x, y, x, y + h);
-    wall.addColorStop(0, "#080D38");
-    wall.addColorStop(1, "#3540A3");
-    ctx.fillStyle = wall;
-    ctx.fillRect(x, y, w, h);
-
-    // The Rise mark, faint, as the wallpaper.
-    const mk = (w * 0.8) / LOGO_VIEWBOX.width;
-    ctx.save();
-    ctx.globalAlpha *= 0.1;
-    ctx.translate(x + w * 0.1, y + h * 0.56);
-    ctx.scale(mk, mk);
-    ctx.fillStyle = C.white;
-    for (const path of bandPaths) ctx.fill(path);
-    ctx.restore();
-
-    fillRound(ctx, x + w * 0.36, y + h * 0.022, w * 0.28, h * 0.028, h * 0.014, "#04071F");
-    text("Payday", x + w / 2, y + h * 0.12, size(0.055), "rgba(255,255,255,0.75)", { align: "center", weight: 500 });
-    text("11:00", x + w / 2, y + h * 0.2, size(0.2), C.white, { align: "center", weight: 700 });
-
-    // The credit alert slides down and settles with a small bounce.
-    const drop = easeOutBack(ramp(b, 0.15, 0.42));
-    if (drop > 0) {
-      const nx = x + w * 0.06;
-      const nw = w * 0.88;
-      const nh = h * 0.21;
-      const ny = lerp(y - nh, y + h * 0.31, drop);
-      ctx.save();
-      ctx.shadowColor = "rgba(0,0,0,0.25)";
-      ctx.shadowBlur = 24 * L.px;
-      ctx.shadowOffsetY = 10 * L.px;
-      fillRound(ctx, nx, ny, nw, nh, w * 0.06, "rgba(255,255,255,0.96)");
-      ctx.restore();
-
-      const pad = nw * 0.07;
-      const icon = nw * 0.12;
-      fillRound(ctx, nx + pad, ny + pad, icon, icon, icon * 0.26, C.brand);
-      const ik = (icon * 0.66) / LOGO_VIEWBOX.width;
-      ctx.save();
-      ctx.translate(nx + pad + icon * 0.17, ny + pad + (icon - LOGO_VIEWBOX.height * ik) / 2);
-      ctx.scale(ik, ik);
-      ctx.fillStyle = C.white;
-      for (const path of bandPaths) ctx.fill(path);
-      ctx.restore();
-
-      const tx = nx + pad + icon + nw * 0.05;
-      text("RISE CLASSROOM", tx, ny + pad + icon * 0.3, size(0.036), C.muted, { weight: 600 });
-      text("now", nx + nw - pad, ny + pad + icon * 0.3, size(0.036), C.muted, { weight: 500, align: "right" });
-      text("Credit alert", tx, ny + pad + icon * 0.95, size(0.055), C.ink, { weight: 700 });
-      text("Your stipend has landed.", tx, ny + nh * 0.6, size(0.045), C.ink2, { weight: 500 });
-
-      // The amount stays a surprise: a blurred bar with a light passing over it.
-      const ay = ny + nh * 0.79;
-      text("Amount", tx, ay, size(0.04), C.muted, { weight: 500 });
-      const bx = tx + nw * 0.2;
-      const bw = nw * 0.34;
-      const bh = nh * 0.13;
-      const sweep = reduced ? 0.5 : (time * 0.45) % 1.4 - 0.2;
-      const shine = ctx.createLinearGradient(bx, 0, bx + bw, 0);
-      shine.addColorStop(0, "#CBD5D6");
-      shine.addColorStop(Math.min(Math.max(sweep - 0.15, 0), 1), "#CBD5D6");
-      shine.addColorStop(Math.min(Math.max(sweep, 0), 1), "#EEF3F3");
-      shine.addColorStop(Math.min(Math.max(sweep + 0.15, 0), 1), "#CBD5D6");
-      shine.addColorStop(1, "#CBD5D6");
-      // Soft-edged with a matching shadow rather than a blur filter, which
-      // is slow on Safari.
-      ctx.save();
-      ctx.shadowColor = "#CBD5D6";
-      ctx.shadowBlur = Math.max(2, w * 0.012);
-      fillRound(ctx, bx, ay - bh / 2, bw, bh, bh / 2, shine);
-      ctx.restore();
-    }
-
-    // "Open to see how much", the nudge every lock screen has.
-    const nudge = ramp(b, 0.5, 0.75);
-    if (nudge > 0) {
-      ctx.save();
-      ctx.globalAlpha *= nudge;
-      text("Open on payday to see how much", x + w / 2, y + h * 0.86, size(0.042), "#ffffff", {
-        align: "center",
-        weight: 500,
-      });
-      ctx.restore();
-    }
-    fillRound(ctx, x + w * 0.35, y + h * 0.94, w * 0.3, h * 0.008, h * 0.004, "rgba(255,255,255,0.7)");
-    ctx.restore();
-  };
-
-  const CONTENT: Partial<Record<ChapterId, Painter>> = { design, frontend, backend, mobile, stipend: lockScreen };
+  const CONTENT: Partial<Record<ChapterId, Painter>> = { design, frontend, backend, mobile };
 
   /* ---------------- the world around the student ---------------- */
 
@@ -1853,196 +1692,9 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     together: togetherEnv,
   };
 
-  /* ---------------- the three doors ---------------- */
-
-  const DOOR_LABELS = ["Risevest", "Hiring partners", "Your own path"];
-
-  /** Where door `k` sits: its centre, size and opacity. */
-  type DoorPlace = { cx: number; cy: number; scale: number; alpha: number };
-
-  /**
-   * Blends the doors between two layouts. `m` 0 is the row of three under the
-   * graduation copy; `m` 1 is one door at a time, stepped forward on the
-   * left, with `f` (0..2, fractional mid-move) saying which. Neighbours wait
-   * off to the sides, hidden, and slide through as `f` changes.
-   */
-  function doorPlace(k: number, row: Point, stage: Point, m: number, f: number): DoorPlace {
-    const s = L.s;
-    const d = k - f;
-    const away = Math.min(Math.abs(d), 1);
-    // Neighbours only drift a little and fade fast, so they never pass under
-    // the copy on the other side; mid-move the two doors cross-fade.
-    const slot = L.mobile ? L.w * 0.5 : L.w * 0.16;
-    const solo = {
-      cx: stage.x + d * slot,
-      cy: stage.y,
-      scale: DOOR_FOCUSED.scale * (1 - 0.3 * away),
-      alpha: 1 - Math.min(Math.abs(d) * 1.25, 1),
-    };
-    const lined = { cx: row.x + (k - 1) * DOOR.gap * s, cy: row.y, scale: 1, alpha: 1 };
-    return {
-      cx: lerp(lined.cx, solo.cx, m),
-      cy: lerp(lined.cy, solo.cy, m),
-      scale: lerp(lined.scale, solo.scale, m),
-      // The row thins out early as one door steps forward.
-      alpha: lerp(lined.alpha, solo.alpha, Math.sqrt(m)),
-    };
-  }
-
-  function door(k: number, place: DoorPlace, enter: number, focus: number, time: number) {
-    const s = L.s;
-    const rise = easeOutCubic(stagger(enter, k, 3, 0.5));
-    if (rise <= 0 || place.alpha <= 0.01) return;
-    const w = DOOR.w * s * place.scale;
-    const h = DOOR.h * s * place.scale;
-    const cx = place.cx;
-    const cy = place.cy + (1 - rise) * 40 * L.px;
-    const x = cx - w / 2;
-    const y = cy - h / 2;
-    const arch = w / 2;
-    const radii = [arch, arch, 10 * L.px, 10 * L.px];
-
-    ctx.save();
-    ctx.globalAlpha *= rise * place.alpha;
-
-    // The chosen door glows and gets a ring.
-    ctx.save();
-    ctx.shadowColor = rgba(BRAND, 0.35 * focus);
-    ctx.shadowBlur = 50 * L.px * focus;
-    ctx.shadowOffsetY = 20 * L.px * focus;
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, radii);
-    ctx.fillStyle = k === 0 ? C.brand : C.white;
-    ctx.fill();
-    ctx.restore();
-    if (k !== 0) {
-      ctx.beginPath();
-      ctx.roundRect(x, y, w, h, radii);
-      ctx.strokeStyle = C.ink2;
-      ctx.lineWidth = 1.5 * L.px;
-      ctx.stroke();
-    }
-    if (focus > 0) {
-      const o = 7 * L.px;
-      ctx.beginPath();
-      ctx.roundRect(x - o, y - o, w + o * 2, h + o * 2, [arch + o, arch + o, 14 * L.px, 14 * L.px]);
-      ctx.strokeStyle = rgba(BRAND, focus);
-      ctx.lineWidth = 2 * L.px;
-      ctx.stroke();
-    }
-
-    // What's behind each door.
-    const icon = { x: cx, y: y + h * 0.5 };
-    if (k === 0) {
-      const lw = w * 0.5;
-      const lk = lw / LOGO_VIEWBOX.width;
-      ctx.save();
-      ctx.translate(icon.x - lw / 2, icon.y - (LOGO_VIEWBOX.height * lk) / 2);
-      ctx.scale(lk, lk);
-      ctx.fillStyle = C.white;
-      for (const path of bandPaths) ctx.fill(path);
-      ctx.restore();
-    } else if (k === 1) {
-      // Placeholder partner marks until the real partners are announced.
-      const u = w * 0.13;
-      const spots = [
-        [-1, -1],
-        [1, -1],
-        [-1, 1],
-        [1, 1],
-      ];
-      spots.forEach(([dx, dy], m) => {
-        const px = icon.x + dx * u * 1.25;
-        const py = icon.y + dy * u * 1.25;
-        ctx.fillStyle = m === 0 ? C.ink2 : C.line;
-        ctx.beginPath();
-        if (m === 0) ctx.arc(px, py, u * 0.8, 0, Math.PI * 2);
-        else if (m === 1) ctx.roundRect(px - u * 0.8, py - u * 0.8, u * 1.6, u * 1.6, u * 0.35);
-        else if (m === 2) {
-          ctx.moveTo(px, py - u * 0.85);
-          ctx.lineTo(px + u * 0.85, py + u * 0.7);
-          ctx.lineTo(px - u * 0.85, py + u * 0.7);
-          ctx.closePath();
-        } else ctx.roundRect(px - u * 0.9, py - u * 0.45, u * 1.8, u * 0.9, u * 0.45);
-        ctx.fill();
-      });
-    } else {
-      // Something of your own, taking off.
-      const cw = w * 0.56;
-      const ch = w * 0.42;
-      const left = icon.x - cw / 2;
-      const base = icon.y + ch / 2;
-      const grow = reduced ? 1 : 0.85 + 0.15 * Math.sin(time * 1.4);
-      const pts = [0.1, 0.18, 0.14, 0.38, 0.5, 0.82].map((v, m, all) => ({
-        x: left + (m / (all.length - 1)) * cw,
-        y: base - v * ch * grow,
-      }));
-      ctx.strokeStyle = C.line;
-      ctx.lineWidth = 1.2 * L.px;
-      strokeLine(ctx, { x: left, y: base }, { x: left + cw, y: base });
-      ctx.beginPath();
-      pts.forEach((pt, m) => (m ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)));
-      ctx.strokeStyle = C.brand;
-      ctx.lineWidth = 2.4 * L.px;
-      ctx.lineJoin = "round";
-      ctx.stroke();
-      const tip = pts[pts.length - 1];
-      ctx.beginPath();
-      ctx.arc(tip.x, tip.y, 4 * L.px, 0, Math.PI * 2);
-      ctx.fillStyle = C.brand;
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // Name above the door.
-    ctx.save();
-    ctx.globalAlpha *= rise * place.alpha;
-    text(DOOR_LABELS[k], cx, y - 22 * L.px, L.mobile ? 10.5 : 13, focus > 0.5 ? C.brand : C.muted, { align: "center" });
-    ctx.restore();
-  }
-
-  function doors(alpha: number, enter: number, m: number, f: number, time: number) {
-    const row = anchor(INDEX.next);
-    const stage = anchor(INDEX.rise);
-    withAlpha(alpha, () => {
-      // Furthest first, so the door in front is drawn on top.
-      [0, 1, 2]
-        .sort((a, b) => Math.abs(b - f) - Math.abs(a - f))
-        .forEach((k) => {
-          const focus = m * Math.max(0, 1 - Math.abs(k - f));
-          door(k, doorPlace(k, row, stage, m, f), enter, focus, time);
-        });
-    });
-  }
-
   function drawEnv(index: number, local: number, time: number) {
     const prevId = index > 0 ? CHAPTERS[index - 1].id : undefined;
     const id = CHAPTERS[index].id;
-    const prevFocus = prevId ? DOOR_FOCUS[prevId] : undefined;
-    const focus = DOOR_FOCUS[id];
-
-    // The doors are one continuous scene across their four chapters, so
-    // nothing fades out and back in. Graduation shows the row of three; on
-    // each door's chapter that door steps forward on the left while the
-    // others slide away, and moving on slides the next one into its place.
-    if (focus !== undefined) {
-      const move = easeInOutSine(ramp(local, 0, 0.5));
-      if (prevFocus === undefined) {
-        doors(1, easeInOutSine(ramp(local, 0.12, 0.6)), 0, 0, time);
-        // Graduation follows the build, which still fades out underneath.
-      } else if (prevFocus < 0) {
-        doors(1, 1, move, focus, time);
-        return;
-      } else {
-        doors(1, 1, 1, lerp(prevFocus, focus, move), time);
-        return;
-      }
-    } else if (prevFocus !== undefined) {
-      // Home: the last door dissolves into the pieces that fly back to the mark.
-      doors(1 - ramp(local, 0.02, 0.18), 1, 1, prevFocus, time);
-      return;
-    }
-
     const prev = prevId ? ENV[prevId] : undefined;
     if (prev) prev({ A: anchor(index - 1), alpha: 1 - easeInOutSine(ramp(local, 0, 0.3)), local: 1, time });
 
@@ -2050,30 +1702,6 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     // The build pieces time their own entrance, flying in from the corners.
     const alpha = id === "together" ? 1 : easeInOutSine(ramp(local, 0.12, 0.42));
     if (now) now({ A: anchor(index), alpha, local, time });
-  }
-
-  /* ---------------- the stipend ---------------- */
-
-  /**
-   * Payday turns the whole stage brand indigo, like the opening screen: a
-   * celebration, with the phone glowing softly in the middle of it.
-   */
-  function drawStipendField(index: number, local: number) {
-    const field =
-      CHAPTERS[index].id === "stipend"
-        ? easeInOutSine(ramp(local, 0, 0.3))
-        : index === INDEX.stipend + 1
-          ? 1 - easeInOutSine(ramp(local, 0.04, 0.32))
-          : 0;
-    if (field <= 0) return;
-    ctx.fillStyle = rgba(BRAND, field);
-    ctx.fillRect(0, 0, L.w, L.h);
-    const P = anchor(INDEX.stipend);
-    const glow = ctx.createRadialGradient(P.x, P.y, 0, P.x, P.y, L.s * 2.2);
-    glow.addColorStop(0, rgba(WHITE, 0.14 * field));
-    glow.addColorStop(1, rgba(WHITE, 0));
-    ctx.fillStyle = glow;
-    ctx.fillRect(P.x - L.s * 2.3, P.y - L.s * 2.3, L.s * 4.6, L.s * 4.6);
   }
 
   /* ---------------- the mark ---------------- */
@@ -2511,7 +2139,7 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     ctx.restore();
   }
 
-  /** The same brand wallpaper as payday's lock screen: it's the same phone. */
+  /** The phone's wallpaper: brand indigo with the mark, faint. */
   function wallpaper() {
     const wall = ctx.createLinearGradient(0, 0, 0, APP.h);
     wall.addColorStop(0, "#080D38");
@@ -3108,7 +2736,6 @@ export function createScene(canvas: HTMLCanvasElement, { reduced }: { reduced: b
     stepOffsets(rawTime, hero && intro >= 1 && local < 0.1);
     stepSlide(rawTime);
 
-    drawStipendField(index, local);
     drawEnv(index, local, time);
     drawPieces(index, local, time);
     drawCard(index, local, time);

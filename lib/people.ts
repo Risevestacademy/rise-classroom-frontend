@@ -58,7 +58,7 @@ const person = (
 ): Person => ({ name, role, track, photo: `/landing/people/${file}.${fileFormat}`, focus });
 
 const CHIJIOKE = person("Chijioke", "Student", "Frontend", "chijioke", { x: 0.529, y: 0.358, w: 0.515 }, "webp");
-const PEACE = person("Peace", "Mentor", "Frontend", "peace", { x: 0.48, y: 0.46, w: 0.285 });
+const PEACE = person("Peace", "Mentor", "Frontend", "peace", { x: 0.433, y: 0.517, w: 0.415 });
 const CHINYERE = person("Chinyere", "Student", "Backend", "chinyere", { x: 0.462, y: 0.348, w: 0.535 }, "jpeg");
 const GABRIEL = person("Gabriel", "Student", "Mobile", "gabriel", { x: 0.481, y: 0.599, w: 0.47 });
 const MICHEAL = person("Micheal", "Student", "Design", "micheal", { x: 0.498, y: 0.515, w: 0.54 });
@@ -94,31 +94,33 @@ const MOCK_PEOPLE: LandingPeople = {
       person: CHIJIOKE,
       quote: "Peace reviews my code like it's going to production. That's exactly why I'm getting better.",
     },
-    {
-      chapter: "stipend",
-      person: IYOBOSA,
-      quote: "I didn't believe the stipend was real until it landed. It let me focus on learning.",
-    },
+    // For the stipend chapter, which is off the landing page for now.
+    // {
+    //   chapter: "stipend",
+    //   person: IYOBOSA,
+    //   quote: "I didn't believe the stipend was real until it landed. It let me focus on learning.",
+    // },
     {
       chapter: "together",
       person: MICHEAL,
       quote: "Designing next to engineers changed how I design. Now I know what's hard to build.",
     },
-    {
-      chapter: "rise",
-      person: CHIJIOKE,
-      quote: "Door one is the dream. Shipping at the company that taught you.",
-    },
-    {
-      chapter: "partner",
-      person: CHINYERE,
-      quote: "I want a backend role where real users depend on my code. That's what we practise here.",
-    },
-    {
-      chapter: "own",
-      person: GABRIEL,
-      quote: "I'm already sketching the app I'll build when this is done.",
-    },
+    // For the after-graduation chapters, which are off the landing page for now.
+    // {
+    //   chapter: "rise",
+    //   person: CHIJIOKE,
+    //   quote: "Door one is the dream. Shipping at the company that taught you.",
+    // },
+    // {
+    //   chapter: "partner",
+    //   person: CHINYERE,
+    //   quote: "I want a backend role where real users depend on my code. That's what we practise here.",
+    // },
+    // {
+    //   chapter: "own",
+    //   person: GABRIEL,
+    //   quote: "I'm already sketching the app I'll build when this is done.",
+    // },
   ],
 };
 

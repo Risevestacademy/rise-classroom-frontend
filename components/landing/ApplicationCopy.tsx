@@ -92,8 +92,8 @@ function TrackSelect({
   );
 }
 
-/* Never put the stipend amount here: it stays a surprise until it arrives. */
-const FACTS = ["Free to join", "12 months", "Virtual, taught live", "Stipend included", "Ages 18 to 28, across Africa"];
+// The stipend isn't listed: Rise Classroom doesn't handle it, so it lives in the FAQ.
+const FACTS = ["Free to join", "12 months", "Virtual, taught live", "Ages 18 to 28, across Africa"];
 
 /** An inline blank in the sentence: big, underlined, and sized to its text. */
 const blank =

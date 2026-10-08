@@ -32,8 +32,6 @@ import { CHAPTERS, TOTAL_SCREENS, type Chapter, type ChapterId, type CopyAlign }
 /** Three clicks on the logo inside this window open the hidden game. */
 const TRIPLE_CLICK_MS = 600;
 
-const STIPEND = CHAPTERS.findIndex((chapter) => chapter.id === "stipend");
-
 /** Where each chapter's copy sits. Phones always get it at the bottom. */
 const ALIGN: Record<CopyAlign, string> = {
   left: "md:right-auto md:bottom-auto md:left-[6vw] md:top-1/2 md:w-[38vw] md:-translate-y-1/2",
@@ -250,12 +248,10 @@ export function LandingPage() {
         const fades = el.querySelectorAll<HTMLElement>("[data-fade]");
 
         // The hero's words rise with the load intro, not the scroll; the
-        // application waits for the mark to shrink into its heading.
-        // Door copy waits for its door to step into place.
-        const settles = id === "end" || id === "rise" || id === "partner" || id === "own";
-        // Rise Classroom's copy waits for the mark to become the app icon.
-        const wordsAt = settles ? 0.3 : id === "classroom" ? 0.16 : 0.12;
-        const fadeAt = settles ? 0.42 : id === "classroom" ? 0.3 : 0.28;
+        // application waits for the mark to shrink into its heading, and Rise
+        // Classroom's copy for the mark to become the app icon.
+        const wordsAt = id === "end" ? 0.3 : id === "classroom" ? 0.16 : 0.12;
+        const fadeAt = id === "end" ? 0.42 : id === "classroom" ? 0.3 : 0.28;
         words.forEach((word, k) => {
           const t =
             id === "hero"
@@ -313,12 +309,8 @@ export function LandingPage() {
       // On the hero the header keeps its opening look (white, no background)
       // until the mark has scattered and the brand field has gone.
       const inHero = index === 0 && local < 0.42;
-      // The header turns white over the brand hero, the brand payday screen and the footer.
-      const dark =
-        inHero ||
-        (index === STIPEND && local > 0.16) ||
-        (index === STIPEND + 1 && local < 0.18) ||
-        footerTop < 48;
+      // The header turns white over the brand hero and the footer.
+      const dark = inHero || footerTop < 48;
       if (dark !== lastDark && headerRef.current) {
         headerRef.current.dataset.dark = String(dark);
         lastDark = dark;

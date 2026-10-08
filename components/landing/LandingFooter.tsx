@@ -12,8 +12,6 @@ const PROGRAM: { label: string; chapter: ChapterId }[] = [
   { label: "Tracks", chapter: "track" },
   { label: "Live classes", chapter: "taught" },
   { label: "Mentors", chapter: "mentor" },
-  { label: "Stipend", chapter: "stipend" },
-  { label: "After Rise", chapter: "next" },
   { label: "Rise Classroom", chapter: "classroom" },
 ];
 
