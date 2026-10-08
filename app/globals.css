@@ -203,3 +203,112 @@
 body {
   font-family: var(--font-tomato);
 }
+
+
+/* Landing page footer marquee: the track is two copies wide, so moving it
+   half its width loops seamlessly. */
+@keyframes landing-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* Landing page hero: a line that draws down and wipes away, on repeat. */
+@keyframes landing-scroll {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  45% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  55% {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+
+/* Hidden game: its end card rises into place. */
+@keyframes game-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/*
+ * Waitlist thank-you page. Each element sets --d, its delay. Lines rise out
+ * of a mask, the pass drops in and settles, the mark on it assembles band by
+ * band, then the pass floats. All of it is skipped for reduced motion.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .waitlist-in {
+    animation: waitlist-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+  }
+  .waitlist-rise {
+    animation: waitlist-rise 1.1s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+  }
+  .waitlist-drop {
+    animation: waitlist-drop 1.4s cubic-bezier(0.16, 1.2, 0.3, 1) var(--d, 0ms) both;
+  }
+  .waitlist-float {
+    animation: waitlist-float 7s ease-in-out 1.8s infinite;
+  }
+  .waitlist-spin {
+    animation: waitlist-spin 22s linear infinite;
+  }
+  .waitlist-band {
+    animation: waitlist-band 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+  }
+}
+
+@keyframes waitlist-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+}
+
+@keyframes waitlist-rise {
+  from {
+    transform: translate3d(0, 105%, 0);
+  }
+}
+
+@keyframes waitlist-drop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -60px, 0) rotate(-7deg) scale(0.94);
+  }
+}
+
+@keyframes waitlist-float {
+  50% {
+    translate: 0 -10px;
+  }
+}
+
+@keyframes waitlist-band {
+  from {
+    opacity: 0;
+    transform: translate3d(-6px, 0, 0);
+  }
+}
+
+@keyframes waitlist-spin {
+  to {
+    rotate: 360deg;
+  }
+}

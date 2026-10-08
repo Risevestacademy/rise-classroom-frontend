@@ -35,8 +35,19 @@ function Logo({
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <Image src={src} alt="" width={37} height={31} className={icon} />
-      <span className={cn("flex flex-col font-bold", textColor, text)}>
+      <Image
+        src={src}
+        alt=""
+        width={37}
+        height={31}
+        className={icon}
+      />
+
+      <span className={cn(
+        "flex flex-col items-start justify-start font-bold",
+        textColor,
+        text
+      )}>
         <span>rise</span>
         <span className="font-medium">Classroom</span>
       </span>
