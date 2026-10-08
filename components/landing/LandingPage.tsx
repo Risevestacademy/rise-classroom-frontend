@@ -13,7 +13,7 @@ import { ArrowRight } from "lucide-react";
 
 import { Logo } from "@/assets/logo";
 import { Button } from "@/components/ui/button";
-import { StackGame } from "@/components/home/StackGame";
+import { CohortGame } from "@/components/home/CohortGame";
 import { admissionsQuery } from "@/lib/admissions";
 import { landingPeopleQuery, type Testimonial } from "@/lib/people";
 import { landingPathFor } from "@/lib/auth";
@@ -504,7 +504,7 @@ export function LandingPage() {
 
       <LandingFooter ref={footerRef} open={open} onJump={jumpTo} />
 
-      {gameOpen && <StackGame onClose={() => setGameOpen(false)} />}
+      {gameOpen && <CohortGame onClose={() => setGameOpen(false)} />}
     </main>
   );
 }
