@@ -1,0 +1,20 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": [
+          "TEAMID1234.com.riseacademy.classroom",
+          "TEAMID1234.com.riseacademy.classroom.staging",
+          "TEAMID1234.com.riseacademy.classroom.development"
+        ],
+        "components": [
+          {
+            "/": "/*",
+            "comment": "Matches any URL"
+          }
+        ]
+      }
+    ]
+  }
+}
