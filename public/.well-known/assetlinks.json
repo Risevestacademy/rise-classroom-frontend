@@ -1,0 +1,32 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.riseacademy.classroom",
+      "sha256_cert_fingerprints": [
+        "PLACEHOLDER_FOR_PRODUCTION_SHA256"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.riseacademy.classroom.staging",
+      "sha256_cert_fingerprints": [
+        "2E:DF:7A:2B:E4:E0:78:27:75:35:14:44:4F:18:1A:3C:1D:3B:B1:96:23:7A:80:B5:0F:A0:75:50:6D:FD:C5:CA"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.riseacademy.classroom.development",
+      "sha256_cert_fingerprints": [
+        "02:12:DB:0D:E3:7D:71:43:51:5A:CA:D9:83:28:90:BF:E8:12:2C:06:E4:29:61:77:EF:48:F3:07:C1:44:91:7B"
+      ]
+    }
+  }
+]
