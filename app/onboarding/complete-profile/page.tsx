@@ -232,7 +232,14 @@ function ConfirmProgramStep({
 function WelcomeStep() {
   return (
     <>
-      <div className="aspect-square w-full rounded-2xl bg-surface-brand" />
+      <div className="relative aspect-square w-full overflow-hidden rounded-2xl">
+        <Image
+          src="/illustrations/welcome.png"
+          alt="Welcome to Rise Classroom"
+          fill
+          className="object-cover"
+        />
+      </div>
       <p className="text-base font-medium text-neutral-800">
         Learn, track progress, complete assignments, and stay connected.
       </p>
@@ -333,15 +340,17 @@ export default function CompleteProfilePage() {
 
   return (
     <AuthShell>
-      <div className="mx-auto flex w-full items-center justify-center">
-        <Image
-          src="/onboarding.png"
-          height={113}
-          width={358}
-          alt="Illustration"
-          className="h-[113px] w-full rounded-2xl object-cover"
-        />
-      </div>
+      {step === 3 && (
+        <div className="mx-auto flex w-full items-center justify-center">
+          <Image
+            src="/illustrations/onboarding.png"
+            height={113}
+            width={358}
+            alt="Illustration"
+            className="h-[113px] w-full rounded-2xl object-cover"
+          />
+        </div>
+      )}
 
       <div>
         <h1 className="text-2xl font-bold text-neutral-800">{title}</h1>
