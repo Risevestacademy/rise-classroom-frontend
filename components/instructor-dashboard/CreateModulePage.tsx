@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,6 +27,9 @@ export const createModuleSchema = z.object({
 export type CreateModuleFormValues = z.infer<typeof createModuleSchema>;
 
 export function CreateModulePage() {
+  const router = useRouter();
+
+
   const {
     register,
     handleSubmit,
@@ -70,6 +75,7 @@ export function CreateModulePage() {
             {...register("name")}
             disabled={isSubmitting}
             placeholder="User Research"
+            leadingIcon={null}
           />
           {errors.name?.message && <Error match={true}>{errors.name.message}</Error>}
         </Field.Root>
@@ -97,6 +103,7 @@ export function CreateModulePage() {
             {...register("objective")}
             disabled={isSubmitting}
             placeholder="Learn conducting primary qualitative research"
+            leadingIcon={null}
           />
           {errors.objective?.message && (
             <Error match={true}>{errors.objective.message}</Error>
@@ -114,14 +121,22 @@ export function CreateModulePage() {
             {...register("numberOfLessons", { valueAsNumber: true })}
             disabled={isSubmitting}
             placeholder="5"
+            leadingIcon={null}
           />
           {errors.numberOfLessons?.message && (
             <Error match={true}>{errors.numberOfLessons.message}</Error>
           )}
         </Field.Root>
 
-        <div className="mt-2 flex justify-end">
-          <Button type="submit" disabled={isSubmitting} className="p-4">
+        <div className="mt-2 flex justify-end space-x-4">
+          <Button
+            type="button"
+            onClick={() => router.back()}
+            className="bg-white text-black p-5 border-black"
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting} className="p-5">
             {isSubmitting ? "Creating..." : "Create module"}
           </Button>
         </div>
