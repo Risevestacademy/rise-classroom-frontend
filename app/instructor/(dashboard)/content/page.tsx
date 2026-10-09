@@ -4,10 +4,8 @@ import * as React from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  ChevronDown,
   FileText,
   Plus,
-  Calendar,
   Play,
   Link2,
   FileEdit,
@@ -187,7 +185,26 @@ export const lessonsData = [
   },
 ];
 
-export const resourcesData = [
+type ResourceType = "PDF" | "PPT" | "LINK" | "DOC";
+
+type ResourceItem = {
+  id: string;
+  name: string;
+  type: ResourceType;
+  sizeOrDomain: string;
+};
+
+type ResourceModule = {
+  id: number;
+  moduleTitle: string;
+  resourcesCount: number;
+  sections: {
+    sectionTitle: string;
+    resources: ResourceItem[];
+  }[];
+};
+
+export const resourcesData: ResourceModule[] = [
   {
     id: 1,
     moduleTitle: "Introduction",
@@ -232,13 +249,13 @@ export const resourcesData = [
   },
 ];
 
-function StatusBadge({ status }) {
+function StatusBadge({ status }: { status: string }) {
   const isPublished = status === "Published";
   const isDraft = status === "Draft";
 
   return (
     <Badge
-      variant="outline"
+      variant="stroked"
       className={cn(
         "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium shadow-none",
         isPublished && "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50",
@@ -312,7 +329,7 @@ export default function Content() {
 
           <TabsContent value="modules" className="mt-8">
             {modulesData && modulesData.length > 0 ? (
-              <ModulesTable data={modulesData} />
+              <ModulesTable />
             ) : (
               <EmptyState
                 title="No modules yet"
@@ -325,7 +342,7 @@ export default function Content() {
 
           <TabsContent value="lessons" className="mt-4">
             {lessonsData && lessonsData.length > 0 ? (
-              <LessonsTable data={lessonsData} />
+              <LessonsTable />
             ) : (
               <EmptyState
                 title="No lessons yet"
@@ -338,7 +355,7 @@ export default function Content() {
 
           <TabsContent value="resources" className="mt-4">
             {resourcesData && resourcesData.length > 0 ? (
-              <ResourcesTable data={resourcesData} />
+              <ResourcesTable />
             ) : (
             <EmptyState
               title="No resources yet"
@@ -513,7 +530,7 @@ function LessonsTable() {
                       </span>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log("Add lesson to module", module.id);
@@ -566,7 +583,7 @@ function LessonsTable() {
 
                       <TableCell className="text-right pr-4">
                         <Badge
-                          variant="outline"
+                          variant="stroked"
                           className={`text-xs font-medium px-2.5 py-0.5 rounded-full border-none ${lesson.status === "Published"
                               ? "bg-emerald-50 text-emerald-700"
                               : "bg-amber-50 text-amber-700"
@@ -590,7 +607,10 @@ function LessonsTable() {
   );
 }
 
-const resourceTypeConfig = {
+const resourceTypeConfig: Record<
+  ResourceType,
+  { label: string; badgeClass: string; icon: React.ElementType }
+> = {
   PDF: {
     label: "PDF",
     badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
@@ -609,7 +629,7 @@ const resourceTypeConfig = {
   DOC: {
     label: "DOC",
     badgeClass: "bg-blue-100 text-blue-800 border-blue-200",
-    icon: File,
+    icon: FileText,
   },
 };
 
@@ -655,7 +675,7 @@ function ResourcesTable() {
 
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={(e) => {
                   e.stopPropagation();
                   console.log("Add resource to module", module.id);

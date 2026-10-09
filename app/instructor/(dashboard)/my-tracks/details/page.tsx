@@ -41,14 +41,6 @@ const TASK_BADGE: Record<WeeklyTaskStatus, string> = {
   OVERDUE: BADGE.error,
 };
 
-const TASK_LABEL: Record<WeeklyTaskStatus, string> = {
-  PENDING: "Pending",
-  IN_PROGRESS: "In progress",
-  SUBMITTED: "Submitted",
-  REVIEWED: "Reviewed",
-  OVERDUE: "Overdue",
-};
-
 function formatDate(iso?: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString(undefined, {
@@ -74,22 +66,6 @@ function EmptyState({
       </div>
       <h3 className="text-sm font-semibold text-neutral-800">{title}</h3>
       <p className="text-xs text-neutral-500 max-w-xs mt-1">{description}</p>
-    </div>
-  );
-}
-
-function ListSkeleton({ rows = 4 }: { rows?: number }) {
-  return (
-    <div className="divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white px-6 py-2 shadow-xs">
-      {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center justify-between py-3.5">
-          <div className="space-y-1.5">
-            <Skeleton className="h-3.5 w-48 bg-neutral-200" />
-            <Skeleton className="h-3 w-32 bg-neutral-200" />
-          </div>
-          <Skeleton className="h-5 w-16 rounded-full bg-neutral-200 shrink-0" />
-        </div>
-      ))}
     </div>
   );
 }
@@ -122,11 +98,6 @@ export default function TrackDetails() {
 
   const tasksQuery = useQuery({
     ...instructorQueries.weeklyTasks({ ...scope, limit: 6 }),
-    enabled: hasScope,
-  });
-
-  const allTasksQuery = useQuery({
-    ...instructorQueries.weeklyTasks({ ...scope }),
     enabled: hasScope,
   });
 
@@ -172,8 +143,6 @@ export default function TrackDetails() {
       badge: task.dueDate ? formatDate(task.dueDate) : "Pending",
       badgeStyle: TASK_BADGE[task.status],
     })) ?? [];
-
-  const allTasks = allTasksQuery.data?.items ?? [];
 
   const triggerClassName =
     "relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-800 data-[state=active]:bg-transparent data-[state=active]:text-neutral-800 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-primary after:opacity-0 data-[state=active]:after:opacity-100";
@@ -372,80 +341,19 @@ export default function TrackDetails() {
           </TabsContent>
 
           <TabsContent value="assignments" className="mt-8">
-            {trackQuery.isLoading || allTasksQuery.isLoading ? (
-              <ListSkeleton />
-            ) : allTasks.length > 0 ? (
-              <div className="divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white px-6 py-2 shadow-xs">
-                {allTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between gap-4 py-3.5"
-                  >
-                    <div className="min-w-0 space-y-0.5">
-                      <p className="truncate text-xs font-semibold text-neutral-800">
-                        {task.title}
-                      </p>
-                      <p className="truncate text-xs text-neutral-500">
-                        {task.student?.user?.name ?? "Student"} • Due{" "}
-                        {formatDate(task.dueDate)}
-                      </p>
-                    </div>
-                    <span className={cn(BADGE_BASE, TASK_BADGE[task.status])}>
-                      {TASK_LABEL[task.status]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
               <EmptyState
                 icon={ClipboardList}
                 title="No assignments created"
                 description="Assignments and quizzes assigned to students in this track will show up here."
               />
-            )}
           </TabsContent>
 
           <TabsContent value="students" className="mt-8">
-            {trackQuery.isLoading || studentsQuery.isLoading ? (
-              <ListSkeleton />
-            ) : students.length > 0 ? (
-              <div className="divide-y divide-neutral-200 rounded-2xl border border-neutral-200 bg-white px-6 py-2 shadow-xs">
-                {students.map((student) => {
-                  const suspended = student.user.status === "SUSPENDED";
-                  const invited = student.user.onboardingStatus === "INVITED";
-                  const badge = suspended
-                    ? { label: "Suspended", style: BADGE.error }
-                    : invited
-                    ? { label: "Invited", style: BADGE.warning }
-                    : { label: "Active", style: BADGE.success };
-
-                  return (
-                    <div
-                      key={student.id}
-                      className="flex items-center justify-between gap-4 py-3.5"
-                    >
-                      <div className="min-w-0 space-y-0.5">
-                        <p className="truncate text-xs font-semibold text-neutral-800">
-                          {student.user.name}
-                        </p>
-                        <p className="truncate text-xs text-neutral-500">
-                          {student.user.email}
-                        </p>
-                      </div>
-                      <span className={cn(BADGE_BASE, badge.style)}>
-                        {badge.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
               <EmptyState
                 icon={Users}
                 title="No enrolled students"
                 description="When students are assigned to this track and cohort, you will see their roster here."
               />
-            )}
           </TabsContent>
 
           <TabsContent value="progress" className="mt-8">
