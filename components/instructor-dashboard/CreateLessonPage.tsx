@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   useForm,
   Controller,
   Control,
   UseFormRegister,
   FieldErrors,
+  useWatch,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -33,7 +35,7 @@ const lessonSchema = z.object({
   description: z.string().min(1, "Description is required."),
   learningObjectives: z.string().optional(),
   module: z.string().min(1, "Module selection is required."),
-  uploadMethod: z.enum(["file", "live_platform"]).default("file"),
+  uploadMethod: z.enum(["file", "live_platform"]),
   videoFile: z.any().optional(),
   videoUrl: z.string().optional(),
   resources: z
@@ -73,20 +75,23 @@ interface StepOneProps {
   control: Control<LessonFormValues>;
   errors: FieldErrors<LessonFormValues>;
   onNext: () => void;
+  onCancel: () => void;
 }
 
-function StepOne({ register, control, errors, onNext }: StepOneProps) {
-  const handleObjectiveFocus = (e: React.FocusEvent<any>) => {
-    const target = e.target as HTMLTextAreaElement;
+function StepOne({ register, control, errors, onNext, onCancel }: StepOneProps) {
+  const handleObjectiveFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    const target = e.target;
+    if (!(target instanceof HTMLTextAreaElement)) return;
     if (!target.value) {
       target.value = "• ";
     }
   };
 
-  const handleObjectiveKeyDown = (e: React.KeyboardEvent<any>) => {
+  const handleObjectiveKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      const textarea = e.currentTarget as HTMLTextAreaElement;
+      const textarea = e.target;
+      if (!(textarea instanceof HTMLTextAreaElement)) return;
       const { selectionStart, selectionEnd, value } = textarea;
       const newValue =
         value.substring(0, selectionStart) +
@@ -159,7 +164,7 @@ function StepOne({ register, control, errors, onNext }: StepOneProps) {
         </label>
         <Input
           {...register("title")}
-          type="text"
+          type="basic"
           placeholder="e.g. User Interviews"
           leadingIcon={null}
         />
@@ -225,7 +230,7 @@ function StepOne({ register, control, errors, onNext }: StepOneProps) {
       <div className="flex items-center justify-between pt-4">
         <Button
           type="button"
-          onClick={() => router.back()}
+          onClick={onCancel}
           className="bg-white text-black p-5 border-black"
         >
           Cancel
@@ -233,7 +238,7 @@ function StepOne({ register, control, errors, onNext }: StepOneProps) {
         <div className="flex items-center gap-3">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             className="bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-100"
           >
             Save draft
@@ -361,7 +366,7 @@ function StepTwo({
             <Button
               type="button"
               onClick={addResourceField}
-              variant="outline"
+              variant="secondary"
               className="text-xs flex items-center gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -371,7 +376,7 @@ function StepTwo({
 
           {resourcesList.length === 0 ? (
             <p className="text-xs text-neutral-500 italic py-2">
-              No resources added yet. Click "Add Resource" to attach link materials.
+              No resources added yet. Click &quot;Add Resource&quot; to attach link materials.
             </p>
           ) : (
             resourcesList.map((_, idx) => (
@@ -439,7 +444,7 @@ function StepTwo({
         <Button
           type="button"
           onClick={onBack}
-          variant="outline"
+          variant="secondary"
           className="bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-100 px-6"
         >
           Back
@@ -457,13 +462,13 @@ function StepTwo({
 }
 
 export function CreateLessonPage() {
+  const router = useRouter();
   const [step, setStep] = React.useState<1 | 2>(1);
 
   const {
     register,
     handleSubmit,
     control,
-    watch,
     setValue,
     trigger,
     formState: { errors, isSubmitting },
@@ -483,8 +488,8 @@ export function CreateLessonPage() {
     },
   });
 
-  const selectedType = watch("type");
-  const resourcesList = watch("resources") || [];
+  const selectedType = useWatch({ control, name: "type" });
+  const resourcesList = useWatch({ control, name: "resources" }) || [];
 
   const handleNext = async () => {
     if (step === 1) {
@@ -536,6 +541,7 @@ export function CreateLessonPage() {
             control={control}
             errors={errors}
             onNext={handleNext}
+            onCancel={() => router.back()}
           />
         )}
 
