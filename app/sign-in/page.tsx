@@ -134,7 +134,7 @@ function SignInForm() {
 
           <div className="flex flex-col gap-6 px-6 py-10 sm:px-12 lg:px-24">
             <div className="mx-auto flex h-[140px] my-10 w-full  items-center justify-center">
-              <Image className="rounded-2xl" src="/sign-in.png" alt="Sign in to your account" width={500} height={0} />
+              <Image className="rounded-2xl" src="/login.png" alt="Sign in to your account" width={500} height={0} />
             </div>
 
             <div>
