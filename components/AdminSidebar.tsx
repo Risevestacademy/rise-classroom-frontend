@@ -3,27 +3,26 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Radar,
-  Video,
-  Users,
-  GraduationCap,
-  UserCog,
-  ShieldCheck,
-  Hash,
-  Layers,
-  BookOpen,
-  BarChart3,
-  Activity,
-  Megaphone,
-  Bell,
-  MessageSquare,
-  Settings,
-  Blocks,
-  X,
-} from "lucide-react";
+import { Blocks, X } from "lucide-react";
 import { Logo } from "@/assets/logo";
+import { 
+  DashboardSquare01, 
+  Video02, 
+  UserMultiple, 
+  Teacher, 
+  Mentor, 
+  Admin, 
+  Cohorts, 
+  Track, 
+  Structure01,
+  Activity02,
+  Coins01,
+  Message01,
+  Notification02,
+  Marketing,
+  Settings01,
+  type IconProps,
+} from "@/assets/icons";
 import { cn } from "@/lib/utils";
 import { useAdminNav } from "@/components/AdminNavContext";
 import { UserMenu } from "@/components/UserMenu";
@@ -31,44 +30,43 @@ import { UserMenu } from "@/components/UserMenu";
 interface NavItem {
   title: string;
   href: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<IconProps<"stroke" | "solid">>;
 }
 
 const overviewNavItems: NavItem[] = [
-  { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+  { title: "Dashboard", href: "/admin/dashboard", icon: DashboardSquare01 },
 ];
 
 const operationsNavItems: NavItem[] = [
-  { title: "Control Tower", href: "/admin/control-tower", icon: Radar },
-  { title: "Live Sessions", href: "/admin/live-sessions", icon: Video },
+  { title: "Live Sessions", href: "/admin/live-sessions", icon: Video02 },
 ];
 
 const peopleNavItems: NavItem[] = [
-  { title: "Students", href: "/admin/students", icon: Users },
-  { title: "Instructors", href: "/admin/instructors", icon: GraduationCap },
-  { title: "Mentors", href: "/admin/mentors", icon: UserCog },
-  { title: "Admins", href: "/admin/admins", icon: ShieldCheck },
+  { title: "Students", href: "/admin/students", icon: UserMultiple },
+  { title: "Instructors", href: "/admin/instructors", icon: Teacher },
+  { title: "Mentors", href: "/admin/mentors", icon: Mentor },
+  { title: "Admins", href: "/admin/admins", icon: Admin },
 ];
 
 const academyNavItems: NavItem[] = [
-  { title: "Tracks", href: "/admin/tracks", icon: Hash },
-  { title: "Cohorts", href: "/admin/cohorts", icon: Layers },
-  { title: "Curriculum", href: "/admin/curriculum", icon: BookOpen },
+  { title: "Cohorts", href: "/admin/cohorts", icon: Cohorts },
+  { title: "Tracks", href: "/admin/tracks", icon: Track },
+  { title: "Curriculum", href: "/admin/curriculum", icon: Structure01 },
 ];
 
 const insightNavItems: NavItem[] = [
-  { title: "Reports", href: "/admin/reports", icon: BarChart3 },
-  { title: "Activity Log", href: "/admin/activity-log", icon: Activity },
+  { title: "Reports", href: "/admin/reports", icon: Coins01 },
+  { title: "Activity Log", href: "/admin/activity-log", icon: Activity02 },
 ];
 
 const communicationNavItems: NavItem[] = [
-  { title: "Announcements", href: "/admin/announcements", icon: Megaphone },
-  { title: "Notifications", href: "/admin/notifications", icon: Bell },
-  { title: "Messages", href: "/admin/messages", icon: MessageSquare },
+  { title: "Announcements", href: "/admin/announcements", icon: Marketing },
+  { title: "Notifications", href: "/admin/notifications", icon: Notification02 },
+  { title: "Messages", href: "/admin/messages", icon: Message01 },
 ];
 
 const accountNavItems: NavItem[] = [
-  { title: "Settings", href: "/admin/settings", icon: Settings },
+  { title: "Settings", href: "/admin/settings", icon: Settings01 },
   { title: "Integration", href: "/admin/integration", icon: Blocks },
 ];
 
@@ -210,7 +208,11 @@ function SidebarNavItem({
           : "border-transparent text-[#505258]",
       )}
     >
-      <Icon className="h-5 w-5 shrink-0" />
+      <Icon
+        // Figma icons switch to their solid variant when active; others (e.g. lucide) ignore it.
+        {...("variants" in Icon && { variant: isActive ? "solid" : "stroke" })}
+        className="h-6 w-6 shrink-0"
+      />
       <span className="truncate">{item.title}</span>
     </Link>
   );
