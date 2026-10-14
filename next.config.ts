@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
    * makes those requests first-party, so the cookie is stored for this origin
    * and sent back automatically.
    */
+  allowedDevOrigins: ['192.168.1.114'],
   async rewrites() {
     return [
       {
