@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
-import { StatusSelect } from "@/components/ui/status-select";
+import { Select } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -169,7 +169,7 @@ function EditUserForm({ user, onOpenChange, isSelf }: EditUserDialogProps) {
           }}
         />
 
-        <StatusSelect
+        <Select
           value={status}
           onChange={setStatus}
           options={userStatusLabels}
@@ -184,7 +184,7 @@ function EditUserForm({ user, onOpenChange, isSelf }: EditUserDialogProps) {
               Suspending signs them out everywhere.
             </p>
           ) : null}
-        </StatusSelect>
+        </Select>
       </div>
 
       {save.isError && (
