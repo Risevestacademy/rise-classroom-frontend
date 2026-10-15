@@ -203,3 +203,91 @@
 body {
   font-family: var(--font-tomato);
 }
+
+/* ---------------------------------------------------------------------------
+ * Landing page motion
+ * ------------------------------------------------------------------------- */
+
+/*
+ * Hero intro elements stay hidden until GSAP takes over, so they don't flash
+ * in their final state before the intro plays. The delayed animation is a
+ * safety net that reveals them anyway if the motion script never runs.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  [data-intro] {
+    visibility: hidden;
+    animation: landing-intro-fallback 0s 3s forwards;
+  }
+}
+
+@keyframes landing-intro-fallback {
+  to {
+    visibility: visible;
+  }
+}
+
+/* SplitText masks: leave room for italic overhang and descenders. */
+.split-line-mask,
+.split-word-mask {
+  padding: 0.08em 0.12em;
+  margin: -0.08em -0.12em;
+}
+
+@keyframes landing-shine {
+  0%,
+  60% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+@layer components {
+  /* Background fill that slides in on hover. Set --btn-fill to change its colour. */
+  .landing-btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .landing-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--btn-fill, var(--color-brand-800));
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @media (hover: hover) {
+    .landing-btn:hover::before {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+  }
+
+  /* A soft light that sweeps across the button every few seconds. */
+  .landing-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    z-index: -1;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.28), transparent);
+    animation: landing-shine 3.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .landing-btn::before {
+      transition: none;
+    }
+
+    .landing-shine::after {
+      display: none;
+    }
+  }
+}

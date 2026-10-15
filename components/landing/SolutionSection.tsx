@@ -33,17 +33,24 @@ export function SolutionSection() {
   return (
     <section id="solutions" className="bg-white px-4 pt-[100px] pb-[100px]">
       <div className="mx-auto flex w-full max-w-[1004px] flex-col gap-12 lg:flex-row lg:items-start lg:justify-between lg:gap-0">
-        <div className="lg:mt-[143px] lg:w-[511px]">
-          <h2 className="text-[48px] leading-[56px] font-bold text-text-primary">
+        <div className="lg:sticky lg:top-[180px] lg:mt-[143px] lg:w-[511px]">
+          <h2
+            data-reveal="lines"
+            className="text-[48px] leading-[56px] font-bold text-text-primary"
+          >
             A better way to bring <em className="italic">learning together.</em>
           </h2>
-          <p className="mt-[18px] max-w-[367px] text-[16px] leading-6 font-medium text-text-secondary">
+          <p
+            data-reveal="up"
+            className="mt-[18px] max-w-[367px] text-[16px] leading-6 font-medium text-text-secondary"
+          >
             Whether you&apos;re running an academy or teaching independently,
             Rise Classroom helps you bring learning into one organized space.
           </p>
           <Link
             href="#product"
-            className="mt-[33px] inline-flex h-[54px] items-center rounded-full bg-brand-950 px-8 text-[14px] leading-5 font-medium text-white ring-2 ring-brand-200"
+            data-magnetic
+            className="landing-btn mt-[33px] inline-flex h-[54px] items-center rounded-full bg-brand-950 px-8 text-[14px] leading-5 font-medium text-white ring-2 ring-brand-200"
           >
             Explore the platform
           </Link>
@@ -53,26 +60,42 @@ export function SolutionSection() {
           {AUDIENCES.map((audience) => (
             <li
               key={audience.label}
+              data-solution-card
               className="rounded-[24px] bg-neutral-100 p-4"
             >
-              <Image
-                src={audience.image}
-                alt={audience.imageAlt}
-                width={381}
-                height={254}
-                className="h-auto w-full rounded-[16px]"
-              />
-              <p className="mt-3 text-[14px] leading-5 font-medium text-brand-950">
+              <div
+                data-solution-media
+                className="overflow-hidden rounded-[16px]"
+              >
+                <Image
+                  src={audience.image}
+                  alt={audience.imageAlt}
+                  width={381}
+                  height={254}
+                  className="h-auto w-full"
+                />
+              </div>
+              <p
+                data-solution-text
+                className="mt-3 text-[14px] leading-5 font-medium text-brand-950"
+              >
                 {audience.label}
               </p>
-              <h3 className="mt-3 text-[20px] leading-7 font-semibold text-black">
+              <h3
+                data-solution-text
+                className="mt-3 text-[20px] leading-7 font-semibold text-black"
+              >
                 {audience.title[0]}
                 <br />
                 {audience.title[1]}
               </h3>
               <ul className="mt-2 flex flex-col gap-2">
                 {audience.points.map((point) => (
-                  <li key={point} className="flex h-6 items-center gap-2">
+                  <li
+                    key={point}
+                    data-solution-point
+                    className="flex h-6 items-center gap-2"
+                  >
                     <Asterisk
                       className="size-4 shrink-0 text-text-secondary"
                       strokeWidth={2}

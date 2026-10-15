@@ -1,6 +1,4 @@
-import { Minus } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { FaqAccordion } from "@/components/landing/FaqAccordion";
 
 const FAQS = [
   {
@@ -40,36 +38,22 @@ export function FaqSection() {
     <section className="bg-brand-50 px-4 pt-[100px] pb-[44px]">
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-10 lg:flex-row lg:justify-between lg:gap-0">
         <div className="lg:w-[328px]">
-          <h2 className="text-[40px] leading-[48px] font-semibold text-text-primary">
+          <h2
+            data-reveal="lines"
+            className="text-[40px] leading-[48px] font-semibold text-text-primary"
+          >
             Totally fair to ask.
           </h2>
-          <p className="mt-[12px] max-w-[322px] text-[16px] leading-6 font-medium text-text-secondary">
+          <p
+            data-reveal="up"
+            className="mt-[12px] max-w-[322px] text-[16px] leading-6 font-medium text-text-secondary"
+          >
             Everything you need to know about getting started with Rise
             Classroom
           </p>
         </div>
 
-        <ul className="flex flex-col gap-3 lg:w-[759px]">
-          {FAQS.map((faq, index) => (
-            <li key={faq.question} className="rounded-[12px] bg-neutral-50 p-6">
-              <div className="flex items-start justify-between gap-6">
-                <h3 className="text-[16px] leading-6 font-medium text-text-primary">
-                  {faq.question}
-                </h3>
-                <Minus className="size-6 shrink-0 text-text-primary" />
-              </div>
-              <p
-                className={cn(
-                  "mt-[23px] font-work text-[16px] leading-6",
-                  // The design shows the first answer in the secondary colour.
-                  index === 0 ? "text-text-secondary" : "text-text-primary"
-                )}
-              >
-                {faq.answer}
-              </p>
-            </li>
-          ))}
-        </ul>
+        <FaqAccordion items={FAQS} />
       </div>
     </section>
   );
