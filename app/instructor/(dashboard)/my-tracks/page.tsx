@@ -38,7 +38,7 @@ export default function MyTracks() {
   );
 
   return (
-    <div className="flex flex-col bg-neutral-100 p-6 space-y-6">
+    <div className="flex flex-col bg-neutral-100 h-full p-6 space-y-6">
       <div id="heading" className="flex flex-row w-full items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-neutral-800 tracking-tight">
