@@ -4,23 +4,22 @@ import { useEffect } from "react";
 import Lenis from "lenis";
 import "lenis/dist/lenis.css";
 
+import { gsap, MEDIA, ScrollTrigger, useGSAP } from "./gsap";
+import { hoverTilt, magneticButtons } from "./interactions";
+import { heroDashboardTilt, heroIntro } from "./intro";
 import {
+  backgroundMorph,
   footerReveal,
-  heroDashboardTilt,
-  heroIntro,
-  hoverTilt,
-  magneticButtons,
+  keywordMarquee,
   navAutoHide,
   navScrolledState,
+  pricingCards,
+  revealGroups,
   scrollReveals,
   solutionCards,
   testimonialsExpand,
   valueCards,
-} from "./animations";
-import { gsap, MEDIA, ScrollTrigger, useGSAP } from "./gsap";
-
-/** Height of the compact nav, so anchor jumps land below it. */
-const NAV_OFFSET = 72;
+} from "./scroll";
 
 /**
  * Wires up smooth scrolling and every landing page animation. Sections only
@@ -31,7 +30,9 @@ export function LandingMotion() {
   useEffect(() => {
     if (window.matchMedia(MEDIA.reduce).matches) return;
 
-    const lenis = new Lenis({ anchors: { offset: -NAV_OFFSET } });
+    // lerp 0.15 follows the wheel closely: smooth, but not floaty. Anchor
+    // jumps respect the scroll-padding-top set in globals.css.
+    const lenis = new Lenis({ lerp: 0.15, anchors: true });
     lenis.on("scroll", ScrollTrigger.update);
 
     // Drive Lenis from GSAP's ticker so scroll-linked tweens stay in sync.
@@ -54,7 +55,9 @@ export function LandingMotion() {
     mm.add(MEDIA.motion, () => {
       heroIntro();
       navAutoHide();
+      backgroundMorph();
       scrollReveals();
+      keywordMarquee();
       solutionCards();
       footerReveal();
     });
@@ -62,17 +65,20 @@ export function LandingMotion() {
     mm.add(MEDIA.desktop, () => {
       heroDashboardTilt();
       valueCards({ spread: true });
+      revealGroups({ perItem: false });
+      pricingCards({ perItem: false });
       testimonialsExpand();
-      const cleanupTilt = hoverTilt();
-      const cleanupMagnetic = magneticButtons();
-      return () => {
-        cleanupTilt();
-        cleanupMagnetic();
-      };
     });
 
     mm.add(MEDIA.mobile, () => {
       valueCards({ spread: false });
+      revealGroups({ perItem: true });
+      pricingCards({ perItem: true });
+    });
+
+    mm.add(MEDIA.finePointer, () => {
+      const cleanups = [hoverTilt(), magneticButtons()];
+      return () => cleanups.forEach((cleanup) => cleanup());
     });
   });
 

@@ -1,5 +1,7 @@
 import Image from "next/image";
 
+import { HandDrawn } from "@/components/landing/HandDrawn";
+
 const VALUE_PROPS = [
   {
     body: "Bring your learning structure into one place. Organize cohorts, manage tracks, and keep lessons and learning resources connected to the right students.",
@@ -20,16 +22,26 @@ const VALUE_PROPS = [
 
 export function ValuePropSection() {
   return (
-    <section className="flex flex-col items-center bg-brand-800 px-4 pt-[100px] pb-[84px]">
+    <section
+      data-bg="#20286F"
+      className="flex flex-col items-center bg-brand-800 px-4 pt-[72px] pb-[64px] lg:pt-[100px] lg:pb-[84px]"
+    >
       <h2
-        data-reveal="words"
-        className="w-full max-w-[740px] text-center text-[48px] leading-[56px] font-bold text-white"
+        data-reveal="lines"
+        className="w-full max-w-[740px] text-center text-[32px] leading-[40px] font-bold text-white lg:text-[48px] lg:leading-[56px]"
       >
         Everything works better when it{" "}
-        <em className="italic">works together</em>.
+        {/* Keeps the full stop from wrapping away from the circled word. */}
+        <span className="whitespace-nowrap">
+          <em className="italic">
+            works{" "}
+            <HandDrawn strokeClassName="text-brand-300">together</HandDrawn>
+          </em>
+          .
+        </span>
       </h2>
       <p
-        data-reveal="up"
+        data-reveal="fill"
         className="mt-[8px] w-full max-w-[501px] text-center text-[16px] leading-6 font-medium text-text-disabled"
       >
         From organizing classes to delivering lessons and tracking progress,
@@ -38,13 +50,13 @@ export function ValuePropSection() {
 
       <ul
         data-value-grid
-        className="relative mt-[80px] grid w-full max-w-[1080px] gap-3 md:grid-cols-3"
+        className="relative mt-12 grid lg:mt-[80px] w-full max-w-[1080px] gap-3 md:grid-cols-3"
       >
         {VALUE_PROPS.map((item) => (
           <li
             key={item.icon}
             data-value-card
-            className="group relative flex h-[472px] transition-[translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-2 motion-reduce:transition-none flex-col justify-between rounded-[28px] bg-neutral-100 px-6 py-8"
+            className="group relative flex h-[400px] md:h-[472px] transition-[translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-2 motion-reduce:transition-none flex-col justify-between rounded-[28px] bg-neutral-100 px-6 py-8"
           >
             <p className="font-work text-[14px] leading-5 font-medium text-text-secondary">
               {item.body}

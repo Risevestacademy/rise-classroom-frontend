@@ -1,5 +1,6 @@
 import { FaqSection } from "@/components/landing/FaqSection";
 import { HeroSection } from "@/components/landing/HeroSection";
+import { KeywordMarquee } from "@/components/landing/KeywordMarquee";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LandingMotion } from "@/components/landing/motion/LandingMotion";
@@ -18,6 +19,7 @@ export default function HomePage() {
         className="relative z-10 overflow-clip rounded-b-[40px]"
       >
         <HeroSection />
+        <KeywordMarquee />
         <ValuePropSection />
         <SolutionSection />
         <TestimonialsSection />

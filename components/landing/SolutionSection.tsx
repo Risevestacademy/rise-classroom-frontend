@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Asterisk } from "lucide-react";
 
+import { RollText } from "@/components/landing/RollText";
+
 const AUDIENCES = [
   {
     label: "FOR ORGANIZATIONS",
@@ -31,12 +33,16 @@ const AUDIENCES = [
 
 export function SolutionSection() {
   return (
-    <section id="solutions" className="bg-white px-4 pt-[100px] pb-[100px]">
+    <section
+      id="solutions"
+      data-bg="#FFFFFF"
+      className="bg-white px-4 pt-[72px] pb-[72px] lg:pt-[100px] lg:pb-[100px]"
+    >
       <div className="mx-auto flex w-full max-w-[1004px] flex-col gap-12 lg:flex-row lg:items-start lg:justify-between lg:gap-0">
         <div className="lg:sticky lg:top-[180px] lg:mt-[143px] lg:w-[511px]">
           <h2
             data-reveal="lines"
-            className="text-[48px] leading-[56px] font-bold text-text-primary"
+            className="text-[32px] leading-[40px] font-bold text-text-primary lg:text-[48px] lg:leading-[56px]"
           >
             A better way to bring <em className="italic">learning together.</em>
           </h2>
@@ -52,7 +58,7 @@ export function SolutionSection() {
             data-magnetic
             className="landing-btn mt-[33px] inline-flex h-[54px] items-center rounded-full bg-brand-950 px-8 text-[14px] leading-5 font-medium text-white ring-2 ring-brand-200"
           >
-            Explore the platform
+            <RollText>Explore the platform</RollText>
           </Link>
         </div>
 

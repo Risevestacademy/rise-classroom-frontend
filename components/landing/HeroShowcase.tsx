@@ -22,29 +22,54 @@ const PRODUCT_TABS = [
   { label: "Chat", screen: "/landing/dashboard-mockup.png" },
   { label: "Calender", screen: "/landing/dashboard-mockup.png" },
 ];
-const INITIAL_TAB = 1;
+const TAB_COUNT = PRODUCT_TABS.length;
+/** How long each tab stays up before advancing to the next. */
 const AUTO_ADVANCE_SECONDS = 5;
 
-/** Product tabs and the dashboard screenshot they switch between. */
+/**
+ * Product tabs and the dashboard they switch between. The tabs advance on a
+ * timer (paused while hovered), and clicking a tab jumps straight to it.
+ */
 export function HeroShowcase() {
   const root = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tabScroller = useRef<HTMLDivElement>(null);
   const pillState = useRef<Flip.FlipState | null>(null);
-  const progress = useRef<gsap.core.Tween | null>(null);
+  const timer = useRef<gsap.core.Tween | null>(null);
   const hovered = useRef(false);
-  const [active, setActive] = useState(INITIAL_TAB);
+  const mounted = useRef(false);
+  const [active, setActive] = useState(0);
+
+  // Every tab change goes through select(), which keeps this in sync.
+  const activeRef = useRef(0);
 
   const select = (index: number) => {
-    if (index === active) return;
+    if (index === activeRef.current) return;
     // Capture where the pill is before React moves it to the new tab.
     pillState.current = Flip.getState("[data-tab-pill]");
+    activeRef.current = index;
     setActive(index);
   };
 
+  // Per-tab transitions: slide the pill, wipe in the new screen, and restart
+  // the auto-advance timer.
   useGSAP(
     () => {
       const state = pillState.current;
       pillState.current = null;
+      const isFirstRun = !mounted.current;
+      mounted.current = true;
+
+      // Keep the active tab centred when the bar scrolls (mobile).
+      const scroller = tabScroller.current;
+      const tab = tabRefs.current[active];
+      if (scroller && tab && scroller.scrollWidth > scroller.clientWidth) {
+        scroller.scrollTo({
+          left: tab.offsetLeft - (scroller.clientWidth - tab.offsetWidth) / 2,
+          behavior: isFirstRun ? "auto" : "smooth",
+        });
+      }
+
       if (!window.matchMedia(MEDIA.motion).matches) return;
 
       if (state) {
@@ -56,26 +81,40 @@ export function HeroShowcase() {
         });
       }
 
-      progress.current = gsap.fromTo(
+      if (!isFirstRun) {
+        gsap.fromTo(
+          `[data-screen="${active}"]`,
+          { clipPath: "inset(0% 0% 100% 0%)", scale: 1.04 },
+          {
+            clipPath: "inset(0% 0% 0% 0%)",
+            scale: 1,
+            duration: 0.9,
+            ease: EASE_OUT,
+          }
+        );
+      }
+
+      timer.current = gsap.fromTo(
         "[data-tab-progress]",
         { scaleX: 0 },
         {
           scaleX: 1,
           duration: AUTO_ADVANCE_SECONDS,
           ease: "none",
-          onComplete: () => select((active + 1) % PRODUCT_TABS.length),
+          onComplete: () => select((active + 1) % TAB_COUNT),
         }
       );
-      if (hovered.current) progress.current.pause();
+      if (hovered.current) timer.current.pause();
     },
     { scope: root, dependencies: [active], revertOnUpdate: true }
   );
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    const steps: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1 };
+    const step = steps[event.key];
     if (!step) return;
     event.preventDefault();
-    const next = (active + step + PRODUCT_TABS.length) % PRODUCT_TABS.length;
+    const next = (active + step + TAB_COUNT) % TAB_COUNT;
     select(next);
     tabRefs.current[next]?.focus();
   };
@@ -86,83 +125,94 @@ export function HeroShowcase() {
       className="flex w-full flex-col items-center"
       onPointerEnter={() => {
         hovered.current = true;
-        progress.current?.pause();
+        timer.current?.pause();
       }}
       onPointerLeave={() => {
         hovered.current = false;
-        progress.current?.resume();
+        timer.current?.resume();
       }}
     >
+      {/* On narrow screens the bar scrolls sideways, edge to edge. */}
       <div
+        ref={tabScroller}
         data-intro="tabs"
-        role="tablist"
-        aria-label="Product areas"
-        onKeyDown={onKeyDown}
-        className="mt-[45px] flex h-[50px] items-center gap-2 rounded-full border border-neutral-300 bg-white p-1 shadow-[inset_0_2px_8px_rgb(0_0_0/0.04)]"
+        className="relative -mx-4 mt-[33px] w-[calc(100%+2rem)] overflow-x-auto px-4 py-3 [scrollbar-width:none] lg:mx-0 lg:mt-[45px] lg:w-auto lg:overflow-visible lg:px-0 lg:py-0 [&::-webkit-scrollbar]:hidden"
       >
-        {PRODUCT_TABS.map((tab, index) => {
-          const isActive = index === active;
-          return (
-            <button
-              key={tab.label}
-              ref={(el) => {
-                tabRefs.current[index] = el;
-              }}
-              id={`product-tab-${index}`}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              aria-controls="product-panel"
-              tabIndex={isActive ? 0 : -1}
-              onClick={() => select(index)}
-              className={cn(
-                "relative isolate h-10 overflow-hidden rounded-full px-4 text-[14px] leading-5 font-medium transition-colors duration-300",
-                isActive
-                  ? "text-brand-950"
-                  : "text-text-secondary hover:text-text-primary"
-              )}
-            >
-              {isActive && (
-                <span
-                  data-tab-pill
-                  data-flip-id="tab-pill"
-                  aria-hidden
-                  className="absolute inset-0 -z-10 rounded-full bg-brand-50"
-                >
-                  <span
-                    data-tab-progress
-                    className="absolute inset-x-4 bottom-1 h-[2px] origin-left scale-x-0 rounded-full bg-brand-950/20 motion-reduce:hidden"
-                  />
-                </span>
-              )}
-              {tab.label}
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          aria-label="Play product tour"
-          className="relative flex size-10 items-center justify-center rounded-full bg-white text-brand-950 shadow-[0_0_12px_rgb(0_0_0/0.04)]"
+        <div
+          role="tablist"
+          aria-label="Product areas"
+          onKeyDown={onKeyDown}
+          className="mx-auto flex h-[50px] w-max items-center gap-2 rounded-full border border-neutral-300 bg-white p-1 shadow-[inset_0_2px_8px_rgb(0_0_0/0.04)]"
         >
-          <span
-            aria-hidden
-            className="absolute inset-0 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite] rounded-full bg-brand-200/70 motion-reduce:hidden"
-          />
-          <CirclePlay className="relative size-5" strokeWidth={2.25} />
-        </button>
+          {PRODUCT_TABS.map((tab, index) => {
+            const isActive = index === active;
+            return (
+              <button
+                key={tab.label}
+                ref={(el) => {
+                  tabRefs.current[index] = el;
+                }}
+                id={`product-tab-${index}`}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls="product-panel"
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => select(index)}
+                className={cn(
+                  "relative isolate h-10 overflow-hidden rounded-full px-4 text-[14px] leading-5 font-medium transition-colors duration-300",
+                  isActive
+                    ? "text-brand-950"
+                    : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                {isActive && (
+                  <span
+                    data-tab-pill
+                    data-flip-id="tab-pill"
+                    aria-hidden
+                    className="absolute inset-0 -z-10 rounded-full bg-brand-50"
+                  >
+                    <span
+                      data-tab-progress
+                      className="absolute inset-x-4 bottom-1 h-[2px] origin-left scale-x-0 rounded-full bg-brand-950/20 motion-reduce:hidden"
+                    />
+                  </span>
+                )}
+                {tab.label}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            aria-label="Play product tour"
+            className="relative flex size-10 items-center justify-center rounded-full bg-white text-brand-950 shadow-[0_0_12px_rgb(0_0_0/0.04)]"
+          >
+            <span
+              aria-hidden
+              className="absolute inset-0 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite] rounded-full bg-brand-200/70 motion-reduce:hidden"
+            />
+            <CirclePlay className="relative size-5" strokeWidth={2.25} />
+          </button>
+        </div>
       </div>
 
-      <div data-intro="dashboard" className="mt-[28px] w-full max-w-[1208px]">
+      {/* Mobile shows a zoomed crop of the dashboard so it stays readable. */}
+      <div
+        data-intro="dashboard"
+        className="mt-[16px] w-full max-w-[1208px] overflow-hidden rounded-[12px] lg:mt-[28px] lg:overflow-visible lg:rounded-none"
+      >
         <div
           data-hero-tilt
           id="product-panel"
           role="tabpanel"
           aria-labelledby={`product-tab-${active}`}
-          className="grid will-change-transform"
+          className="grid w-[170%] will-change-transform lg:w-full"
         >
           {PRODUCT_TABS.map((tab, index) => (
             <Image
               key={tab.label}
+              data-screen={index}
               src={tab.screen}
               alt={
                 index === active
@@ -173,10 +223,13 @@ export function HeroShowcase() {
               width={1208}
               height={861}
               unoptimized
-              fetchPriority={index === INITIAL_TAB ? "high" : undefined}
+              fetchPriority={index === 0 ? "high" : undefined}
               className={cn(
-                "col-start-1 row-start-1 h-auto w-full transition-[opacity,scale] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
-                index === active ? "opacity-100" : "scale-[0.98] opacity-0"
+                "col-start-1 row-start-1 h-auto w-full",
+                index === active
+                  ? "z-10 opacity-100"
+                  : // Fade the old screen only after the new one has wiped in.
+                    "opacity-0 transition-opacity delay-500 duration-300"
               )}
             />
           ))}

@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { RollText } from "@/components/landing/RollText";
+
 const NAV_LINKS = [
   { label: "Product", href: "#product" },
   { label: "Solutions", href: "#solutions" },
@@ -15,7 +17,7 @@ export function LandingNav() {
     >
       <nav
         data-intro="nav"
-        className="mx-auto flex h-[100px] w-full max-w-[1200px] items-center px-4 transition-[height] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-data-[scrolled=true]:h-[72px] xl:px-0"
+        className="mx-auto flex h-[72px] w-full max-w-[1200px] items-center px-4 transition-[height] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] lg:h-[100px] lg:group-data-[scrolled=true]:h-[72px] xl:px-0"
       >
         <Link href="/" aria-label="Rise Classroom home" className="shrink-0">
           <Image
@@ -32,9 +34,9 @@ export function LandingNav() {
             <li key={link.label}>
               <Link
                 href={link.href}
-                className="relative text-[14px] leading-5 font-medium text-text-primary after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-current after:transition-transform after:duration-500 after:ease-[cubic-bezier(0.16,1,0.3,1)] hover:after:origin-left hover:after:scale-x-100"
+                className="text-[14px] leading-5 font-medium text-text-primary"
               >
-                {link.label}
+                <RollText>{link.label}</RollText>
               </Link>
             </li>
           ))}
@@ -45,13 +47,13 @@ export function LandingNav() {
             href="/sign-in"
             className="landing-btn flex h-10 items-center rounded-[14px] border border-neutral-200 bg-white px-4 text-[14px] leading-5 font-medium text-text-secondary [--btn-fill:var(--color-neutral-100)]"
           >
-            Sign in
+            <RollText>Sign in</RollText>
           </Link>
           <Link
             href="/onboarding/create-account"
             className="landing-btn flex h-10 items-center rounded-[14px] bg-brand-950 px-4 text-[14px] leading-5 font-medium text-white"
           >
-            Start for free
+            <RollText>Start for free</RollText>
           </Link>
         </div>
       </nav>

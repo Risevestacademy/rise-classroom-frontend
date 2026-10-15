@@ -35,12 +35,15 @@ const FAQS = [
 
 export function FaqSection() {
   return (
-    <section className="bg-brand-50 px-4 pt-[100px] pb-[44px]">
+    <section
+      data-bg="#F5F6FF"
+      className="bg-brand-50 px-4 pt-[72px] pb-[44px] lg:pt-[100px]"
+    >
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-10 lg:flex-row lg:justify-between lg:gap-0">
         <div className="lg:w-[328px]">
           <h2
-            data-reveal="lines"
-            className="text-[40px] leading-[48px] font-semibold text-text-primary"
+            data-reveal="words"
+            className="text-[32px] leading-[40px] font-semibold text-text-primary lg:text-[40px] lg:leading-[48px]"
           >
             Totally fair to ask.
           </h2>

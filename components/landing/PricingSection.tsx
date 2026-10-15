@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { RollText } from "@/components/landing/RollText";
+
 import { cn } from "@/lib/utils";
 
 const PLANS = [
@@ -24,11 +26,12 @@ export function PricingSection() {
   return (
     <section
       id="pricing"
-      className="flex flex-col items-center bg-white px-4 pt-[100px] pb-[254px]"
+      data-bg="#FFFFFF"
+      className="flex flex-col items-center bg-white px-4 pt-[72px] pb-[96px] lg:pt-[100px] lg:pb-[254px]"
     >
       <h2
-        data-reveal="lines"
-        className="text-center text-[48px] leading-[56px] font-bold text-text-primary"
+        data-reveal="chars"
+        className="text-center text-[36px] leading-[44px] font-bold text-text-primary lg:text-[48px] lg:leading-[56px]"
       >
         Start free.
         <br />
@@ -42,17 +45,14 @@ export function PricingSection() {
         community expands.
       </p>
 
-      <ul
-        data-reveal-group
-        className="mt-[80px] grid w-full max-w-[947px] gap-[15px] md:grid-cols-2"
-      >
+      <ul className="mt-12 grid lg:mt-[80px] w-full max-w-[947px] gap-[15px] md:grid-cols-2">
         {PLANS.map((plan) => (
           <li
             key={plan.title}
-            data-reveal-item
+            data-pricing-card
             data-tilt
             className={cn(
-              "rounded-[16px] p-10",
+              "rounded-[16px] p-6 lg:p-10",
               plan.featured
                 ? "bg-neutral-50 shadow-[0_1px_2px_rgb(17_24_25/0.12),0_0_0_1px_rgb(17_24_25/0.04)]"
                 : "border border-neutral-200 bg-white"
@@ -89,7 +89,7 @@ export function PricingSection() {
                   : "border border-neutral-200 bg-white text-brand-950 [--btn-fill:var(--color-neutral-100)]"
               )}
             >
-              {plan.cta.label}
+              <RollText>{plan.cta.label}</RollText>
             </Link>
           </li>
         ))}

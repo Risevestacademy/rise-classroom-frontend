@@ -3,10 +3,12 @@ export function TestimonialsSection() {
   return (
     <section
       data-testimonials
-      className="h-[904px] bg-brand-950 px-4 pt-[100px] lg:px-[100px]"
+      data-bg="#080D38"
+      data-bg-keep
+      className="h-[480px] bg-brand-950 px-4 pt-[72px] lg:h-[904px] lg:px-[100px] lg:pt-[100px]"
     >
       <h2
-        data-reveal="up"
+        data-reveal="scramble"
         className="text-[18px] leading-6 font-semibold text-white uppercase"
       >
         Words from our community
