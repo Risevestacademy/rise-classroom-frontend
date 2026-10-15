@@ -71,6 +71,20 @@ function EmptyState({
 }
 
 export default function TrackDetails() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex flex-col bg-neutral-100 p-6 space-y-6">
+          <Skeleton className="h-8 w-48 bg-neutral-200" />
+        </div>
+      }
+    >
+      <TrackDetailsContent />
+    </React.Suspense>
+  );
+}
+
+function TrackDetailsContent() {
   const searchParams = useSearchParams();
   const assignmentId = searchParams.get("id");
 
@@ -144,7 +158,7 @@ export default function TrackDetails() {
     "relative bg-transparent p-0 pb-3 text-base font-medium text-neutral-500 shadow-none transition-none hover:text-neutral-800 data-[state=active]:bg-transparent data-[state=active]:text-neutral-800 data-[state=active]:shadow-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-primary after:opacity-0 data-[state=active]:after:opacity-100";
 
   return (
-    <div className="flex flex-col bg-neutral-100 p-6 space-y-6">
+    <div className="flex flex-col h-full bg-neutral-100 p-6 space-y-6">
       <div id="heading" className="flex flex-row w-full items-center justify-between">
         <div>
           {trackQuery.isLoading ? (
