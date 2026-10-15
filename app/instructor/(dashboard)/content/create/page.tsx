@@ -1,9 +1,9 @@
 "use client";
 
-import { CreateModulePage } from "@/components/instructor-dashboard/CreateModulePage";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-// import { CreateLessonPage } from "@/components/instructor-dashboard/CreateLessonPage";
+import { CreateModulePage } from "@/components/instructor-dashboard/CreateModulePage";
+import { CreateLessonPage } from "@/components/instructor-dashboard/CreateLessonPage";
 // import { CreateResourcePage } from "@/components/instructor-dashboard/CreateResourcePage";
 
 function CreatePageContent() {
@@ -13,7 +13,7 @@ function CreatePageContent() {
   return (
     <div className="flex flex-col bg-neutral-50 p-6 space-y-6">
       {type === "modules" && <CreateModulePage />}
-      {/* {type === "lessons" && <CreateLessonPage />} */}
+      {type === "lessons" && <CreateLessonPage />}
       {/* {type === "resources" && <CreateTrackForm />} */}
     </div>
   );
