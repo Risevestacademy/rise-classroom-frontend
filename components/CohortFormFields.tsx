@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { z } from "zod";
-import { AlertCircle, ChevronDown } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 import { FormField } from "@/components/ui/field";
+import { StatusSelect } from "@/components/ui/status-select";
 import type { CohortStatus } from "@/lib/admin";
 
 export const cohortFormSchema = z
@@ -167,33 +168,17 @@ export function CohortStatusSelect({
   value: CohortStatus;
   onChange: (value: CohortStatus) => void;
 }) {
-  const id = React.useId();
-
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-neutral-800">
-        Status
-      </label>
-      <div className="relative">
-        <select
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value as CohortStatus)}
-          className="h-11 w-full appearance-none rounded-lg border border-neutral-200 bg-transparent px-3 pr-9 text-sm text-neutral-800 outline-none focus:border-brand-primary"
-        >
-          {Object.entries(cohortStatusLabels).map(([status, label]) => (
-            <option key={status} value={status}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-      </div>
+    <StatusSelect
+      value={value}
+      onChange={onChange}
+      options={cohortStatusLabels}
+    >
       {value !== "ONGOING" && (
         <p className="text-xs text-neutral-400">
           Students and instructors can only be invited to ongoing cohorts.
         </p>
       )}
-    </div>
+    </StatusSelect>
   );
 }

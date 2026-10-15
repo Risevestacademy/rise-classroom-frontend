@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -61,12 +61,12 @@ export function EditCohortDialog({
         type="button"
         aria-label={`Edit ${cohortName}`}
         onClick={() => setOpen(true)}
-        className="text-neutral-300 hover:text-neutral-600"
+        className="text-neutral-400 hover:text-neutral-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <Pencil className="h-4 w-4" />
+        <MoreHorizontal className="h-4 w-4" />
       </button>
 
-      <DialogContent className="w-[520px]">
+      <DialogContent className="w-130">
         <DialogHeader>
           <DialogTitle>Edit cohort</DialogTitle>
           <DialogDescription>

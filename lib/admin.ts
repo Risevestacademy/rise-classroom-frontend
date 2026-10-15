@@ -116,11 +116,6 @@ async function getUser(id: string) {
   return data;
 }
 
-/**
- * Just the number of matching users. Asks for a single row and reads the
- * `total` off the pagination envelope, so a headline figure doesn't pull down
- * a full page of records.
- */
 async function countUsers(filters: UserFilters = {}) {
   const { total } = await listUsers({ ...filters, limit: 1 });
   return total;
@@ -131,6 +126,11 @@ async function listTracks(status?: TrackStatus) {
     query: { status },
   });
 
+  return data;
+}
+
+async function getTrack(id: string) {
+  const { data } = await api.get<Envelope<Track>>(`/admin/tracks/${id}`);
   return data;
 }
 
@@ -177,6 +177,53 @@ export function createTrack(input: CreateTrackInput) {
   return api.post<Envelope<Track>>("/admin/tracks", input);
 }
 
+export type UpdateTrackInput = Partial<
+  CreateTrackInput & { status: TrackStatus }
+>;
+
+export function updateTrack(id: string, input: UpdateTrackInput) {
+  return api.patch<Envelope<Track>>(`/admin/tracks/${id}`, input);
+}
+
+/** The PATCH body for a draft: only the fields that differ from the track. */
+export function trackChanges(
+  track: Track,
+  draft: { name: string; description: string; status: TrackStatus },
+) {
+  const changes: UpdateTrackInput = {};
+  const name = draft.name.trim();
+  const description = draft.description.trim();
+
+  if (name !== track.name) changes.name = name;
+  if (description !== track.description) changes.description = description;
+  if (draft.status !== track.status) changes.status = draft.status;
+
+  return changes;
+}
+
+export function getTrackErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return "We couldn't reach the server. Check your connection and try again.";
+  }
+
+  const accessMessage = getAdminAccessErrorMessage(error);
+  if (accessMessage) return accessMessage;
+
+  if (error.status === 404) {
+    return "This track no longer exists. Refresh the page to see the latest list.";
+  }
+
+  if (error.status === 409) {
+    return "A track with this name already exists. Choose a different name.";
+  }
+
+  if (error.status >= 500) {
+    return "We couldn't save the track. Please try again.";
+  }
+
+  return error.message || "We couldn't save the track. Please try again.";
+}
+
 export function inviteUser(input: InviteUserInput) {
   return api.post<Envelope<InviteUserResult>>("/admin/users", input);
 }
@@ -187,6 +234,41 @@ export function inviteUsersBulk(users: InviteUserInput[]) {
 
 export function resendInvite(userId: string) {
   return api.post<Envelope<unknown>>(`/admin/users/${userId}/resend-invite`);
+}
+
+export type UpdateUserInput = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  status?: UserStatus;
+};
+
+export type UpdateUserResult = {
+  user: AdminUser;
+  emailSent?: boolean;
+};
+
+export function updateUser(id: string, input: UpdateUserInput) {
+  return api.patch<Envelope<UpdateUserResult>>(`/admin/users/${id}`, input);
+}
+
+export type UserDraft = Pick<
+  AdminUser,
+  "firstName" | "lastName" | "email" | "status"
+>;
+
+export function userChanges(user: AdminUser, draft: UserDraft) {
+  const changes: UpdateUserInput = {};
+  const firstName = draft.firstName.trim();
+  const lastName = draft.lastName.trim();
+  const email = draft.email.trim();
+
+  if (firstName !== user.firstName) changes.firstName = firstName;
+  if (lastName !== user.lastName) changes.lastName = lastName;
+  if (email !== user.email) changes.email = email;
+  if (draft.status !== user.status) changes.status = draft.status;
+
+  return changes;
 }
 
 function getAdminAccessErrorMessage(error: ApiError) {
@@ -258,7 +340,48 @@ export function getCohortErrorMessage(error: unknown) {
   return error.message || "We couldn't save the cohort. Please try again.";
 }
 
-/** The cohort and track names shown against a user, whatever their role. */
+export function getUpdateUserErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return "We couldn't reach the server. Check your connection and try again.";
+  }
+
+  const accessMessage = getAdminAccessErrorMessage(error);
+  if (accessMessage) return accessMessage;
+
+  if (error.status === 404) {
+    return "This user no longer exists. Refresh the page to see the latest list.";
+  }
+
+  if (error.status === 409) {
+    return "Another account already uses this email address.";
+  }
+
+  if (error.status >= 500) {
+    return "We couldn't save these changes. Please try again.";
+  }
+
+  return error.message || "We couldn't save these changes. Please try again.";
+}
+
+export function getResendInviteErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return "We couldn't reach the server. Check your connection and try again.";
+  }
+
+  const accessMessage = getAdminAccessErrorMessage(error);
+  if (accessMessage) return accessMessage;
+
+  if (error.status === 404) {
+    return "This user no longer exists. Refresh the page to see the latest list.";
+  }
+
+  if (error.status === 502) {
+    return "We couldn't send the email. Please try again.";
+  }
+
+  return error.message || "We couldn't resend the invite. Please try again.";
+}
+
 export function assignmentsFor(user: AdminUser) {
   const tracks = new Set<string>();
   const cohorts = new Set<string>();
@@ -287,6 +410,8 @@ export const adminKeys = {
   userCount: (filters: UserFilters = {}) =>
     ["admin", "users", "count", filters] as const,
   tracks: (status?: TrackStatus) => ["admin", "tracks", status] as const,
+  track: (id: string) => ["admin", "tracks", "detail", id] as const,
+  allTracks: () => ["admin", "tracks"] as const,
   cohorts: (status?: CohortStatus) => ["admin", "cohorts", status] as const,
   cohort: (id: string) => ["admin", "cohorts", "detail", id] as const,
   allCohorts: () => ["admin", "cohorts"] as const,
@@ -311,8 +436,6 @@ export const adminQueries = {
       queryFn: () => countUsers(filters),
     }),
 
-  // Tracks and cohorts are program structure — they change far less often than
-  // headcounts, so they can sit in cache much longer.
   tracks: (status?: TrackStatus) =>
     queryOptions({
       queryKey: adminKeys.tracks(status),
@@ -331,5 +454,11 @@ export const adminQueries = {
     queryOptions({
       queryKey: adminKeys.cohort(id),
       queryFn: () => getCohort(id),
+    }),
+
+  track: (id: string) =>
+    queryOptions({
+      queryKey: adminKeys.track(id),
+      queryFn: () => getTrack(id),
     }),
 };

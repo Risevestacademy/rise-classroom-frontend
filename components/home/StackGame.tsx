@@ -13,10 +13,10 @@ import {
 } from "@/lib/stack-game";
 
 /** Mirrors the tokens in app/globals.css — canvas can't read Tailwind classes. */
-const INK = "#111819"; // neutral-700
+const INK = "#111819"; // neutral-800
 const WHITE = [255, 255, 255];
-const TEAL_TINT = [180, 210, 213]; // decorative tint (not a design token)
-const TEAL = [13, 109, 120]; // brand-primary
+const BRAND_TINT = [184, 191, 255]; // brand-300
+const BRAND = [8, 13, 56]; // brand-primary / brand-950
 
 type Phase = "ready" | "playing" | "over" | "won";
 
@@ -44,10 +44,10 @@ function mix(a: number[], b: number[], t: number) {
   return a.map((channel, i) => Math.round(channel + (b[i] - channel) * t));
 }
 
-/** The tower rises through the brand teal: white → teal tint → brand-primary. */
+/** The tower rises through the brand ramp: white → brand-300 → brand-primary. */
 function fillFor(level: number) {
   const t = Math.min(level / GRADUATION_WEEK, 1);
-  const [r, g, b] = t < 0.5 ? mix(WHITE, TEAL_TINT, t / 0.5) : mix(TEAL_TINT, TEAL, (t - 0.5) / 0.5);
+  const [r, g, b] = t < 0.5 ? mix(WHITE, BRAND_TINT, t / 0.5) : mix(BRAND_TINT, BRAND, (t - 0.5) / 0.5);
   return { fill: `rgb(${r}, ${g}, ${b})`, dark: t > 0.62 };
 }
 

@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Hash, MoreHorizontal, ChevronDown } from "lucide-react";
+import { Hash, ChevronDown } from "lucide-react";
 
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { CreateTrackDialog } from "@/components/CreateTrackDialog";
+import { EditTrackDialog } from "@/components/EditTrackDialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminQueries, type TrackStatus } from "@/lib/admin";
@@ -128,7 +129,7 @@ export default function TracksPage() {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-left text-sm">
+                <table className="w-full min-w-160 text-left text-sm">
                   <thead className="text-xs tracking-wider text-neutral-400 uppercase">
                     <tr>
                       <th className="px-5 py-3">Track</th>
@@ -206,13 +207,10 @@ export default function TracksPage() {
                             {formatDate(track.createdAt)}
                           </td>
                           <td className="px-5 py-4">
-                            <button
-                              type="button"
-                              aria-label="Row actions"
-                              className="text-neutral-300 hover:text-neutral-600"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </button>
+                            <EditTrackDialog
+                              trackId={track.id}
+                              trackName={track.name}
+                            />
                           </td>
                         </tr>
                       ))

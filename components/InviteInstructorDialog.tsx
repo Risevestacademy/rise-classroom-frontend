@@ -30,6 +30,7 @@ import {
   inviteUsersBulk,
   type InviteUserInput,
 } from "@/lib/admin";
+import { readSpreadsheetAsCsv, spreadsheetAccept } from "@/lib/spreadsheet";
 
 /** One row parsed out of an uploaded CSV. */
 type CsvRow = {
@@ -220,7 +221,7 @@ export function InviteInstructorDialog() {
     setCsvError(null);
 
     try {
-      const { rows, skipped } = parseInstructorCsv(await file.text());
+      const { rows, skipped } = parseInstructorCsv(await readSpreadsheetAsCsv(file));
 
       if (rows.length === 0) {
         setCsvError(
@@ -234,7 +235,7 @@ export function InviteInstructorDialog() {
       setSelectedRows(rows.map(() => true));
       setStep("bulk-review");
     } catch {
-      setCsvError("That file couldn't be read. Please upload a CSV.");
+      setCsvError("That file couldn't be read. Please upload a CSV or Excel file.");
     }
   }
 
@@ -449,7 +450,7 @@ function ChoiceStep({
             <Upload className="h-5 w-5" />
           </span>
           <span className="flex w-full items-center justify-between font-semibold text-neutral-800">
-            Upload CSV
+            Upload file
             <ArrowRight className="h-4 w-4 text-neutral-300" />
           </span>
           <span className="text-sm text-neutral-400">
@@ -821,9 +822,9 @@ function BulkUploadStep({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Upload Instructor CSV</DialogTitle>
+        <DialogTitle>Upload Instructor file</DialogTitle>
         <DialogDescription>
-          Upload a CSV with the columns <code>firstName</code>,{" "}
+          Upload a CSV or Excel file with the columns <code>firstName</code>,{" "}
           <code>lastName</code> and <code>email</code>. We&apos;ll help you
           assign everyone to a cohort and track.
         </DialogDescription>
@@ -845,12 +846,12 @@ function BulkUploadStep({
         <p className="font-medium text-neutral-800">
           Choose a file or drag &amp; drop it here.
         </p>
-        <p className="text-sm text-neutral-400">CSV format only, up to 10 MB.</p>
+        <p className="text-sm text-neutral-400">CSV or Excel (.xlsx), up to 10 MB.</p>
 
         <input
           ref={inputRef}
           type="file"
-          accept=".csv,text/csv"
+          accept={spreadsheetAccept}
           className="hidden"
           onChange={(event) => {
             const file = event.target.files?.[0];

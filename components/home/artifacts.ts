@@ -13,15 +13,15 @@ export type Rgb = readonly [number, number, number];
 
 /** Mirrors the tokens in app/globals.css — canvas can't read Tailwind classes. */
 export const PALETTE = {
-  ink: "#111819", // neutral-700
-  muted: "#647274", // neutral-300
-  faint: "#CBD5D6", // neutral-200
+  ink: "#111819", // neutral-800
+  muted: "#647274", // neutral-400
+  faint: "#CBD5D6", // neutral-300
   white: "#FFFFFF",
-  teal: [13, 109, 120] as Rgb, // brand-primary
-  tint50: [232, 245, 246] as Rgb, // surface-brand
-  tint100: [180, 210, 213] as Rgb, // decorative tint (not a design token)
-  tint200: [144, 188, 193] as Rgb, // decorative tint (not a design token)
-  tint300: [93, 157, 165] as Rgb, // decorative tint (not a design token)
+  brand: [8, 13, 56] as Rgb, // brand-primary / brand-950
+  brand50: [245, 246, 255] as Rgb, // surface-brand / brand-50
+  brand300: [184, 191, 255] as Rgb, // brand-300
+  brand400: [146, 155, 255] as Rgb, // brand-400
+  brand500: [108, 119, 230] as Rgb, // brand-500
   success: [46, 125, 50] as Rgb, // icon-success
   warning: [138, 97, 0] as Rgb, // icon-warning
 };
@@ -82,16 +82,16 @@ function designFrame(r: Rect): Artifact {
   const button = { w: r.w * 0.26, h: r.h * 0.1 };
 
   const blocks: BlockSpec[] = [
-    dot(r.x + p + avatar / 2, r.y + p + avatar / 2, avatar, PALETTE.tint100),
-    pill(textX, r.y + p + avatar * 0.18, r.w * 0.34, r.h * 0.065, PALETTE.teal),
-    pill(textX, r.y + p + avatar * 0.62, r.w * 0.22, r.h * 0.05, PALETTE.tint200),
+    dot(r.x + p + avatar / 2, r.y + p + avatar / 2, avatar, PALETTE.brand300),
+    pill(textX, r.y + p + avatar * 0.18, r.w * 0.34, r.h * 0.065, PALETTE.brand),
+    pill(textX, r.y + p + avatar * 0.62, r.w * 0.22, r.h * 0.05, PALETTE.brand400),
     ...[0, 1, 2].map((i) =>
-      pill(r.x + p, r.y + p + avatar + p * 0.9 + i * r.h * 0.085, r.w * (0.3 - i * 0.04), r.h * 0.045, PALETTE.tint200)
+      pill(r.x + p, r.y + p + avatar + p * 0.9 + i * r.h * 0.085, r.w * (0.3 - i * 0.04), r.h * 0.045, PALETTE.brand400)
     ),
-    ...[PALETTE.teal, PALETTE.tint300, PALETTE.success, PALETTE.warning].map((color, i) =>
+    ...[PALETTE.brand, PALETTE.brand500, PALETTE.success, PALETTE.warning].map((color, i) =>
       dot(r.x + p + swatch / 2 + i * swatch * 1.35, r.y + r.h - p - swatch / 2, swatch, color)
     ),
-    pill(r.x + r.w - p - button.w, r.y + r.h - p - button.h, button.w, button.h, PALETTE.teal),
+    pill(r.x + r.w - p - button.w, r.y + r.h - p - button.h, button.w, button.h, PALETTE.brand),
   ];
 
   return {
@@ -160,20 +160,20 @@ function browserWindow(r: Rect): Artifact {
 
   const blocks: BlockSpec[] = [
     ...[0, 1, 2].map((i) =>
-      dot(r.x + p * 0.8 + i * chrome * 0.42, r.y + chrome / 2, chrome * 0.26, PALETTE.tint200)
+      dot(r.x + p * 0.8 + i * chrome * 0.42, r.y + chrome / 2, chrome * 0.26, PALETTE.brand400)
     ),
-    pill(r.x + r.w * 0.3, r.y + chrome * 0.29, r.w * 0.5, chrome * 0.42, PALETTE.tint50),
-    box(r.x + p, top, r.h * 0.06, r.h * 0.06, PALETTE.teal),
+    pill(r.x + r.w * 0.3, r.y + chrome * 0.29, r.w * 0.5, chrome * 0.42, PALETTE.brand50),
+    box(r.x + p, top, r.h * 0.06, r.h * 0.06, PALETTE.brand),
     ...[0, 1, 2].map((i) =>
-      pill(r.x + r.w - p - r.w * 0.1 * (i + 1) - p * 0.4 * i, top + r.h * 0.015, r.w * 0.1, r.h * 0.03, PALETTE.tint200)
+      pill(r.x + r.w - p - r.w * 0.1 * (i + 1) - p * 0.4 * i, top + r.h * 0.015, r.w * 0.1, r.h * 0.03, PALETTE.brand400)
     ),
-    pill(r.x + p, top + r.h * 0.12, inner * 0.68, r.h * 0.07, PALETTE.teal),
-    pill(r.x + p, top + r.h * 0.21, inner * 0.48, r.h * 0.07, PALETTE.teal),
-    pill(r.x + p, top + r.h * 0.31, inner * 0.6, r.h * 0.035, PALETTE.tint200),
-    pill(r.x + p, top + r.h * 0.37, inner * 0.5, r.h * 0.035, PALETTE.tint200),
-    pill(r.x + p, top + r.h * 0.45, r.w * 0.24, r.h * 0.085, PALETTE.teal),
+    pill(r.x + p, top + r.h * 0.12, inner * 0.68, r.h * 0.07, PALETTE.brand),
+    pill(r.x + p, top + r.h * 0.21, inner * 0.48, r.h * 0.07, PALETTE.brand),
+    pill(r.x + p, top + r.h * 0.31, inner * 0.6, r.h * 0.035, PALETTE.brand400),
+    pill(r.x + p, top + r.h * 0.37, inner * 0.5, r.h * 0.035, PALETTE.brand400),
+    pill(r.x + p, top + r.h * 0.45, r.w * 0.24, r.h * 0.085, PALETTE.brand),
     ...[0, 1, 2].map((i) =>
-      box(r.x + p + i * (tileW + tile.gap), r.y + r.h - p - tile.h, tileW, tile.h, PALETTE.tint100)
+      box(r.x + p + i * (tileW + tile.gap), r.y + r.h - p - tile.h, tileW, tile.h, PALETTE.brand300)
     ),
   ];
 
@@ -202,17 +202,17 @@ function codeEditor(r: Rect): Artifact {
   const indent = r.w * 0.06;
 
   const lines: [number, [number, Rgb][]][] = [
-    [0, [[0.14, PALETTE.teal], [0.24, PALETTE.tint200]]],
-    [0, [[0.4, PALETTE.tint200]]],
-    [0, [[0.12, PALETTE.teal], [0.2, PALETTE.tint300], [0.1, PALETTE.tint200]]],
-    [1, [[0.1, PALETTE.teal], [0.3, PALETTE.tint200]]],
+    [0, [[0.14, PALETTE.brand], [0.24, PALETTE.brand400]]],
+    [0, [[0.4, PALETTE.brand400]]],
+    [0, [[0.12, PALETTE.brand], [0.2, PALETTE.brand500], [0.1, PALETTE.brand400]]],
+    [1, [[0.1, PALETTE.brand], [0.3, PALETTE.brand400]]],
     [2, [[0.26, PALETTE.success]]],
-    [1, [[0.08, PALETTE.teal], [0.2, PALETTE.tint200]]],
-    [0, [[0.05, PALETTE.tint200]]],
+    [1, [[0.08, PALETTE.brand], [0.2, PALETTE.brand400]]],
+    [0, [[0.05, PALETTE.brand400]]],
   ];
 
   const blocks: BlockSpec[] = [
-    pill(r.x + p, r.y + header * 0.25, r.w * 0.34, header * 0.5, PALETTE.tint50),
+    pill(r.x + p, r.y + header * 0.25, r.w * 0.34, header * 0.5, PALETTE.brand50),
   ];
   lines.forEach(([depth, parts], row) => {
     let x = codeX + depth * indent;
@@ -273,18 +273,18 @@ function phoneScreen(slot: Rect): Artifact {
   const cta = w * 0.22;
 
   const blocks: BlockSpec[] = [
-    dot(r.x + w / 2, r.y + h * 0.16, avatar, PALETTE.tint100),
-    pill(r.x + (w - w * 0.5) / 2, r.y + h * 0.27, w * 0.5, h * 0.03, PALETTE.teal),
+    dot(r.x + w / 2, r.y + h * 0.16, avatar, PALETTE.brand300),
+    pill(r.x + (w - w * 0.5) / 2, r.y + h * 0.27, w * 0.5, h * 0.03, PALETTE.brand),
   ];
   for (let i = 0; i < 3; i++) {
     const y = fieldsTop + i * (field.h + field.gap);
     blocks.push(
-      box(r.x + p, y, field.w, field.h, PALETTE.tint50),
-      dot(r.x + p + field.h / 2, y + field.h / 2, field.h * 0.4, PALETTE.tint200),
-      pill(r.x + p + field.h, y + field.h * 0.38, field.w * 0.45, field.h * 0.24, PALETTE.tint200)
+      box(r.x + p, y, field.w, field.h, PALETTE.brand50),
+      dot(r.x + p + field.h / 2, y + field.h / 2, field.h * 0.4, PALETTE.brand400),
+      pill(r.x + p + field.h, y + field.h * 0.38, field.w * 0.45, field.h * 0.24, PALETTE.brand400)
     );
   }
-  blocks.push(dot(r.x + w / 2, r.y + h * 0.84, cta, PALETTE.teal));
+  blocks.push(dot(r.x + w / 2, r.y + h * 0.84, cta, PALETTE.brand));
 
   return {
     track: "Mobile",
