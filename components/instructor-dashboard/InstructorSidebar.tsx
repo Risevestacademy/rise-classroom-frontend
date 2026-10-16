@@ -38,7 +38,6 @@ const overviewNavItems: NavItem[] = [
 const programNavItems: NavItem[] = [
   { title: "My Tracks", href: "/instructor/my-tracks", icon: FolderKanban },
   { title: "Students", href: "/instructor/students", icon: Users },
-  { title: "Content", href: "/instructor/content", icon: FolderOpen },
 ];
 
 const teachingNavItems: NavItem[] = [
