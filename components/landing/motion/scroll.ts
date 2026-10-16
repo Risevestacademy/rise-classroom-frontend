@@ -414,7 +414,10 @@ export function pricingCards({ perItem }: { perItem: boolean }) {
   );
 }
 
-/** The footer wordmark rises and unclips as the page lifts off the footer. */
+/**
+ * The footer wordmark rises and unclips as the page lifts off the footer,
+ * while its dot layers drift past each other.
+ */
 export function footerReveal() {
   const main = one("[data-landing-main]");
   const wordmark = one("[data-footer-wordmark]");
@@ -422,10 +425,11 @@ export function footerReveal() {
 
   gsap.fromTo(
     wordmark,
-    { yPercent: 30, clipPath: "inset(100% 0% 0% 0%)" },
+    { yPercent: 30, clipPath: "inset(100% 0% 0% 0%)", "--dots-shift": -1 },
     {
       yPercent: 0,
       clipPath: "inset(0% 0% 0% 0%)",
+      "--dots-shift": 0,
       ease: "none",
       scrollTrigger: {
         trigger: main,

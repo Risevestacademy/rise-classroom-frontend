@@ -36,6 +36,7 @@ const FAQS = [
 export function FaqSection() {
   return (
     <section
+      id="faq"
       data-bg="#F5F6FF"
       className="bg-brand-50 px-4 pt-[72px] pb-[44px] lg:pt-[100px]"
     >

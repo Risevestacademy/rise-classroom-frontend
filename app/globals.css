@@ -323,3 +323,42 @@ body {
 :root:has([data-landing-main]) {
   scroll-padding-top: 72px;
 }
+
+/*
+ * Footer wordmark: white letters speckled with overlapping print dots. Each
+ * layer tiles at a different size so the dots never line up into a grid.
+ * Everything is in em so the dots scale with the type, and --dots-shift
+ * (tweened on scroll) slides the layers past each other.
+ */
+.wordmark-dots {
+  --dot: 0.05em;
+  --s: var(--dots-shift, 0);
+  background-color: #fff;
+  background-image:
+    radial-gradient(circle at 50% 50%, #1a12ff var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 15% 75%, #1a12ff var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 20% 30%, #ff1ae8 var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 75% 85%, #ff1ae8 var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 70% 40%, #00f0ff var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 30% 90%, #00f0ff var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 85% 15%, #00f0ff var(--dot), transparent calc(var(--dot) + 0.5px));
+  background-size:
+    0.9em 0.8em,
+    1.13em 0.97em,
+    0.47em 0.53em,
+    0.67em 0.61em,
+    0.41em 0.57em,
+    0.59em 0.43em,
+    0.73em 0.79em;
+  background-position:
+    calc(var(--s) * 1em) 0,
+    calc(var(--s) * -0.6em) calc(var(--s) * 0.2em),
+    calc(var(--s) * 0.8em) 0,
+    calc(var(--s) * -1.1em) calc(var(--s) * -0.2em),
+    calc(var(--s) * 0.5em) 0,
+    calc(var(--s) * -0.4em) calc(var(--s) * 0.3em),
+    calc(var(--s) * 1.2em) 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
