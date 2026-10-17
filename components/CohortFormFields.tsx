@@ -5,7 +5,7 @@ import { z } from "zod";
 import { AlertCircle } from "lucide-react";
 
 import { FormField } from "@/components/ui/field";
-import { StatusSelect } from "@/components/ui/status-select";
+import { Select } from "@/components/ui/select";
 import type { CohortStatus } from "@/lib/admin";
 
 export const cohortFormSchema = z
@@ -169,7 +169,7 @@ export function CohortStatusSelect({
   onChange: (value: CohortStatus) => void;
 }) {
   return (
-    <StatusSelect
+    <Select
       value={value}
       onChange={onChange}
       options={cohortStatusLabels}
@@ -179,6 +179,6 @@ export function CohortStatusSelect({
           Students and instructors can only be invited to ongoing cohorts.
         </p>
       )}
-    </StatusSelect>
+    </Select>
   );
 }

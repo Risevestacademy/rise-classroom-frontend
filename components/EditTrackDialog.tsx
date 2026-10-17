@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusSelect } from "@/components/ui/status-select";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -155,7 +155,7 @@ function EditTrackForm({
           )}
         </Field.Root>
 
-        <StatusSelect
+        <Select
           value={status}
           onChange={setStatus}
           options={trackStatusLabels}
