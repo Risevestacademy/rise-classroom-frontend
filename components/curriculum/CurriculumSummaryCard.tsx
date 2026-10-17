@@ -2,7 +2,7 @@ import Image from "next/image";
 import { BookOpen, Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { TRACKS, type Curriculum } from "@/lib/curriculum";
+import { trackDetails, type Curriculum } from "@/lib/curriculum";
 
 export function CurriculumSummaryCard({
   curriculum,
@@ -44,7 +44,7 @@ export function CurriculumSummaryCard({
           {curriculum.title}
         </p>
         <p className="mt-0.5 text-sm text-neutral-500">
-          {TRACKS[curriculum.track].label} · {curriculum.cohort}
+          {trackDetails[curriculum.track].label} · {curriculum.cohort}
         </p>
 
         <div className="mt-4 flex items-start gap-3 rounded-lg bg-neutral-100 p-4">

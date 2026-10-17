@@ -17,16 +17,16 @@ import { FormField } from "@/components/ui/field";
 import { Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  COHORTS,
-  TRACKS,
+  cohortNames,
+  trackDetails,
   createCurriculum,
   curriculumKeys,
   type Cohort,
   type TrackKey,
 } from "@/lib/curriculum";
 
-const PLACEHOLDER_TITLE = "Design Track Curriculum";
-const PLACEHOLDER_DESCRIPTION =
+const placeholderTitle = "Design Track Curriculum";
+const placeholderDescription =
   "This curriculum is designed to help students build a strong foundation in product and ux design. It covers the full design process from research and ideation to prototyping and design systems.";
 
 export default function CreateCurriculumPage() {
@@ -92,7 +92,7 @@ export default function CreateCurriculumPage() {
                     size: "medium",
                     value: title,
                     onChange: (event) => setTitle(event.target.value),
-                    placeholder: PLACEHOLDER_TITLE,
+                    placeholder: placeholderTitle,
                     leadingIcon: null,
                   }}
                 />
@@ -103,7 +103,7 @@ export default function CreateCurriculumPage() {
                     <Textarea
                       value={description}
                       onChange={(event) => setDescription(event.target.value)}
-                      placeholder={PLACEHOLDER_DESCRIPTION}
+                      placeholder={placeholderDescription}
                       className="min-h-28"
                     />
                   </div>
@@ -123,7 +123,7 @@ export default function CreateCurriculumPage() {
                   label="Track"
                   value={track}
                   onChange={(value) => setTrack(value as TrackKey)}
-                  options={Object.entries(TRACKS).map(([key, t]) => ({
+                  options={Object.entries(trackDetails).map(([key, t]) => ({
                     value: key,
                     label: t.label,
                   }))}
@@ -133,7 +133,7 @@ export default function CreateCurriculumPage() {
                   label="Cohort"
                   value={cohort}
                   onChange={(value) => setCohort(value as Cohort)}
-                  options={COHORTS.map((c) => ({ value: c, label: c }))}
+                  options={cohortNames.map((c) => ({ value: c, label: c }))}
                 />
               </div>
             </section>
@@ -183,14 +183,14 @@ export default function CreateCurriculumPage() {
             <div className="p-5">
               <div className="flex flex-wrap items-center gap-3">
                 <p className="text-xl font-bold text-neutral-800">
-                  {title.trim() || PLACEHOLDER_TITLE}
+                  {title.trim() || placeholderTitle}
                 </p>
                 <Badge variant="light" status="success">
                   Active
                 </Badge>
               </div>
               <p className="mt-1 text-sm font-medium text-neutral-500">
-                {TRACKS[track].label} · {cohort}
+                {trackDetails[track].label} · {cohort}
               </p>
 
               <CurriculumStats

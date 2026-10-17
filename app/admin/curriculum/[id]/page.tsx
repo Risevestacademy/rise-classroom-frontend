@@ -44,7 +44,7 @@ import { SuccessToast } from "@/components/ui/toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/lib/api";
 import {
-  TRACKS,
+  trackDetails,
   curriculumKeys,
   curriculumQueries,
   deleteCurriculum,
@@ -53,7 +53,7 @@ import {
   type CurriculumModule,
 } from "@/lib/curriculum";
 
-const TABS = {
+const tabLabels = {
   overview: "Overview",
   modules: "Modules",
   assignments: "Assignments",
@@ -62,10 +62,10 @@ const TABS = {
   settings: "Settings",
 } as const;
 
-type TabKey = keyof typeof TABS;
+type TabKey = keyof typeof tabLabels;
 
 function isTabKey(value: unknown): value is TabKey {
-  return typeof value === "string" && value in TABS;
+  return typeof value === "string" && value in tabLabels;
 }
 
 export default function CurriculumDetailPage({
@@ -132,7 +132,7 @@ export default function CurriculumDetailPage({
   const curriculum = curriculumQuery.data;
   if (!curriculum) return null;
 
-  const track = TRACKS[curriculum.track];
+  const track = trackDetails[curriculum.track];
 
   return (
     <>
@@ -198,9 +198,9 @@ export default function CurriculumDetailPage({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-full overflow-x-auto">
               <TabsList variant="pill">
-                {(Object.keys(TABS) as TabKey[]).map((key) => (
+                {(Object.keys(tabLabels) as TabKey[]).map((key) => (
                   <TabsTrigger key={key} value={key}>
-                    {TABS[key]}
+                    {tabLabels[key]}
                   </TabsTrigger>
                 ))}
               </TabsList>

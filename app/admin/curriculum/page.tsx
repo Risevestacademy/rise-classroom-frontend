@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  TRACKS,
+  trackDetails,
   curriculumKeys,
   curriculumQueries,
   deleteCurriculum,
@@ -135,7 +135,7 @@ export default function CurriculumPage({
               </p>
             ) : (
               filtered.map((curriculum) => {
-                const track = TRACKS[curriculum.track];
+                const track = trackDetails[curriculum.track];
                 return (
                   <div key={curriculum.id} className="rounded-xl bg-white p-5">
                     <div className="flex items-start gap-3">

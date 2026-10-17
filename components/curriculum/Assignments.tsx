@@ -23,7 +23,7 @@ import { FileChip } from "@/components/ui/file-upload";
 import { DetailRows, DetailSheet } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  SUBMISSION_TYPES,
+  submissionTypes,
   curriculumKeys,
   curriculumQueries,
   deleteAssignment,
@@ -247,7 +247,7 @@ export function AssignmentsTab({
   );
 }
 
-const SHEET_TABS = [
+const sheetTabs = [
   { value: "overview", label: "Overview" },
   { value: "submissions", label: "Submissions" },
 ];
@@ -277,7 +277,7 @@ export function AssignmentSheet({
       {assignment && (
         <Tabs defaultValue="overview" className="gap-8">
           <TabsList variant="pill">
-            {SHEET_TABS.map((tab) => (
+            {sheetTabs.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value}>
                 {tab.label}
               </TabsTrigger>
@@ -303,7 +303,7 @@ function OverviewPanel({ assignment }: { assignment: ModuleAssignment }) {
     { label: "Type", value: assignment.type },
     {
       label: "Submission type",
-      value: SUBMISSION_TYPES[assignment.submissionType],
+      value: submissionTypes[assignment.submissionType],
     },
     {
       label: "Due date",

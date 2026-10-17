@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
 import {
-  RESOURCE_KINDS,
+  resourceKinds,
   createResource,
   curriculumKeys,
   curriculumQueries,
@@ -26,8 +26,8 @@ import {
   type ResourceKind,
 } from "@/lib/curriculum";
 
-const MAX_FILE_BYTES = 50e6;
-const WHOLE_MODULE = "module";
+const maxFileBytes = 50e6;
+const wholeModule = "module";
 
 export default function NewResourcePage({
   params,
@@ -51,7 +51,7 @@ export default function NewResourcePage({
   const selectedModuleId = moduleId || modules[0]?.id || "";
   const selectedModule = modules.find((m) => m.id === selectedModuleId);
   const lessons = selectedModule?.lessons ?? [];
-  const selectedLessonId = lessonId || lessons[0]?.id || WHOLE_MODULE;
+  const selectedLessonId = lessonId || lessons[0]?.id || wholeModule;
   const file = files[0];
   const backHref = `/admin/curriculum/${id}?tab=resources`;
 
@@ -59,7 +59,7 @@ export default function NewResourcePage({
     mutationFn: () =>
       createResource(
         selectedModuleId,
-        selectedLessonId === WHOLE_MODULE ? null : selectedLessonId,
+        selectedLessonId === wholeModule ? null : selectedLessonId,
         {
           name: file.name,
           sizeBytes: file.sizeBytes,
@@ -133,7 +133,7 @@ export default function NewResourcePage({
                     setKind(value as ResourceKind);
                     setFiles([]);
                   }}
-                  options={(Object.keys(RESOURCE_KINDS) as ResourceKind[]).map(
+                  options={(Object.keys(resourceKinds) as ResourceKind[]).map(
                     (k) => ({
                       value: k,
                       label: k,
@@ -169,9 +169,9 @@ export default function NewResourcePage({
                   files={files}
                   onChange={setFiles}
                   createFile={resourceFromUpload}
-                  extensions={RESOURCE_KINDS[kind].extensions}
-                  maxBytes={MAX_FILE_BYTES}
-                  formatsLabel={RESOURCE_KINDS[kind].formats}
+                  extensions={resourceKinds[kind].extensions}
+                  maxBytes={maxFileBytes}
+                  formatsLabel={resourceKinds[kind].formats}
                   multiple={false}
                 />
                 <Select
@@ -200,7 +200,7 @@ export default function NewResourcePage({
                       label: `Lesson ${index + 1}`,
                     })),
                     {
-                      value: WHOLE_MODULE,
+                      value: wholeModule,
                       label: "Whole module (no specific lesson)",
                     },
                   ]}

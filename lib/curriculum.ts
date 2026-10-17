@@ -13,7 +13,7 @@ import { ApiError } from "@/lib/api";
 // for API calls, so swapping in real endpoints only means replacing their
 // bodies. Data lives in memory and resets on a full page reload.
 
-export const TRACKS = {
+export const trackDetails = {
   design: {
     label: "Design",
     icon: PenTool,
@@ -39,10 +39,10 @@ export const TRACKS = {
   { label: string; icon: LucideIcon; iconClassName: string }
 >;
 
-export type TrackKey = keyof typeof TRACKS;
+export type TrackKey = keyof typeof trackDetails;
 
-export const COHORTS = ["Cohort 2026", "Cohort 2025"] as const;
-export type Cohort = (typeof COHORTS)[number];
+export const cohortNames = ["Cohort 2026", "Cohort 2025"] as const;
+export type Cohort = (typeof cohortNames)[number];
 
 export type ModuleStatus = "PUBLISHED" | "DRAFT";
 
@@ -59,19 +59,19 @@ export type ResourceFile = {
   status: ModuleStatus;
 };
 
-export const RESOURCE_KINDS = {
+export const resourceKinds = {
   PDF: { extensions: [".pdf"], formats: "PDF" },
   Video: { extensions: [".mp4"], formats: "MP4" },
   Document: { extensions: [".docx", ".pptx"], formats: "DOCX and PPTX" },
   Image: { extensions: [".jpeg", ".jpg", ".png"], formats: "JPEG and PNG" },
 } as const;
 
-export type ResourceKind = keyof typeof RESOURCE_KINDS;
+export type ResourceKind = keyof typeof resourceKinds;
 
 export function resourceKind(fileName: string): ResourceKind | "File" {
   const extension = `.${fileName.split(".").pop()?.toLowerCase()}`;
-  const match = (Object.keys(RESOURCE_KINDS) as ResourceKind[]).find((kind) =>
-    (RESOURCE_KINDS[kind].extensions as readonly string[]).includes(extension)
+  const match = (Object.keys(resourceKinds) as ResourceKind[]).find((kind) =>
+    (resourceKinds[kind].extensions as readonly string[]).includes(extension)
   );
   return match ?? "File";
 }
@@ -118,13 +118,13 @@ export type ModuleLesson = {
   resources: ResourceFile[];
 };
 
-export const SUBMISSION_TYPES = {
+export const submissionTypes = {
   FILE_UPLOAD: "File Upload",
   LINK: "Link",
   TEXT: "Text Entry",
 } as const;
 
-export type SubmissionType = keyof typeof SUBMISSION_TYPES;
+export type SubmissionType = keyof typeof submissionTypes;
 
 export type AssignmentSubmission = {
   id: string;
@@ -207,12 +207,12 @@ export type Curriculum = {
   notes: CurriculumNote[];
 };
 
-export const PROGRESS_MODES = {
+export const progressModes = {
   SEQUENTIAL: "Sequential",
   FLEXIBLE: "Flexible",
 } as const;
 
-export type ProgressMode = keyof typeof PROGRESS_MODES;
+export type ProgressMode = keyof typeof progressModes;
 
 export type CurriculumHistoryEntry = {
   id: string;
@@ -249,25 +249,25 @@ export type SaveModuleInput = Omit<
 
 // ---- Placeholder store ---------------------------------------------------
 
-const DESIGN_DESCRIPTION =
+const designDescription =
   "This curriculum is designed to help students build a strong foundation in product and ux design. It covers the full design process from research and ideation to prototyping and design systems.";
 
-const MODULE_DESCRIPTION =
+const moduleDescription =
   "Discover how product design turns user needs into useful, intuitive and meaningful experiences. Explore the core principles of colour, typography and layout, and learn how designers move from understanding a problem to developing a solution. Through real-world examples, see how thoughtful design improves everyday products and helps people achieve their goals.";
 
-const PLACEHOLDER_INSTRUCTOR = {
+const placeholderInstructor = {
   name: "Aishat Lawal",
   email: "aishatlawal21@gmail.com",
 };
 
-const PLACEHOLDER_NOTE_BODY =
+const placeholderNoteBody =
   "Added the new Design Systems module for Cohort 2026. The old component lesson has been moved to Module 6.";
 
-const PLACEHOLDER_NOTES: CurriculumNote[] = [
+const placeholderNotes: CurriculumNote[] = [
   {
     id: "n-1",
     title: "Curriculum update",
-    body: PLACEHOLDER_NOTE_BODY,
+    body: placeholderNoteBody,
     moduleId: "user-journey-mapping",
     author: "Aishat Lawal",
     createdAt: "2026-09-28T10:00:00",
@@ -276,7 +276,7 @@ const PLACEHOLDER_NOTES: CurriculumNote[] = [
   {
     id: "n-2",
     title: "Curriculum update",
-    body: PLACEHOLDER_NOTE_BODY,
+    body: placeholderNoteBody,
     moduleId: "user-journey-mapping",
     author: "Aishat Lawal",
     createdAt: "2026-09-28T09:00:00",
@@ -293,7 +293,7 @@ const PLACEHOLDER_NOTES: CurriculumNote[] = [
   },
 ];
 
-const PLACEHOLDER_LIVE_CLASSES: LiveClass[] = [
+const placeholderLiveClasses: LiveClass[] = [
   { id: "lc-1", title: "Foundations · Week 1", scheduledFor: "2026-10-10" },
   { id: "lc-2", title: "Color · Week 1", scheduledFor: null },
   { id: "lc-3", title: "layout · Week 1", scheduledFor: null },
@@ -308,7 +308,7 @@ function placeholderCurriculum(
   return {
     id,
     title,
-    description: DESIGN_DESCRIPTION,
+    description: designDescription,
     track,
     cohort: "Cohort 2026",
     status: "Active",
@@ -316,8 +316,8 @@ function placeholderCurriculum(
     totalLessons: totals[1],
     totalAssignments: totals[2],
     studentCount: 16,
-    instructor: PLACEHOLDER_INSTRUCTOR,
-    liveClasses: PLACEHOLDER_LIVE_CLASSES,
+    instructor: placeholderInstructor,
+    liveClasses: placeholderLiveClasses,
     publishStatus: "PUBLISHED",
     progressMode: "SEQUENTIAL",
     history: [
@@ -328,7 +328,7 @@ function placeholderCurriculum(
         at: "2026-10-08T10:00:00",
       },
     ],
-    notes: id === "design-track-curriculum" ? PLACEHOLDER_NOTES : [],
+    notes: id === "design-track-curriculum" ? placeholderNotes : [],
   };
 }
 
@@ -351,7 +351,7 @@ function placeholderFile(
   );
 }
 
-const PLACEHOLDER_STUDENT = {
+const placeholderStudent = {
   studentName: "Aishat Lawal",
   studentEmail: "aishatlawal21@gmail.com",
 };
@@ -378,7 +378,7 @@ function draftModule(id: string, curriculumId: string, title: string): Curriculu
     id,
     curriculumId,
     title,
-    description: MODULE_DESCRIPTION,
+    description: moduleDescription,
     status: "DRAFT",
     outcomes: [],
     recordingLink: "",
@@ -395,7 +395,7 @@ let modules: CurriculumModule[] = [
     id: "introduction-to-design",
     curriculumId: "design-track-curriculum",
     title: "Introduction to Design",
-    description: MODULE_DESCRIPTION,
+    description: moduleDescription,
     status: "PUBLISHED",
     outcomes: [
       "Understand the basics of visual hierarchy, contrast, and composition",
@@ -464,11 +464,11 @@ let modules: CurriculumModule[] = [
         submissions: [
           ...Array.from({ length: 5 }, (_, i) => ({
             id: `s-${i + 1}`,
-            ...PLACEHOLDER_STUDENT,
+            ...placeholderStudent,
             submittedAt: "2026-10-12T16:00:00",
             grade: null,
           })),
-          { id: "s-6", ...PLACEHOLDER_STUDENT, submittedAt: null, grade: null },
+          { id: "s-6", ...placeholderStudent, submittedAt: null, grade: null },
         ],
       },
       {
@@ -540,7 +540,7 @@ export async function createCurriculum(input: CreateCurriculumInput) {
     totalLessons: 0,
     totalAssignments: 0,
     studentCount: 0,
-    instructor: PLACEHOLDER_INSTRUCTOR,
+    instructor: placeholderInstructor,
     liveClasses: [],
     publishStatus: "DRAFT",
     progressMode: "SEQUENTIAL",
@@ -553,7 +553,7 @@ export async function createCurriculum(input: CreateCurriculumInput) {
 
 /** Describes a settings change for the version history, e.g. "changed module access to Flexible". */
 function describeChange(input: UpdateCurriculumInput) {
-  if (input.progressMode) return `changed module access to ${PROGRESS_MODES[input.progressMode]}`;
+  if (input.progressMode) return `changed module access to ${progressModes[input.progressMode]}`;
   if (input.publishStatus)
     return `changed curriculum status to ${input.publishStatus === "PUBLISHED" ? "Published" : "Draft"}`;
   return "updated the curriculum details";
