@@ -26,27 +26,72 @@ function drawStrokes(tl: gsap.core.Timeline, scope: Element, position: number) {
   return tl;
 }
 
-/** Hides the nav while scrolling down and brings it back when scrolling up. */
-export function navAutoHide() {
+/**
+ * Hides the nav while scrolling down and brings it back when scrolling up
+ * (unless `followScroll` is off). It always stays out of the way while the
+ * product tabs are stuck to the top, and once the footer is showing.
+ */
+export function navAutoHide({ followScroll = true } = {}) {
   const header = one("[data-landing-nav]");
   if (!header) return;
 
+  let scrollingDown = false;
+  let tabsStuck = false;
+  let footerShowing = false;
   let hidden = false;
-  ScrollTrigger.create({
-    start: 0,
-    end: "max",
-    onUpdate: (self) => {
-      const shouldHide = self.direction === 1 && self.scroll() > 400;
-      if (shouldHide === hidden) return;
-      hidden = shouldHide;
-      gsap.to(header, {
-        yPercent: hidden ? -100 : 0,
-        duration: 0.6,
-        ease: EASE_OUT,
-        overwrite: "auto",
-      });
-    },
-  });
+
+  const update = () => {
+    const shouldHide = scrollingDown || tabsStuck || footerShowing;
+    if (shouldHide === hidden) return;
+    hidden = shouldHide;
+    gsap.to(header, {
+      yPercent: hidden ? -100 : 0,
+      duration: followScroll ? 0.6 : 0,
+      ease: EASE_OUT,
+      overwrite: "auto",
+    });
+  };
+
+  if (followScroll) {
+    ScrollTrigger.create({
+      start: 0,
+      end: "max",
+      onUpdate: (self) => {
+        scrollingDown = self.direction === 1 && self.scroll() > 400;
+        update();
+      },
+    });
+  }
+
+  // The tab bar is sticky, so measure from the dashboard below it instead:
+  // the bar sticks about when the dashboard top passes 100px.
+  const tabs = one("[data-hero-tabs]");
+  const dashboard = one("[data-hero-dashboard]");
+  if (tabs && dashboard) {
+    ScrollTrigger.create({
+      trigger: dashboard,
+      start: "top 100px",
+      end: "bottom 100px",
+      onToggle: (self) => {
+        tabsStuck = self.isActive;
+        tabs.dataset.stuck = String(self.isActive);
+        update();
+      },
+    });
+  }
+
+  const main = one("[data-landing-main]");
+  if (main) {
+    ScrollTrigger.create({
+      trigger: main,
+      start: "bottom 90%",
+      end: "max",
+      onToggle: (self) => {
+        footerShowing = self.isActive;
+        update();
+      },
+    });
+  }
 }
 
 /** Flags the nav once the page has scrolled so CSS can compact and frost it. */
@@ -363,6 +408,34 @@ export function solutionCards() {
         { rotate: -90, duration: 0.8, stagger: 0.07 },
         0.5
       );
+  });
+}
+
+/**
+ * The solution cards are sticky (see SolutionSection); as each next card
+ * slides up over one, that card shrinks back and dims into the stack.
+ */
+export function solutionStack() {
+  const cards = all("[data-solution-card]");
+  cards.slice(0, -1).forEach((card, i) => {
+    const next = cards[i + 1];
+    gsap.fromTo(
+      card,
+      { filter: "brightness(1)" },
+      {
+        scale: 0.92,
+        filter: "brightness(0.88)",
+        ease: "none",
+        scrollTrigger: {
+          trigger: next,
+          start: "top bottom",
+          // Done once the next card reaches its own sticky position.
+          end: () => `top ${parseFloat(getComputedStyle(next).top)}px`,
+          scrub: true,
+          invalidateOnRefresh: true,
+        },
+      }
+    );
   });
 }
 

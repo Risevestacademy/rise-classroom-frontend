@@ -27,7 +27,7 @@ export function PricingSection() {
     <section
       id="pricing"
       data-bg="#FFFFFF"
-      className="flex flex-col items-center bg-white px-4 pt-[72px] pb-[96px] lg:pt-[100px] lg:pb-[254px]"
+      className="flex flex-col items-center bg-white px-4 pt-[72px] pb-[72px] lg:pt-[100px] lg:pb-[100px]"
     >
       <h2
         data-reveal="chars"

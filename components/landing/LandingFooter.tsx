@@ -38,7 +38,7 @@ const FOOTER_COLUMNS = [
 /** Sits behind the page and is revealed as the content above scrolls away. */
 export function LandingFooter() {
   return (
-    <footer className="sticky bottom-0 flex flex-col justify-between gap-16 bg-brand-950 px-4 pt-10 pb-10 lg:h-[628px] lg:gap-0 lg:px-[96px] lg:pt-[60px] lg:pb-[38px]">
+    <footer className="sticky bottom-0 flex min-h-svh flex-col justify-between gap-16 bg-brand-950 px-4 pt-10 pb-10 lg:h-[628px] lg:min-h-0 lg:gap-0 lg:px-[96px] lg:pt-[60px] lg:pb-[38px]">
       <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
         <Link href="/" aria-label="Rise Classroom home" className="shrink-0">
           <Image
@@ -75,24 +75,23 @@ export function LandingFooter() {
         </nav>
       </div>
 
-      <div className="relative">
-        {/* Type sizes are in cqw so "Classroom" always spans the full width. */}
-        <div
-          data-footer-wordmark
-          className="@container w-full max-w-[1250px] leading-none font-normal select-none"
-        >
-          <span className="sr-only">Rise Classroom</span>
-          <p aria-hidden className="wordmark-dots w-fit text-[length:7.9cqw]">
+      {/* Sizes are in cqw so "Classroom" always spans the full width and the
+          copyright stays lined up with the end of it. */}
+      <div
+        data-footer-wordmark
+        className="@container relative w-full max-w-[1250px]"
+      >
+        <span className="sr-only">Rise Classroom</span>
+        <div aria-hidden className="leading-none font-normal select-none">
+          {/* The taller line box keeps the dot on the "i" inside the reveal clip. */}
+          <p className="wordmark-dots w-fit text-[length:7.9cqw] leading-[1.3]">
             rise
           </p>
-          <p
-            aria-hidden
-            className="wordmark-dots -mt-[1.5cqw] w-fit text-[length:20.1cqw]"
-          >
+          <p className="wordmark-dots -mt-[2.7cqw] w-fit text-[length:20.2cqw]">
             Classroom
           </p>
         </div>
-        <p className="mt-4 font-work text-[14px] leading-5 tracking-[-0.01em] text-[#aab7b8] lg:absolute lg:top-[38%] lg:right-0 lg:mt-0">
+        <p className="mt-4 font-work text-[14px] leading-5 tracking-[-0.01em] text-[#aab7b8] lg:absolute lg:top-[10.2cqw] lg:right-[1.2cqw] lg:mt-0">
           &copy; 2026 Rise Classroom. All rights reserved.
         </p>
       </div>

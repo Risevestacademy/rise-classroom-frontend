@@ -2,7 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent } from "react";
 import Image from "next/image";
-import { CirclePlay } from "lucide-react";
+import { CirclePause, CirclePlay } from "lucide-react";
 
 import {
   EASE_OUT,
@@ -16,11 +16,11 @@ import { cn } from "@/lib/utils";
 // TODO: swap in the per-tab dashboard screenshots once they're exported from
 // Figma. Every tab shows the curriculum dashboard until then.
 const PRODUCT_TABS = [
-  { label: "Analytics", screen: "/landing/dashboard-mockup.png" },
-  { label: "Learning", screen: "/landing/dashboard-mockup.png" },
-  { label: "Community", screen: "/landing/dashboard-mockup.png" },
-  { label: "Chat", screen: "/landing/dashboard-mockup.png" },
-  { label: "Calender", screen: "/landing/dashboard-mockup.png" },
+  { label: "Analytics", screen: "/landing/dashboard-mockup.webp" },
+  { label: "Learning", screen: "/landing/dashboard-mockup.webp" },
+  { label: "Community", screen: "/landing/dashboard-mockup.webp" },
+  { label: "Chat", screen: "/landing/dashboard-mockup.webp" },
+  { label: "Calender", screen: "/landing/dashboard-mockup.webp" },
 ];
 const TAB_COUNT = PRODUCT_TABS.length;
 /** How long each tab stays up before advancing to the next. */
@@ -37,6 +37,17 @@ export function HeroShowcase() {
   const pillState = useRef<Flip.FlipState | null>(null);
   const timer = useRef<gsap.core.Tween | null>(null);
   const hovered = useRef(false);
+  const [paused, setPaused] = useState(false);
+  // Read by the timer callbacks, which outlive the render they were made in.
+  const pausedRef = useRef(false);
+
+  const togglePaused = () => {
+    pausedRef.current = !pausedRef.current;
+    setPaused(pausedRef.current);
+    // While paused the timer stays stopped even after the pointer leaves.
+    if (pausedRef.current) timer.current?.pause();
+    else if (!hovered.current) timer.current?.resume();
+  };
   const mounted = useRef(false);
   const [active, setActive] = useState(0);
 
@@ -104,7 +115,7 @@ export function HeroShowcase() {
           onComplete: () => select((active + 1) % TAB_COUNT),
         }
       );
-      if (hovered.current) timer.current.pause();
+      if (hovered.current || pausedRef.current) timer.current.pause();
     },
     { scope: root, dependencies: [active], revertOnUpdate: true }
   );
@@ -129,20 +140,23 @@ export function HeroShowcase() {
       }}
       onPointerLeave={() => {
         hovered.current = false;
-        timer.current?.resume();
+        if (!pausedRef.current) timer.current?.resume();
       }}
     >
-      {/* On narrow screens the bar scrolls sideways, edge to edge. */}
+      {/* Sticks to the top while the dashboard is on screen (the nav hides to
+          make room), so tabs can be switched without scrolling back up. On
+          narrow screens the bar scrolls sideways, edge to edge. */}
       <div
         ref={tabScroller}
         data-intro="tabs"
-        className="relative -mx-4 mt-[33px] w-[calc(100%+2rem)] overflow-x-auto px-4 py-3 [scrollbar-width:none] lg:mx-0 lg:mt-[45px] lg:w-auto lg:overflow-visible lg:px-0 lg:py-0 [&::-webkit-scrollbar]:hidden"
+        data-hero-tabs
+        className="group/tabs sticky top-3 z-20 -mx-4 mt-[33px] w-[calc(100%+2rem)] overflow-x-auto px-4 py-3 [scrollbar-width:none] lg:top-4 lg:mx-0 lg:mt-[45px] lg:w-auto lg:overflow-visible lg:px-0 lg:py-0 [&::-webkit-scrollbar]:hidden"
       >
         <div
           role="tablist"
           aria-label="Product areas"
           onKeyDown={onKeyDown}
-          className="mx-auto flex h-[50px] w-max items-center gap-2 rounded-full border border-neutral-300 bg-white p-1 shadow-[inset_0_2px_8px_rgb(0_0_0/0.04)]"
+          className="mx-auto flex h-[50px] w-max items-center gap-2 rounded-full border border-neutral-300 bg-white p-1 shadow-[inset_0_2px_8px_rgb(0_0_0/0.04)] transition-shadow duration-500 group-data-[stuck=true]/tabs:shadow-[inset_0_2px_8px_rgb(0_0_0/0.04),0_12px_32px_rgb(16_22_79/0.16)]"
         >
           {PRODUCT_TABS.map((tab, index) => {
             const isActive = index === active;
@@ -183,16 +197,29 @@ export function HeroShowcase() {
               </button>
             );
           })}
+          {/* Pauses and resumes the auto-advance. Hidden with reduced motion,
+              where the tabs never advance on their own. */}
           <button
             type="button"
-            aria-label="Play product tour"
-            className="relative flex size-10 items-center justify-center rounded-full bg-white text-brand-950 shadow-[0_0_12px_rgb(0_0_0/0.04)]"
+            aria-label={
+              paused
+                ? "Resume cycling through tabs"
+                : "Pause cycling through tabs"
+            }
+            onClick={togglePaused}
+            className="relative flex size-10 items-center justify-center rounded-full bg-white text-brand-950 shadow-[0_0_12px_rgb(0_0_0/0.04)] transition-transform active:scale-90 motion-reduce:hidden"
           >
-            <span
-              aria-hidden
-              className="absolute inset-0 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite] rounded-full bg-brand-200/70 motion-reduce:hidden"
-            />
-            <CirclePlay className="relative size-5" strokeWidth={2.25} />
+            {paused && (
+              <span
+                aria-hidden
+                className="absolute inset-0 animate-[ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite] rounded-full bg-brand-200/70"
+              />
+            )}
+            {paused ? (
+              <CirclePlay className="relative size-5" strokeWidth={2.25} />
+            ) : (
+              <CirclePause className="relative size-5" strokeWidth={2.25} />
+            )}
           </button>
         </div>
       </div>
@@ -200,6 +227,7 @@ export function HeroShowcase() {
       {/* Mobile shows a zoomed crop of the dashboard so it stays readable. */}
       <div
         data-intro="dashboard"
+        data-hero-dashboard
         className="mt-[16px] w-full max-w-[1208px] overflow-hidden rounded-[12px] lg:mt-[28px] lg:overflow-visible lg:rounded-none"
       >
         <div

@@ -164,6 +164,7 @@ export function TestimonialCarousel() {
   const hovered = useRef(false);
   const inView = useRef(false);
   const swipeStart = useRef<number | null>(null);
+  const titleSplit = useRef<SplitText | null>(null);
 
   const go = (step: 1 | -1) => {
     const next = (activeRef.current + step + COUNT) % COUNT;
@@ -254,7 +255,11 @@ export function TestimonialCarousel() {
         if (i !== active && i !== from) gsap.set(panel, { autoAlpha: 0 });
       });
       const incoming = panels[active];
-      gsap.killTweensOf(incoming.querySelectorAll("[data-quote-part]"));
+      const incomingParts = incoming.querySelectorAll("[data-quote-part]");
+      // Clicking quickly can land back on a quote that is still animating out.
+      titleSplit.current?.revert();
+      gsap.killTweensOf([incoming, ...incomingParts]);
+      gsap.set(incomingParts, { clearProps: "transform,opacity,visibility" });
       gsap.set(incoming, { autoAlpha: 1 });
 
       if (animate) {
@@ -275,6 +280,7 @@ export function TestimonialCarousel() {
 
         const title = incoming.querySelector("[data-quote-title]");
         const split = SplitText.create(title, { type: "lines", mask: "lines" });
+        titleSplit.current = split;
         gsap
           .timeline({ delay: 0.3, onComplete: () => split.revert() })
           .from(split.lines, {

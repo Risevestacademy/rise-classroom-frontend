@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Asterisk } from "lucide-react";
@@ -62,12 +63,16 @@ export function SolutionSection() {
           </Link>
         </div>
 
+        {/* The cards stick as they reach the top, each a little lower than
+            the last, so the next one slides up over the previous like a
+            stack. */}
         <ul className="flex flex-col gap-12 lg:w-[413px]">
-          {AUDIENCES.map((audience) => (
+          {AUDIENCES.map((audience, index) => (
             <li
               key={audience.label}
               data-solution-card
-              className="rounded-[24px] bg-neutral-100 p-4"
+              style={{ "--stack": index } as CSSProperties}
+              className="sticky top-[calc(88px+var(--stack)*16px)] origin-top rounded-[24px] bg-neutral-100 p-4 lg:top-[calc(120px+var(--stack)*24px)]"
             >
               <div
                 data-solution-media

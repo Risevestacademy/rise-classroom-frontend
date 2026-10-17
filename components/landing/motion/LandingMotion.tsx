@@ -17,6 +17,7 @@ import {
   revealGroups,
   scrollReveals,
   solutionCards,
+  solutionStack,
   testimonialsExpand,
   valueCards,
 } from "./scroll";
@@ -59,8 +60,13 @@ export function LandingMotion() {
       scrollReveals();
       keywordMarquee();
       solutionCards();
+      solutionStack();
       footerReveal();
     });
+
+    // Without motion the nav still gets out of the way of the stuck tabs and
+    // the footer, just instantly.
+    mm.add(MEDIA.reduce, () => navAutoHide({ followScroll: false }));
 
     mm.add(MEDIA.desktop, () => {
       heroDashboardTilt();
