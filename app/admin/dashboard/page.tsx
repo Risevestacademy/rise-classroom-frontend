@@ -100,7 +100,7 @@ export default function AdminDashboardPage() {
                 Here&apos;s what&apos;s happening across your program
               </p>
             </div>
-            <WeekFilter />
+            {/* <WeekFilter /> */}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

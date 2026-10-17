@@ -26,7 +26,7 @@ export function AdminTopNav({
   const user = session?.user;
 
   return (
-    <header className="flex h-16 items-center justify-between gap-3 border-b border-neutral-200 bg-white px-4 py-3 sm:px-6">
+    <header className="flex h-16 items-center justify-between gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-3 sm:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"

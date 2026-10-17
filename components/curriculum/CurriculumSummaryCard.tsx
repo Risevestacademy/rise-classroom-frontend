@@ -44,7 +44,7 @@ export function CurriculumSummaryCard({
           {curriculum.title}
         </p>
         <p className="mt-0.5 text-sm text-neutral-500">
-          {trackDetails[curriculum.track].label} · {curriculum.cohort}
+          {trackDetails(curriculum.track.name).label} · {curriculum.cohort}
         </p>
 
         <div className="mt-4 flex items-start gap-3 rounded-lg bg-neutral-100 p-4">

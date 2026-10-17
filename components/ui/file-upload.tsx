@@ -7,7 +7,12 @@ import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { formatFileSize } from "@/lib/utils";
 
-export type UploadedFile = { id: string; name: string; sizeBytes: number };
+export type UploadedFile = {
+  id: string;
+  name: string;
+  /** `null` when unknown, e.g. a resource saved as a link. */
+  sizeBytes: number | null;
+};
 
 /** Splits picked files into ones that pass the type/size rules and the names that don't. */
 export function acceptFiles(
