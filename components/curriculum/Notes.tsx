@@ -34,7 +34,7 @@ import {
   type SaveNoteInput,
 } from "@/lib/curriculum";
 
-const MENU_ITEM =
+const menuItemClass =
   "flex cursor-pointer rounded-md px-3 py-2 text-neutral-700 outline-none data-highlighted:bg-neutral-100";
 
 export function AddNoteButton({
@@ -149,13 +149,13 @@ export function NotesTab({
                         <Menu.Popup className="w-40 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg outline-none">
                           <Menu.Item
                             onClick={() => onEditNote(note.id)}
-                            className={MENU_ITEM}
+                            className={menuItemClass}
                           >
                             Edit note
                           </Menu.Item>
                           <Menu.Item
                             onClick={() => pinMutation.mutate(note)}
-                            className={MENU_ITEM}
+                            className={menuItemClass}
                           >
                             {note.pinned ? "Unpin" : "Pin to top"}
                           </Menu.Item>
@@ -217,7 +217,7 @@ export function NotesTab({
   );
 }
 
-const WHOLE_CURRICULUM = "curriculum";
+const wholeCurriculum = "curriculum";
 
 /** Adds a note, or edits one when `noteId` is given. */
 export function NoteDialog({
@@ -264,11 +264,11 @@ function NoteForm({
   const [title, setTitle] = React.useState(existing?.title ?? "");
   const [body, setBody] = React.useState(existing?.body ?? "");
   const [attachTo, setAttachTo] = React.useState(
-    existing ? (existing.moduleId ?? WHOLE_CURRICULUM) : "",
+    existing ? (existing.moduleId ?? wholeCurriculum) : "",
   );
 
   const modules = modulesQuery.data ?? [];
-  const selectedAttachTo = attachTo || modules[0]?.id || WHOLE_CURRICULUM;
+  const selectedAttachTo = attachTo || modules[0]?.id || wholeCurriculum;
 
   const saveMutation = useMutation({
     mutationFn: async (input: SaveNoteInput) => {
@@ -340,7 +340,7 @@ function NoteForm({
               value: m.id,
               label: `Module ${index + 1} - ${m.title}`,
             })),
-            { value: WHOLE_CURRICULUM, label: "Whole curriculum" },
+            { value: wholeCurriculum, label: "Whole curriculum" },
           ]}
         />
       </div>
@@ -371,7 +371,7 @@ function NoteForm({
               title: title.trim(),
               body: body.trim(),
               moduleId:
-                selectedAttachTo === WHOLE_CURRICULUM ? null : selectedAttachTo,
+                selectedAttachTo === wholeCurriculum ? null : selectedAttachTo,
             })
           }
         >

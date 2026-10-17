@@ -26,10 +26,10 @@ import {
   type SaveModuleInput,
 } from "@/lib/curriculum";
 
-const ACCEPTED_EXTENSIONS = [".pdf", ".pptx", ".docx"];
-const MAX_FILE_BYTES = 20e6;
+const acceptedExtensions = [".pdf", ".pptx", ".docx"];
+const maxFileBytes = 20e6;
 
-const PLACEHOLDER_OUTCOMES = [
+const placeholderOutcomes = [
   "Understand the basics of visual hierarchy, contrast, and composition",
   "Apply color, typography, and spacing to communicate a message",
   "Create a simple composition that guides the viewer’s attention",
@@ -188,7 +188,7 @@ export function ModuleForm({
                       )
                     }
                     placeholder={
-                      PLACEHOLDER_OUTCOMES[index] ?? "Add an outcome"
+                      placeholderOutcomes[index] ?? "Add an outcome"
                     }
                     aria-label={`Outcome ${index + 1}`}
                     className="h-11 min-w-0 flex-1 rounded-lg border border-neutral-200 px-3 text-sm text-neutral-800 outline-none placeholder:text-neutral-400 hover:bg-neutral-100 focus:border-brand-primary"
@@ -472,8 +472,8 @@ function FileUploadField({
 
   function handleFiles(fileList: FileList | null) {
     const { accepted, rejected } = acceptFiles(fileList, {
-      extensions: ACCEPTED_EXTENSIONS,
-      maxBytes: MAX_FILE_BYTES,
+      extensions: acceptedExtensions,
+      maxBytes: maxFileBytes,
     });
     setError(
       rejected.length
@@ -503,7 +503,7 @@ function FileUploadField({
           ref={inputRef}
           type="file"
           multiple
-          accept={ACCEPTED_EXTENSIONS.join(",")}
+          accept={acceptedExtensions.join(",")}
           className="hidden"
           onChange={(event) => {
             handleFiles(event.target.files);

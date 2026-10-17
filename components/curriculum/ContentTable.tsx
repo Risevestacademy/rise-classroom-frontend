@@ -12,13 +12,13 @@ import type { ModuleStatus } from "@/lib/curriculum";
 
 export type StatusFilter = ModuleStatus | "ALL";
 
-const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
+const statusFilters: { label: string; value: StatusFilter }[] = [
   { label: "All statuses", value: "ALL" },
   { label: "Published", value: "PUBLISHED" },
   { label: "Draft", value: "DRAFT" },
 ];
 
-const MENU_ITEM =
+const menuItemClass =
   "flex cursor-pointer rounded-md px-3 py-2 text-neutral-700 outline-none data-highlighted:bg-neutral-100";
 
 /** Heading, search box and status filter shared by the curriculum content tables. */
@@ -76,12 +76,12 @@ export function TableToolbar({
           <Menu.Portal>
             <Menu.Positioner align="end" sideOffset={6} className="z-50">
               <Menu.Popup className="w-44 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg outline-none">
-                {STATUS_FILTERS.map((option) => (
+                {statusFilters.map((option) => (
                   <Menu.Item
                     key={option.value}
                     onClick={() => onStatusFilterChange(option.value)}
                     className={cn(
-                      MENU_ITEM,
+                      menuItemClass,
                       statusFilter === option.value &&
                         "font-medium text-brand-primary",
                     )}
@@ -123,10 +123,10 @@ export function RowActionsMenu({
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={6} className="z-50">
           <Menu.Popup className="w-44 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg outline-none">
-            <Menu.Item onClick={onView} className={MENU_ITEM}>
+            <Menu.Item onClick={onView} className={menuItemClass}>
               View details
             </Menu.Item>
-            <Menu.Item onClick={onToggleStatus} className={MENU_ITEM}>
+            <Menu.Item onClick={onToggleStatus} className={menuItemClass}>
               {status === "PUBLISHED" ? "Move to draft" : "Publish"}
             </Menu.Item>
             <Menu.Item

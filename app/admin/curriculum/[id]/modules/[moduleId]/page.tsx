@@ -33,7 +33,7 @@ import {
   type ModuleStatus,
 } from "@/lib/curriculum";
 
-const STATUS_LABELS: Record<ModuleStatus, string> = {
+const statusLabels: Record<ModuleStatus, string> = {
   PUBLISHED: "Published",
   DRAFT: "Draft",
 };
@@ -117,7 +117,7 @@ export default function ModuleDetailPage({
             <Menu.Portal>
               <Menu.Positioner align="end" sideOffset={6} className="z-50">
                 <Menu.Popup className="w-40 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg outline-none">
-                  {(Object.keys(STATUS_LABELS) as ModuleStatus[]).map(
+                  {(Object.keys(statusLabels) as ModuleStatus[]).map(
                     (status) => (
                       <Menu.Item
                         key={status}
@@ -125,7 +125,7 @@ export default function ModuleDetailPage({
                         onClick={() => updateMutation.mutate({ status })}
                         className="flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-neutral-700 outline-none data-disabled:cursor-default data-disabled:text-neutral-400 data-highlighted:bg-neutral-100"
                       >
-                        {STATUS_LABELS[status]}
+                        {statusLabels[status]}
                         {status === curriculumModule.status && (
                           <span className="text-xs">Current</span>
                         )}

@@ -18,8 +18,8 @@ import { Hint, InputWrapper, Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
 import {
-  SUBMISSION_TYPES,
-  TRACKS,
+  submissionTypes,
+  trackDetails,
   createAssignment,
   curriculumKeys,
   curriculumQueries,
@@ -28,9 +28,9 @@ import {
   type SubmissionType,
 } from "@/lib/curriculum";
 
-const ACCEPTED_EXTENSIONS = [".jpeg", ".jpg", ".png", ".pdf", ".mp4"];
-const MAX_FILE_BYTES = 50e6;
-const NO_LESSON = "none";
+const acceptedExtensions = [".jpeg", ".jpg", ".png", ".pdf", ".mp4"];
+const maxFileBytes = 50e6;
+const noLesson = "none";
 
 export default function NewAssignmentPage({
   params,
@@ -49,7 +49,7 @@ export default function NewAssignmentPage({
   const [resources, setResources] = React.useState<ResourceFile[]>([]);
   const [moduleId, setModuleId] = React.useState("");
   const [dueDate, setDueDate] = React.useState("");
-  const [afterLesson, setAfterLesson] = React.useState(NO_LESSON);
+  const [afterLesson, setAfterLesson] = React.useState(noLesson);
   const [submissionType, setSubmissionType] =
     React.useState<SubmissionType>("FILE_UPLOAD");
 
@@ -67,7 +67,7 @@ export default function NewAssignmentPage({
         resources,
         submissionType,
         dueAt: dueDate ? `${dueDate}T23:59:00` : null,
-        afterLesson: afterLesson === NO_LESSON ? null : Number(afterLesson),
+        afterLesson: afterLesson === noLesson ? null : Number(afterLesson),
       }),
     onSuccess: (assignment) => {
       queryClient.invalidateQueries({ queryKey: curriculumKeys.modules(id) });
@@ -167,8 +167,8 @@ export default function NewAssignmentPage({
                   files={resources}
                   onChange={setResources}
                   createFile={resourceFromUpload}
-                  extensions={ACCEPTED_EXTENSIONS}
-                  maxBytes={MAX_FILE_BYTES}
+                  extensions={acceptedExtensions}
+                  maxBytes={maxFileBytes}
                   formatsLabel="JPEG, PNG, PDF, and MP4"
                 />
               </div>
@@ -201,7 +201,7 @@ export default function NewAssignmentPage({
               </h2>
               {curriculum && (
                 <p className="mt-1 text-sm text-neutral-500">
-                  {TRACKS[curriculum.track].label} · {curriculum.cohort}
+                  {trackDetails[curriculum.track].label} · {curriculum.cohort}
                 </p>
               )}
 
@@ -213,7 +213,7 @@ export default function NewAssignmentPage({
                   value={selectedModuleId}
                   onChange={(value) => {
                     setModuleId(value);
-                    setAfterLesson(NO_LESSON);
+                    setAfterLesson(noLesson);
                   }}
                   options={modules.map((m, index) => ({
                     value: m.id,
@@ -248,7 +248,7 @@ export default function NewAssignmentPage({
                   value={afterLesson}
                   onChange={setAfterLesson}
                   options={[
-                    { value: NO_LESSON, label: "Not tied to a lesson" },
+                    { value: noLesson, label: "Not tied to a lesson" },
                     ...(selectedModule?.lessons ?? []).map((_, index) => ({
                       value: String(index + 1),
                       label: `After lesson ${index + 1}`,
@@ -263,7 +263,7 @@ export default function NewAssignmentPage({
                   onChange={(value) =>
                     setSubmissionType(value as SubmissionType)
                   }
-                  options={Object.entries(SUBMISSION_TYPES).map(
+                  options={Object.entries(submissionTypes).map(
                     ([value, label]) => ({
                       value,
                       label,

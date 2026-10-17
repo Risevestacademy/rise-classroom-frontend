@@ -21,7 +21,7 @@ import {
   type UpdateCurriculumInput,
 } from "@/lib/curriculum";
 
-const STATUS_OPTIONS: RadioOption<ModuleStatus>[] = [
+const statusOptions: RadioOption<ModuleStatus>[] = [
   {
     value: "PUBLISHED",
     label: "Published",
@@ -34,7 +34,7 @@ const STATUS_OPTIONS: RadioOption<ModuleStatus>[] = [
   },
 ];
 
-const PROGRESS_OPTIONS: RadioOption<ProgressMode>[] = [
+const progressOptions: RadioOption<ProgressMode>[] = [
   {
     value: "SEQUENTIAL",
     label: "Sequential",
@@ -142,7 +142,7 @@ export function SettingsTab({ curriculum }: { curriculum: Curriculum }) {
               <RadioCard
                 title="Curriculum status"
                 value={curriculum.publishStatus}
-                options={STATUS_OPTIONS}
+                options={statusOptions}
                 onChange={(publishStatus) =>
                   updateMutation.mutate({ publishStatus })
                 }
@@ -150,7 +150,7 @@ export function SettingsTab({ curriculum }: { curriculum: Curriculum }) {
               <RadioCard
                 title="Progress mode"
                 value={curriculum.progressMode}
-                options={PROGRESS_OPTIONS}
+                options={progressOptions}
                 onChange={(progressMode) =>
                   updateMutation.mutate({ progressMode })
                 }
