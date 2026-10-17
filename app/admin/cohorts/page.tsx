@@ -44,9 +44,9 @@ const cardSurface: Record<CohortStatus, string> = {
 export default function CohortsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ created?: string; updated?: string }>;
+  searchParams: Promise<{ created?: string }>;
 }) {
-  const { created, updated } = React.use(searchParams);
+  const { created } = React.use(searchParams);
   const router = useRouter();
   const [filter, setFilter] = React.useState<Filter>("all");
   const [statusToast, setStatusToast] = React.useState<Toast | null>(null);
@@ -112,14 +112,6 @@ export default function CohortsPage({
               to cohorts
             </>
           }
-          onDismiss={dismissToast}
-        />
-      )}
-
-      {updated && (
-        <SuccessToast
-          title="Cohort updated"
-          message={<>&ldquo;{updated}&rdquo; has been successfully updated</>}
           onDismiss={dismissToast}
         />
       )}

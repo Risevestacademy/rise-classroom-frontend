@@ -1,6 +1,12 @@
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { AdminNavProvider } from "@/components/AdminNavContext";
 import { AuthGuard } from "@/components/AuthGuard";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Admin Dashboard",
+  description: "The admin dashboard for managing the Rise Classroom.",
+};
 
 export default function AdminLayout({
   children,

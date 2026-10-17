@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import {
   Cohorts as CohortsIcon,
+  Edit02,
   Mentor,
   Teacher,
   Track,
@@ -20,9 +21,11 @@ import {
   CohortPeopleTable,
   StatusPill,
 } from "@/components/cohorts/CohortPeopleTable";
+import { CohortSettings } from "@/components/cohorts/CohortSettings";
 import { CohortStatusBadge } from "@/components/cohorts/CohortStatusBadge";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
 import { CohortTracks } from "@/components/cohorts/CohortTracks";
+import { SuccessToast } from "@/components/ui/toast";
 import { getProgramOptionsErrorMessage } from "@/lib/admin";
 import { ApiError } from "@/lib/api";
 import { cohortQueries, type CohortStaff } from "@/lib/cohorts";
@@ -35,6 +38,7 @@ const tabs = [
   { value: "students", label: "Students" },
   { value: "instructors", label: "Instructors" },
   { value: "mentors", label: "Mentors" },
+  { value: "settings", label: "Settings" },
 ] as const;
 
 type Tab = (typeof tabs)[number]["value"];
@@ -47,14 +51,26 @@ const studentStatusPill: Record<StudentStatus, "success" | "warning" | "error"> 
   };
 
 const staffColumns = [
-  { header: "Track", width: "w-[210px]", cell: (row: CohortStaff) => row.track },
-  { header: "Students", width: "w-[160px]", cell: (row: CohortStaff) => `${row.students} students` },
+  {
+    header: "Track",
+    width: "w-[210px]",
+    cell: (row: CohortStaff) => row.track,
+  },
+  {
+    header: "Students",
+    width: "w-[160px]",
+    cell: (row: CohortStaff) => `${row.students} students`,
+  },
   {
     header: "Status",
     width: "w-[160px]",
     cell: () => <StatusPill status="success">Active</StatusPill>,
   },
-  { header: "Last active", width: "w-[135px]", cell: (row: CohortStaff) => row.lastActive },
+  {
+    header: "Last active",
+    width: "w-[135px]",
+    cell: (row: CohortStaff) => row.lastActive,
+  },
 ];
 
 function isTab(value: string | undefined): value is Tab {
@@ -74,9 +90,17 @@ export default function CohortDetailPage({
   const router = useRouter();
   const cohortQuery = useQuery(cohortQueries.detail(id));
   const cohort = cohortQuery.data;
+  const [editingSettings, setEditingSettings] = React.useState(false);
+  const [toast, setToast] = React.useState<{
+    title: string;
+    message: string;
+  } | null>(null);
+  const dismissToast = React.useCallback(() => setToast(null), []);
   const setTab = React.useCallback(
-    (next: Tab) =>
-      router.replace(`/admin/cohorts/${id}?tab=${next}`, { scroll: false }),
+    (next: Tab) => {
+      setEditingSettings(false);
+      router.replace(`/admin/cohorts/${id}?tab=${next}`, { scroll: false });
+    },
     [id, router],
   );
 
@@ -147,13 +171,27 @@ export default function CohortDetailPage({
           />
         </div>
 
-        <CohortTabs
-          label="Cohort sections"
-          tabs={tabs}
-          value={tab}
-          onChange={setTab}
-          className="mt-[22px]"
-        />
+        <div className="mt-[22px] flex flex-wrap items-center justify-between gap-4">
+          <CohortTabs
+            label="Cohort sections"
+            tabs={tabs}
+            value={tab}
+            onChange={setTab}
+          />
+          {tab === "settings" && (
+            <button
+              type="button"
+              aria-pressed={editingSettings}
+              onClick={() => setEditingSettings((editing) => !editing)}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-interactive-primary-hover"
+            >
+              <Edit02 className="size-5" />
+              {/* The design only shows the idle state; while editing the same
+                  button cancels. */}
+              {editingSettings ? "Cancel editing" : "Edit settings"}
+            </button>
+          )}
+        </div>
 
         {tab === "overview" &&
           (cohort.students === 0 && cohort.tracks === 0 ? (
@@ -222,7 +260,11 @@ export default function CohortDetailPage({
                     "--"
                   ),
               },
-              { header: "Last active", width: "w-[297px]", cell: (row) => row.lastActive },
+              {
+                header: "Last active",
+                width: "w-[297px]",
+                cell: (row) => row.lastActive,
+              },
             ]}
           />
         )}
@@ -268,7 +310,23 @@ export default function CohortDetailPage({
               actionHeader="Action"
             />
           ))}
+        {tab === "settings" && (
+          <CohortSettings
+            cohortId={cohort.id}
+            editing={editingSettings}
+            onEditingChange={setEditingSettings}
+            onToast={setToast}
+          />
+        )}
       </main>
+
+      {toast && (
+        <SuccessToast
+          title={toast.title}
+          message={toast.message}
+          onDismiss={dismissToast}
+        />
+      )}
     </>
   );
 }

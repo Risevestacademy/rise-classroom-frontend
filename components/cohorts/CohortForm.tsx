@@ -26,7 +26,7 @@ export type CohortFormSubmit = {
 };
 
 const inputClass =
-  "h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 font-work text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-brand-primary";
+  "h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 font-work text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-brand-primary read-only:bg-neutral-100 read-only:focus:border-neutral-200 disabled:bg-neutral-100 disabled:opacity-100";
 
 /** Parses DD/MM/YYYY; returns undefined for anything else. */
 function parseDate(value: string) {
@@ -49,7 +49,12 @@ function durationLabel(start: string, end: string) {
   return `${months} month${months === 1 ? "" : "s"}`;
 }
 
-/** The create and edit cohort screens share this layout. */
+/**
+ * The create cohort screen and the cohort Settings tab share this layout.
+ * Without a title the page heading and back link are left out, and
+ * `inlineSubmit` puts a single submit button inside the card instead of
+ * Cancel and submit below it.
+ */
 export function CohortForm({
   title,
   subtitle,
@@ -61,10 +66,13 @@ export function CohortForm({
   isPending,
   error,
   aside,
+  readOnly = false,
+  inlineSubmit = false,
+  className,
   onSubmit,
 }: {
-  title: string;
-  subtitle: string;
+  title?: string;
+  subtitle?: string;
   initialValues: CohortFormValues;
   statusOptions: { value: CohortStatus; label: string }[];
   statusHint: string;
@@ -73,6 +81,10 @@ export function CohortForm({
   isPending: boolean;
   error?: string;
   aside?: React.ReactNode;
+  /** Shows the values without letting them be changed. */
+  readOnly?: boolean;
+  inlineSubmit?: boolean;
+  className?: string;
   onSubmit: (values: CohortFormSubmit) => void;
 }) {
   const [name, setName] = React.useState(initialValues.name);
@@ -89,6 +101,7 @@ export function CohortForm({
     name.trim().length > 0 &&
     start !== undefined &&
     end !== undefined &&
+    !readOnly &&
     !isPending;
 
   function handleSubmit(event: React.FormEvent) {
@@ -103,25 +116,51 @@ export function CohortForm({
     });
   }
 
+  const submitButton = (
+    <button
+      type="submit"
+      disabled={!canSubmit}
+      className="inline-flex h-10 items-center rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-interactive-primary-hover disabled:bg-brand-200 disabled:text-[#a8b2b3]"
+    >
+      {isPending ? pendingLabel : submitLabel}
+    </button>
+  );
+
   return (
     <>
-      <Link
-        href="/admin/cohorts"
-        className="inline-flex items-center gap-2 font-work text-sm text-brand-primary"
-      >
-        <ArrowLeft01 className="size-4" />
-        Back to Cohort
-      </Link>
+      {title && (
+        <>
+          <Link
+            href="/admin/cohorts"
+            className="inline-flex items-center gap-2 font-work text-sm text-brand-primary"
+          >
+            <ArrowLeft01 className="size-4" />
+            Back to Cohort
+          </Link>
 
-      <h1 className="mt-5 text-2xl font-semibold text-text-primary">{title}</h1>
-      <p className="mt-1 font-work text-sm text-text-secondary">{subtitle}</p>
+          <h1 className="mt-5 text-2xl font-semibold text-text-primary">
+            {title}
+          </h1>
+          <p className="mt-1 font-work text-sm text-text-secondary">
+            {subtitle}
+          </p>
+        </>
+      )}
 
       <form
         onSubmit={handleSubmit}
-        className="mt-6 flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-[22px]"
+        className={cn(
+          "mt-6 flex flex-col gap-6 xl:flex-row xl:items-start xl:gap-[22px]",
+          className,
+        )}
       >
         <div className="flex min-w-0 flex-col xl:w-[694px] xl:shrink-0">
-          <section className="rounded-xl bg-white p-6 pb-7 shadow-[0_2px_4px_rgb(17_24_25/0.06)]">
+          <section
+            className={cn(
+              "rounded-xl bg-white p-6 shadow-[0_2px_4px_rgb(17_24_25/0.06)]",
+              !inlineSubmit && "pb-7",
+            )}
+          >
             <h2 className="text-lg leading-6 font-semibold text-text-primary">
               Basic Information
             </h2>
@@ -132,6 +171,7 @@ export function CohortForm({
                   id="cohort-name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
+                  readOnly={readOnly}
                   className={inputClass}
                 />
               </Field>
@@ -145,6 +185,7 @@ export function CohortForm({
                   id="cohort-description"
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
+                  readOnly={readOnly}
                   placeholder="Add description here"
                   className={cn(inputClass, "h-[100px] resize-none py-2.5")}
                 />
@@ -156,6 +197,7 @@ export function CohortForm({
                     id="cohort-start"
                     value={startDate}
                     onChange={setStartDate}
+                    readOnly={readOnly}
                   />
                 </Field>
                 <Field label="End date" htmlFor="cohort-end" required>
@@ -163,6 +205,7 @@ export function CohortForm({
                     id="cohort-end"
                     value={endDate}
                     onChange={setEndDate}
+                    readOnly={readOnly}
                   />
                 </Field>
                 <Field label="Duration" htmlFor="cohort-duration">
@@ -180,6 +223,7 @@ export function CohortForm({
                   <select
                     id="cohort-status"
                     value={status}
+                    disabled={readOnly}
                     onChange={(event) =>
                       setStatus(event.target.value as CohortStatus)
                     }
@@ -198,27 +242,27 @@ export function CohortForm({
                 </p>
               </Field>
             </div>
+
+            {inlineSubmit && (
+              <div className="mt-5 flex justify-end">{submitButton}</div>
+            )}
           </section>
 
           {error && (
             <p className="mt-4 font-work text-sm text-text-error">{error}</p>
           )}
 
-          <div className="mt-8 flex justify-end gap-3">
-            <Link
-              href="/admin/cohorts"
-              className="inline-flex h-10 items-center rounded-lg border border-neutral-200 bg-white px-4 text-sm font-medium text-text-primary"
-            >
-              Cancel
-            </Link>
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="inline-flex h-10 items-center rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-interactive-primary-hover disabled:opacity-50"
-            >
-              {isPending ? pendingLabel : submitLabel}
-            </button>
-          </div>
+          {!inlineSubmit && (
+            <div className="mt-8 flex justify-end gap-3">
+              <Link
+                href="/admin/cohorts"
+                className="inline-flex h-10 items-center rounded-lg border border-neutral-200 bg-white px-4 text-sm font-medium text-text-primary"
+              >
+                Cancel
+              </Link>
+              {submitButton}
+            </div>
+          )}
         </div>
 
         {aside}
@@ -263,10 +307,12 @@ function DateInput({
   id,
   value,
   onChange,
+  readOnly,
 }: {
   id: string;
   value: string;
   onChange: (value: string) => void;
+  readOnly?: boolean;
 }) {
   return (
     <div className="relative">
@@ -277,6 +323,7 @@ function DateInput({
         placeholder="DD/MM/YYYY"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        readOnly={readOnly}
         className={cn(inputClass, "pl-10")}
       />
     </div>

@@ -23,7 +23,7 @@ import type {
   CohortSummary,
 } from "@/app/admin/cohorts/cohort-data";
 
-type StatusAction = "complete" | "terminate" | "reactivate";
+export type StatusAction = "complete" | "terminate" | "reactivate";
 
 const statusActions: Record<
   StatusAction,
@@ -98,29 +98,8 @@ export function CohortActionsMenu({
   cohort: CohortSummary;
   onStatusChanged: (toast: { title: string; message: string }) => void;
 }) {
-  const queryClient = useQueryClient();
   const [action, setAction] = React.useState<StatusAction | null>(null);
   const ended = cohort.status === "completed" || cohort.status === "terminated";
-
-  const statusMutation = useMutation({
-    mutationFn: (next: StatusAction) =>
-      setCohortStatus(cohort.id, statusActions[next].status),
-    onSuccess: (_, next) => {
-      queryClient.invalidateQueries({ queryKey: cohortKeys.all() });
-      setAction(null);
-      onStatusChanged({
-        title: statusActions[next].doneTitle,
-        message: `“${cohort.name}” ${statusActions[next].doneMessage}`,
-      });
-    },
-  });
-
-  function openAction(next: StatusAction) {
-    statusMutation.reset();
-    setAction(next);
-  }
-
-  const current = action ? statusActions[action] : null;
 
   return (
     <>
@@ -140,15 +119,9 @@ export function CohortActionsMenu({
               >
                 View details
               </Menu.Item>
-              <Menu.Item
-                render={<Link href={`/admin/cohorts/${cohort.id}/edit`} />}
-                className={itemClass}
-              >
-                Edit cohort
-              </Menu.Item>
               {ended ? (
                 <Menu.Item
-                  onClick={() => openAction("reactivate")}
+                  onClick={() => setAction("reactivate")}
                   className={itemClass}
                 >
                   Reactivate cohort
@@ -156,13 +129,13 @@ export function CohortActionsMenu({
               ) : (
                 <>
                   <Menu.Item
-                    onClick={() => openAction("complete")}
+                    onClick={() => setAction("complete")}
                     className={itemClass}
                   >
                     Mark as completed
                   </Menu.Item>
                   <Menu.Item
-                    onClick={() => openAction("terminate")}
+                    onClick={() => setAction("terminate")}
                     className="flex cursor-pointer rounded-md px-3 py-2 text-text-error outline-none data-highlighted:bg-surface-error-badge"
                   >
                     Terminate cohort
@@ -174,63 +147,107 @@ export function CohortActionsMenu({
         </Menu.Portal>
       </Menu.Root>
 
-      <Dialog
-        open={action !== null}
-        onOpenChange={(open) => {
-          if (!open && !statusMutation.isPending) setAction(null);
-        }}
-      >
-        {current && action && (
-          <DialogContent
-            showClose={false}
-            className="flex w-[370px] flex-col items-center text-center sm:p-6"
-          >
-            <span
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-lg",
-                toneClass[current.tone],
-              )}
-            >
-              <current.icon className="h-4 w-4" />
-            </span>
-            <DialogTitle className="mt-5 text-base font-semibold">
-              {current.title}
-            </DialogTitle>
-            <DialogDescription className="mt-2 text-neutral-500">
-              {current.description(cohort.name)}
-            </DialogDescription>
-            {statusMutation.isError && (
-              <p className="mt-3 text-sm text-text-error">
-                {getCohortErrorMessage(statusMutation.error)}
-              </p>
-            )}
-            <div className="mt-5 flex gap-2">
-              <DialogClose
-                disabled={statusMutation.isPending}
-                render={
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    className="border-neutral-200 text-neutral-800"
-                  />
-                }
-              >
-                Cancel
-              </DialogClose>
-              <Button
-                variant={current.tone === "error" ? "destructive" : "primary"}
-                size="lg"
-                disabled={statusMutation.isPending}
-                onClick={() => statusMutation.mutate(action)}
-              >
-                {statusMutation.isPending
-                  ? current.pendingLabel
-                  : current.confirmLabel}
-              </Button>
-            </div>
-          </DialogContent>
-        )}
-      </Dialog>
+      <CohortStatusDialog
+        cohort={cohort}
+        action={action}
+        onClose={() => setAction(null)}
+        onStatusChanged={onStatusChanged}
+      />
     </>
+  );
+}
+
+/** Confirms completing, terminating or reactivating a cohort, then saves it. */
+export function CohortStatusDialog({
+  cohort,
+  action,
+  onClose,
+  onStatusChanged,
+}: {
+  cohort: { id: string; name: string };
+  action: StatusAction | null;
+  onClose: () => void;
+  onStatusChanged: (toast: { title: string; message: string }) => void;
+}) {
+  const queryClient = useQueryClient();
+  const statusMutation = useMutation({
+    mutationFn: (next: StatusAction) =>
+      setCohortStatus(cohort.id, statusActions[next].status),
+    onSuccess: (_, next) => {
+      queryClient.invalidateQueries({ queryKey: cohortKeys.all() });
+      onClose();
+      onStatusChanged({
+        title: statusActions[next].doneTitle,
+        message: `“${cohort.name}” ${statusActions[next].doneMessage}`,
+      });
+    },
+  });
+
+  // Each opening starts without the previous attempt's error.
+  const { reset } = statusMutation;
+  React.useEffect(() => {
+    if (action) reset();
+  }, [action, reset]);
+
+  const current = action ? statusActions[action] : null;
+
+  return (
+    <Dialog
+      open={action !== null}
+      onOpenChange={(open) => {
+        if (!open && !statusMutation.isPending) onClose();
+      }}
+    >
+      {current && action && (
+        <DialogContent
+          showClose={false}
+          className="flex w-[370px] flex-col items-center text-center sm:p-6"
+        >
+          <span
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-lg",
+              toneClass[current.tone],
+            )}
+          >
+            <current.icon className="h-4 w-4" />
+          </span>
+          <DialogTitle className="mt-5 text-base font-semibold">
+            {current.title}
+          </DialogTitle>
+          <DialogDescription className="mt-2 text-neutral-500">
+            {current.description(cohort.name)}
+          </DialogDescription>
+          {statusMutation.isError && (
+            <p className="mt-3 text-sm text-text-error">
+              {getCohortErrorMessage(statusMutation.error)}
+            </p>
+          )}
+          <div className="mt-5 flex gap-2">
+            <DialogClose
+              disabled={statusMutation.isPending}
+              render={
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="border-neutral-200 text-neutral-800"
+                />
+              }
+            >
+              Cancel
+            </DialogClose>
+            <Button
+              variant={current.tone === "error" ? "destructive" : "primary"}
+              size="lg"
+              disabled={statusMutation.isPending}
+              onClick={() => statusMutation.mutate(action)}
+            >
+              {statusMutation.isPending
+                ? current.pendingLabel
+                : current.confirmLabel}
+            </Button>
+          </div>
+        </DialogContent>
+      )}
+    </Dialog>
   );
 }
