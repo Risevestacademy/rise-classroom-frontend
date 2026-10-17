@@ -61,7 +61,7 @@ export default function CurriculumPage({
   return (
     <>
       <AdminTopNav breadcrumb={["Academy", "Curriculum"]} />
-      <main className="flex min-w-0 flex-1 flex-col p-4 sm:p-6 lg:p-8">
+      <main className="flex min-w-0 flex-1 flex-col p-4 sm:p-6 bg-neutral-50 lg:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-neutral-800">Curriculum</h1>
@@ -135,7 +135,7 @@ export default function CurriculumPage({
               </p>
             ) : (
               filtered.map((curriculum) => {
-                const track = trackDetails[curriculum.track];
+                const track = trackDetails(curriculum.track.name);
                 return (
                   <div key={curriculum.id} className="rounded-xl bg-white p-5">
                     <div className="flex items-start gap-3">

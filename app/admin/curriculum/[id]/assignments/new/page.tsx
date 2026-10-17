@@ -201,7 +201,7 @@ export default function NewAssignmentPage({
               </h2>
               {curriculum && (
                 <p className="mt-1 text-sm text-neutral-500">
-                  {trackDetails[curriculum.track].label} · {curriculum.cohort}
+                  {trackDetails(curriculum.track.name).label} · {curriculum.cohort}
                 </p>
               )}
 

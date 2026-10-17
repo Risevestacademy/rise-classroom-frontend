@@ -132,7 +132,7 @@ export default function CurriculumDetailPage({
   const curriculum = curriculumQuery.data;
   if (!curriculum) return null;
 
-  const track = trackDetails[curriculum.track];
+  const track = trackDetails(curriculum.track.name);
 
   return (
     <>

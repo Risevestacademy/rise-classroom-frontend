@@ -5,7 +5,8 @@ import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { Field } from "@base-ui/react/field";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, FileText } from "lucide-react";
+import { File01, Video, Link01, Camera02 } from "@/assets/icons";
+import { ChevronLeft, FileText, Link2 } from "lucide-react";
 
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { FileDropzone } from "@/components/ui/file-upload";
@@ -44,6 +45,7 @@ export default function NewResourcePage({
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [files, setFiles] = React.useState<ResourceFile[]>([]);
+  const [url, setUrl] = React.useState("");
   const [moduleId, setModuleId] = React.useState("");
   const [lessonId, setLessonId] = React.useState("");
 
@@ -53,19 +55,36 @@ export default function NewResourcePage({
   const lessons = selectedModule?.lessons ?? [];
   const selectedLessonId = lessonId || lessons[0]?.id || wholeModule;
   const file = files[0];
+  const isLink = kind === "Link";
   const backHref = `/admin/curriculum/${id}?tab=resources`;
+
+  const Icons: Record<ResourceKind, React.ReactNode> = {
+    PDF: <File01 className="text-text-info" />,
+    Video: <Video className="text-text-info" />,
+    Link: <Link01 className="text-text-info" />,
+    Image: <Camera02 className="text-text-info" />,
+    Document: <FileText className="text-text-info" />,
+  };
 
   const createMutation = useMutation({
     mutationFn: () =>
       createResource(
         selectedModuleId,
         selectedLessonId === wholeModule ? null : selectedLessonId,
-        {
-          name: file.name,
-          sizeBytes: file.sizeBytes,
-          title: title.trim(),
-          description: description.trim(),
-        },
+        isLink
+          ? {
+              name: url.trim(),
+              sizeBytes: null,
+              title: title.trim(),
+              description: description.trim(),
+              url: url.trim(),
+            }
+          : {
+              name: file.name,
+              sizeBytes: file.sizeBytes,
+              title: title.trim(),
+              description: description.trim(),
+            },
       ),
     onSuccess: (resource) => {
       queryClient.invalidateQueries({ queryKey: curriculumKeys.modules(id) });
@@ -89,7 +108,7 @@ export default function NewResourcePage({
   const curriculum = curriculumQuery.data;
   const canSubmit =
     title.trim().length > 0 &&
-    file !== undefined &&
+    (isLink ? url.trim().length > 0 : file !== undefined) &&
     selectedModuleId !== "" &&
     !createMutation.isPending;
 
@@ -139,7 +158,7 @@ export default function NewResourcePage({
                       label: k,
                     }),
                   )}
-                  leadingIcon={<FileText className="text-text-info" />}
+                  leadingIcon={Icons[kind]}
                 />
                 <FormField
                   label="Title"
@@ -164,16 +183,32 @@ export default function NewResourcePage({
                     />
                   </div>
                 </Field.Root>
-                <FileDropzone
-                  label="Resource"
-                  files={files}
-                  onChange={setFiles}
-                  createFile={resourceFromUpload}
-                  extensions={resourceKinds[kind].extensions}
-                  maxBytes={maxFileBytes}
-                  formatsLabel={resourceKinds[kind].formats}
-                  multiple={false}
-                />
+                {isLink ? (
+                  <FormField
+                    label="Link"
+                    required
+                    hint="Paste a full link starting with https://"
+                    inputProps={{
+                      type: "basic",
+                      size: "medium",
+                      value: url,
+                      onChange: (event) => setUrl(event.target.value),
+                      placeholder: "https://www.figma.com/file/…",
+                      leadingIcon: <Link2 className="text-text-info" />,
+                    }}
+                  />
+                ) : (
+                  <FileDropzone
+                    label="Resource"
+                    files={files}
+                    onChange={setFiles}
+                    createFile={resourceFromUpload}
+                    extensions={resourceKinds[kind].extensions}
+                    maxBytes={maxFileBytes}
+                    formatsLabel={resourceKinds[kind].formats}
+                    multiple={false}
+                  />
+                )}
                 <Select
                   size="large"
                   label="Attach to"

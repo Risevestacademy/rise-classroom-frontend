@@ -69,6 +69,35 @@ export function SettingsTab({ curriculum }: { curriculum: Curriculum }) {
     },
   });
 
+  // Radio changes show straight away and roll back if the save fails.
+  const deliveryMutation = useMutation({
+    mutationFn: (input: UpdateCurriculumInput) =>
+      updateCurriculum(curriculum.id, input),
+    onMutate: async (input) => {
+      const queryKey = curriculumKeys.detail(curriculum.id);
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<Curriculum>(queryKey);
+      queryClient.setQueryData<Curriculum>(queryKey, (current) =>
+        current ? { ...current, ...input } : current,
+      );
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          curriculumKeys.detail(curriculum.id),
+          context.previous,
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: curriculumKeys.detail(curriculum.id),
+      });
+      queryClient.invalidateQueries({ queryKey: curriculumKeys.list() });
+    },
+  });
+
   const isDirty =
     title.trim() !== curriculum.title ||
     description.trim() !== curriculum.description;
@@ -144,7 +173,7 @@ export function SettingsTab({ curriculum }: { curriculum: Curriculum }) {
                 value={curriculum.publishStatus}
                 options={statusOptions}
                 onChange={(publishStatus) =>
-                  updateMutation.mutate({ publishStatus })
+                  deliveryMutation.mutate({ publishStatus })
                 }
               />
               <RadioCard
@@ -152,16 +181,19 @@ export function SettingsTab({ curriculum }: { curriculum: Curriculum }) {
                 value={curriculum.progressMode}
                 options={progressOptions}
                 onChange={(progressMode) =>
-                  updateMutation.mutate({ progressMode })
+                  deliveryMutation.mutate({ progressMode })
                 }
               />
             </div>
           </section>
 
-          {updateMutation.isError && (
-            <p className="text-sm text-text-error">
-              {updateMutation.error.message}
-            </p>
+          {[updateMutation, deliveryMutation].map(
+            (mutation, index) =>
+              mutation.isError && (
+                <p key={index} className="text-sm text-text-error">
+                  {mutation.error.message}
+                </p>
+              ),
           )}
         </div>
 
