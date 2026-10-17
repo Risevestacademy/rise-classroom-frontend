@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -18,6 +18,8 @@ import { landingPathFor, signIn } from "@/lib/auth"
 import {
   completeOnboarding,
   getOnboardingErrorMessage,
+  PROFILE_IMAGE_TYPES,
+  validateProfileImage,
   type OnboardingDetails,
 } from "@/lib/onboarding"
 
@@ -49,17 +51,120 @@ function stepContent(step: StepId, isInstructor: boolean) {
   }
 }
 
+/** A picked photo plus the blob URL used to preview it. */
+type ProfilePhoto = { file: File; previewUrl: string }
+
+function ProfilePhotoPicker({
+  photo,
+  error,
+  onPhotoChange,
+  onPhotoError,
+}: {
+  photo: ProfilePhoto | null
+  error: string | null
+  onPhotoChange: (file: File | null) => void
+  onPhotoError: (message: string) => void
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    // Clear the input so picking the same file again still fires onChange.
+    event.target.value = ""
+    if (!file) return
+
+    const problem = validateProfileImage(file)
+    if (problem) onPhotoError(problem)
+    else onPhotoChange(file)
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-4">
+        <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-200">
+          {photo ? (
+            // A local blob preview, so next/image's optimisation doesn't apply.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photo.previewUrl}
+              alt="Your profile photo"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <User className="size-6 text-neutral-400" />
+          )}
+        </span>
+        <div className="space-y-1.5">
+          <p className="text-base text-neutral-800">
+            Profile photo{" "}
+            <span className="text-sm text-neutral-500">(optional)</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="cursor-pointer border border-neutral-300"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {photo ? "Change photo" : "Add photo"}
+            </Button>
+            {photo && (
+              <button
+                type="button"
+                onClick={() => onPhotoChange(null)}
+                className="text-sm font-medium text-text-error hover:underline"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={PROFILE_IMAGE_TYPES.join(",")}
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+      </div>
+      <p
+        role={error ? "alert" : undefined}
+        className={
+          error ? "text-xs text-text-error" : "text-xs text-neutral-500"
+        }
+      >
+        {error ?? "JPEG, PNG or WebP, up to 2MB"}
+      </p>
+    </div>
+  )
+}
+
 function ProfileStep({
   fullName,
   displayName,
   onDisplayNameChange,
+  photo,
+  photoError,
+  onPhotoChange,
+  onPhotoError,
 }: {
   fullName: string
   displayName: string
   onDisplayNameChange: (value: string) => void
+  photo: ProfilePhoto | null
+  photoError: string | null
+  onPhotoChange: (file: File | null) => void
+  onPhotoError: (message: string) => void
 }) {
   return (
     <div className="flex flex-col gap-5">
+      <ProfilePhotoPicker
+        photo={photo}
+        error={photoError}
+        onPhotoChange={onPhotoChange}
+        onPhotoError={onPhotoError}
+      />
       <FormField
         label="Full Name"
         hint="Set by your program admin and not editable"
@@ -96,9 +201,9 @@ function ConfirmProgramStep({
   memberships: OnboardingDetails["memberships"]
 }) {
   return (
-    <div className="space-y-5 rounded-xl bg-primary-50 p-5">
+    <div className="space-y-5 rounded-xl bg-surface-brand p-5">
       {memberships.length === 0 ? (
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-neutral-500">
           You haven&apos;t been assigned to a cohort or track yet. Your program
           admin can add you once your account is set up.
         </p>
@@ -109,17 +214,17 @@ function ConfirmProgramStep({
             className="space-y-5"
           >
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-neutral-900">Cohort</p>
-              <p className="text-sm text-neutral-600">{membership.cohort}</p>
+              <p className="text-sm font-semibold text-neutral-800">Cohort</p>
+              <p className="text-sm text-neutral-500">{membership.cohort}</p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-neutral-900">Track</p>
-              <p className="text-sm text-neutral-600">{membership.track}</p>
+              <p className="text-sm font-semibold text-neutral-800">Track</p>
+              <p className="text-sm text-neutral-500">{membership.track}</p>
             </div>
           </div>
         ))
       )}
-      <h2 className="pt-2 text-lg font-bold text-neutral-900">Is everything correct?</h2>
+      <h2 className="pt-2 text-lg font-bold text-neutral-800">Is everything correct?</h2>
     </div>
   )
 }
@@ -127,8 +232,8 @@ function ConfirmProgramStep({
 function WelcomeStep() {
   return (
     <>
-      <div className="aspect-square w-full rounded-2xl bg-primary-50" />
-      <p className="text-base font-medium text-neutral-900">
+      <div className="aspect-square w-full rounded-2xl bg-surface-brand" />
+      <p className="text-base font-medium text-neutral-800">
         Learn, track progress, complete assignments, and stay connected.
       </p>
     </>
@@ -145,6 +250,26 @@ export default function CompleteProfilePage() {
   const [displayName, setDisplayName] = useState(
     `${details.firstName} ${details.lastName.charAt(0)}.`.trim()
   )
+  const [photo, setPhoto] = useState<ProfilePhoto | null>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+
+  // Blob URLs keep the file in memory until revoked, so release the old one
+  // whenever the photo is replaced or removed, and the last one on unmount.
+  const photoUrlRef = useRef<string | null>(null)
+  useEffect(
+    () => () => {
+      if (photoUrlRef.current) URL.revokeObjectURL(photoUrlRef.current)
+    },
+    []
+  )
+
+  function handlePhotoChange(file: File | null) {
+    if (photoUrlRef.current) URL.revokeObjectURL(photoUrlRef.current)
+    const previewUrl = file ? URL.createObjectURL(file) : null
+    photoUrlRef.current = previewUrl
+    setPhoto(file && previewUrl ? { file, previewUrl } : null)
+    setPhotoError(null)
+  }
 
   // The password lives in memory only, so a refresh on this page loses it —
   // send the invitee back a step to enter it again.
@@ -163,6 +288,7 @@ export default function CompleteProfilePage() {
         displayName: displayName.trim(),
         password,
         confirmPassword: password,
+        image: photo?.file,
       })
 
       try {
@@ -218,8 +344,8 @@ export default function CompleteProfilePage() {
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-neutral-600">{subtitle}</p>}
+        <h1 className="text-2xl font-bold text-neutral-800">{title}</h1>
+        {subtitle && <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>}
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -228,6 +354,10 @@ export default function CompleteProfilePage() {
             fullName={`${details.firstName} ${details.lastName}`}
             displayName={displayName}
             onDisplayNameChange={setDisplayName}
+            photo={photo}
+            photoError={photoError}
+            onPhotoChange={handlePhotoChange}
+            onPhotoError={setPhotoError}
           />
         )}
         {step === 2 && <ConfirmProgramStep memberships={details.memberships} />}
@@ -236,7 +366,7 @@ export default function CompleteProfilePage() {
         {finish.isError && (
           <p
             role="alert"
-            className="flex items-start gap-2 rounded-lg border border-semantic-border-error bg-semantic-surface-error-badge px-4 py-3 text-sm text-semantic-text-error"
+            className="flex items-start gap-2 rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{getOnboardingErrorMessage(finish.error)}</span>
@@ -255,18 +385,18 @@ export default function CompleteProfilePage() {
         </Button>
 
         {step === 2 && (
-          <div className="flex flex-col items-center gap-2 text-center text-sm text-neutral-600">
+          <div className="flex flex-col items-center gap-2 text-center text-sm text-neutral-500">
             <button
               type="button"
               disabled={finish.isPending}
               onClick={() => setStep(1)}
-              className="font-medium text-primary-500 hover:underline disabled:opacity-50"
+              className="font-medium text-brand-primary hover:underline disabled:opacity-50"
             >
               Back
             </button>
             <p>
               Something&apos;s wrong?{" "}
-              <a href="#" className="font-medium text-primary-500 hover:underline">
+              <a href="#" className="font-medium text-brand-primary hover:underline">
                 Contact support
               </a>
             </p>

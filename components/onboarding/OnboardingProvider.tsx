@@ -65,13 +65,13 @@ function OnboardingProblem({ message }: { message: string }) {
   return (
     <AuthShell>
       <div className="my-10 flex flex-col items-center gap-4 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-semantic-surface-error-badge text-semantic-text-error">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-error-badge text-text-error">
           <AlertCircle className="h-7 w-7" />
         </span>
-        <h1 className="text-xl font-bold text-neutral-900">
+        <h1 className="text-xl font-bold text-neutral-800">
           We can&apos;t open this invitation
         </h1>
-        <p className="max-w-sm text-sm text-neutral-600">{message}</p>
+        <p className="max-w-sm text-sm text-neutral-500">{message}</p>
         <Button
           variant="primary"
           size="lg"

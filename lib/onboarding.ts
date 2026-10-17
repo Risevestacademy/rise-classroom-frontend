@@ -18,7 +18,28 @@ export type CompleteOnboardingInput = {
   displayName: string;
   password: string;
   confirmPassword: string;
+  /** Optional profile photo. */
+  image?: File | null;
 };
+
+/** Profile photo formats `POST /onboarding/complete` accepts. */
+export const PROFILE_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** Largest profile photo the backend accepts (2MB). */
+export const PROFILE_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+
+/** Returns why the backend would reject a photo, or null if it's fine. */
+export function validateProfileImage(file: File) {
+  if (!PROFILE_IMAGE_TYPES.includes(file.type)) {
+    return "Choose a JPEG, PNG or WebP image.";
+  }
+
+  if (file.size > PROFILE_IMAGE_MAX_BYTES) {
+    return "Choose an image that's 2MB or smaller.";
+  }
+
+  return null;
+}
 
 // The token goes in the body rather than the URL so it isn't written to the
 // backend's request logs.
@@ -32,13 +53,25 @@ async function getOnboardingDetails(token: string) {
 }
 
 /**
- * Sets the password and display name and uses up the invite link. It does not
- * sign the user in — that is a separate call afterwards.
+ * Sets the password, display name and optional profile photo, and uses up the
+ * invite link. It does not sign the user in — that is a separate call
+ * afterwards. Sent as multipart so the photo can go in the same request.
  */
-export function completeOnboarding(input: CompleteOnboardingInput) {
+export function completeOnboarding({
+  image,
+  ...fields
+}: CompleteOnboardingInput) {
+  const body = new FormData();
+
+  for (const [key, value] of Object.entries(fields)) {
+    body.append(key, value);
+  }
+
+  if (image) body.append("image", image);
+
   return api.post<{ success: boolean; message: string }>(
     "/onboarding/complete",
-    input
+    body
   );
 }
 
@@ -66,6 +99,8 @@ export function getOnboardingErrorMessage(error: unknown) {
       return "This invitation link is invalid or has already been used. If you've already set up your account, sign in instead.";
     case 410:
       return "This invitation link has expired. Ask your program admin to send you a new one.";
+    case 413:
+      return "Your profile photo is larger than 2MB. Go back and choose a smaller one.";
     case 429:
       return "Too many attempts. Please wait a few minutes and try again.";
     default:

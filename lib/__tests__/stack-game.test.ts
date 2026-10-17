@@ -39,6 +39,10 @@ describe("resolveDrop", () => {
     expect(result.placed.width + result.offcut.width).toBe(180);
   });
 
+  it("counts a sliver-thin overlap as a miss", () => {
+    expect(resolveDrop(below, { x: 295, width: 200 })).toEqual({ kind: "miss" });
+  });
+
   it("misses when nothing overlaps", () => {
     expect(resolveDrop(below, { x: 300, width: 200 })).toEqual({ kind: "miss" });
     expect(resolveDrop(below, { x: -100, width: 200 })).toEqual({ kind: "miss" });

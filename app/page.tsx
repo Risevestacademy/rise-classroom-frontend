@@ -54,7 +54,7 @@ export default function HomePage() {
 
   return (
     <main
-      className="relative h-dvh w-full overflow-hidden bg-semantic-surface-brand"
+      className="relative h-dvh w-full overflow-hidden bg-surface-brand"
       style={{
         // A design-tool canvas: a faint dot grid.
         backgroundImage:
@@ -75,7 +75,7 @@ export default function HomePage() {
           data-easter-egg-trigger
           onClick={handleLogoClick}
           aria-label="Rise Classroom"
-          className="pointer-events-auto rounded-lg outline-none select-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          className="pointer-events-auto rounded-lg outline-none select-none focus-visible:ring-2 focus-visible:ring-brand-primary"
         >
           <Logo variant="teal" size="sm" />
         </button>
@@ -112,7 +112,7 @@ export default function HomePage() {
             transform: merged ? "translateY(0)" : "translateY(-50%)",
           }}
         >
-          <h1 className="text-3xl leading-tight font-bold [word-spacing:0.8rem] text-neutral-900 lg:text-4xl">
+          <h1 className="text-3xl leading-tight font-bold [word-spacing:0.8rem] text-neutral-800 lg:text-4xl">
             Learn. Practice. Progress.
           </h1>
 
@@ -120,14 +120,14 @@ export default function HomePage() {
             className="flex flex-col items-center transition-opacity duration-300"
             style={{ opacity: merged ? 0 : 1 }}
           >
-            <p className="mt-3 max-w-md text-sm text-neutral-600">
+            <p className="mt-3 max-w-md text-sm text-neutral-500">
               Design, Frontend, Backend and Mobile — one studio, built
               together by students, mentors and instructors.
             </p>
-            <p className="mt-6 flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700">
+            <p className="mt-6 flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-medium text-neutral-600">
               {hasMerged ? "Hold again" : "Press and hold anywhere"}
-              <span className="hidden text-neutral-400 sm:inline">or hold</span>
-              <kbd className="hidden rounded-md border border-neutral-300 px-1.5 py-0.5 font-sans text-[11px] text-neutral-700 sm:inline">
+              <span className="hidden text-neutral-300 sm:inline">or hold</span>
+              <kbd className="hidden rounded-md border border-neutral-200 px-1.5 py-0.5 font-sans text-[11px] text-neutral-600 sm:inline">
                 Space
               </kbd>
             </p>

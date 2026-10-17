@@ -420,8 +420,8 @@ export function StudioField({
       }
     }
 
-    function fill(color: Rgb, toTeal: number) {
-      const [r, g, b] = color.map((channel, i) => Math.round(mix(channel, PALETTE.teal[i], toTeal)));
+    function fill(color: Rgb, toBrand: number) {
+      const [r, g, b] = color.map((channel, i) => Math.round(mix(channel, PALETTE.brand[i], toBrand)));
       return `rgb(${r}, ${g}, ${b})`;
     }
 
@@ -480,7 +480,7 @@ export function StudioField({
         ctx!.beginPath();
         ctx!.rect(target.x0, -1, target.x1 - target.x0, LOGO_VIEWBOX.height + 2);
         ctx!.clip();
-        ctx!.fillStyle = `rgb(${PALETTE.teal.join(", ")})`;
+        ctx!.fillStyle = `rgb(${PALETTE.brand.join(", ")})`;
         ctx!.fill(bandPaths[piece.band]);
         ctx!.restore();
       }
@@ -493,7 +493,7 @@ export function StudioField({
       ctx!.translate(mark.left, mark.top);
       const scale = mark.width / LOGO_VIEWBOX.width;
       ctx!.scale(scale, scale);
-      ctx!.fillStyle = `rgb(${PALETTE.teal.join(", ")})`;
+      ctx!.fillStyle = `rgb(${PALETTE.brand.join(", ")})`;
       bandPaths.forEach((path, band) => {
         if (solid[band] === 0) return;
         ctx!.globalAlpha = solid[band];
@@ -528,7 +528,7 @@ export function StudioField({
 
     function drawCursor(cursor: Cursor, now: number) {
       const staff = isStaff(cursor.person);
-      const color = staff ? `rgb(${PALETTE.teal.join(",")})` : PALETTE.ink;
+      const color = staff ? `rgb(${PALETTE.brand.join(",")})` : PALETTE.ink;
 
       // Click ripple.
       const ripple = (now - cursor.clickAt) / 450;

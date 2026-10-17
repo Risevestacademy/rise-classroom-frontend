@@ -12,7 +12,7 @@ function Hint({
   return (
     <Field.Description
       className={cn(
-        "mt-1.5 flex items-center gap-1 text-xs text-neutral-600",
+        "mt-1.5 flex items-center gap-1 text-xs text-neutral-500",
         className
       )}
       {...props}
@@ -34,7 +34,7 @@ function Error({
   return (
     <Field.Error
       className={cn(
-        "mt-1.5 flex items-center gap-1 text-xs text-semantic-text-error",
+        "mt-1.5 flex items-center gap-1 text-xs text-text-error",
         className
       )}
       {...props}

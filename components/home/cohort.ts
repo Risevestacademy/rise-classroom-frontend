@@ -26,8 +26,8 @@ export const STUDIO_PEOPLE: StudioPerson[] = [
   { name: "Etim", role: "Student", track: "Design" },
   { name: "Micheal", role: "Instructor", track: "Mobile" },
   { name: "Iyobosa", role: "Student", track: "Frontend" },
-  { name: "Zainab", role: "Student", track: "Design" },
-  { name: "Ada", role: "Mentor", track: "Backend" },
+  { name: "Sophia", role: "Instructor", track: "Frontend" },
+  { name: "Oladapo", role: "Mentor", track: "Mobile" },
 ];
 
 /** "Ada · Mentor", or "Zainab · Frontend" for a student. */

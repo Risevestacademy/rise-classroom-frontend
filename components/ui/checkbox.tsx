@@ -11,17 +11,17 @@ function Checkbox({
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        "peer group/checkbox flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-neutral-400 bg-neutral-50 outline-none transition-colors",
-        "hover:border-primary-500",
-        "focus-visible:ring-3 focus-visible:ring-primary-500/30",
-        "data-[checked]:border-primary-500 data-[checked]:bg-primary-500",
-        "data-[indeterminate]:border-primary-500 data-[indeterminate]:bg-primary-500",
+        "peer group/checkbox flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-neutral-300 bg-neutral-0 outline-none transition-colors",
+        "hover:border-brand-primary",
+        "focus-visible:ring-3 focus-visible:ring-brand-primary/30",
+        "data-[checked]:border-brand-primary data-[checked]:bg-brand-primary",
+        "data-[indeterminate]:border-brand-primary data-[indeterminate]:bg-brand-primary",
         "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
         className
       )}
       {...props}
     >
-      <CheckboxPrimitive.Indicator className="flex text-neutral-50">
+      <CheckboxPrimitive.Indicator className="flex text-neutral-0">
         <Check
           className="size-3 group-data-[indeterminate]/checkbox:hidden"
           strokeWidth={3}
