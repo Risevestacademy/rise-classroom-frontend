@@ -61,8 +61,11 @@ export function CohortPeopleTable<T extends Person>({
     });
   }
 
+  // `relative` keeps the absolutely positioned sr-only labels and checkbox
+  // inputs inside the scroll area; without it they widen the whole page on
+  // mobile.
   return (
-    <section className="mt-6 overflow-x-auto">
+    <section className="relative mt-6 overflow-x-auto">
       <div className="min-w-[960px]">
         <div className="flex h-16 items-center justify-between bg-white px-6">
           <h2 className="text-xl font-semibold text-text-primary">{title}</h2>
