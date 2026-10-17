@@ -143,7 +143,10 @@ function getProgramOptions(
   return { status: "loading" };
 }
 
-export function InviteStudentDialog() {
+/** `defaultCohortId` preselects a cohort, e.g. when inviting from a cohort's page. */
+export function InviteStudentDialog({
+  defaultCohortId = "",
+}: { defaultCohortId?: string } = {}) {
   const queryClient = useQueryClient();
 
   const [open, setOpen] = React.useState(false);
@@ -157,7 +160,7 @@ export function InviteStudentDialog() {
   );
 
 
-  const [chosenCohortId, setChosenCohortId] = React.useState("");
+  const [chosenCohortId, setChosenCohortId] = React.useState(defaultCohortId);
   const [chosenTrackId, setChosenTrackId] = React.useState("");
   const [emailSent, setEmailSent] = React.useState(true);
 
@@ -185,6 +188,8 @@ export function InviteStudentDialog() {
 
   function refreshStudents() {
     queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    // Cohort screens count students too.
+    queryClient.invalidateQueries({ queryKey: ["admin", "cohorts"] });
   }
 
   const inviteMutation = useMutation({
@@ -210,7 +215,7 @@ export function InviteStudentDialog() {
     setFirstName("");
     setLastName("");
     setDetailsErrors({});
-    setChosenCohortId("");
+    setChosenCohortId(defaultCohortId);
     setChosenTrackId("");
     setEmailSent(true);
     setUpload({ status: "idle" });

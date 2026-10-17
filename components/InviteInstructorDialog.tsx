@@ -129,7 +129,10 @@ export function parseInstructorCsv(text: string) {
   return { rows, skipped };
 }
 
-export function InviteInstructorDialog() {
+/** `defaultCohortId` preselects a cohort, e.g. when inviting from a cohort's page. */
+export function InviteInstructorDialog({
+  defaultCohortId = "",
+}: { defaultCohortId?: string } = {}) {
   const queryClient = useQueryClient();
 
   const [open, setOpen] = React.useState(false);
@@ -142,7 +145,7 @@ export function InviteInstructorDialog() {
   const [fileName, setFileName] = React.useState("");
   // Only the explicit choice is stored; the effective value falls back to the
   // first option, so there is no state to sync once the lists load.
-  const [chosenCohortId, setChosenCohortId] = React.useState("");
+  const [chosenCohortId, setChosenCohortId] = React.useState(defaultCohortId);
   const [chosenTrackId, setChosenTrackId] = React.useState("");
   const [csvRows, setCsvRows] = React.useState<CsvRow[]>([]);
   const [csvSkipped, setCsvSkipped] = React.useState(0);
@@ -179,6 +182,8 @@ export function InviteInstructorDialog() {
 
   function refreshInstructors() {
     queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    // Cohort screens list instructor assignments too.
+    queryClient.invalidateQueries({ queryKey: ["admin", "cohorts"] });
   }
 
   const singleInvite = useMutation({

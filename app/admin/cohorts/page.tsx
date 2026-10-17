@@ -1,237 +1,250 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Layers } from "lucide-react";
 
-import { AdminTopNav } from "@/components/AdminTopNav";
-import { CreateCohortDialog } from "@/components/CreateCohortDialog";
-import { EditCohortDialog } from "@/components/EditCohortDialog";
 import {
-  cohortStatusBadge,
-  cohortStatusLabels,
-  formatCohortDate,
-} from "@/components/CohortFormFields";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { adminQueries, type CohortStatus } from "@/lib/admin";
+  Add01,
+  Cohorts as CohortsIcon,
+  Track,
+  UserMultiple,
+} from "@/assets/icons";
+import { AdminTopNav } from "@/components/AdminTopNav";
+import { CohortActionsMenu } from "@/components/cohorts/CohortActionsMenu";
+import { CohortStatusBadge } from "@/components/cohorts/CohortStatusBadge";
+import { CohortTabs } from "@/components/cohorts/CohortTabs";
+import { SuccessToast } from "@/components/ui/toast";
+import { getProgramOptionsErrorMessage } from "@/lib/admin";
+import { cohortQueries } from "@/lib/cohorts";
+import { cn } from "@/lib/utils";
+import { type CohortStatus, type CohortSummary } from "./cohort-data";
 
-const statusFilters: { label: string; value: CohortStatus | undefined }[] = [
-  { label: "All statuses", value: undefined },
-  { label: "Ongoing", value: "ONGOING" },
-  { label: "Completed", value: "COMPLETED" },
-  { label: "Terminated", value: "TERMINATED" },
-];
+type Filter = "all" | CohortStatus;
 
-function formatCreatedDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+type Toast = { title: string; message: string };
 
-export default function CohortsPage() {
-  const [statusFilter, setStatusFilter] = React.useState<
-    CohortStatus | undefined
-  >(undefined);
+const filters = [
+  { value: "all", label: "All cohorts" },
+  { value: "active", label: "Active" },
+  // Spelling kept from the design.
+  { value: "upcoming", label: "Upcomimg" },
+  { value: "completed", label: "Completed" },
+  { value: "terminated", label: "Terminated" },
+] as const;
 
-  const cohortsQuery = useQuery(adminQueries.cohorts(statusFilter));
-  const allCohortsQuery = useQuery(adminQueries.cohorts());
+const cardSurface: Record<CohortStatus, string> = {
+  active: "bg-brand-50",
+  upcoming: "bg-info-surface",
+  completed: "bg-success-surface",
+  terminated: "bg-error-surface",
+};
 
+export default function CohortsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string; updated?: string }>;
+}) {
+  const { created, updated } = React.use(searchParams);
+  const router = useRouter();
+  const [filter, setFilter] = React.useState<Filter>("all");
+  const [statusToast, setStatusToast] = React.useState<Toast | null>(null);
+  const dismissStatusToast = React.useCallback(() => setStatusToast(null), []);
+  const cohortsQuery = useQuery(cohortQueries.summaries());
   const cohorts = cohortsQuery.data ?? [];
-  const allCohorts = allCohortsQuery.data ?? [];
 
-  function countWithStatus(status: CohortStatus) {
-    return allCohorts.filter((cohort) => cohort.status === status).length;
-  }
+  const dismissToast = React.useCallback(
+    () => router.replace("/admin/cohorts", { scroll: false }),
+    [router],
+  );
 
-  const showEmptyState =
-    !cohortsQuery.isPending && allCohorts.length === 0 && !statusFilter;
+  const visible =
+    filter === "all"
+      ? cohorts
+      : cohorts.filter((cohort) => cohort.status === filter);
 
   return (
     <>
       <AdminTopNav breadcrumb={["Academy", "Cohorts"]} />
-      <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+      <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-text-primary">Cohorts</h1>
+            <p className="mt-1 font-work text-sm text-text-secondary">
+              Manage student groups and monitor their progress
+            </p>
+          </div>
+          {cohorts.length > 0 && <CreateCohortLink />}
+        </div>
+
+        <CohortTabs
+          label="Filter cohorts"
+          tabs={filters}
+          value={filter}
+          onChange={setFilter}
+          className="mt-6"
+        />
+
         {cohortsQuery.isError ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-            <Layers className="h-12 w-12 text-neutral-200" />
-            <p className="font-semibold text-neutral-800">
-              Couldn&apos;t load cohorts
-            </p>
-            <p className="max-w-80 text-sm text-neutral-400">
-              {cohortsQuery.error.message}
-            </p>
-          </div>
-        ) : showEmptyState ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-            <Layers className="h-12 w-12 text-neutral-200" />
-            <p className="font-semibold text-neutral-800">
-              No cohorts created yet.
-            </p>
-            <p className="max-w-80 text-sm text-neutral-400">
-              A cohort is a group of students and instructors who go through the
-              program together. Create your first cohort to start inviting
-              people.
-            </p>
-            <div className="mt-2">
-              <CreateCohortDialog />
-            </div>
-          </div>
+          <p className="mt-8 font-work text-sm text-text-error">
+            {getProgramOptionsErrorMessage(cohortsQuery.error)}
+          </p>
+        ) : cohortsQuery.isPending ? null : visible.length === 0 ? (
+          <EmptyState />
         ) : (
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-neutral-800">Cohorts</h1>
-                <p className="mt-1 text-sm text-neutral-400">
-                  Create and manage cohorts. Each cohort groups the students and
-                  instructors taking the program over the same period.
-                </p>
-              </div>
-              <CreateCohortDialog />
-            </div>
-
-            <div className="rounded-xl border border-neutral-200 bg-white">
-              <div className="flex flex-col gap-4 border-b border-neutral-100 p-5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  {allCohortsQuery.isPending ? (
-                    <>
-                      <Skeleton className="h-5 w-20" />
-                      <Skeleton className="mt-2 h-4 w-48" />
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-semibold text-neutral-800">
-                        {allCohorts.length} Cohort
-                        {allCohorts.length === 1 ? "" : "s"}
-                      </p>
-                      <p className="text-sm text-neutral-400">
-                        {countWithStatus("ONGOING")} Ongoing ·{" "}
-                        {countWithStatus("COMPLETED")} Completed ·{" "}
-                        {countWithStatus("TERMINATED")} Terminated
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <select
-                    aria-label="Filter by status"
-                    value={statusFilter ?? ""}
-                    onChange={(event) =>
-                      setStatusFilter(
-                        (event.target.value || undefined) as
-                          CohortStatus | undefined,
-                      )
-                    }
-                    className="h-10 w-full appearance-none rounded-lg border border-neutral-200 bg-transparent py-2 pr-9 pl-3 text-sm font-medium text-neutral-600 outline-none focus:border-brand-primary sm:w-44"
-                  >
-                    {statusFilters.map((option) => (
-                      <option key={option.label} value={option.value ?? ""}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-left text-sm">
-                  <thead className="text-xs tracking-wider text-neutral-400 uppercase">
-                    <tr>
-                      <th className="px-5 py-3">Cohort</th>
-                      <th className="px-5 py-3">Duration</th>
-                      <th className="px-5 py-3">Status</th>
-                      <th className="px-5 py-3">Created</th>
-                      <th className="w-12 px-5 py-3">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cohortsQuery.isPending ? (
-                      Array.from({ length: 5 }).map((_, index) => (
-                        <tr key={index} className="border-t border-neutral-100">
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-3">
-                              <Skeleton className="h-9 w-9 rounded-full" />
-                              <div className="flex flex-col gap-1.5">
-                                <Skeleton className="h-4 w-32" />
-                                <Skeleton className="h-3 w-16" />
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-5 py-4">
-                            <Skeleton className="h-4 w-44" />
-                          </td>
-                          <td className="px-5 py-4">
-                            <Skeleton className="h-6 w-20 rounded-full" />
-                          </td>
-                          <td className="px-5 py-4">
-                            <Skeleton className="h-4 w-24" />
-                          </td>
-                          <td className="px-5 py-4">
-                            <Skeleton className="h-4 w-4" />
-                          </td>
-                        </tr>
-                      ))
-                    ) : cohorts.length === 0 ? (
-                      <tr className="border-t border-neutral-100">
-                        <td
-                          colSpan={5}
-                          className="px-5 py-10 text-center text-sm text-neutral-400"
-                        >
-                          No cohorts match this filter.
-                        </td>
-                      </tr>
-                    ) : (
-                      cohorts.map((cohort) => (
-                        <tr
-                          key={cohort.id}
-                          className="border-t border-neutral-100"
-                        >
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-brand text-brand-primary">
-                                <Layers className="h-4 w-4" />
-                              </span>
-                              <div className="min-w-0">
-                                <p className="font-medium text-neutral-800">
-                                  {cohort.name}
-                                </p>
-                                <p className="text-xs text-neutral-400">
-                                  Year {cohort.year}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-5 py-4 text-neutral-600">
-                            {formatCohortDate(cohort.startDate)} –{" "}
-                            {formatCohortDate(cohort.endDate)}
-                          </td>
-                          <td className="px-5 py-4">
-                            <Badge status={cohortStatusBadge[cohort.status]}>
-                              {cohortStatusLabels[cohort.status]}
-                            </Badge>
-                          </td>
-                          <td className="px-5 py-4 text-neutral-400">
-                            {formatCreatedDate(cohort.createdAt)}
-                          </td>
-                          <td className="px-5 py-4">
-                            <EditCohortDialog
-                              cohortId={cohort.id}
-                              cohortName={cohort.name}
-                            />
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <ul className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {visible.map((cohort) => (
+              <li key={cohort.id}>
+                <CohortCard cohort={cohort} onStatusChanged={setStatusToast} />
+              </li>
+            ))}
+          </ul>
         )}
       </main>
+
+      {created && (
+        <SuccessToast
+          title="New Cohort created"
+          message={
+            <>
+              &ldquo;{created}&rdquo; has been successfully created and added
+              to cohorts
+            </>
+          }
+          onDismiss={dismissToast}
+        />
+      )}
+
+      {updated && (
+        <SuccessToast
+          title="Cohort updated"
+          message={<>&ldquo;{updated}&rdquo; has been successfully updated</>}
+          onDismiss={dismissToast}
+        />
+      )}
+
+      {statusToast && (
+        <SuccessToast
+          title={statusToast.title}
+          message={statusToast.message}
+          onDismiss={dismissStatusToast}
+        />
+      )}
     </>
+  );
+}
+
+function CreateCohortLink({ label = "Create cohort" }: { label?: string }) {
+  return (
+    <Link
+      href="/admin/cohorts/create"
+      className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-interactive-primary-hover"
+    >
+      <Add01 className="size-5" />
+      {label}
+    </Link>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center px-4 pt-[231px] pb-16 text-center lg:-mr-8">
+      <CohortsIcon className="size-[84px] text-brand-primary" />
+      <p className="mt-[17px] text-2xl font-semibold text-text-primary">
+        No cohort yet
+      </p>
+      <p className="mt-0.5 max-w-[372px] font-work text-sm text-text-secondary">
+        Create your first cohort. Manage student groups and monitor their
+        progress
+      </p>
+      <div className="mt-[23px]">
+        {/* Label kept from the design. */}
+        <CreateCohortLink label="Add assignment" />
+      </div>
+    </div>
+  );
+}
+
+function CohortCard({
+  cohort,
+  onStatusChanged,
+}: {
+  cohort: CohortSummary;
+  onStatusChanged: (toast: Toast) => void;
+}) {
+  const completed = cohort.status === "completed";
+
+  return (
+    <article
+      className={cn(
+        "relative rounded-3xl p-6 shadow-[0_2px_4px_rgb(17_24_25/0.06)]",
+        cardSurface[cohort.status],
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <CohortStatusBadge status={cohort.status} />
+        <CohortActionsMenu cohort={cohort} onStatusChanged={onStatusChanged} />
+      </div>
+
+      <h2 className="mt-3 text-xl font-semibold text-text-primary">
+        <Link
+          href={`/admin/cohorts/${cohort.id}`}
+          className="after:absolute after:inset-0 after:rounded-3xl"
+        >
+          {cohort.name}
+        </Link>
+      </h2>
+      <p className="mt-1 font-work text-xs text-text-secondary">
+        {cohort.startDate} - {cohort.endDate}
+      </p>
+
+      <div className="mt-4 flex gap-8">
+        <CardStat icon={UserMultiple} value={cohort.students} label="Students" />
+        <CardStat icon={Track} value={cohort.tracks} label="Tracks" />
+      </div>
+
+      <p className="mt-3.5 text-xs font-medium text-text-primary">
+        {completed ? "Completed" : `${cohort.progress}% Complete`}
+      </p>
+      <div className="mt-1 h-2 overflow-hidden rounded-full bg-brand-100">
+        <div
+          className="h-full rounded-full bg-brand-primary"
+          style={{ width: `${cohort.progress}%` }}
+        />
+      </div>
+      {countdown(cohort) && (
+        <p className="mt-1 text-right font-work text-xs text-text-secondary">
+          {countdown(cohort)}
+        </p>
+      )}
+    </article>
+  );
+}
+
+/** Days to kick off for upcoming cohorts, days left for active ones, nothing once ended. */
+function countdown(cohort: CohortSummary) {
+  if (cohort.status === "upcoming") return `${cohort.daysToStart} days to kick off`;
+  if (cohort.status === "active") return `${cohort.daysLeft} days left`;
+  return null;
+}
+
+function CardStat({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  value: number;
+  label: string;
+}) {
+  return (
+    <div className="grid grid-cols-[24px_auto] gap-x-3">
+      <Icon className="size-6 text-text-primary" />
+      <p className="text-xl font-semibold text-text-primary">{value}</p>
+      <p className="col-start-2 font-work text-sm text-text-secondary">
+        {label}
+      </p>
+    </div>
   );
 }
