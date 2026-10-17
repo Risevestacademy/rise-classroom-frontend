@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Field } from "@base-ui/react/field";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Pencil } from "lucide-react";
 
 import { AdminTopNav } from "@/components/AdminTopNav";
@@ -16,14 +16,8 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
 import { Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  cohortNames,
-  trackDetails,
-  createCurriculum,
-  curriculumKeys,
-  type Cohort,
-  type TrackKey,
-} from "@/lib/curriculum";
+import { adminQueries } from "@/lib/admin";
+import { createCurriculum, curriculumKeys } from "@/lib/curriculum";
 
 const placeholderTitle = "Design Track Curriculum";
 const placeholderDescription =
@@ -34,16 +28,20 @@ export default function CreateCurriculumPage() {
   const queryClient = useQueryClient();
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [track, setTrack] = React.useState<TrackKey>("design");
-  const [cohort, setCohort] = React.useState<Cohort>("Cohort 2026");
+  const [trackId, setTrackId] = React.useState("");
+  const [cohortId, setCohortId] = React.useState("");
+  const tracks = useQuery(adminQueries.tracks()).data ?? [];
+  const cohorts = useQuery(adminQueries.cohorts()).data ?? [];
+  const track = tracks.find((t) => t.id === trackId) ?? tracks[0];
+  const cohort = cohorts.find((c) => c.id === cohortId) ?? cohorts[0];
 
   const createMutation = useMutation({
     mutationFn: () =>
       createCurriculum({
         title: title.trim(),
         description: description.trim(),
-        track,
-        cohort,
+        trackId: track.id,
+        cohort: cohort?.name ?? "",
       }),
     onSuccess: (curriculum) => {
       queryClient.invalidateQueries({ queryKey: curriculumKeys.list() });
@@ -53,7 +51,8 @@ export default function CreateCurriculumPage() {
     },
   });
 
-  const canSubmit = title.trim().length > 0 && !createMutation.isPending;
+  const canSubmit =
+    title.trim().length > 0 && track !== undefined && !createMutation.isPending;
 
   return (
     <>
@@ -121,22 +120,25 @@ export default function CreateCurriculumPage() {
                 <Select
                   size="large"
                   label="Track"
-                  value={track}
-                  onChange={(value) => setTrack(value as TrackKey)}
-                  options={Object.entries(trackDetails).map(([key, t]) => ({
-                    value: key,
-                    label: t.label,
-                  }))}
+                  value={track?.id ?? ""}
+                  onChange={setTrackId}
+                  options={tracks.map((t) => ({ value: t.id, label: t.name }))}
                 />
                 <Select
                   size="large"
                   label="Cohort"
-                  value={cohort}
-                  onChange={(value) => setCohort(value as Cohort)}
-                  options={cohortNames.map((c) => ({ value: c, label: c }))}
+                  value={cohort?.id ?? ""}
+                  onChange={setCohortId}
+                  options={cohorts.map((c) => ({ value: c.id, label: c.name }))}
                 />
               </div>
             </section>
+
+            {createMutation.isError && (
+              <p className="text-sm text-text-error">
+                {createMutation.error.message}
+              </p>
+            )}
 
             <div className="flex justify-end gap-3">
               <Button
@@ -190,7 +192,7 @@ export default function CreateCurriculumPage() {
                 </Badge>
               </div>
               <p className="mt-1 text-sm font-medium text-neutral-500">
-                {trackDetails[track].label} · {cohort}
+                {track?.name ?? "Track"} · {cohort?.name ?? "Cohort"}
               </p>
 
               <CurriculumStats

@@ -181,7 +181,7 @@ export function ResourcesTab({
                       {formatDate(resource.uploadedAt)}
                     </td>
                     <td className="px-4 py-5 text-neutral-600">
-                      <p>{resourceKind(resource.name)}</p>
+                      <p>{resourceKind(resource.name, resource.url)}</p>
                       <p className="mt-0.5">
                         {formatFileSize(resource.sizeBytes)}
                       </p>
@@ -270,6 +270,10 @@ export function ResourceSheet({
                 <Button
                   variant="secondary"
                   size="lg"
+                  disabled={!item.resource.url}
+                  onClick={() =>
+                    window.open(item.resource.url, "_blank", "noreferrer")
+                  }
                   className="border-neutral-200 text-neutral-800"
                 >
                   <Download className="h-4 w-4" />
@@ -284,7 +288,7 @@ export function ResourceSheet({
               </h3>
               <DetailRows
                 rows={[
-                  { label: "Type", value: resourceKind(item.resource.name) },
+                  { label: "Type", value: resourceKind(item.resource.name, item.resource.url) },
                   {
                     label: "Size",
                     value: formatFileSize(item.resource.sizeBytes),
