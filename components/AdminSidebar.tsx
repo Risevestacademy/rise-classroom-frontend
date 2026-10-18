@@ -157,7 +157,8 @@ export function AdminSidebar() {
 
           <hr className="my-3 text-neutral-200" />
 
-          <UserMenu />
+          {/* Sign-out lives in the top nav's profile menu. */}
+          <UserMenu withMenu={false} />
         </div>
       </aside>
     </>

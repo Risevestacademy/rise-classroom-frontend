@@ -19,17 +19,62 @@ const roleLabels: Record<Role, string> = {
 
 /**
  * The signed-in user's card at the foot of a sidebar. Clicking it opens a menu
- * with the sign-out action.
+ * with the sign-out action, unless `withMenu` is off (the admin area signs out
+ * from the top nav instead).
  */
 export function UserMenu({
   variant = "muted",
+  withMenu = true,
 }: {
   /** `muted` sits on a white sidebar; `card` sits on a grey footer. */
   variant?: "muted" | "card";
+  withMenu?: boolean;
 }) {
   const { data: session, isPending } = useQuery(sessionQuery());
   const signOut = useSignOut();
   const user = session?.user;
+
+  const details = (
+    <>
+      <UserAvatar
+        user={{
+          name: user?.name ?? "Account",
+          avatar: user?.image ?? "/default-avatar.png",
+        }}
+        isLoading={isPending}
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        {isPending ? (
+          <>
+            <Skeleton className="h-3 w-20 rounded-full" />
+            <Skeleton className="mt-1.5 h-2 w-14 rounded-full" />
+          </>
+        ) : (
+          <>
+            <span className="truncate text-sm font-bold text-neutral-800">
+              {user?.displayName ?? user?.name ?? "Account"}
+            </span>
+            <span className="mt-0.5 truncate text-xs text-neutral-400">
+              {user ? roleLabels[user.role] : "Not signed in"}
+            </span>
+          </>
+        )}
+      </div>
+    </>
+  );
+
+  if (!withMenu) {
+    return (
+      <div
+        className={cn(
+          "flex w-full items-center gap-3 rounded-2xl p-3",
+          variant === "card" ? "bg-white shadow-sm" : "bg-neutral-50"
+        )}
+      >
+        {details}
+      </div>
+    );
+  }
 
   return (
     <Menu.Root>
@@ -42,30 +87,7 @@ export function UserMenu({
             : "bg-neutral-50 hover:bg-neutral-100 data-[popup-open]:bg-neutral-100"
         )}
       >
-        <UserAvatar
-          user={{
-            name: user?.name ?? "Account",
-            avatar: user?.image ?? "/default-avatar.png",
-          }}
-          isLoading={isPending}
-        />
-        <div className="flex min-w-0 flex-1 flex-col">
-          {isPending ? (
-            <>
-              <Skeleton className="h-3 w-20 rounded-full" />
-              <Skeleton className="mt-1.5 h-2 w-14 rounded-full" />
-            </>
-          ) : (
-            <>
-              <span className="truncate text-sm font-bold text-neutral-800">
-                {user?.displayName ?? user?.name ?? "Account"}
-              </span>
-              <span className="mt-0.5 truncate text-xs text-neutral-400">
-                {user ? roleLabels[user.role] : "Not signed in"}
-              </span>
-            </>
-          )}
-        </div>
+        {details}
         <ChevronsUpDown className="h-4 w-4 shrink-0 text-neutral-300" />
       </Menu.Trigger>
 
