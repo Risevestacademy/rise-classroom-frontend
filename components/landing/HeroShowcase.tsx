@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 // TODO: swap in the per-tab dashboard screenshots once they're exported from
 // Figma. Every tab shows the curriculum dashboard until then.
 const PRODUCT_TABS = [
-  { label: "Analytics", screen: "/landing/dashboard-mockup.webp" },
+  { label: "Analytics", screen: "/landing/analytics-mockup.webp" },
   { label: "Learning", screen: "/landing/dashboard-mockup.webp" },
   { label: "Community", screen: "/landing/dashboard-mockup.webp" },
   { label: "Chat", screen: "/landing/dashboard-mockup.webp" },
