@@ -8,6 +8,11 @@ import { PricingSection } from "@/components/landing/PricingSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { ValuePropSection } from "@/components/landing/ValuePropSection";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function HomePage() {
   return (
