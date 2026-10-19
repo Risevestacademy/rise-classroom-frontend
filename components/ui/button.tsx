@@ -16,7 +16,7 @@ const buttonVariants = cva(
           "bg-neutral-0 text-neutral-500 hover:bg-neutral-300 focus-visible:border focus-visible:border-brand-primary focus-visible:bg-interactive-secondary-hover disabled:bg-interactive-secondary-disabled disabled:text-text-disabled/30",
 
         tertiary:
-          "bg-neutral-200 text-brand-primary hover:bg-neutral-300 focus-visible:border focus-visible:border-brand-primary focus-visible:bg-interactive-tertiary-pressed disabled:bg-interactive-secondary-disabled disabled:text-text-disabled/30",
+          "bg-neutral-0 text-brand-primary hover:bg-brand-tertiary-hover border border-neutral-200 focus-visible:border focus-visible:border-brand-primary focus-visible:bg-interactive-tertiary-pressed disabled:bg-interactive-secondary-disabled disabled:text-text-disabled/30",
 
         destructive:
           "bg-interactive-destructive-default text-neutral-0 hover:bg-interactive-destructive-hover focus-visible:border focus-visible:border-brand-primary focus-visible:bg-interactive-destructive-hover disabled:bg-interactive-destructive-disabled disabled:text-text-disabled/30",
@@ -75,6 +75,7 @@ function Button({
       data-disabled={disabled}
       disabled={disabled}
       className={cn(
+        "cursor-pointer disabled:cursor-not-allowed",
         buttonVariants({
           variant,
           size,
