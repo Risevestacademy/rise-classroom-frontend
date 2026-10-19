@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import {
   BookOpen,
@@ -39,17 +39,18 @@ import { AssignmentsList } from "@/components/instructor-dashboard/AssignmentsLi
 import {
   assignmentsData,
   modulesData,
-  resourcesData,
-  notesData
+  notesData,
+  resourcesData
 } from "@/components/instructor-dashboard/data";
 import { ModulesList } from "@/components/instructor-dashboard/ModulesList";
-import { ResourcesList } from "@/components/instructor-dashboard/ResourcesList";
 import { NotesList } from "@/components/instructor-dashboard/NotesList";
+import { ResourcesList } from "@/components/instructor-dashboard/ResourcesList";
 import { UserAvatar } from "@/components/UserAvatar";
 
 import { sessionQuery } from "@/lib/session-query";
 
 export default function Curriculum() {
+  const router = useRouter();
   const { data: session, isPending } = useQuery(sessionQuery());
   const user = session?.user;
 
@@ -104,7 +105,7 @@ export default function Curriculum() {
     switch (activeTab) {
       case "modules":
         return modulesData.length > 0
-          ? { label: "Add Module", onClick: () => console.log("Add Module") }
+          ? { label: "Add Module", onClick: () => router.push("/instructor/curriculum/modules/create") }
           : null;
       case "assignments":
         return assignments.length > 0
@@ -293,7 +294,7 @@ export default function Curriculum() {
                 button={{
                   label: "Add Module",
                   onClick: () => {
-                    console.log("Add Module");
+                    router.push("/instructor/curriculum/modules/create")
                   },
                 }}
               />
@@ -395,7 +396,7 @@ export default function Curriculum() {
                         <Field.Label className="text-xs font-medium text-text-primary">
                           Curriculum name <span className="text-red-500">*</span>
                         </Field.Label>
-                        <Input defaultValue="Design Track Curriculum" placeholder="Type curriculum name..." />
+                        <Input placeholder="Type curriculum name..." />
                         <Error className="text-xs text-error-text"></Error>
                       </Field.Root>
 
@@ -405,7 +406,6 @@ export default function Curriculum() {
                         </Field.Label>
                         <textarea
                           className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-neutral-800"
-                          defaultValue="This curriculum is designed to help students build a strong foundation in product and ux design. It covers the full design process from research and ideation to prototyping and design systems."
                         />
                         <Error className="text-xs text-error-text"></Error>
                       </Field.Root>
