@@ -3,7 +3,15 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, ClipboardList, Play, StickyNote, Video } from "lucide-react";
+import {
+  BookOpen,
+  CalendarDays,
+  ClipboardList,
+  History,
+  Play,
+  StickyNote,
+  Video,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +23,7 @@ import {
   getSampleActivity,
   getSampleEvents,
   type SampleActivity,
+  type SampleEvent,
 } from "@/lib/dashboard-sample-data";
 
 type BadgeStatus = "success" | "warning" | "error" | "info" | "neutral";
@@ -22,6 +31,11 @@ type Tone = BadgeStatus | "brand";
 
 // The lesson route doesn't exist yet; send "Resume" to the My learning page.
 const RESUME_HREF = "/student/my-learning";
+
+// The design has Upcoming Event and Recent Activity sections, but no endpoint
+// exists for either yet. Sample data fills them in local development only, so
+// deployed builds never show made-up events to real students.
+const SHOW_SAMPLE_DATA = process.env.NODE_ENV === "development";
 
 const taskStatus: Record<
   WeeklyTaskStatus,
@@ -174,9 +188,15 @@ export default function StudentDashboardPage() {
     studentQueries.weeklyTasks({ week: "current", limit: 3 }),
   );
 
-  // Sample data: there are no event or activity endpoints yet.
-  const events = useMemo(() => getSampleEvents(), []);
-  const activity = useMemo(() => getSampleActivity(), []);
+  // No event or activity endpoints yet: sample data in development, empty otherwise.
+  const events = useMemo<SampleEvent[]>(
+    () => (SHOW_SAMPLE_DATA ? getSampleEvents() : []),
+    [],
+  );
+  const activity = useMemo<SampleActivity[]>(
+    () => (SHOW_SAMPLE_DATA ? getSampleActivity() : []),
+    [],
+  );
 
   const user = session.data?.user;
   const firstName = (user?.displayName ?? user?.name ?? "").split(" ")[0];
@@ -296,6 +316,13 @@ export default function StudentDashboardPage() {
           </section>
 
           <Card title="Recent Activity">
+            {activity.length === 0 ? (
+              <EmptyState
+                icon={History}
+                title="No recent activity"
+                message="Updates from your track will appear here."
+              />
+            ) : (
             <ul className="divide-y divide-neutral-200">
               {activity.map((item) => {
                 const { icon, tone } = activityIcon[item.kind];
@@ -320,6 +347,7 @@ export default function StudentDashboardPage() {
                 );
               })}
             </ul>
+            )}
           </Card>
         </div>
 
@@ -328,6 +356,15 @@ export default function StudentDashboardPage() {
             <h2 className="mb-6 text-xl font-medium text-neutral-800">
               Upcoming Event
             </h2>
+            {events.length === 0 ? (
+              <div className="rounded-2xl bg-white p-4 shadow-sm">
+                <EmptyState
+                  icon={CalendarDays}
+                  title="No upcoming events"
+                  message="Live classes and meetings will appear here."
+                />
+              </div>
+            ) : (
             <ul className="flex flex-col gap-3">
               {events.map((event) => (
                 <li
@@ -365,6 +402,7 @@ export default function StudentDashboardPage() {
                 </li>
               ))}
             </ul>
+            )}
           </section>
 
           <hr className="border-neutral-200" />
