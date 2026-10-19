@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Bell, ChevronRight, Menu } from "lucide-react";
 
 import { Search, Calendar } from "@/assets/icons";
@@ -17,6 +19,8 @@ export function AdminTopNav({
   breadcrumb?: string[];
 }) {
   const { setOpen } = useAdminNav();
+  const pathname = usePathname();
+  const onCalendar = pathname.startsWith("/admin/calendar");
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
   const { unreadCount } = useAdminNotifications();
 
@@ -62,13 +66,18 @@ export function AdminTopNav({
           />
         </div>
 
-        <button
-          type="button"
+        <Link
+          href="/admin/calendar"
           aria-label="Calendar"
-          className="hidden size-10 items-center justify-center rounded-lg bg-neutral-100 text-neutral-800 hover:bg-neutral-200 sm:flex"
+          aria-current={onCalendar ? "page" : undefined}
+          className={
+            onCalendar
+              ? "hidden size-10 items-center justify-center rounded-lg bg-brand-300 text-neutral-800 sm:flex"
+              : "hidden size-10 items-center justify-center rounded-lg bg-neutral-100 text-neutral-800 hover:bg-neutral-200 sm:flex"
+          }
         >
           <Calendar />
-        </button>
+        </Link>
 
         <button
           type="button"
