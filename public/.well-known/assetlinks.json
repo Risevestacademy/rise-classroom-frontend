@@ -13,7 +13,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.riseacademy.classroom.staging",
+      "package_name": "com.riseacademy.classroom.preview",
       "sha256_cert_fingerprints": [
         "2E:DF:7A:2B:E4:E0:78:27:75:35:14:44:4F:18:1A:3C:1D:3B:B1:96:23:7A:80:B5:0F:A0:75:50:6D:FD:C5:CA"
       ]
