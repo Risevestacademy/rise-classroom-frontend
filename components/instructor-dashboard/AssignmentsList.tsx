@@ -2,6 +2,7 @@
 
 import { MoreHorizontal, Search, SlidersHorizontal } from "lucide-react";
 
+import type { AssignmentItem } from "@/components/instructor-dashboard/data";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -12,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { AssignmentItem } from "@/components/instructor-dashboard/data";
 
 interface AssignmentsListProps {
   assignments: AssignmentItem[];
@@ -91,7 +91,7 @@ export function AssignmentsList({
               <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
                 Status
               </TableHead>
-              <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase text-right pr-6">
+              <TableHead className="w-16 text-[11px] font-semibold tracking-wider text-neutral-500 uppercase text-right pr-6">
                 Action
               </TableHead>
             </TableRow>
@@ -156,7 +156,7 @@ export function AssignmentsList({
 
                   <TableCell className="py-4">
                     <Badge
-                      variant="secondary"
+                      variant="light"
                       className={
                         assignment.status === "Published"
                           ? "bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0"
@@ -167,8 +167,10 @@ export function AssignmentsList({
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="py-4 text-right pr-6">
-                    <MoreHorizontal className="h-4 w-4" />
+                  <TableCell className="w-16 py-4 pr-6">
+                    <div className="flex w-full justify-end">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </div>
                   </TableCell>
                 </TableRow>
               );

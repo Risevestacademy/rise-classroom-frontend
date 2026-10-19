@@ -91,7 +91,7 @@ export function ResourcesList({
               <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
                 Status
               </TableHead>
-              <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase text-right pr-6">
+              <TableHead className="w-16 text-[11px] font-semibold tracking-wider text-neutral-500 uppercase text-right pr-6">
                 Action
               </TableHead>
             </TableRow>
@@ -155,7 +155,7 @@ export function ResourcesList({
 
                   <TableCell className="py-4">
                     <Badge
-                      variant="secondary"
+                      variant="light"
                       className={
                         resource.status === "Published"
                           ? "bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0"
@@ -166,8 +166,10 @@ export function ResourcesList({
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="py-4 text-right pr-6">
-                    <MoreHorizontal className="h-4 w-4" />
+                  <TableCell className="w-16 py-4 pr-6">
+                    <div className="flex w-full justify-end">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </div>
                   </TableCell>
                 </TableRow>
               );
