@@ -230,6 +230,7 @@ export const resourcesData: ResourceItem[] = [
 export interface NoteItem {
   id: string;
   title: string;
+  owner: string;
   description: string;
   moduleNumber: string;
   date: string;

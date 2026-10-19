@@ -33,7 +33,7 @@ export function ModulesList({ modules }: { modules: ModuleItem[] }) {
                 {mod.number}. {mod.title}
               </h3>
               <Badge
-                variant="secondary"
+                variant="light"
                 className={
                   mod.status === "Published"
                     ? "bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"

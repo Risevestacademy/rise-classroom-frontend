@@ -142,7 +142,7 @@ export default function Curriculum() {
               Design Track Curriculum
             </h1>
             <Badge
-              variant="secondary"
+              variant="light"
               className="bg-emerald-100/70 text-emerald-700 hover:bg-emerald-100 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
             >
               Active
