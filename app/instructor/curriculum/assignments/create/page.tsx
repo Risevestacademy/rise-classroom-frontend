@@ -85,7 +85,6 @@ export default function ModuleForm({ }) {
                     </Field.Label>
                     <Input
                       name="resources"
-                      type="file"
                       placeholder="Type module title..."
                       leadingIcon={null}
                     />

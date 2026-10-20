@@ -333,7 +333,8 @@ export function AssignmentsList({
                     <div className="flex items-center justify-between text-xs pt-1">
                       <span className="text-neutral-500 font-medium">Status:</span>
                       <Badge
-                        variant="secondary"
+                        variant="light"
+                        status="success"
                         className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
                       >
                         Published
@@ -419,14 +420,16 @@ export function AssignmentsList({
                           <TableCell className="py-3.5">
                             {submission.status === "Submitted" ? (
                               <Badge
-                                variant="secondary"
+                                variant="light"
+                                status="success"
                                 className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0 shadow-none"
                               >
                                 Submitted
                               </Badge>
                             ) : (
                               <Badge
-                                variant="secondary"
+                                variant="light"
+                                status="error"
                                 className="bg-rose-100/80 text-rose-600 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0 shadow-none"
                               >
                                 Not submitted
