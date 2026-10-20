@@ -145,7 +145,7 @@ export default function CreateAssignmentPage({ }) {
                 Create now, build next
               </p>
               <p className="text-neutral-500 leading-relaxed">
-                After creating your module, add lessons, quizzes and assignments from its detail page. Draft modules aren't visible to students until you publish them.
+                After creating your module, add lessons, quizzes and assignments from its detail page. Draft modules aren&apos;t visible to students until you publish them.
               </p>
             </div>
           </div>

@@ -580,8 +580,6 @@ export function EmptyState({
   description,
   button,
 }: EmptyStateProps) {
-  const ButtonIcon = button?.icon;
-
   return (
     <div className="flex flex-col items-center justify-center text-center w-full">
       <div className="flex items-center justify-center w-12 h-12 rounded-full bg-neutral-100 mb-[16px]">

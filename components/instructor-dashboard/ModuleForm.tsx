@@ -51,11 +51,11 @@ export default function ModuleForm({
   );
 
   const [lessons, setLessons] = useState<ModuleItem[]>(
-    initialValues?.lessons ?? [{ id: Date.now().toString(), title: "", description: "", resources: [] }],
+    initialValues?.lessons ?? [{ title: "", description: "", resources: [] }],
   );
 
   const [assignments, setAssignments] = useState<ModuleItem[]>(
-    initialValues?.assignments ?? [{ id: Date.now().toString(), title: "", description: "", resources: [] }],
+    initialValues?.assignments ?? [{ title: "", description: "", resources: [] }],
   );
 
   const addObjective = () => setObjectives((prev) => [...prev, ""]);
@@ -68,7 +68,7 @@ export default function ModuleForm({
   const addLesson = () => {
     setLessons((prev) => [
       ...prev,
-      { id: Date.now().toString(), title: "", description: "", resources: [] },
+      { title: "", description: "", resources: [] },
     ]);
   };
   const removeLesson = (id: string) => {
@@ -78,7 +78,7 @@ export default function ModuleForm({
   const addAssignment = () => {
     setAssignments((prev) => [
       ...prev,
-      { id: Date.now().toString(), title: "", description: "", resources: [] },
+      { title: "", description: "", resources: [] },
     ]);
   };
   const removeAssignment = (id: string) => {
@@ -293,7 +293,7 @@ export default function ModuleForm({
             <CardHeader className="p-0 mb-4">
               <CardTitle className="text-[18px] font-semibold">Assignments</CardTitle>
               <CardDescription className="text-[14px] font-regular text-neutral-500">
-                Add practical exercises that help students apply what they've learned.
+                Add practical exercises that help students apply what they&apos;ve learned.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0 space-y-4">
