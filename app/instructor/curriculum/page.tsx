@@ -11,6 +11,7 @@ import {
   Info,
   Pencil,
   Plus,
+  ChevronDown,
 } from "lucide-react";
 
 import { useQuery } from "@tanstack/react-query";
@@ -35,6 +36,14 @@ import { Error } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { Field } from "@base-ui/react/field";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+
 import { AssignmentsList } from "@/components/instructor-dashboard/AssignmentsList";
 import {
   assignmentsData,
@@ -58,6 +67,7 @@ export default function Curriculum() {
 
   const assignments = assignmentsData;
   const resources = resourcesData;
+  const [isAddNoteOpen, setIsAddNoteOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
@@ -116,7 +126,7 @@ export default function Curriculum() {
           ? { label: "Add Resource", onClick: () => router.push("/instructor/curriculum/resources/create") }
           : null;
       case "notes":
-        return { label: "Add Note", onClick: () => console.log("Add Note") };
+        return { label: "Add Note", onClick: () => setIsAddNoteOpen(true) };
       default:
         return null;
     }
@@ -359,7 +369,7 @@ export default function Curriculum() {
               button={{
                 label: "Add Note",
                 onClick: () => {
-
+                  setIsAddNoteOpen(true);
                 },
               }}
             />
@@ -391,7 +401,7 @@ export default function Curriculum() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="space-y-4">
+                    <form className="space-y-4">
                       <Field.Root className="flex flex-col space-y-1.5">
                         <Field.Label className="text-xs font-medium text-text-primary">
                           Curriculum name <span className="text-red-500">*</span>
@@ -415,7 +425,7 @@ export default function Curriculum() {
                           Save changes
                         </Button>
                       </div>
-                    </div>
+                    </form>
                   </CardContent>
                 </Card>
 
@@ -494,6 +504,61 @@ export default function Curriculum() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={isAddNoteOpen} onOpenChange={setIsAddNoteOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Note</DialogTitle>
+            <DialogDescription>
+              Add an internal note about this curriculum
+            </DialogDescription>
+          </DialogHeader>
+          <form action="" className="space-y-4 mt-6">
+            <Field.Root className="flex flex-col space-y-1.5">
+              <Field.Label className="text-xs font-medium text-text-primary">
+                Title <span className="text-red-500">*</span>
+              </Field.Label>
+              <Input placeholder="Type curriculum note title..." leadingIcon={null} />
+              <Error className="text-xs text-error-text"></Error>
+            </Field.Root>
+
+            <Field.Root className="flex flex-col space-y-1.5">
+              <Field.Label className="text-xs font-medium text-text-primary">
+                Note <span className="text-red-500">*</span>
+              </Field.Label>
+              <textarea
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-neutral-800"
+              />
+              <Error className="text-xs text-error-text"></Error>
+            </Field.Root>
+
+            <Field.Root className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-neutral-800">
+                Attach to <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
+                >
+                  <option value="module-1">Module 1 - Introduction to Design</option>
+                  <option value="module-2">Module 2 - Design Thinking</option>
+                  <option value="module-3">Module 3 - User Research</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
+              </div>
+            </Field.Root>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsAddNoteOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setIsAddNoteOpen(false)}>
+                Save Note
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
