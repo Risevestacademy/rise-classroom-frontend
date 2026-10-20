@@ -1,8 +1,9 @@
 "use client";
 
 import { MoreHorizontal, Search, SlidersHorizontal } from "lucide-react";
+import { useState } from "react";
 
-import type { AssignmentItem } from "@/components/instructor-dashboard/data";
+import { submissionsData, type AssignmentItem } from "@/components/instructor-dashboard/data";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -13,6 +14,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 
 interface AssignmentsListProps {
   assignments: AssignmentItem[];
@@ -31,6 +62,29 @@ export function AssignmentsList({
   onToggleSelectRow,
   onToggleSelectAll,
 }: AssignmentsListProps) {
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [submissionSelectedIds, setSubmissionSelectedIds] = useState<string[]>([]);
+
+  const mockSubmissions = submissionsData;
+
+  const isAllSubmissionsSelected =
+    mockSubmissions.length > 0 &&
+    submissionSelectedIds.length === mockSubmissions.length;
+
+  const handleSelectAllSubmissions = () => {
+    if (isAllSubmissionsSelected) {
+      setSubmissionSelectedIds([]);
+    } else {
+      setSubmissionSelectedIds(mockSubmissions.map((item) => item.id));
+    }
+  };
+
+  const handleSelectSubmissionRow = (id: string) => {
+    setSubmissionSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div className="space-y-6 max-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -104,9 +158,8 @@ export function AssignmentsList({
               return (
                 <TableRow
                   key={assignment.id}
-                  className={`border-b border-neutral-100 transition-colors hover:bg-neutral-50/50 ${
-                    isSelected ? "bg-neutral-50/80" : ""
-                  }`}
+                  className={`border-b border-neutral-100 transition-colors hover:bg-neutral-50/50 ${isSelected ? "bg-neutral-50/80" : ""
+                    }`}
                 >
                   <TableCell className="pl-4 py-4">
                     <Checkbox
@@ -169,7 +222,22 @@ export function AssignmentsList({
 
                   <TableCell className="w-16 py-4 pr-6">
                     <div className="flex w-full justify-end">
-                      <MoreHorizontal className="h-4 w-4" />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          className="min-w-18! border-none ring-0 bg-white! cursor-pointer"
+                          align="end"
+                        >
+                          <DropdownMenuGroup>
+                            <DropdownMenuItem
+                              onClick={() => setIsViewModalOpen(true)}
+                              className="cursor-pointer"
+                            >View</DropdownMenuItem>
+                          </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -178,6 +246,213 @@ export function AssignmentsList({
           </TableBody>
         </Table>
       </div>
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="w-[80%] !max-w-none h-[80%] !bottom-4 !right-4 !left-auto !top-auto !translate-x-0 !translate-y-0">
+          <Tabs defaultValue="overview" className="w-full space-y-4">
+            <TabsList className="bg-neutral-200 px-2 py-1 !h-auto rounded-lg gap-1 inline-flex shadow-[0px_1px_3px_0px_rgba(0,0,0,0.15)]">
+              <TabsTrigger
+                value="overview"
+                className="rounded-lg px-2 py-1.5 text-[14px] font-medium text-neutral-600 data-active:bg-white data-[state=active]:text-neutral-900"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger
+                value="submissions"
+                className="rounded-lg px-2 py-1.5 text-[14px] font-medium text-neutral-600 data-active:bg-white data-[state=active]:text-neutral-900"
+              >
+                Submissions
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="outline-none tracking-wide">
+              <DialogHeader>
+                <DialogTitle>Introduction to Design Exercise</DialogTitle>
+                <DialogDescription>
+                  Project . Individual
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col sm:flex-row pt-4 gap-3">
+                <Card className="w-[70%] bg-white border-neutral-200 ring-1 ring-neutral-300 shadow-lg rounded-2xl p-4">
+                  <CardHeader className="p-0">
+                    <CardTitle className="text-[18px] font-semibold">
+                      Assignment Brief
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 space-y-5 text-[14px]">
+                    <div className="space-y-1">
+                      <p className="font-medium">Assignment title</p>
+                      <p className="font-regular">Visual Hierarchy</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="font-medium">Description</p>
+                      <p className="font-regular">Redesign a simple landing page using hierarchy and contrast</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="font-medium">Instruction for students</p>
+                      <p className="font-regular">Use typography, spacing, and color to guide the viewer through the page.</p>
+                    </div>
+
+                    <div className="space-y-2 pt-2">
+                      <p className="font-regular">Supporting resources</p>
+
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="w-[30%] bg-white border-neutral-200 ring-1 ring-neutral-300 shadow-lg rounded-2xl p-4">
+                  <CardHeader className="p-0">
+                    <CardTitle className="text-[18px] font-semibold">
+                      Assignment details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 space-y-6">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-neutral-500 font-medium">Type:</span>
+                      <span className="text-neutral-900 font-semibold">Project</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-neutral-500 font-medium">Submission type:</span>
+                      <span className="text-neutral-900 font-semibold">File Upload</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-neutral-500 font-medium">Due date:</span>
+                      <div className="text-right">
+                        <p className="text-neutral-900 font-semibold">Oct 12, 2025</p>
+                        <p className="text-neutral-500 text-[11px]">11:59 PM</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-neutral-500 font-medium">Relative to lesson:</span>
+                      <span className="text-neutral-900 font-semibold">After lesson 4</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <span className="text-neutral-500 font-medium">Status:</span>
+                      <Badge
+                        variant="secondary"
+                        className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
+                      >
+                        Published
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            <TabsContent value="submissions" className="space-y-4 outline-none">
+              <div className="w-full bg-white rounded-2xl border border-neutral-200/80 shadow-xs overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-neutral-50/80">
+                    <TableRow className="border-b border-neutral-200/80 hover:bg-transparent">
+                      <TableHead className="w-12 text-center pl-4 pr-0">
+                        <Checkbox
+                          checked={isAllSubmissionsSelected}
+                          onCheckedChange={handleSelectAllSubmissions}
+                          aria-label="Select all submissions"
+                          className="rounded border-neutral-300"
+                        />
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-neutral-500 py-3.5">
+                        Student
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-neutral-500 py-3.5">
+                        Date Submitted
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-neutral-500 py-3.5">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-neutral-500 py-3.5">
+                        Grade
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold uppercase tracking-wider text-neutral-500 py-3.5 text-right pr-6">
+                        Action
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  <TableBody>
+                    {mockSubmissions.map((submission) => {
+                      const isSelected = submissionSelectedIds.includes(submission.id);
+
+                      return (
+                        <TableRow
+                          key={submission.id}
+                          className="border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors"
+                        >
+                          <TableCell className="w-12 text-center pl-4 pr-0">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handleSelectSubmissionRow(submission.id)}
+                              aria-label={`Select ${submission.name}`}
+                              className="rounded border-neutral-300"
+                            />
+                          </TableCell>
+
+                          <TableCell className="py-3.5">
+                            <div className="flex items-center gap-3">
+                              <div className="flex flex-col">
+                                <span className="text-xs font-bold text-neutral-900">
+                                  {submission.name}
+                                </span>
+                                <span className="text-[11px] text-neutral-500">
+                                  {submission.email}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="py-3.5">
+                            <div className="flex flex-col">
+                              <span className="text-xs font-medium text-neutral-800">
+                                {submission.dateSubmitted}
+                              </span>
+                              <span className="text-[11px] text-neutral-400">
+                                {submission.timeSubmitted}
+                              </span>
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="py-3.5">
+                            {submission.status === "Submitted" ? (
+                              <Badge
+                                variant="secondary"
+                                className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0 shadow-none"
+                              >
+                                Submitted
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="secondary"
+                                className="bg-rose-100/80 text-rose-600 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0 shadow-none"
+                              >
+                                Not submitted
+                              </Badge>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="py-3.5 text-xs font-medium text-neutral-600">
+                            {submission.grade}
+                          </TableCell>
+                          <TableCell className="w-16 py-4 pr-6">
+                            <div className="flex w-full justify-end">
+                            <MoreHorizontal className="h-4 w-4" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

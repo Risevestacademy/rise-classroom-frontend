@@ -270,3 +270,72 @@ export const notesData: NoteItem[] = [
     date: "Oct 5, 2026",
   },
 ];
+
+interface StudentSubmission {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  dateSubmitted: string;
+  timeSubmitted: string;
+  status: "Submitted" | "Not submitted";
+  grade: string;
+}
+
+
+export const submissionsData: StudentSubmission[] = [
+  {
+    id: "1",
+    name: "Aishat Lawal",
+    email: "aishatalawal21@gmail.com",
+    dateSubmitted: "Oct 12, 2026",
+    timeSubmitted: "4:00 PM",
+    status: "Submitted",
+    grade: "--",
+  },
+  {
+    id: "2",
+    name: "Aishat Lawal",
+    email: "aishatalawal21@gmail.com",
+    dateSubmitted: "Oct 12, 2026",
+    timeSubmitted: "4:00 PM",
+    status: "Submitted",
+    grade: "--",
+  },
+  {
+    id: "3",
+    name: "Aishat Lawal",
+    email: "aishatalawal21@gmail.com",
+    dateSubmitted: "Oct 12, 2026",
+    timeSubmitted: "4:00 PM",
+    status: "Submitted",
+    grade: "--",
+  },
+  {
+    id: "4",
+    name: "Aishat Lawal",
+    email: "aishatalawal21@gmail.com",
+    dateSubmitted: "Oct 12, 2026",
+    timeSubmitted: "4:00 PM",
+    status: "Submitted",
+    grade: "--",
+  },
+  {
+    id: "5",
+    name: "Aishat Lawal",
+    email: "aishatalawal21@gmail.com",
+    dateSubmitted: "Oct 12, 2026",
+    timeSubmitted: "4:00 PM",
+    status: "Submitted",
+    grade: "--",
+  },
+  {
+    id: "6",
+    name: "Aishat Lawal",
+    email: "aishatalawal21@gmail.com",
+    dateSubmitted: "Oct 12, 2026",
+    timeSubmitted: "4:00 PM",
+    status: "Not submitted",
+    grade: "--",
+  },
+];
