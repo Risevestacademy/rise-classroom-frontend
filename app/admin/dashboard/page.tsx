@@ -1,22 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircle,
   ArrowRight,
   ArrowUpRight,
   CalendarCheck,
   ChevronRight,
-  FileText,
   Magnet,
   MessagesSquare,
-  MonitorPlay,
-  Rows3,
-  UsersRound,
+  MonitorPlay
 } from "lucide-react";
 
-import { TowerControl } from "@/assets/icons";
+import { 
+  TowerControl, 
+  UserMultiple, 
+  ListView, 
+  AlertCircle,
+  Calendar03,
+  File02
+} from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { trackStyles } from "@/components/cohorts/CohortOverview";
 import { CircularProgress } from "@/components/ui/circular-progress";
@@ -27,25 +31,20 @@ import {
   dashboardMock,
   type ActivityKind,
 } from "@/lib/admin-dashboard";
+import { getTrackColor } from "@/lib/tracks";
 import { trackKeyFor } from "@/lib/cohorts";
 import { daysLeftIn, weekRangeFor } from "@/lib/control-tower";
 import { sessionQuery } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
 import type { TrackKey } from "@/app/admin/cohorts/cohort-data";
+import { Button } from "@/components/ui/button";
 
 const cardClass =
   "rounded-2xl border border-neutral-100 bg-white shadow-[0_2px_4px_rgb(17_24_25/0.06)]";
 
-/** Badge and icon colours per track, as in the design. */
-const trackTone: Record<TrackKey, string> = {
-  design: "bg-success-surface text-text-success",
-  frontend: "bg-info-surface text-text-info",
-  backend: "bg-[#fdeafc] text-[#960b93]",
-  mobile: "bg-[#fdeafc] text-[#960b93]",
-};
 
 const activityIcons: Record<ActivityKind, React.ComponentType<{ className?: string }>> = {
-  assignment: FileText,
+  assignment: File02,
   lesson: MonitorPlay,
   mentorship: MessagesSquare,
   controlTower: TowerControl,
@@ -73,6 +72,7 @@ function checkInDue(now = new Date()) {
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const session = useQuery(sessionQuery());
   const participants = useQuery(
     adminQueries.userCount({ role: "STUDENT", status: "ACTIVE" }),
@@ -113,7 +113,7 @@ export default function AdminDashboardPage() {
               isPending={participants.isPending}
               isError={participants.isError}
               description="Total active participants"
-              icon={UsersRound}
+              icon={UserMultiple}
               iconClassName="bg-info-surface text-text-info"
             />
             <MetricCard
@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
                   ? tracks.map((track) => track.name).join(" · ")
                   : "No active tracks yet"
               }
-              icon={Rows3}
+              icon={ListView}
               iconClassName="bg-success-surface text-text-success"
             />
             {/* PENDING-BACKEND: no engagement data yet. */}
@@ -230,7 +230,10 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="mt-8 flex justify-end">
-                <OutlineButton>View detailed progress</OutlineButton>
+                <Button onClick={() => {router.push("/admin/report")}} variant="tertiary" size="sm">
+                  View detailed progress
+                  <ArrowRight className="size-4" />
+                </Button>
               </div>
             </section>
 
@@ -253,7 +256,7 @@ export default function AdminDashboardPage() {
                 {/* PENDING-BACKEND: no at-risk data yet. */}
                 <AttentionRow
                   href="/admin/students"
-                  icon={UsersRound}
+                  icon={UserMultiple}
                   iconClassName="bg-surface-error-badge text-text-error"
                   title="Student at risk"
                   subtitle={`${dashboardMock.atRisk.newThisWeek} new this week`}
@@ -265,7 +268,7 @@ export default function AdminDashboardPage() {
                 ) : (
                   <AttentionRow
                     href="/admin/students"
-                    icon={CalendarCheck}
+                    icon={Calendar03}
                     iconClassName="bg-surface-warning-badge text-text-warning"
                     title={
                       controlTower.isError
@@ -282,7 +285,7 @@ export default function AdminDashboardPage() {
                 {/* PENDING-BACKEND: admins can't list submissions awaiting grading. */}
                 <AttentionRow
                   href="/admin/curriculum"
-                  icon={FileText}
+                  icon={File02}
                   iconClassName="bg-info-surface text-text-info"
                   title={`${dashboardMock.assignmentsAwaitingGrading} assignments awaiting grading`}
                   subtitle="Across all tracks"
@@ -290,7 +293,10 @@ export default function AdminDashboardPage() {
               </ul>
 
               <div className="mt-auto flex justify-end pt-6">
-                <OutlineButton>View all</OutlineButton>
+                <Button onClick={() => {router.push("/admin/reports")}} variant="tertiary" size="sm">
+                  View all
+                  <ArrowRight className="size-4" />
+                </Button>
               </div>
             </section>
           </div>
@@ -301,18 +307,20 @@ export default function AdminDashboardPage() {
               <CardHeader
                 title="Recent Activity"
                 subtitle="Whats happening across your program"
-                action={<OutlineButton>View all</OutlineButton>}
+                action={<Button onClick={() => {router.push("/admin/activity-log")}} variant="tertiary" size="sm">
+                  View all
+                  <ArrowRight className="size-4" />
+                </Button>}
               />
               <ul className="mt-4 flex flex-col divide-y divide-neutral-200">
                 {dashboardMock.recentActivity.map((item) => {
                   const Icon = activityIcons[item.kind];
+                  const { backgroundColor, textColor } = getTrackColor(item.track.name);
                   return (
                     <li key={item.id} className="flex items-center gap-4 py-4">
                       <span
-                        className={cn(
-                          "flex size-10 shrink-0 items-center justify-center rounded-lg",
-                          trackTone[item.track.key],
-                        )}
+                        className= "flex size-10 shrink-0 items-center justify-center rounded-lg"
+                        style={{ backgroundColor: backgroundColor, color: textColor }}
                       >
                         <Icon className="size-5" />
                       </span>
@@ -325,10 +333,8 @@ export default function AdminDashboardPage() {
                         </p>
                       </div>
                       <span
-                        className={cn(
-                          "hidden shrink-0 rounded-full px-2.5 py-1 text-sm sm:inline",
-                          trackTone[item.track.key],
-                        )}
+                        className="hidden shrink-0 rounded-full px-2.5 py-1 text-sm sm:inline"
+                        style={{ backgroundColor: backgroundColor, color: textColor }}
                       >
                         {item.track.name}
                       </span>
@@ -343,7 +349,10 @@ export default function AdminDashboardPage() {
               <CardHeader
                 title="Upcoming Activites"
                 subtitle="What's coming up next"
-                action={<OutlineButton>View Calender</OutlineButton>}
+                action={<Button onClick={() => {router.push("/admin/calendar")}} variant="tertiary" size="sm">
+                  View Calender
+                  <ArrowRight className="size-4" />
+                </Button>}
               />
               <ul className="mt-4 flex flex-col divide-y divide-neutral-200">
                 {dashboardMock.upcoming.map((item, index) => (
@@ -489,15 +498,3 @@ function CardHeader({
   );
 }
 
-// PENDING-PAGE: none of these buttons has a page to go to yet.
-function OutlineButton({ children }: { children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
-    >
-      {children}
-      <ArrowRight className="size-4" />
-    </button>
-  );
-}
