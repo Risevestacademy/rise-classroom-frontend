@@ -51,11 +51,11 @@ export default function ModuleForm({
   );
 
   const [lessons, setLessons] = useState<ModuleItem[]>(
-    initialValues?.lessons ?? [{ title: "", description: "", resources: [] }],
+    initialValues?.lessons ?? [{ id: "new-lesson", title: "", description: "", resources: [] }],
   );
 
   const [assignments, setAssignments] = useState<ModuleItem[]>(
-    initialValues?.assignments ?? [{ title: "", description: "", resources: [] }],
+    initialValues?.assignments ?? [{ id: "new-assignment", title: "", description: "", resources: [] }],
   );
 
   const addObjective = () => setObjectives((prev) => [...prev, ""]);
@@ -68,7 +68,7 @@ export default function ModuleForm({
   const addLesson = () => {
     setLessons((prev) => [
       ...prev,
-      { title: "", description: "", resources: [] },
+      { id: crypto.randomUUID(), title: "", description: "", resources: [] },
     ]);
   };
   const removeLesson = (id: string) => {
@@ -78,7 +78,7 @@ export default function ModuleForm({
   const addAssignment = () => {
     setAssignments((prev) => [
       ...prev,
-      { title: "", description: "", resources: [] },
+      { id: crypto.randomUUID(), title: "", description: "", resources: [] },
     ]);
   };
   const removeAssignment = (id: string) => {

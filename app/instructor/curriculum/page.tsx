@@ -549,7 +549,7 @@ export default function Curriculum() {
             </Field.Root>
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsAddNoteOpen(false)}>
+              <Button variant="secondary" onClick={() => setIsAddNoteOpen(false)}>
                 Cancel
               </Button>
               <Button onClick={() => setIsAddNoteOpen(false)}>
