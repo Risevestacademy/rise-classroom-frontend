@@ -1,7 +1,6 @@
 "use client";
 
-import { BookOpen, Info, Pencil, Plus, Trash2, X } from "lucide-react";
-import Image from "next/image";
+import { Info, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -13,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Error } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
@@ -217,7 +215,7 @@ export default function ModuleForm({
                   <label className="text-[14px] font-medium text-text-primary">
                     Supporting resources <span className="text-neutral-400 font-normal">(Optional)</span>
                   </label>
-                  <Button type="button" variant="outline" className="h-8 px-4 py-5 text-sm font-medium rounded-lg border-neutral-300">
+                  <Button type="button" variant="secondary" className="h-8 px-4 py-5 text-sm font-medium rounded-lg border-neutral-300">
                     <Plus className="h-3.5 w-3.5 mr-1.5" /> Upload file
                   </Button>
                 </div>
@@ -273,7 +271,7 @@ export default function ModuleForm({
 
                   <div className="flex items-center justify-between pt-2">
                     <span className="text-sm font-medium text-neutral-700">Supporting resources <span className="text-neutral-400 font-normal">(Optional)</span></span>
-                    <Button type="button" variant="outline" className="h-7 px-2.5 py-4 text-sm text-neutral-500  hover:bg-neutral-300 hover:text-neutral-700 font-medium rounded-lg border-neutral-300">
+                    <Button type="button" variant="secondary" className="h-7 px-2.5 py-4 text-sm text-neutral-500  hover:bg-neutral-300 hover:text-neutral-700 font-medium rounded-lg border-neutral-300">
                       <Plus className="h-3 w-3 mr-1" /> Upload file
                     </Button>
                   </div>
@@ -282,7 +280,7 @@ export default function ModuleForm({
 
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 className="w-full h-9 border-neutral-300 text-sm font-medium rounded-xl cursor-pointer"
                 onClick={addLesson}
               >
@@ -338,7 +336,7 @@ export default function ModuleForm({
 
                   <div className="flex items-center justify-between pt-2">
                     <span className="text-sm font-medium text-neutral-700">Supporting resources <span className="text-neutral-400 font-normal">(Optional)</span></span>
-                    <Button type="button" variant="outline" className="h-7 px-2.5 py-4 text-sm text-neutral-500  hover:bg-neutral-300 hover:text-neutral-700 font-medium rounded-lg border-neutral-300">
+                    <Button type="button" variant="secondary" className="h-7 px-2.5 py-4 text-sm text-neutral-500  hover:bg-neutral-300 hover:text-neutral-700 font-medium rounded-lg border-neutral-300">
                       <Plus className="h-3 w-3 mr-1" /> Upload file
                     </Button>
                   </div>
@@ -347,7 +345,7 @@ export default function ModuleForm({
 
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 className="w-full h-9 border-neutral-300 text-sm font-medium rounded-xl cursor-pointer"
                 onClick={addAssignment}
               >
@@ -368,7 +366,7 @@ export default function ModuleForm({
             </label>
 
             <div className="flex items-center gap-3 w-full sm:w-auto">
-              <Button type="button" variant="outline" className="flex-1 sm:flex-none border-neutral-300 rounded-xl px-5 py-2.5 text-sm font-medium">
+              <Button type="button" variant="secondary" className="flex-1 sm:flex-none border-neutral-300 rounded-xl px-5 py-2.5 text-sm font-medium">
                 Cancel
               </Button>
               <Button type="submit" className="flex-1 sm:flex-none bg-brand-primary text-white rounded-xl px-6 py-2.5 text-sm font-medium">
@@ -379,76 +377,6 @@ export default function ModuleForm({
         </form>
 
         <div className="w-[30%] hidden md:block space-y-4">
-          <Card className="bg-white border-none ring-0 shadow-xs rounded-2xl overflow-hidden p-0">
-            <div className="relative w-full h-36 bg-blue-100">
-              <Image
-                src="/curriculum-header.png"
-                alt="Curriculum Header"
-                fill
-                className="object-cover"
-                priority
-              />
-              <Button
-                type="button"
-                size="icon"
-                className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white text-neutral-800 shadow-sm hover:bg-neutral-100 cursor-pointer"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <CardContent className="p-6 space-y-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-neutral-500">
-                  {isEditing ? "Editing in" : "Adding to"}
-                </span>
-                <Badge
-                  variant="secondary"
-                  className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-sm font-medium border-0"
-                >
-                  Active
-                </Badge>
-              </div>
-
-              <div className="space-y-1">
-                <h1 className="text-xl font-bold text-neutral-900 tracking-tight">
-                  Design Track Curriculum
-                </h1>
-                <p className="text-sm text-neutral-500 font-medium">
-                  Design · Cohort 2026
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3.5 p-4 rounded-xl bg-neutral-50 border border-neutral-200/60">
-                <div className="h-9 w-9 rounded-lg bg-white shadow-xs border border-neutral-200 flex items-center justify-center text-neutral-700 shrink-0">
-                  <BookOpen className="h-4 w-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-neutral-900">Module 1</h4>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">
-                    {isEditing
-                      ? "Module in the Design Track curriculum."
-                      : "Added after the 12 existing modules."}
-                  </p>
-                </div>
-              </div>
-
-              <hr className="border-neutral-100" />
-
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-[11px] text-neutral-400 font-medium uppercase tracking-wider">
-                    Instructor
-                  </p>
-                  <h4 className="text-sm font-bold text-neutral-900">Aishat Lawal</h4>
-                  <p className="text-[11px] text-neutral-500">
-                    aishatalawal21@gmail.com
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <div className="rounded-2xl bg-indigo-50/50 border border-indigo-100 p-4 flex gap-3 text-neutral-700">
             <Info className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
             <div className="space-y-1 text-sm">
