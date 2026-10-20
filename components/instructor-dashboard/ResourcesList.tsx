@@ -1,9 +1,11 @@
 "use client";
 
 import { MoreHorizontal, Search, SlidersHorizontal } from "lucide-react";
+import { useState } from "react";
 
 import type { ResourceItem } from "@/components/instructor-dashboard/data";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -13,6 +15,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 
 interface ResourcesListProps {
   resources: ResourceItem[];
@@ -31,6 +57,8 @@ export function ResourcesList({
   onToggleSelectRow,
   onToggleSelectAll,
 }: ResourcesListProps) {
+
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   return (
     <div className="space-y-6 max-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -168,7 +196,22 @@ export function ResourcesList({
 
                   <TableCell className="w-16 py-4 pr-6">
                     <div className="flex w-full justify-end">
-                      <MoreHorizontal className="h-4 w-4" />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          className="min-w-18! border-none ring-0 bg-white! cursor-pointer"
+                          align="end"
+                        >
+                          <DropdownMenuGroup>
+                            <DropdownMenuItem
+                              onClick={() => setIsViewModalOpen(true)}
+                              className="cursor-pointer"
+                            >View</DropdownMenuItem>
+                          </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -177,6 +220,76 @@ export function ResourcesList({
           </TableBody>
         </Table>
       </div>
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="w-[80%] !max-w-none h-[80%] !bottom-4 !right-4 !left-auto !top-auto !translate-x-0 !translate-y-0">
+          <DialogHeader>
+            <DialogTitle>Visual Hierarchy</DialogTitle>
+            <DialogDescription>
+              Attached to Module 1 . Lesson2
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col sm:flex-row pt-4 gap-3">
+            <Card className="w-[70%] bg-white border-neutral-200 ring-1 ring-neutral-300 shadow-lg rounded-2xl p-4">
+              <CardHeader className="p-0">
+                <CardTitle className="text-[18px] font-semibold">
+                  Preview
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 space-y-5 text-[14px]">
+                <div className="space-y-1 w-[700px] h-[300px] rounded-lg bg-amber-100">
+                </div>
+                <div className="flex justify-end gap-3 w-full sm:w-auto mt-4">
+                  <Button type="button" variant="secondary" className="flex-1 sm:flex-none border-neutral-300 rounded-lg px-5 py-4 text-sm font-medium">
+                    Download
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="w-[30%] h-full bg-white border-neutral-200 ring-1 ring-neutral-300 shadow-lg rounded-2xl p-4">
+              <CardHeader className="p-0">
+                <CardTitle className="text-[18px] font-semibold">
+                  Resource details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 space-y-6">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-neutral-500 font-medium">Type:</span>
+                  <span className="text-neutral-900 font-semibold">PDF</span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-neutral-500 font-medium">Size:</span>
+                  <span className="text-neutral-900 font-semibold">1.2 MB</span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-neutral-500 font-medium">Date uploaded:</span>
+                  <div className="text-right">
+                    <p className="text-neutral-900 font-semibold">Oct 12, 2025</p>
+                    <p className="text-neutral-500 text-[11px]">11:59 PM</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-neutral-500 font-medium">Uploaded by:</span>
+                  <span className="text-neutral-900 font-semibold">After lesson 4</span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <span className="text-neutral-500 font-medium">Status:</span>
+                  <Badge
+                    variant="light"
+                    status="success"
+                    className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
+                  >
+                    Published
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

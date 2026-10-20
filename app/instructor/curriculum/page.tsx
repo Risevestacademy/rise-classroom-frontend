@@ -113,7 +113,7 @@ export default function Curriculum() {
           : null;
       case "resources":
         return resources.length > 0
-          ? { label: "Add Resource", onClick: () => console.log("Add Resource") }
+          ? { label: "Add Resource", onClick: () => router.push("/instructor/curriculum/resources/create") }
           : null;
       case "notes":
         return { label: "Add Note", onClick: () => console.log("Add Note") };
@@ -335,7 +335,7 @@ export default function Curriculum() {
               button={{
                 label: "Add Resource",
                 onClick: () => {
-
+                  router.push("/instructor/curriculum/resources/create");
                 },
               }}
               />

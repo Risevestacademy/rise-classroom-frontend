@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@base-ui/react/field";
 
 
-export default function ModuleForm({ }) {
+export default function CreateAssignmentPage({ }) {
   const router = useRouter();
 
   return (
