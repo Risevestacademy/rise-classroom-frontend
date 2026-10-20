@@ -24,10 +24,16 @@ const roleLabels: Record<Role, string> = {
  */
 export function UserMenu({
   variant = "muted",
+  subtitle = "role",
   withMenu = true,
 }: {
-  /** `muted` sits on a white sidebar; `card` sits on a grey footer. */
-  variant?: "muted" | "card";
+  /**
+   * `muted` sits on a white sidebar; `card` sits on a grey footer; `plain` is
+   * flat with no background or chevron.
+   */
+  variant?: "muted" | "card" | "plain";
+  /** What to show under the name: the user's role (default) or their email. */
+  subtitle?: "role" | "email";
   withMenu?: boolean;
 }) {
   const { data: session, isPending } = useQuery(sessionQuery());
@@ -55,7 +61,11 @@ export function UserMenu({
               {user?.displayName ?? user?.name ?? "Account"}
             </span>
             <span className="mt-0.5 truncate text-xs text-neutral-400">
-              {user ? roleLabels[user.role] : "Not signed in"}
+              {user
+                ? subtitle === "email" && user.email
+                  ? user.email
+                  : roleLabels[user.role]
+                : "Not signed in"}
             </span>
           </>
         )}
@@ -67,8 +77,12 @@ export function UserMenu({
     return (
       <div
         className={cn(
-          "flex w-full items-center gap-3 rounded-2xl p-3",
-          variant === "card" ? "bg-white shadow-sm" : "bg-neutral-50"
+          "flex w-full items-center gap-3",
+          variant === "card"
+            ? "rounded-2xl bg-white p-3 shadow-sm"
+            : variant === "plain"
+              ? "rounded-xl p-2"
+              : "rounded-2xl bg-neutral-50 p-3"
         )}
       >
         {details}
@@ -81,14 +95,18 @@ export function UserMenu({
       <Menu.Trigger
         disabled={isPending}
         className={cn(
-          "flex w-full items-center gap-3 rounded-2xl p-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary",
+          "flex w-full items-center gap-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand-primary",
           variant === "card"
-            ? "bg-white shadow-sm hover:bg-neutral-0 data-[popup-open]:bg-neutral-0"
-            : "bg-neutral-50 hover:bg-neutral-100 data-[popup-open]:bg-neutral-100"
+            ? "rounded-2xl bg-white p-3 shadow-sm hover:bg-neutral-0 data-[popup-open]:bg-neutral-0"
+            : variant === "plain"
+              ? "rounded-xl p-2 hover:bg-neutral-100 data-[popup-open]:bg-neutral-100"
+              : "rounded-2xl bg-neutral-50 p-3 hover:bg-neutral-100 data-[popup-open]:bg-neutral-100"
         )}
       >
         {details}
-        <ChevronsUpDown className="h-4 w-4 shrink-0 text-neutral-300" />
+        {variant !== "plain" && (
+          <ChevronsUpDown className="h-4 w-4 shrink-0 text-neutral-300" />
+        )}
       </Menu.Trigger>
 
       <Menu.Portal>
