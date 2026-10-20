@@ -5,7 +5,7 @@
       {
         "appIDs": [
           "TEAMID1234.com.riseacademy.classroom",
-          "TEAMID1234.com.riseacademy.classroom.staging",
+          "TEAMID1234.com.riseacademy.classroom.preview",
           "TEAMID1234.com.riseacademy.classroom.development"
         ],
         "components": [

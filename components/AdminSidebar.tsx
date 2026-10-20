@@ -94,7 +94,7 @@ export function AdminSidebar() {
           open && "translate-x-0",
         )}
       >
-        <div className="flex items-center justify-between gap-2.5 border-b border-neutral-200 px-4 py-5">
+        <div className="flex items-center h-16 justify-between gap-2.5 border-b border-neutral-200 px-4 py-5">
           <Link
             href="/admin/dashboard"
             className="flex items-center overflow-hidden"
@@ -157,7 +157,8 @@ export function AdminSidebar() {
 
           <hr className="my-3 text-neutral-200" />
 
-          <UserMenu />
+          {/* Sign-out lives in the top nav's profile menu. */}
+          <UserMenu withMenu={false} />
         </div>
       </aside>
     </>

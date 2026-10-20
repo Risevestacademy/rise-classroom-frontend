@@ -1,23 +1,61 @@
 "use client";
 
-import { useQueries, useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
-  Users,
-  Layers,
-  GraduationCap,
-  MailWarning,
   AlertCircle,
-  CheckCircle2,
-  ChevronDown,
+  ArrowRight,
   ArrowUpRight,
+  CalendarCheck,
+  ChevronRight,
+  FileText,
+  Magnet,
+  MessagesSquare,
+  MonitorPlay,
+  Rows3,
+  UsersRound,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { TowerControl } from "@/assets/icons";
+import { AdminTopNav } from "@/components/AdminTopNav";
+import { trackStyles } from "@/components/cohorts/CohortOverview";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AdminTopNav } from "@/components/AdminTopNav";
 import { adminQueries } from "@/lib/admin";
+import {
+  adminDashboardQueries,
+  dashboardMock,
+  type ActivityKind,
+} from "@/lib/admin-dashboard";
+import { trackKeyFor } from "@/lib/cohorts";
+import { daysLeftIn, weekRangeFor } from "@/lib/control-tower";
 import { sessionQuery } from "@/lib/session-query";
+import { cn } from "@/lib/utils";
+import type { TrackKey } from "@/app/admin/cohorts/cohort-data";
+
+const cardClass =
+  "rounded-2xl border border-neutral-100 bg-white shadow-[0_2px_4px_rgb(17_24_25/0.06)]";
+
+/** Badge and icon colours per track, as in the design. */
+const trackTone: Record<TrackKey, string> = {
+  design: "bg-success-surface text-text-success",
+  frontend: "bg-info-surface text-text-info",
+  backend: "bg-[#fdeafc] text-[#960b93]",
+  mobile: "bg-[#fdeafc] text-[#960b93]",
+};
+
+const activityIcons: Record<ActivityKind, React.ComponentType<{ className?: string }>> = {
+  assignment: FileText,
+  lesson: MonitorPlay,
+  mentorship: MessagesSquare,
+  controlTower: TowerControl,
+};
+
+const dateTones = [
+  "bg-success-surface text-text-success",
+  "bg-info-surface text-text-info",
+  "bg-[#fdeafc] text-[#960b93]",
+];
 
 function greeting(date = new Date()) {
   const hour = date.getHours();
@@ -26,92 +64,57 @@ function greeting(date = new Date()) {
   return "Good Evening";
 }
 
+/** "Due today" on the last day of the week, counting down before that. */
+function checkInDue(now = new Date()) {
+  const days = daysLeftIn(weekRangeFor(now).weekEnd, now);
+  if (days <= 1) return "Due today";
+  if (days === 2) return "Due tomorrow";
+  return `Due in ${days - 1} days`;
+}
+
 export default function AdminDashboardPage() {
   const session = useQuery(sessionQuery());
-
-  const activeStudents = useQuery(
-    adminQueries.userCount({ role: "STUDENT", status: "ACTIVE" })
+  const participants = useQuery(
+    adminQueries.userCount({ role: "STUDENT", status: "ACTIVE" }),
   );
-  const onboardedStudents = useQuery(
-    adminQueries.userCount({
-      role: "STUDENT",
-      onboardingStatus: "COMPLETED",
-    })
-  );
-  const instructors = useQuery(
-    adminQueries.userCount({ role: "INSTRUCTOR", status: "ACTIVE" })
-  );
-  const pendingInvites = useQuery(
-    adminQueries.userCount({ onboardingStatus: "INVITED" })
-  );
-  const suspended = useQuery(adminQueries.userCount({ status: "SUSPENDED" }));
   const activeTracks = useQuery(adminQueries.tracks("ACTIVE"));
+  const controlTower = useQuery(adminDashboardQueries.controlTower());
 
   const tracks = activeTracks.data ?? [];
-
-  // One cheap count per track, each cached under its own key.
-  const trackCounts = useQueries({
-    queries: tracks.map((track) =>
-      adminQueries.userCount({ role: "STUDENT", trackId: track.id })
-    ),
-  });
-
   const adminName = session.data?.user.firstName ?? "Admin";
 
-  const onboardedShare =
-    activeStudents.data && activeStudents.data > 0 && onboardedStudents.data !== undefined
-      ? Math.round((onboardedStudents.data / activeStudents.data) * 100)
-      : 0;
-
-  const attentionItems = [
-    {
-      label: "Invites not yet accepted",
-      count: pendingInvites.data ?? 0,
-      href: "/admin/instructors",
-      icon: MailWarning,
-      className: "bg-surface-warning-badge text-text-warning",
-    },
-    {
-      label: "Suspended accounts",
-      count: suspended.data ?? 0,
-      href: "/admin/instructors",
-      icon: AlertCircle,
-      className: "bg-surface-error-badge text-text-error",
-    },
-  ].filter((item) => item.count > 0);
-
-  const attentionPending = pendingInvites.isPending || suspended.isPending;
+  const overview = controlTower.data?.overview;
+  const missingCheckIns = overview
+    ? Math.max(0, overview.totalStudents - overview.metricsSubmittedThisWeek)
+    : 0;
 
   return (
     <>
       <AdminTopNav />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-800">
-                {session.isPending ? (
-                  <Skeleton className="h-8 w-64" />
-                ) : (
-                  `${greeting()}, ${adminName}`
-                )}
-              </h1>
-              <p className="mt-1 text-sm text-neutral-400">
-                Here&apos;s what&apos;s happening across your program
-              </p>
-            </div>
-            <WeekFilter />
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-800 sm:text-[28px]">
+              {session.isPending ? (
+                <Skeleton className="h-8 w-64" />
+              ) : (
+                `${greeting()}, ${adminName}`
+              )}
+            </h1>
+            <p className="mt-1 font-work text-neutral-500">
+              Here&apos;s what&apos;s happening across your program
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               title="Participants"
-              value={activeStudents.data}
-              isPending={activeStudents.isPending}
-              isError={activeStudents.isError}
+              value={participants.data}
+              isPending={participants.isPending}
+              isError={participants.isError}
               description="Total active participants"
-              icon={Users}
-              iconWrapperClassName="bg-surface-brand text-brand-primary"
+              icon={UsersRound}
+              iconClassName="bg-info-surface text-text-info"
             />
             <MetricCard
               title="Active Tracks"
@@ -123,153 +126,252 @@ export default function AdminDashboardPage() {
                   ? tracks.map((track) => track.name).join(" · ")
                   : "No active tracks yet"
               }
-              icon={Layers}
-              iconWrapperClassName="bg-surface-success-badge text-text-success"
+              icon={Rows3}
+              iconClassName="bg-success-surface text-text-success"
             />
+            {/* PENDING-BACKEND: no engagement data yet. */}
             <MetricCard
-              title="Instructors"
-              value={instructors.data}
-              isPending={instructors.isPending}
-              isError={instructors.isError}
-              description="Active across all tracks"
-              icon={GraduationCap}
-              iconWrapperClassName="bg-[#FDEAFC] text-[#960B93]"
+              title="Engagement"
+              value={`${dashboardMock.engagement}%`}
+              description="This week"
+              icon={Magnet}
+              iconClassName="bg-[#fdeafc] text-[#960b93]"
             />
+            {/* PENDING-BACKEND: no at-risk data yet. */}
             <MetricCard
-              title="Pending Invites"
-              value={pendingInvites.data}
-              isPending={pendingInvites.isPending}
-              isError={pendingInvites.isError}
-              description="Invited but not yet onboarded"
-              icon={MailWarning}
-              iconWrapperClassName="bg-surface-error-badge text-text-error"
+              title="At Risk"
+              value={dashboardMock.atRisk.total}
+              description="Students needing attention"
+              icon={AlertCircle}
+              iconClassName="bg-surface-error-badge text-text-error"
+              footer={
+                <span className="mt-1 flex items-center gap-1 font-work text-sm text-text-error">
+                  <ArrowUpRight className="size-4" />
+                  {dashboardMock.atRisk.newThisWeek} new this week
+                </span>
+              }
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <DashboardCard
-              title="Onboarding Progress"
-              subtitle="How far participants have got through onboarding"
-              action={<WeekFilter />}
-            >
-              <div className="flex flex-col gap-8 sm:flex-row sm:items-center">
-                {onboardedStudents.isPending || activeStudents.isPending ? (
-                  <Skeleton className="h-[168px] w-[168px] shrink-0 rounded-full" />
-                ) : (
-                  <CircularProgress value={onboardedShare}>
-                    <div className="flex flex-col items-center">
-                      <span className="text-3xl font-bold text-neutral-800">
-                        {onboardedShare}%
-                      </span>
-                      <span className="text-xs text-neutral-400">
-                        Onboarded
-                      </span>
-                    </div>
-                  </CircularProgress>
-                )}
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[7fr_5fr]">
+            <section className={cn(cardClass, "flex flex-col p-6 sm:p-8")}>
+              <h2 className="text-xl font-bold text-neutral-800 sm:text-2xl">
+                Program Health
+              </h2>
+              <p className="mt-1 font-work text-neutral-500">
+                Overall program health across all tracks
+              </p>
 
-                <div className="flex-1 space-y-4">
-                  <h3 className="text-sm font-semibold text-neutral-800">
-                    Participants per Track
+              <div className="mt-8 flex flex-col items-center gap-8 md:flex-row md:items-start">
+                {/* PENDING-BACKEND: no health score yet. */}
+                <CircularProgress
+                  value={dashboardMock.programHealth}
+                  size={176}
+                  strokeWidth={14}
+                  progressClassName="text-brand-primary"
+                >
+                  <div className="flex flex-col items-center">
+                    <span className="text-4xl font-bold text-neutral-800">
+                      {dashboardMock.programHealth}%
+                    </span>
+                    <span className="font-work text-sm text-neutral-500">
+                      Overall health
+                    </span>
+                  </div>
+                </CircularProgress>
+
+                <div className="w-full flex-1">
+                  <h3 className="text-lg font-semibold text-neutral-800">
+                    Track Health
                   </h3>
-
-                  {activeTracks.isPending ? (
-                    Array.from({ length: 4 }).map((_, index) => (
-                      <div key={index} className="flex items-center gap-3">
-                        <Skeleton className="h-4 w-20 sm:w-36" />
-                        <Skeleton className="h-2 flex-1" />
-                        <Skeleton className="h-4 w-8" />
-                      </div>
-                    ))
-                  ) : tracks.length === 0 ? (
-                    <p className="text-sm text-neutral-400">
-                      No active tracks to report on yet.
-                    </p>
-                  ) : (
-                    <TrackBars
-                      tracks={tracks}
-                      counts={trackCounts.map((query) => ({
-                        value: query.data,
-                        isPending: query.isPending,
-                      }))}
-                    />
-                  )}
+                  <div className="mt-4 flex flex-col gap-4">
+                    {activeTracks.isPending ? (
+                      Array.from({ length: 4 }).map((_, index) => (
+                        <Skeleton key={index} className="h-8 w-full" />
+                      ))
+                    ) : tracks.length === 0 ? (
+                      <p className="font-work text-sm text-neutral-400">
+                        No active tracks to report on yet.
+                      </p>
+                    ) : (
+                      tracks.map((track, index) => {
+                        const key = trackKeyFor(track.name, index);
+                        const style = trackStyles[key];
+                        // PENDING-BACKEND: no per-track health yet.
+                        const health = dashboardMock.trackHealth[key];
+                        return (
+                          <div key={track.id} className="flex items-center gap-3">
+                            <span
+                              className={cn(
+                                "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                                style.box,
+                              )}
+                            >
+                              <style.icon className="size-4" />
+                            </span>
+                            <span className="w-28 shrink-0 truncate font-work text-neutral-800 sm:w-40">
+                              {track.name}
+                            </span>
+                            <div className="h-2 flex-1 rounded-full bg-neutral-100">
+                              <div
+                                className={cn("h-2 rounded-full", style.bar)}
+                                style={{ width: `${health}%` }}
+                              />
+                            </div>
+                            <span className="w-10 shrink-0 text-right font-work text-sm text-neutral-800">
+                              {health}%
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="mt-6 flex items-center gap-1 text-sm font-medium text-brand-primary"
-              >
-                View detailed progress
-                <ArrowUpRight className="h-4 w-4" />
-              </button>
-            </DashboardCard>
+              <div className="mt-8 flex justify-end">
+                <OutlineButton>View detailed progress</OutlineButton>
+              </div>
+            </section>
 
-            <DashboardCard
-              title="Attention Required"
-              subtitle="Items that may need your attention"
-            >
-              {attentionPending ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-16 w-full rounded-lg" />
-                  <Skeleton className="h-16 w-full rounded-lg" />
-                </div>
-              ) : attentionItems.length === 0 ? (
-                <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-success-badge text-text-success">
-                    <CheckCircle2 className="h-6 w-6" />
-                  </div>
-                  <p className="font-semibold text-neutral-800">
-                    All caught up!
-                  </p>
-                  <p className="max-w-64 text-sm text-neutral-400">
-                    There are no pending items that need your attention right
-                    now.
+            <section className={cn(cardClass, "flex flex-col p-6 sm:p-8")}>
+              <div className="flex items-start gap-4">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-error-badge text-text-error">
+                  <AlertCircle className="size-5" />
+                </span>
+                <div>
+                  <h2 className="text-xl font-bold text-neutral-800 sm:text-2xl">
+                    Attention Required
+                  </h2>
+                  <p className="mt-1 font-work text-neutral-500">
+                    Items that may need your attention
                   </p>
                 </div>
-              ) : (
-                <ul className="space-y-3">
-                  {attentionItems.map((item) => (
-                    <li
-                      key={item.label}
-                      className="flex items-center gap-3 rounded-lg border border-neutral-100 px-4 py-3"
-                    >
-                      <span
-                        className={cn(
-                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                          item.className
-                        )}
-                      >
-                        <item.icon className="h-4 w-4" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-neutral-800">
-                          {item.count} {item.label}
-                        </p>
-                      </div>
-                      <ArrowUpRight className="h-4 w-4 shrink-0 text-neutral-300" />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </DashboardCard>
+              </div>
+
+              <ul className="mt-6 flex flex-col divide-y divide-neutral-200">
+                {/* PENDING-BACKEND: no at-risk data yet. */}
+                <AttentionRow
+                  href="/admin/students"
+                  icon={UsersRound}
+                  iconClassName="bg-surface-error-badge text-text-error"
+                  title="Student at risk"
+                  subtitle={`${dashboardMock.atRisk.newThisWeek} new this week`}
+                />
+                {controlTower.isPending ? (
+                  <li className="py-4">
+                    <Skeleton className="h-12 w-full" />
+                  </li>
+                ) : (
+                  <AttentionRow
+                    href="/admin/students"
+                    icon={CalendarCheck}
+                    iconClassName="bg-surface-warning-badge text-text-warning"
+                    title={
+                      controlTower.isError
+                        ? "Couldn't load this week's check ins"
+                        : missingCheckIns === 0
+                          ? "Everyone has completed this week's check in"
+                          : `${missingCheckIns} ${
+                              missingCheckIns === 1 ? "student hasn't" : "students haven't"
+                            } completed this week's check in`
+                    }
+                    subtitle={checkInDue()}
+                  />
+                )}
+                {/* PENDING-BACKEND: admins can't list submissions awaiting grading. */}
+                <AttentionRow
+                  href="/admin/curriculum"
+                  icon={FileText}
+                  iconClassName="bg-info-surface text-text-info"
+                  title={`${dashboardMock.assignmentsAwaitingGrading} assignments awaiting grading`}
+                  subtitle="Across all tracks"
+                />
+              </ul>
+
+              <div className="mt-auto flex justify-end pt-6">
+                <OutlineButton>View all</OutlineButton>
+              </div>
+            </section>
           </div>
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <DashboardCard
-              title="Recent Activity"
-              subtitle="What's happening across your program"
-            >
-              <EmptyPanel message="An activity feed will appear here once the API exposes one." />
-            </DashboardCard>
+            {/* PENDING-BACKEND: no activity feed yet. */}
+            <section className={cn(cardClass, "p-6 sm:p-8")}>
+              <CardHeader
+                title="Recent Activity"
+                subtitle="Whats happening across your program"
+                action={<OutlineButton>View all</OutlineButton>}
+              />
+              <ul className="mt-4 flex flex-col divide-y divide-neutral-200">
+                {dashboardMock.recentActivity.map((item) => {
+                  const Icon = activityIcons[item.kind];
+                  return (
+                    <li key={item.id} className="flex items-center gap-4 py-4">
+                      <span
+                        className={cn(
+                          "flex size-10 shrink-0 items-center justify-center rounded-lg",
+                          trackTone[item.track.key],
+                        )}
+                      >
+                        <Icon className="size-5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-work text-neutral-800">
+                          {item.message}
+                        </p>
+                        <p className="mt-0.5 font-work text-sm text-neutral-500">
+                          {item.time}
+                        </p>
+                      </div>
+                      <span
+                        className={cn(
+                          "hidden shrink-0 rounded-full px-2.5 py-1 text-sm sm:inline",
+                          trackTone[item.track.key],
+                        )}
+                      >
+                        {item.track.name}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
 
-            <DashboardCard
-              title="Upcoming Activities"
-              subtitle="What's coming up next"
-            >
-              <EmptyPanel message="Scheduled sessions will appear here once the API exposes them." />
-            </DashboardCard>
+            {/* PENDING-BACKEND: no events or calendar yet. */}
+            <section className={cn(cardClass, "p-6 sm:p-8")}>
+              <CardHeader
+                title="Upcoming Activites"
+                subtitle="What's coming up next"
+                action={<OutlineButton>View Calender</OutlineButton>}
+              />
+              <ul className="mt-4 flex flex-col divide-y divide-neutral-200">
+                {dashboardMock.upcoming.map((item, index) => (
+                  <li key={item.id} className="flex items-center gap-4 py-4">
+                    <span
+                      className={cn(
+                        "flex size-16 shrink-0 flex-col items-center justify-center rounded-lg",
+                        dateTones[index % dateTones.length],
+                      )}
+                    >
+                      <span className="text-sm font-medium">{item.month}</span>
+                      <span className="text-xl leading-6 font-bold">{item.day}</span>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-work text-neutral-800">
+                        {item.title}
+                      </p>
+                      <p className="mt-0.5 font-work text-sm text-neutral-500">
+                        {item.scope}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-work text-sm text-neutral-500">
+                      {item.when}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           </div>
         </div>
       </main>
@@ -277,151 +379,125 @@ export default function AdminDashboardPage() {
   );
 }
 
-function TrackBars({
-  tracks,
-  counts,
-}: {
-  tracks: { id: string; name: string }[];
-  counts: { value?: number; isPending: boolean }[];
-}) {
-  const palette = [
-    "text-brand-primary",
-    "text-text-info",
-    "text-[#960B93]",
-    "text-[#7C3AED]",
-  ];
-
-  // Bars are scaled against the busiest track so the comparison stays readable
-  // whatever the absolute headcounts are.
-  const largest = Math.max(1, ...counts.map((count) => count.value ?? 0));
-
-  return (
-    <>
-      {tracks.map((track, index) => {
-        const count = counts[index];
-        const className = palette[index % palette.length];
-
-        return (
-          <div key={track.id} className="flex items-center gap-2 sm:gap-3">
-            <span className="w-20 shrink-0 truncate text-sm text-neutral-600 sm:w-36">
-              {track.name}
-            </span>
-            {count?.isPending ? (
-              <>
-                <Skeleton className="h-2 flex-1" />
-                <Skeleton className="h-4 w-8 shrink-0" />
-              </>
-            ) : (
-              <>
-                <div className="h-2 flex-1 rounded-full bg-neutral-100">
-                  <div
-                    className={cn("h-2 rounded-full bg-current", className)}
-                    style={{
-                      width: `${((count?.value ?? 0) / largest) * 100}%`,
-                    }}
-                  />
-                </div>
-                <span className="w-10 shrink-0 text-right text-sm font-medium text-neutral-800">
-                  {count?.value ?? 0}
-                </span>
-              </>
-            )}
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-function EmptyPanel({ message }: { message: string }) {
-  return (
-    <div className="flex flex-1 items-center justify-center py-10 text-center">
-      <p className="max-w-72 text-sm text-neutral-400">{message}</p>
-    </div>
-  );
-}
-
-function WeekFilter() {
-  return (
-    <button
-      type="button"
-      className="flex h-10 items-center gap-2 rounded-lg border border-neutral-200 px-3 text-sm font-medium text-neutral-600"
-    >
-      This week
-      <ChevronDown className="h-4 w-4 text-neutral-400" />
-    </button>
-  );
-}
-
 function MetricCard({
   title,
   value,
-  isPending,
-  isError,
+  isPending = false,
+  isError = false,
   description,
+  footer,
   icon: Icon,
-  iconWrapperClassName,
+  iconClassName,
 }: {
   title: string;
-  value?: number;
-  isPending: boolean;
-  isError: boolean;
+  value?: number | string;
+  isPending?: boolean;
+  isError?: boolean;
   description: string;
-  icon: React.ElementType;
-  iconWrapperClassName: string;
+  footer?: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
+  iconClassName: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-5">
-      <div
+    <div className={cn(cardClass, "flex gap-4 p-5")}>
+      <span
         className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-lg",
-          iconWrapperClassName
+          "flex size-10 shrink-0 items-center justify-center rounded-lg",
+          iconClassName,
         )}
       >
-        <Icon className="h-5 w-5" />
-      </div>
-      <div>
-        <p className="text-sm text-neutral-400">{title}</p>
+        <Icon className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-neutral-800">{title}</p>
         {isPending ? (
           <Skeleton className="mt-1 h-8 w-16" />
         ) : (
-          <p className="text-2xl font-bold text-neutral-800">
+          <p className="mt-1 text-2xl font-bold text-neutral-800">
             {isError ? "—" : (value ?? 0)}
           </p>
         )}
+        {isPending ? (
+          <Skeleton className="mt-3 h-4 w-full" />
+        ) : (
+          <p className="mt-3 font-work text-sm text-neutral-500">
+            {isError ? "Couldn't load this figure." : description}
+          </p>
+        )}
+        {footer}
       </div>
-      {isPending ? (
-        <Skeleton className="h-4 w-full" />
-      ) : (
-        <p className="line-clamp-2 text-sm text-neutral-400">
-          {isError ? "Couldn't load this figure." : description}
-        </p>
-      )}
     </div>
   );
 }
 
-function DashboardCard({
+function AttentionRow({
+  href,
+  icon: Icon,
+  iconClassName,
+  title,
+  subtitle,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  iconClassName: string;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <li>
+      <Link
+        href={href}
+        className="flex items-center gap-4 py-4 hover:bg-neutral-50"
+      >
+        <span
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-lg",
+            iconClassName,
+          )}
+        >
+          <Icon className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-work text-neutral-800">{title}</span>
+          <span className="mt-0.5 block font-work text-sm text-neutral-500">
+            {subtitle}
+          </span>
+        </span>
+        <ChevronRight className="size-5 shrink-0 text-neutral-800" />
+      </Link>
+    </li>
+  );
+}
+
+function CardHeader({
   title,
   subtitle,
   action,
-  children,
 }: {
   title: string;
   subtitle: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
+  action: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col rounded-xl border border-neutral-200 bg-white p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-800">{title}</h2>
-          <p className="mt-1 text-sm text-neutral-400">{subtitle}</p>
-        </div>
-        {action}
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <h2 className="text-xl font-bold text-neutral-800 sm:text-2xl">{title}</h2>
+        <p className="mt-1 font-work text-neutral-500">{subtitle}</p>
       </div>
-      <div className="mt-6 flex flex-1 flex-col">{children}</div>
+      {action}
     </div>
+  );
+}
+
+// PENDING-PAGE: none of these buttons has a page to go to yet.
+function OutlineButton({ children }: { children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+    >
+      {children}
+      <ArrowRight className="size-4" />
+    </button>
   );
 }

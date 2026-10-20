@@ -18,7 +18,6 @@ const navSections = [
     items: [
       { title: "My Tracks", href: "/instructor/my-tracks" },
       { title: "Students", href: "/instructor/students" },
-      { title: "Content", href: "/instructor/content" },
     ],
   },
   {
