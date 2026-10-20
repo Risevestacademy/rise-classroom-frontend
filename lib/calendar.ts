@@ -201,6 +201,24 @@ export function eventsOn(events: CalendarEvent[], date: Date) {
     );
 }
 
+/** An empty list means no filtering on that field. */
+export type CalendarFilters = {
+  kinds: CalendarEvent["kind"][];
+  trackIds: string[];
+};
+
+export const noFilters: CalendarFilters = { kinds: [], trackIds: [] };
+
+export function filterEvents(events: CalendarEvent[], filters: CalendarFilters) {
+  return events.filter(
+    (event) =>
+      (filters.kinds.length === 0 || filters.kinds.includes(event.kind)) &&
+      (filters.trackIds.length === 0 ||
+        event.trackIds === "all" ||
+        event.trackIds.some((id) => filters.trackIds.includes(id))),
+  );
+}
+
 function parseTime(time: string) {
   const [hours, minutes] = time.split(":").map(Number);
   return { hours, minutes };

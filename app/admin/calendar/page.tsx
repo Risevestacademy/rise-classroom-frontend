@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Add01, ArrowLeft01, ArrowRight01, Filter } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
+import { CalendarFilterDialog } from "@/components/calendar/CalendarFilterDialog";
 import {
   EventDetailsPopover,
   type OpenEvent,
@@ -18,12 +19,15 @@ import { Button } from "@/components/ui/button";
 import { SuccessToast } from "@/components/ui/toast";
 import {
   eventsOn,
+  filterEvents,
   monthGrid,
   monthNames,
+  noFilters,
   sampleEvents,
   shortTime,
   toDateKey,
   type CalendarEvent,
+  type CalendarFilters,
 } from "@/lib/calendar";
 import { sessionQuery } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
@@ -50,6 +54,8 @@ export default function CalendarPage() {
   const [openEvent, setOpenEvent] = React.useState<OpenEvent | null>(null);
   const [form, setForm] = React.useState<Form | null>(null);
   const [formOpen, setFormOpen] = React.useState(false);
+  const [filters, setFilters] = React.useState<CalendarFilters>(noFilters);
+  const [filterOpen, setFilterOpen] = React.useState(false);
   const [toast, setToast] = React.useState<Toast | null>(null);
   const dismissToast = React.useCallback(() => setToast(null), []);
   const session = useQuery(sessionQuery());
@@ -58,7 +64,8 @@ export default function CalendarPage() {
   const todayKey = toDateKey(today);
   const viewingToday =
     view.year === today.getFullYear() && view.month === today.getMonth();
-  const hasEvents = (date: Date) => eventsOn(events, date).length > 0;
+  const visibleEvents = filterEvents(events, filters);
+  const hasEvents = (date: Date) => eventsOn(visibleEvents, date).length > 0;
 
   const shiftMonth = (by: number) =>
     setView(({ year, month }) => {
@@ -137,9 +144,9 @@ export default function CalendarPage() {
             >
               <ArrowRight01 className="size-5" />
             </button>
-            {/* Kept from the design; filtering has no design or data yet. */}
             <button
               type="button"
+              onClick={() => setFilterOpen(true)}
               className="ml-6 flex h-10 items-center gap-1 rounded-lg border border-neutral-200 bg-white px-2 text-base text-text-primary hover:bg-neutral-100"
             >
               <Filter className="size-4" />
@@ -183,7 +190,7 @@ export default function CalendarPage() {
               const key = toDateKey(date);
               const inMonth = date.getMonth() === view.month;
               const weekend = date.getDay() === 0 || date.getDay() === 6;
-              const dayEvents = eventsOn(events, date);
+              const dayEvents = eventsOn(visibleEvents, date);
               const hidden = dayEvents.length - VISIBLE_EVENTS;
               return (
                 <div
@@ -272,6 +279,13 @@ export default function CalendarPage() {
           hasEvents={hasEvents}
         />
       )}
+
+      <CalendarFilterDialog
+        open={filterOpen}
+        onOpenChange={setFilterOpen}
+        value={filters}
+        onApply={setFilters}
+      />
 
       {toast && (
         <SuccessToast

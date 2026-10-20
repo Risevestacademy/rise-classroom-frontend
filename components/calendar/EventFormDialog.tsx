@@ -13,17 +13,15 @@ import {
   Cancel01,
   Track,
 } from "@/assets/icons";
+import {
+  CalendarDialogActions,
+  CalendarDialogHeader,
+} from "@/components/calendar/CalendarDialog";
 import { DatePickerPopup } from "@/components/calendar/DatePickerPopup";
 import { RecurrencePopup } from "@/components/calendar/RecurrencePopup";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MultiSelectInput, SelectInput } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { adminQueries } from "@/lib/admin";
 import {
   addDays,
@@ -185,17 +183,9 @@ function EventForm({
         if (canSubmit) onSubmit({ ...draft, title: draft.title.trim() });
       }}
     >
-      <div className="flex items-center justify-between">
-        <DialogTitle className="text-xl leading-7 font-semibold text-text-primary">
-          {mode === "create" ? "Create event" : "Edit event"}
-        </DialogTitle>
-        <DialogClose
-          aria-label="Close"
-          className="flex size-10 items-center justify-center rounded-lg bg-white text-text-primary hover:bg-neutral-100"
-        >
-          <Cancel01 className="size-5" />
-        </DialogClose>
-      </div>
+      <CalendarDialogHeader
+        title={mode === "create" ? "Create event" : "Edit event"}
+      />
 
       <div className="mt-6 grid gap-6 md:grid-cols-[minmax(0,436px)_1px_minmax(0,272px)]">
         <div className="flex min-w-0 flex-col">
@@ -452,27 +442,11 @@ function EventForm({
         </div>
       </div>
 
-      <div className="mt-[26px] flex justify-end gap-4">
-        <DialogClose
-          render={
-            <Button
-              variant="secondary"
-              size="lg"
-              className="border-neutral-200 text-base font-normal text-text-secondary"
-            />
-          }
-        >
-          Cancel
-        </DialogClose>
-        <Button
-          type="submit"
-          size="lg"
-          disabled={!canSubmit}
-          className="text-base disabled:bg-brand-200 disabled:text-white"
-        >
-          {mode === "create" ? "Create event" : "Save changes"}
-        </Button>
-      </div>
+      <CalendarDialogActions
+        submitLabel={mode === "create" ? "Create event" : "Save changes"}
+        disabled={!canSubmit}
+        className="mt-[26px]"
+      />
     </form>
   );
 }
