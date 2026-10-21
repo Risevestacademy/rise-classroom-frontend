@@ -87,8 +87,8 @@ export function AdminNotificationsPanel({
                   aria-selected={filter === value}
                   onClick={() => setFilter(value)}
                   className={cn(
-                    "rounded-lg px-4 py-1.5 text-sm text-neutral-500 capitalize",
-                    filter === value && "bg-white text-neutral-800 shadow-sm",
+                    "rounded-lg px-4 py-1.5 text-sm font-medium text-text-muted capitalize",
+                    filter === value && "bg-white text-text-primary shadow-sm",
                   )}
                 >
                   {value}
