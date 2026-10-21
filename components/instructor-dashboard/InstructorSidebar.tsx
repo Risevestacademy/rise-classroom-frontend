@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   FolderKanban,
   Users,
-  FolderOpen,
   FileCheck,
   Video,
   BookOpen,
