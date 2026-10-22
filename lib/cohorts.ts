@@ -9,6 +9,7 @@ import {
   type CohortStatus as ApiCohortStatus,
 } from "@/lib/admin";
 import { api, type Envelope, type Paginated } from "@/lib/api";
+import type { OnboardingStatus, UserStatus } from "@/lib/auth";
 import type {
   CohortStatus,
   CohortSummary,
@@ -49,6 +50,9 @@ export type CohortTrack = {
 export type CohortStudent = Person & {
   id: string;
   track: string;
+  trackIds: string[];
+  accountStatus: UserStatus;
+  onboardingStatus: OnboardingStatus;
   // PENDING-BACKEND: no student health or activity data yet.
   status: StudentStatus | null;
   lastActive: string;
@@ -57,6 +61,9 @@ export type CohortStudent = Person & {
 export type CohortStaff = Person & {
   id: string;
   track: string;
+  trackId: string;
+  /** `null` when the user record couldn't be loaded. */
+  accountStatus: UserStatus | null;
   students: number;
   // PENDING-BACKEND: no activity data yet.
   lastActive: string;
@@ -151,12 +158,30 @@ async function listInstructorTracks(cohortId?: string) {
   return data;
 }
 
-async function listStudentsPage(cohortId: string, page: number) {
+async function listUsersPage(
+  query: { role: AdminUser["role"]; cohortId?: string },
+  page: number,
+) {
   const { data } = await api.get<Envelope<Paginated<AdminUser>>>(
     "/admin/users",
-    { query: { role: "STUDENT", cohortId, page, limit: 100 } },
+    { query: { ...query, page, limit: 100 } },
   );
   return data;
+}
+
+function listStudentsPage(cohortId: string, page: number) {
+  return listUsersPage({ role: "STUDENT", cohortId }, page);
+}
+
+/** Instructor-track records only carry a name and email, not account status. */
+async function listAllInstructors() {
+  const first = await listUsersPage({ role: "INSTRUCTOR" }, 1);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, i) =>
+      listUsersPage({ role: "INSTRUCTOR" }, i + 2),
+    ),
+  );
+  return [first, ...rest].flatMap((page) => page.items);
 }
 
 async function listAllStudents(cohortId: string) {
@@ -230,11 +255,17 @@ async function listCohortSummaries() {
 }
 
 async function getCohortDetail(id: string): Promise<CohortDetail> {
-  const [{ data: cohort }, assignments, students] = await Promise.all([
-    api.get<Envelope<Cohort>>(`/admin/cohorts/${id}`),
-    listInstructorTracks(id),
-    listAllStudents(id),
-  ]);
+  const [{ data: cohort }, assignments, students, instructors] =
+    await Promise.all([
+      api.get<Envelope<Cohort>>(`/admin/cohorts/${id}`),
+      listInstructorTracks(id),
+      listAllStudents(id),
+      // Only needed for the status filter, so a failure shouldn't hide the page.
+      listAllInstructors().catch(() => [] as AdminUser[]),
+    ]);
+  const instructorStatus = new Map(
+    instructors.map((user) => [user.id, user.status]),
+  );
 
   const tracks = cohortTrackNames(id, assignments, students);
   const studentsPerTrack = new Map<string, number>();
@@ -263,6 +294,9 @@ async function getCohortDetail(id: string): Promise<CohortDetail> {
       studentTracks(student, id)
         .map((track) => track.name)
         .join(", ") || "--",
+    trackIds: studentTracks(student, id).map((track) => track.id),
+    accountStatus: student.status,
+    onboardingStatus: student.onboardingStatus,
     status: null,
     lastActive: "--",
   }));
@@ -278,6 +312,8 @@ async function getCohortDetail(id: string): Promise<CohortDetail> {
         ...personFor(assignment.id, name, instructor?.email ?? ""),
         id: assignment.id,
         track: assignment.track?.name ?? "--",
+        trackId: assignment.trackId,
+        accountStatus: instructorStatus.get(assignment.instructorId) ?? null,
         students: studentsPerTrack.get(assignment.trackId) ?? 0,
         lastActive: "--",
       };

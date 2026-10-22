@@ -21,7 +21,7 @@ export function CohortTabs<T extends string>({
       role="tablist"
       aria-label={label}
       className={cn(
-        "inline-flex max-w-full gap-3 overflow-x-auto rounded-xl bg-neutral-100 p-2.5 shadow-[0_2px_4px_rgb(17_24_25/0.06)]",
+        "inline-flex max-w-full gap-3 overflow-x-auto rounded-xl bg-neutral-100 p-1 shadow-[0_2px_4px_rgb(17_24_25/0.06)]",
         className,
       )}
     >
@@ -35,7 +35,7 @@ export function CohortTabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(tab.value)}
             className={cn(
-              "h-8 shrink-0 rounded-lg px-[13px] text-sm whitespace-nowrap transition-colors",
+              "h-8 shrink-0 rounded-lg px-[13px] text-sm font-medium whitespace-nowrap transition-colors",
               active
                 ? "bg-white text-text-primary"
                 : "text-text-muted hover:text-text-primary",

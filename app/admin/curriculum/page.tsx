@@ -10,6 +10,7 @@ import { cn } from "cn";
 
 import { Search } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
+import { CurriculumFilterDialog } from "@/components/curriculum/CurriculumFilterDialog";
 import { CurriculumStats } from "@/components/curriculum/CurriculumStats";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { SuccessToast } from "@/components/ui/toast";
@@ -21,7 +22,9 @@ import {
   curriculumKeys,
   curriculumQueries,
   deleteCurriculum,
+  noCurriculumFilters,
   type Curriculum,
+  type CurriculumFilters,
 } from "@/lib/curriculum";
 
 export default function CurriculumPage({
@@ -32,7 +35,10 @@ export default function CurriculumPage({
   const { created: createdTitle } = React.use(searchParams);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const curriculaQuery = useQuery(curriculumQueries.list());
+  const [filters, setFilters] =
+    React.useState<CurriculumFilters>(noCurriculumFilters);
+  const [filterOpen, setFilterOpen] = React.useState(false);
+  const curriculaQuery = useQuery(curriculumQueries.list(filters.trackIds));
   const [search, setSearch] = React.useState("");
   const [deleteTarget, setDeleteTarget] = React.useState<Curriculum | null>(
     null,
@@ -53,10 +59,17 @@ export default function CurriculumPage({
 
   const curricula = curriculaQuery.data ?? [];
   const query = search.trim().toLowerCase();
-  const filtered = curricula.filter((curriculum) =>
-    curriculum.title.toLowerCase().includes(query),
+  const filtered = curricula.filter(
+    (curriculum) =>
+      curriculum.title.toLowerCase().includes(query) &&
+      (filters.statuses.length === 0 ||
+        filters.statuses.includes(curriculum.publishStatus)),
   );
-  const showEmptyState = curriculaQuery.isSuccess && curricula.length === 0;
+  // A track filter can empty the list too; that isn't "no curriculum yet".
+  const showEmptyState =
+    curriculaQuery.isSuccess &&
+    curricula.length === 0 &&
+    filters.trackIds.length === 0;
 
   return (
     <>
@@ -109,6 +122,7 @@ export default function CurriculumPage({
               <Button
                 variant="secondary"
                 size="lg"
+                onClick={() => setFilterOpen(true)}
                 className="border-neutral-200"
               >
                 <Filter className="h-4 w-4" />
@@ -131,7 +145,11 @@ export default function CurriculumPage({
               ))
             ) : filtered.length === 0 ? (
               <p className="rounded-xl bg-white px-5 py-10 text-center text-sm text-neutral-400">
-                No curriculum matches &ldquo;{search}&rdquo;.
+                {query ? (
+                  <>No curriculum matches &ldquo;{search}&rdquo;.</>
+                ) : (
+                  "No curriculum matches the selected filters."
+                )}
               </p>
             ) : (
               filtered.map((curriculum) => {
@@ -222,6 +240,13 @@ export default function CurriculumPage({
           </div>
         )}
       </main>
+
+      <CurriculumFilterDialog
+        open={filterOpen}
+        onOpenChange={setFilterOpen}
+        value={filters}
+        onApply={setFilters}
+      />
 
       <DeleteConfirmDialog
         open={deleteTarget !== null}

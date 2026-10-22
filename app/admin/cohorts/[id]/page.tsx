@@ -23,12 +23,18 @@ import {
 } from "@/components/cohorts/CohortPeopleTable";
 import { CohortSettings } from "@/components/cohorts/CohortSettings";
 import { CohortStatusBadge } from "@/components/cohorts/CohortStatusBadge";
+import type { PeopleFilter } from "@/components/cohorts/PeopleFilterDialog";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
 import { CohortTracks } from "@/components/cohorts/CohortTracks";
 import { SuccessToast } from "@/components/ui/toast";
 import { getProgramOptionsErrorMessage } from "@/lib/admin";
 import { ApiError } from "@/lib/api";
-import { cohortQueries, type CohortStaff } from "@/lib/cohorts";
+import {
+  cohortQueries,
+  type CohortStaff,
+  type CohortStudent,
+  type CohortTrack,
+} from "@/lib/cohorts";
 import { cn } from "@/lib/utils";
 import { studentStatusLabels, type StudentStatus } from "../cohort-data";
 
@@ -43,12 +49,14 @@ const tabs = [
 
 type Tab = (typeof tabs)[number]["value"];
 
-const studentStatusPill: Record<StudentStatus, "success" | "warning" | "error"> =
-  {
-    onTrack: "success",
-    atRisk: "warning",
-    needsAttention: "error",
-  };
+const studentStatusPill: Record<
+  StudentStatus,
+  "success" | "warning" | "error"
+> = {
+  onTrack: "success",
+  atRisk: "warning",
+  needsAttention: "error",
+};
 
 const staffColumns = [
   {
@@ -64,7 +72,14 @@ const staffColumns = [
   {
     header: "Status",
     width: "w-[160px]",
-    cell: () => <StatusPill status="success">Active</StatusPill>,
+    cell: (row: CohortStaff) =>
+      row.accountStatus === null ? (
+        "--"
+      ) : row.accountStatus === "SUSPENDED" ? (
+        <StatusPill status="error">Suspended</StatusPill>
+      ) : (
+        <StatusPill status="success">Active</StatusPill>
+      ),
   },
   {
     header: "Last active",
@@ -72,6 +87,65 @@ const staffColumns = [
     cell: (row: CohortStaff) => row.lastActive,
   },
 ];
+
+const accountStatusOptions = [
+  { value: "ACTIVE", label: "Active" },
+  { value: "SUSPENDED", label: "Suspended" },
+];
+
+function trackFilter<T>(
+  tracks: CohortTrack[],
+  values: (row: T) => string[],
+): PeopleFilter<T> {
+  return {
+    key: "track",
+    title: "Track",
+    description: "Filter by the learning track they belong to.",
+    allLabel: "All tracks",
+    options: tracks.map((track) => ({ value: track.id, label: track.name })),
+    values,
+  };
+}
+
+function studentFilters(tracks: CohortTrack[]): PeopleFilter<CohortStudent>[] {
+  return [
+    trackFilter(tracks, (row) => row.trackIds),
+    {
+      key: "status",
+      title: "Account status",
+      description: "Find students whose account is active or suspended.",
+      allLabel: "All",
+      options: accountStatusOptions,
+      values: (row) => [row.accountStatus],
+    },
+    {
+      key: "onboarding",
+      title: "Onboarding",
+      description:
+        "Find students who have joined or are yet to accept their invite.",
+      allLabel: "All",
+      options: [
+        { value: "INVITED", label: "Invited" },
+        { value: "COMPLETED", label: "Joined" },
+      ],
+      values: (row) => [row.onboardingStatus],
+    },
+  ];
+}
+
+function instructorFilters(tracks: CohortTrack[]): PeopleFilter<CohortStaff>[] {
+  return [
+    trackFilter(tracks, (row) => [row.trackId]),
+    {
+      key: "status",
+      title: "Account status",
+      description: "Find instructors whose account is active or suspended.",
+      allLabel: "All",
+      options: accountStatusOptions,
+      values: (row) => (row.accountStatus ? [row.accountStatus] : []),
+    },
+  ];
+}
 
 function isTab(value: string | undefined): value is Tab {
   return tabs.some((tab) => tab.value === value);
@@ -246,6 +320,7 @@ export default function CohortDetailPage({
             title={`${cohort.students} students`}
             personHeader="Student"
             rows={cohort.studentList}
+            filters={studentFilters(cohort.trackList)}
             columns={[
               { header: "Track", width: "w-[210px]", cell: (row) => row.track },
               {
@@ -288,6 +363,7 @@ export default function CohortDetailPage({
               personHeader="Instructors"
               rows={cohort.instructorList}
               columns={staffColumns}
+              filters={instructorFilters(cohort.trackList)}
               actionHeader="Action"
             />
           ))}
@@ -354,7 +430,9 @@ function HeaderStat({
       </span>
       <div>
         <p className="font-work text-sm text-text-secondary">{label}</p>
-        <p className="mt-0.5 text-lg font-semibold text-text-primary">{value}</p>
+        <p className="mt-0.5 text-lg font-semibold text-text-primary">
+          {value}
+        </p>
       </div>
     </div>
   );

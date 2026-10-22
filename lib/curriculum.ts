@@ -563,11 +563,25 @@ async function toCurriculum(record: CurriculumRecord, knownTrack?: Track): Promi
 
 // ---- Curriculum ----------------------------------------------------------------
 
-async function listCurricula() {
-  // Curricula are only listed per track, so walk every track.
+/** Filters for the curriculum list. An empty list means "all". */
+export type CurriculumFilters = {
+  /**
+   * PENDING-BACKEND: draft/published lives in the session-only store, so this
+   * is applied on the page rather than sent to the API.
+   */
+  statuses: ModuleStatus[];
+  trackIds: string[];
+};
+
+export const noCurriculumFilters: CurriculumFilters = { statuses: [], trackIds: [] };
+
+async function listCurricula(trackIds: string[] = []) {
+  // Curricula are only listed per track, so walk every selected track.
   const tracks = await getData<Track[]>("/admin/tracks");
+  const selected =
+    trackIds.length > 0 ? tracks.filter((track) => trackIds.includes(track.id)) : tracks;
   const perTrack = await Promise.all(
-    tracks.map(async (track) => {
+    selected.map(async (track) => {
       const records = await getData<CurriculumRecord[]>(
         `/admin/tracks/${track.id}/curriculums`
       );
@@ -1060,6 +1074,9 @@ export function formatModuleNumber(index: number) {
 export const curriculumKeys = {
   all: () => ["curriculum"] as const,
   list: () => ["curriculum", "list"] as const,
+  /** Sits under `list()`, so invalidating that refreshes every filtered list. */
+  listByTracks: (trackIds: string[]) =>
+    ["curriculum", "list", { trackIds: [...trackIds].sort() }] as const,
   detail: (id: string) => ["curriculum", "detail", id] as const,
   // Assignments and resources are read from this same tree, so invalidating
   // it refreshes every tab.
@@ -1075,10 +1092,10 @@ const modulesQuery = (curriculumId: string) => ({
 });
 
 export const curriculumQueries = {
-  list: () =>
+  list: (trackIds: string[] = []) =>
     queryOptions({
-      queryKey: curriculumKeys.list(),
-      queryFn: listCurricula,
+      queryKey: curriculumKeys.listByTracks(trackIds),
+      queryFn: () => listCurricula(trackIds),
     }),
 
   detail: (id: string) =>
