@@ -167,7 +167,7 @@ export default function StudentDetailsPage({
               scroll: false,
             })
           }
-          className="mt-6"
+          className="mt-6 shadow-[0_1px_3px_rgb(0_0_0/0.15)]"
         />
 
         <div className="mt-6">
