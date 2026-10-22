@@ -3,27 +3,26 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Radar,
-  Video,
-  Users,
-  GraduationCap,
-  UserCog,
-  ShieldCheck,
-  Hash,
-  Layers,
-  BookOpen,
-  BarChart3,
-  Activity,
-  Megaphone,
-  Bell,
-  MessageSquare,
-  Settings,
-  Blocks,
-  X,
-} from "lucide-react";
+import { Blocks, X } from "lucide-react";
 import { Logo } from "@/assets/logo";
+import { 
+  DashboardSquare01, 
+  Video02, 
+  UserMultiple, 
+  Teacher, 
+  Mentor, 
+  Admin, 
+  Cohorts, 
+  Track, 
+  Structure01,
+  Activity02,
+  Coins01,
+  Message01,
+  Notification02,
+  Marketing,
+  Settings01,
+  type IconProps,
+} from "@/assets/icons";
 import { cn } from "@/lib/utils";
 import { useAdminNav } from "@/components/AdminNavContext";
 import { UserMenu } from "@/components/UserMenu";
@@ -31,44 +30,43 @@ import { UserMenu } from "@/components/UserMenu";
 interface NavItem {
   title: string;
   href: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<IconProps<"stroke" | "solid">>;
 }
 
 const overviewNavItems: NavItem[] = [
-  { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+  { title: "Dashboard", href: "/admin/dashboard", icon: DashboardSquare01 },
 ];
 
 const operationsNavItems: NavItem[] = [
-  { title: "Control Tower", href: "/admin/control-tower", icon: Radar },
-  { title: "Live Sessions", href: "/admin/live-sessions", icon: Video },
+  { title: "Live Sessions", href: "/admin/live-sessions", icon: Video02 },
 ];
 
 const peopleNavItems: NavItem[] = [
-  { title: "Students", href: "/admin/students", icon: Users },
-  { title: "Instructors", href: "/admin/instructors", icon: GraduationCap },
-  { title: "Mentors", href: "/admin/mentors", icon: UserCog },
-  { title: "Admins", href: "/admin/admins", icon: ShieldCheck },
+  { title: "Students", href: "/admin/students", icon: UserMultiple },
+  { title: "Instructors", href: "/admin/instructors", icon: Teacher },
+  { title: "Mentors", href: "/admin/mentors", icon: Mentor },
+  { title: "Admins", href: "/admin/admins", icon: Admin },
 ];
 
 const academyNavItems: NavItem[] = [
-  { title: "Tracks", href: "/admin/tracks", icon: Hash },
-  { title: "Cohorts", href: "/admin/cohorts", icon: Layers },
-  { title: "Curriculum", href: "/admin/curriculum", icon: BookOpen },
+  { title: "Cohorts", href: "/admin/cohorts", icon: Cohorts },
+  { title: "Tracks", href: "/admin/tracks", icon: Track },
+  { title: "Curriculum", href: "/admin/curriculum", icon: Structure01 },
 ];
 
 const insightNavItems: NavItem[] = [
-  { title: "Reports", href: "/admin/reports", icon: BarChart3 },
-  { title: "Activity Log", href: "/admin/activity-log", icon: Activity },
+  { title: "Reports", href: "/admin/reports", icon: Coins01 },
+  { title: "Activity Log", href: "/admin/activity-log", icon: Activity02 },
 ];
 
 const communicationNavItems: NavItem[] = [
-  { title: "Announcements", href: "/admin/announcements", icon: Megaphone },
-  { title: "Notifications", href: "/admin/notifications", icon: Bell },
-  { title: "Messages", href: "/admin/messages", icon: MessageSquare },
+  { title: "Announcements", href: "/admin/announcements", icon: Marketing },
+  { title: "Notifications", href: "/admin/notifications", icon: Notification02 },
+  { title: "Messages", href: "/admin/messages", icon: Message01 },
 ];
 
 const accountNavItems: NavItem[] = [
-  { title: "Settings", href: "/admin/settings", icon: Settings },
+  { title: "Settings", href: "/admin/settings", icon: Settings01 },
   { title: "Integration", href: "/admin/integration", icon: Blocks },
 ];
 
@@ -84,19 +82,19 @@ export function AdminSidebar() {
     <>
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-neutral-900/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-neutral-800/50 lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 -translate-x-full flex-col border-r border-neutral-300 bg-white transition-transform duration-200 ease-in-out",
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 -translate-x-full flex-col border-r border-neutral-200 bg-white transition-transform duration-200 ease-in-out",
           "lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-60 lg:shrink-0 lg:self-start lg:translate-x-0",
           open && "translate-x-0",
         )}
       >
-        <div className="flex items-center justify-between gap-2.5 border-b border-neutral-300 px-4 py-5">
+        <div className="flex items-center h-16 justify-between gap-2.5 border-b border-neutral-200 px-4 py-5">
           <Link
             href="/admin/dashboard"
             className="flex items-center overflow-hidden"
@@ -107,7 +105,7 @@ export function AdminSidebar() {
             type="button"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
-            className="text-neutral-500 hover:text-neutral-700 lg:hidden"
+            className="text-neutral-400 hover:text-neutral-600 lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -157,9 +155,10 @@ export function AdminSidebar() {
             ))}
           </div>
 
-          <hr className="my-3 text-neutral-300" />
+          <hr className="my-3 text-neutral-200" />
 
-          <UserMenu />
+          {/* Sign-out lives in the top nav's profile menu. */}
+          <UserMenu withMenu={false} />
         </div>
       </aside>
     </>
@@ -177,7 +176,7 @@ function NavSection({
 }) {
   return (
     <div className="space-y-1">
-      <p className="mb-2 px-3 text-xs font-medium tracking-wider text-neutral-500 uppercase">
+      <p className="mb-2 px-3 text-xs font-medium tracking-wider text-neutral-400 uppercase">
         {label}
       </p>
       {items.map((item) => (
@@ -206,11 +205,15 @@ function SidebarNavItem({
       className={cn(
         "flex h-10 w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium",
         isActive
-          ? "border-primary-500 bg-[#E8F5F6] text-primary-500"
+          ? "border-brand-primary bg-surface-brand text-brand-primary"
           : "border-transparent text-[#505258]",
       )}
     >
-      <Icon className="h-5 w-5 shrink-0" />
+      <Icon
+        // Figma icons switch to their solid variant when active; others (e.g. lucide) ignore it.
+        {...("variants" in Icon && { variant: isActive ? "solid" : "stroke" })}
+        className="h-6 w-6 shrink-0"
+      />
       <span className="truncate">{item.title}</span>
     </Link>
   );

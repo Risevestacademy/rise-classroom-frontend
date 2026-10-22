@@ -22,7 +22,7 @@ function CountryFlag({
   return (
     <span
       className={cn(
-        "flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-100",
+        "flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-50",
         disabled && "grayscale opacity-60",
         className
       )}
@@ -118,7 +118,7 @@ function CountrySelect({
       >
         <CountryFlag Icon={selected?.FlagIcon} disabled={disabled} />
 
-        <ChevronDown className="size-3.5 text-neutral-400" />
+        <ChevronDown className="size-3.5 text-neutral-300" />
       </Popover.Trigger>
 
       <Popover.Portal>
@@ -127,9 +127,9 @@ function CountrySelect({
           align="start"
           sideOffset={6}
         >
-          <Popover.Popup className="w-64 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-lg">
-            <div className="flex items-center gap-2 border-b border-neutral-200 p-2">
-              <Search className="size-4 shrink-0 text-neutral-400" />
+          <Popover.Popup className="w-64 overflow-hidden rounded-lg border border-neutral-100 bg-white shadow-lg">
+            <div className="flex items-center gap-2 border-b border-neutral-100 p-2">
+              <Search className="size-4 shrink-0 text-neutral-300" />
 
               <input
                 autoFocus
@@ -137,7 +137,7 @@ function CountrySelect({
                 onChange={(e) => handleQueryChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search country"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-neutral-400"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-neutral-300"
               />
             </div>
 
@@ -146,7 +146,7 @@ function CountrySelect({
               className="max-h-64 overflow-y-auto p-1"
             >
               {filtered.length === 0 && (
-                <li className="px-2 py-4 text-center text-sm text-neutral-400">
+                <li className="px-2 py-4 text-center text-sm text-neutral-300">
                   No countries found
                 </li>
               )}
@@ -162,19 +162,19 @@ function CountrySelect({
                     className={cn(
                       "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
                       index === activeIndex
-                        ? "bg-neutral-100"
-                        : "hover:bg-neutral-50",
+                        ? "bg-neutral-50"
+                        : "hover:bg-neutral-0",
                       country.iso2 === value &&
-                        "font-medium text-neutral-900"
+                        "font-medium text-neutral-800"
                     )}
                   >
                     <CountryFlag Icon={country.FlagIcon} />
 
-                    <span className="flex-1 truncate text-neutral-700">
+                    <span className="flex-1 truncate text-neutral-600">
                       {country.name}
                     </span>
 
-                    <span className="shrink-0 text-neutral-400">
+                    <span className="shrink-0 text-neutral-300">
                       {country.dialCode}
                     </span>
                   </button>

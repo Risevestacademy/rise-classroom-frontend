@@ -27,15 +27,15 @@ function WebsiteInput({
       data-invalid={invalid || undefined}
       className={className}
     >
-      <span className="shrink-0 text-sm text-neutral-500">{protocol}</span>
-      <span className="h-4 w-px shrink-0 bg-neutral-200" aria-hidden="true" />
+      <span className="shrink-0 text-sm text-neutral-400">{protocol}</span>
+      <span className="h-4 w-px shrink-0 bg-neutral-100" aria-hidden="true" />
       <input
         type="text"
         disabled={disabled}
         placeholder={placeholder}
         className={cn(
-          "w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400",
-          "disabled:cursor-not-allowed disabled:text-neutral-400"
+          "w-full bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-300",
+          "disabled:cursor-not-allowed disabled:text-neutral-300"
         )}
         {...props}
       />

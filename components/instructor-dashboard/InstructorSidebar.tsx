@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   FolderKanban,
   Users,
-  FolderOpen,
   FileCheck,
   Video,
   BookOpen,
@@ -38,7 +37,6 @@ const overviewNavItems: NavItem[] = [
 const programNavItems: NavItem[] = [
   { title: "My Tracks", href: "/instructor/my-tracks", icon: FolderKanban },
   { title: "Students", href: "/instructor/students", icon: Users },
-  { title: "Content", href: "/instructor/content", icon: FolderOpen },
 ];
 
 const teachingNavItems: NavItem[] = [
@@ -68,7 +66,7 @@ export function InstructorSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 flex h-screen w-56 shrink-0 self-start flex-col border-r-2 border-neutral-300">
+    <aside className="sticky top-0 flex h-screen w-56 shrink-0 self-start flex-col border-r-2 border-neutral-200">
       <div className="flex h-16 items-center">
         <Link
           href="/instructor/dashboard"
@@ -80,7 +78,7 @@ export function InstructorSidebar() {
         </Link>
       </div>
 
-      <hr className="text-neutral-300 mx-4" />
+      <hr className="text-neutral-200 mx-4" />
 
             <div className="flex-1 min-h-0 px-3 py-4 space-y-6 overflow-y-auto">
         <NavSection label="Overview" items={overviewNavItems} pathname={pathname} />
@@ -100,8 +98,8 @@ export function InstructorSidebar() {
             />
           ))}
         </div>
-        <hr className="text-neutral-300 mx-4" />
-        <div className="mt-auto p-4 bg-neutral-100">
+        <hr className="text-neutral-200 mx-4" />
+        <div className="mt-auto p-4 bg-neutral-50">
           <UserMenu variant="card" />
         </div>
       </div>
@@ -120,7 +118,7 @@ function NavSection({
 }) {
   return (
     <div className="space-y-1">
-      <p className="mb-2 px-3 text-xs font-medium tracking-wider text-neutral-500 uppercase">
+      <p className="mb-2 px-3 text-xs font-medium tracking-wider text-neutral-400 uppercase">
         {label}
       </p>
       {items.map((item) => (
@@ -146,7 +144,7 @@ function SidebarNavItem({
   return (
     <div className="relative flex items-center w-full px-2">
       {isActive && (
-        <span className="absolute -left-4 top-1/2 -translate-y-1/2 h-8 w-2 rounded-r-md bg-[#0D6D78]" />
+        <span className="absolute -left-4 top-1/2 -translate-y-1/2 h-8 w-2 rounded-r-md bg-brand-primary" />
       )}
 
       <Link
@@ -154,15 +152,15 @@ function SidebarNavItem({
         className={cn(
           "flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium",
           isActive
-            ? "bg-neutral-200 text-primary-500 border-2 border-primary-500"
-            : "text-neutral-500"
+            ? "bg-neutral-100 text-brand-primary border-2 border-brand-primary"
+            : "text-neutral-400"
         )}
       >
         <Icon
           fill={isActive ? "currentColor" : "none"}
           className={cn(
             "h-5 w-5 shrink-0",
-            isActive ? "text-[#0D6D78]" : "text-neutral-500"
+            isActive ? "text-brand-primary" : "text-neutral-400"
           )}
         />
         <span className="truncate">{item.title}</span>

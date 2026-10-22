@@ -5,61 +5,148 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Colours */
-  --color-primary-50: #E7F0F2;
-  --color-primary-100: #B4D2D5;
-  --color-primary-200: #90BCC1;
-  --color-primary-300: #5D9DA5;
-  --color-primary-400: #3D8A93;
-  --color-primary-500: #0D6D78;
-  --color-primary-600: #0C636D;
-  --color-primary-700: #094D55;
-  --color-primary-800: #073C42;
-  --color-primary-900: #052E32;
+  /*
+   * Colours — mirrors the Figma design tokens (design-tokens/Light.tokens.json).
+   * Names follow the token path: --color-{group}-{name}.
+   */
+  --color-neutral-*: initial; /* drop Tailwind's default neutral scale so only design shades exist */
 
-  --color-success-50: #E6F2EE;
-  --color-success-100: #B1D5CB;
-  --color-success-200: #8CC1B2;
-  --color-success-300: #57A58E;
-  --color-success-400: #369379;
-  --color-success-500: #047857;
-  --color-success-600: #046D4F;
-  --color-success-700: #03553E;
-  --color-success-800: #024230;
-  --color-success-900: #023225;
+  /* Primitive · Brand */
+  --color-brand-surface: #f5f6ff;
+  --color-brand-on-primary: #ffffff;
+  --color-brand-primary: #080d38; /* brand-950 */
+  --color-brand-primary-hover: #10164f; /* brand-900 */
+  --color-brand-primary-pressed: #20286f; /* brand-800 */
+  --color-brand-primary-disabled: #d5d9ff; /* brand-200 */
+  --color-brand-secondary-default: #ffffff;
+  --color-brand-secondary-hover: #f3f6f6;
+  --color-brand-secondary-pressed: #e7ecec;
+  --color-brand-secondary-disabled: #f1f3f3;
+  --color-brand-tertiary-default: #ffffff;
+  --color-brand-tertiary-hover: #f3f6f6;
+  --color-brand-tertiary-pressed: #e7ecec;
+  --color-brand-tertiary-disabled: #ffffff;
+  --color-brand-destructive-default: #dc2626;
+  --color-brand-destructive-hover: #b91c1c;
+  --color-brand-destructive-pressed: #991b1b;
+  --color-brand-destructive-disabled: #fecaca;
 
-  --color-warning-50: #F8EEE6;
-  --color-warning-100: #E8CAB3;
-  --color-warning-200: #DDB08E;
-  --color-warning-300: #CD8C5A;
-  --color-warning-400: #C3753A;
-  --color-warning-500: #B45309;
-  --color-warning-600: #A44C08;
-  --color-warning-700: #803B06;
-  --color-warning-800: #632E05;
-  --color-warning-900: #4C2304;
+  /* Primitive · Brand Night Indigo ramp */
+  --color-brand-50: #f5f6ff;
+  --color-brand-100: #e9ebff;
+  --color-brand-200: #d5d9ff;
+  --color-brand-300: #b8bfff;
+  --color-brand-400: #929bff;
+  --color-brand-500: #6c77e6;
+  --color-brand-600: #4f59c7;
+  --color-brand-700: #3540a3;
+  --color-brand-800: #20286f;
+  --color-brand-900: #10164f;
+  --color-brand-950: #080d38;
 
-  --color-error-50:  #E7F0F2;
-  --color-error-100: #B4D2D5;
-  --color-error-200: #90BCC1;
-  --color-error-300: #5D9DA5;
-  --color-error-400: #3D8A93;
-  --color-error-500: #0D6D78;
-  --color-error-600: #0C636D;
-  --color-error-700: #094D55;
-  --color-error-800: #073C42;
-  --color-error-900: #052E32;
+  /* Primitive · Neutral */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f8fafa;
+  --color-neutral-100: #f1f4f4;
+  --color-neutral-200: #e2e8e8;
+  --color-neutral-300: #cbd5d6;
+  --color-neutral-350: #a8b2b3;
+  --color-neutral-400: #647274;
+  --color-neutral-500: #475355;
+  --color-neutral-600: #344043;
+  --color-neutral-700: #1f292b;
+  --color-neutral-800: #111819;
 
-  --color-neutral-50: #FFFFFF;
-  --color-neutral-100: #F8FAFA;
-  --color-neutral-200: #F1F4F4;
-  --color-neutral-300: #E2E8E8;
-  --color-neutral-400: #CBD5D6;
-  --color-neutral-500: #647274;
-  --color-neutral-600: #475355;
-  --color-neutral-700: #344043;
-  --color-neutral-800: #1F292B;
-  --color-neutral-900: #111819;
+  /* Primitive · Status */
+  --color-success-surface: #e8f5e9;
+  --color-success-border: #b7ddb9;
+  --color-success-text: #2e7d32;
+  --color-success-badge-icon: #2e7d32;
+  --color-warning-surface: #fff4d6;
+  --color-warning-border: #f0d58a;
+  --color-warning-text: #8a6100;
+  --color-warning-badge-icon: #8a6100;
+  --color-error-surface: #fdeaea;
+  --color-error-border: #f2b8b8;
+  --color-error-text: #c62828;
+  --color-error-icon: #c62828;
+  --color-info-surface: #e8f1ff;
+  --color-info-border: #b8d3f2;
+  --color-info-text: #2563a8;
+  --color-info-badge-icon: #2563a8;
+  --color-default-surface: #f8fafa;
+  --color-default-border: #e2e8e8;
+  --color-default-text: #344043;
+  --color-default-badge-icon: #344043;
+
+  /* Semantic · Surface */
+  --color-surface-background: #f8fafa; /* neutral-50 */
+  --color-surface-default: #ffffff; /* neutral-0 */
+  --color-surface-subtle: #f1f4f4; /* neutral-100 */
+  --color-surface-brand: #f5f6ff; /* brand-surface */
+  --color-surface-success-badge: #e8f5e9;
+  --color-surface-warning-badge: #fff4d6;
+  --color-surface-error-badge: #fdeaea;
+  --color-surface-info-badge: #e8f1ff;
+  --color-surface-default-badge: #f8fafa;
+
+  /* Semantic · Border */
+  --color-border-default: #e2e8e8; /* neutral-200 */
+  --color-border-strong: #cbd5d6; /* neutral-300 */
+  --color-border-focus: #080d38; /* brand-primary */
+  --color-border-accessible: #647274; /* neutral-400 */
+  --color-border-success: #b7ddb9;
+  --color-border-warning: #f0d58a;
+  --color-border-error: #f2b8b8;
+  --color-border-info: #b8d3f2;
+  --color-border-default-badge: #e2e8e8;
+
+  /* Semantic · Text */
+  --color-text-primary: #111819; /* neutral-800 */
+  --color-text-secondary: #475355; /* neutral-500 */
+  --color-text-muted: #647274; /* neutral-400 */
+  --color-text-disabled: #a8b2b3; /* neutral-350 */
+  --color-text-brand: #080d38; /* brand-950 */
+  --color-text-success: #2e7d32;
+  --color-text-warning: #8a6100;
+  --color-text-error: #c62828;
+  --color-text-info: #2563a8;
+  --color-text-default-badge: #344043;
+
+  /* Semantic · Icon */
+  --color-icon-primary: #111819; /* neutral-800 */
+  --color-icon-secondary: #475355; /* neutral-500 */
+  --color-icon-brand: #080d38; /* brand-primary */
+  --color-icon-white: #ffffff; /* neutral-0 */
+  --color-icon-disabled: #a8b2b3; /* text-disabled */
+  --color-icon-muted: #647274; /* text-muted */
+  --color-icon-success: #2e7d32;
+  --color-icon-warning: #8a6100;
+  --color-icon-error: #c62828;
+  --color-icon-info: #2563a8;
+  --color-icon-default: #344043;
+
+  /* Semantic · Interactive */
+  --color-interactive-primary-default: #080d38; /* brand-primary */
+  --color-interactive-primary-hover: #10164f; /* brand-primary-hover */
+  --color-interactive-primary-pressed: #20286f; /* brand-primary-pressed */
+  --color-interactive-primary-disabled: #d5d9ff; /* brand-primary-disabled */
+  --color-interactive-primary-text: #ffffff; /* brand-on-primary */
+  --color-interactive-secondary-default: #ffffff;
+  --color-interactive-secondary-hover: #f3f6f6;
+  --color-interactive-secondary-pressed: #e7ecec;
+  --color-interactive-secondary-disabled: #f1f3f3;
+  --color-interactive-secondary-text: #111819; /* text-primary */
+  --color-interactive-tertiary-default: #ffffff;
+  --color-interactive-tertiary-hover: #f3f6f6;
+  --color-interactive-tertiary-pressed: #e7ecec;
+  --color-interactive-tertiary-disabled: #ffffff;
+  --color-interactive-tertiary-text: #080d38; /* text-brand */
+  --color-interactive-destructive-default: #dc2626;
+  --color-interactive-destructive-hover: #b91c1c;
+  --color-interactive-destructive-pressed: #991b1b;
+  --color-interactive-destructive-disabled: #fecaca;
+  --color-interactive-destructive-text: #ffffff; /* neutral-0 */
 
   /* Font */
   --font-tomato: var(--font-tomato-grotesk), system-ui, sans-serif;
@@ -110,32 +197,168 @@
   --spacing-30: 320px;
   --spacing-31: 384px;
   --spacing-32: 512px;
-
-  /* extras */
-  --color-interactive-tetiary-focused: #E7ECEC;
-  --color-interactive-primary-hover: #0B5D67;
-  --color-interactive-secondary-focused:#F3F6F6;
-  --color-interactive-destructive-default: #DC2626;
-  --color-interactive-destructive-hover: #B91C1C;
-  --color-interactive-destructive-disabled: #FECACA;
-  --color-interactive-destructive-disabled-text: #9CA3AF;
-  --color-interactive-secondary-disabled: #F1F3F3;
-  --color-semantic-surface-success-badge: #E8F5E9;
-  --color-semantic-border-success: #B7DDB9;
-  --color-semantic-text-success: #2E7D32;
-  --color-semantic-surface-error-badge: #FDEAEA;
-  --color-semantic-border-error: #F2B8B8;
-  --color-semantic-text-error: #C62828;
-  --color-semantic-surface-warning-badge: #FFF4D6;
-  --color-semantic-border-warning: #F0D58A;
-  --color-semantic-text-warning: #8A6100;
-  --color-semantic-surface-info-badge: #E8F1FF;
-  --color-semantic-border-info: #B8D3F2;
-  --color-semantic-text-info: #2563A8;
-  --color-semantic-surface-brand: #E8F5F6;
 }
 
 body {
   font-family: var(--font-tomato);
 }
 
+/* ---------------------------------------------------------------------------
+ * Landing page motion
+ * ------------------------------------------------------------------------- */
+
+/*
+ * Hero intro elements stay hidden until GSAP takes over, so they don't flash
+ * in their final state before the intro plays. The delayed animation reveals
+ * them anyway after 1.2s, so a slow connection never leaves the hero blank.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  [data-intro] {
+    visibility: hidden;
+    animation: landing-intro-fallback 0s 1.2s forwards;
+  }
+}
+
+@keyframes landing-intro-fallback {
+  to {
+    visibility: visible;
+  }
+}
+
+/*
+ * SplitText masks: leave room for italic overhang, descenders, and the
+ * hand-drawn strokes that sit just below the text.
+ */
+.split-line-mask,
+.split-word-mask {
+  padding: 0.12em 0.25em 0.4em;
+  margin: -0.12em -0.25em -0.4em;
+}
+
+@keyframes landing-shine {
+  0%,
+  60% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+@layer components {
+  /* Background fill that slides in on hover. Set --btn-fill to change its colour. */
+  .landing-btn {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+
+  .landing-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--btn-fill, var(--color-brand-800));
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @media (hover: hover) {
+    .landing-btn:hover::before {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+  }
+
+  /* A soft light that sweeps across the button every few seconds. */
+  .landing-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    z-index: -1;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.28),
+      transparent
+    );
+    animation: landing-shine 3.2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .landing-btn::before {
+      transition: none;
+    }
+
+    .landing-shine::after {
+      display: none;
+    }
+  }
+}
+
+/* Rolling labels: each letter carries its copy as a shadow one line below. */
+.roll-text {
+  display: inline-flex;
+  height: 1lh;
+  overflow: hidden;
+}
+
+.roll-text > span {
+  display: inline-block;
+  text-shadow: 0 1lh currentColor;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--i) * 14ms);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :is(a, button):hover .roll-text > span {
+    transform: translateY(-1lh);
+  }
+}
+
+/* Anchor jumps (Lenis or native) land below the fixed nav. */
+:root:has([data-landing-main]) {
+  scroll-padding-top: 72px;
+}
+
+/*
+ * Footer wordmark: white letters speckled with overlapping print dots. Each
+ * layer tiles at a different size so the dots never line up into a grid.
+ * Everything is in em so the dots scale with the type, and --dots-shift
+ * (tweened on scroll) slides the layers past each other.
+ */
+.wordmark-dots {
+  --dot: 0.05em;
+  --s: var(--dots-shift, 0);
+  background-color: #fff;
+  background-image:
+    radial-gradient(circle at 50% 50%, #1a12ff var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 15% 75%, #1a12ff var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 20% 30%, #ff1ae8 var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 75% 85%, #ff1ae8 var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 70% 40%, #00f0ff var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 30% 90%, #00f0ff var(--dot), transparent calc(var(--dot) + 0.5px)),
+    radial-gradient(circle at 85% 15%, #00f0ff var(--dot), transparent calc(var(--dot) + 0.5px));
+  background-size:
+    0.9em 0.8em,
+    1.13em 0.97em,
+    0.47em 0.53em,
+    0.67em 0.61em,
+    0.41em 0.57em,
+    0.59em 0.43em,
+    0.73em 0.79em;
+  background-position:
+    calc(var(--s) * 1em) 0,
+    calc(var(--s) * -0.6em) calc(var(--s) * 0.2em),
+    calc(var(--s) * 0.8em) 0,
+    calc(var(--s) * -1.1em) calc(var(--s) * -0.2em),
+    calc(var(--s) * 0.5em) 0,
+    calc(var(--s) * -0.4em) calc(var(--s) * 0.3em),
+    calc(var(--s) * 1.2em) 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

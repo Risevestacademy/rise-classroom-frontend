@@ -1,20 +1,17 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { Bell, Menu } from "lucide-react";
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Bell, ChevronRight, Menu } from "lucide-react";
 
 import { Search, Calendar } from "@/assets/icons";
-import { UserAvatar } from "@/components/UserAvatar";
-import { Skeleton } from "@/components/ui/skeleton";
+import { AdminProfileMenu } from "@/components/AdminProfileMenu";
 import { useAdminNav } from "@/components/AdminNavContext";
-import { sessionQuery } from "@/lib/session-query";
-import type { Role } from "@/lib/auth";
-
-const roleLabels: Record<Role, string> = {
-  SUPERADMIN: "Super Admin",
-  INSTRUCTOR: "Instructor",
-  STUDENT: "Student",
-};
+import {
+  AdminNotificationsPanel,
+  useAdminNotifications,
+} from "@/components/AdminNotificationsPanel";
 
 export function AdminTopNav({
   breadcrumb = ["Overview", "Dashboard"],
@@ -22,29 +19,33 @@ export function AdminTopNav({
   breadcrumb?: string[];
 }) {
   const { setOpen } = useAdminNav();
-  const { data: session, isPending } = useQuery(sessionQuery());
-  const user = session?.user;
+  const pathname = usePathname();
+  const onCalendar = pathname.startsWith("/admin/calendar");
+  const [notificationsOpen, setNotificationsOpen] = React.useState(false);
+  const { unreadCount } = useAdminNotifications();
 
   return (
-    <header className="flex h-16 items-center justify-between gap-3 border-b border-neutral-300 bg-white px-4 py-3 sm:px-6">
+    <header className="flex h-16 items-center justify-between gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-3 sm:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
           aria-label="Open menu"
           onClick={() => setOpen(true)}
-          className="text-neutral-500 hover:text-neutral-700 lg:hidden"
+          className="text-neutral-400 hover:text-neutral-600 lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
 
-        <div className="flex min-w-0 items-center gap-1.5 truncate text-sm text-neutral-500">
+        <div className="flex min-w-0 items-center gap-1.5 truncate text-sm text-neutral-400">
           {breadcrumb.map((item, index) => (
             <span key={item} className="flex items-center gap-1.5">
-              {index > 0 && <span className="text-neutral-400">/</span>}
+              {index > 0 && (
+                <ChevronRight className="h-4 w-4 shrink-0 text-neutral-400" />
+              )}
               <span
                 className={
                   index === breadcrumb.length - 1
-                    ? "font-medium text-neutral-900"
+                    ? "font-medium text-neutral-800"
                     : undefined
                 }
               >
@@ -55,57 +56,62 @@ export function AdminTopNav({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-        <div className="hidden h-10 items-center gap-2 rounded-lg border border-neutral-300 px-3 text-neutral-400 md:flex md:w-48 lg:w-64">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <div className="hidden h-10 items-center gap-2 rounded-lg border border-neutral-200 px-3 text-neutral-300 md:flex md:w-48 lg:w-64">
           <Search />
           <input
             type="search"
             placeholder="Search"
-            className="w-full bg-transparent text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+            className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-300 focus:outline-none"
           />
         </div>
 
-        <button
-          type="button"
+        <Link
+          href="/admin/calendar"
           aria-label="Calendar"
-          className="hidden text-neutral-500 hover:text-neutral-700 sm:block"
+          aria-current={onCalendar ? "page" : undefined}
+          className={
+            onCalendar
+              ? "hidden size-10 items-center justify-center rounded-lg bg-brand-300 text-neutral-800 sm:flex"
+              : "hidden size-10 items-center justify-center rounded-lg bg-neutral-100 text-neutral-800 hover:bg-neutral-200 sm:flex"
+          }
         >
           <Calendar />
-        </button>
+        </Link>
 
         <button
           type="button"
-          aria-label="Notifications"
-          className="text-neutral-500 hover:text-neutral-700"
+          aria-label={
+            unreadCount > 0
+              ? `Notifications, ${unreadCount} new`
+              : "Notifications"
+          }
+          aria-expanded={notificationsOpen}
+          onClick={() => setNotificationsOpen(true)}
+          className="flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-lg bg-neutral-100 px-2.5 text-neutral-800 hover:bg-neutral-200"
         >
-          <Bell className="h-5 w-5" />
+          <span className="relative">
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 right-0 size-2 rounded-full bg-text-error ring-2 ring-neutral-100" />
+            )}
+          </span>
+          {unreadCount > 0 && (
+            <span className="hidden text-sm font-medium text-text-error sm:inline">
+              {unreadCount} New
+            </span>
+          )}
         </button>
 
-        <div className="flex items-center gap-2.5 border-l border-neutral-300 pl-2 sm:pl-4">
-          <UserAvatar
-            user={{
-              name: user?.name ?? "Account",
-              avatar: user?.image ?? "/default-avatar.png",
-            }}
-            isLoading={isPending}
-          />
-          {isPending ? (
-            <div className="hidden flex-col gap-1 sm:flex">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-3 w-14" />
-            </div>
-          ) : (
-            <div className="hidden flex-col sm:flex">
-              <span className="text-sm font-bold text-neutral-900">
-                {user?.displayName ?? user?.name ?? "Account"}
-              </span>
-              <span className="text-xs text-neutral-500">
-                {user ? roleLabels[user.role] : "Not signed in"}
-              </span>
-            </div>
-          )}
+        <div className="pl-1 sm:pl-2">
+          <AdminProfileMenu />
         </div>
       </div>
+
+      <AdminNotificationsPanel
+        open={notificationsOpen}
+        onOpenChange={setNotificationsOpen}
+      />
     </header>
   );
 }
