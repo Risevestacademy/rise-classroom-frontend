@@ -1,3 +1,7 @@
+// PENDING-BACKEND: the API has no mentor, progress, deadline, activity, note
+// or attendance data for a student yet, so the Overview tab shows the
+// design's sample content until it does.
+
 export type AttendanceStatus = "attended" | "absent" | "none";
 
 export const mentor = {
@@ -6,12 +10,16 @@ export const mentor = {
   nextSession: "Sep 30, 2026 · 6:00 PM -7:00 PM",
 };
 
+export const overallProgress = 84;
+
 export const moduleProgress = [
-  { label: "Design System", value: 91, tone: "primary" },
+  { label: "Design System", value: 91, tone: "brand" },
   { label: "Visual identity", value: 82, tone: "info" },
   { label: "UX Research", value: 74, tone: "success" },
   { label: "Prototyping", value: 88, tone: "accent" },
 ] as const;
+
+export const moduleFilters = [{ value: "all", label: "All modules" }] as const;
 
 export const deadlines = [
   {
@@ -87,8 +95,11 @@ export const notes = [
 
 // September 2026 starts on a Tuesday, so the grid opens with two blanks.
 export const attendanceMonth = {
+  value: "2026-09",
   label: "SEP",
   leadingBlanks: 2,
+  // The design's totals; they don't add up from the sample grid below.
+  stats: { rate: "92%", attended: 8, absent: 3 },
   days: [
     "none",
     "attended",
