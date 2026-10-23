@@ -48,7 +48,10 @@ export function ProgressTab({
       <Card className="gap-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="text-lg/6 font-semibold text-text-primary">
+            <h2
+              title={track ? `${track} Track` : trackProgress.name}
+              className="truncate text-lg/6 font-semibold text-text-primary"
+            >
               {track ? `${track} Track` : trackProgress.name}
             </h2>
             {cohort && (
@@ -215,7 +218,7 @@ function LearningItemMenu({ item }: { item: LearningItem }) {
             variant="tertiary"
             size="icon-sm"
             aria-label={`${item.title} options`}
-            className="text-icon-primary"
+            className="text-icon-primary border-none"
           />
         }
       >

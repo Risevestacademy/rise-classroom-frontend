@@ -50,9 +50,9 @@ export function UserRowActions({ user }: { user: AdminUser }) {
       <Menu.Root open={menuOpen} onOpenChange={handleMenuOpenChange}>
         <Menu.Trigger
           aria-label="Row actions"
-          className="text-neutral-400 hover:text-neutral-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex size-8 items-center justify-center text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="size-5" />
         </Menu.Trigger>
 
         <Menu.Portal>
