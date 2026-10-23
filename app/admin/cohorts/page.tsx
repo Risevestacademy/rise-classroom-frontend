@@ -15,6 +15,7 @@ import { AdminTopNav } from "@/components/AdminTopNav";
 import { CohortActionsMenu } from "@/components/cohorts/CohortActionsMenu";
 import { CohortStatusBadge } from "@/components/cohorts/CohortStatusBadge";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SuccessToast } from "@/components/ui/toast";
 import { getProgramOptionsErrorMessage } from "@/lib/admin";
 import { cohortQueries } from "@/lib/cohorts";
@@ -90,7 +91,9 @@ export default function CohortsPage({
           <p className="mt-8 font-work text-sm text-text-error">
             {getProgramOptionsErrorMessage(cohortsQuery.error)}
           </p>
-        ) : cohortsQuery.isPending ? null : visible.length === 0 ? (
+        ) : cohortsQuery.isPending ? (
+          <CohortCardsSkeleton />
+        ) : visible.length === 0 ? (
           <EmptyState />
         ) : (
           <ul className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -211,6 +214,39 @@ function CohortCard({
         </p>
       )}
     </article>
+  );
+}
+
+function CohortCardsSkeleton() {
+  return (
+    <ul aria-busy className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <li
+          key={index}
+          className="rounded-3xl bg-white p-6 shadow-[0_2px_4px_rgb(17_24_25/0.06)]"
+        >
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="size-5" />
+          </div>
+          <Skeleton className="mt-3 h-7 w-40" />
+          <Skeleton className="mt-1 h-4 w-32" />
+          <div className="mt-4 flex gap-8">
+            {Array.from({ length: 2 }).map((_, stat) => (
+              <div key={stat} className="flex gap-3">
+                <Skeleton className="size-6" />
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-6 w-8" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <Skeleton className="mt-3.5 h-4 w-24" />
+          <Skeleton className="mt-1 h-2 w-full rounded-full" />
+        </li>
+      ))}
+    </ul>
   );
 }
 

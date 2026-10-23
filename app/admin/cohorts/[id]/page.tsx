@@ -26,6 +26,7 @@ import { CohortStatusBadge } from "@/components/cohorts/CohortStatusBadge";
 import type { PeopleFilter } from "@/components/cohorts/PeopleFilterDialog";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
 import { CohortTracks } from "@/components/cohorts/CohortTracks";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SuccessToast } from "@/components/ui/toast";
 import { getProgramOptionsErrorMessage } from "@/lib/admin";
 import { ApiError } from "@/lib/api";
@@ -190,10 +191,12 @@ export default function CohortDetailPage({
       <>
         <AdminTopNav breadcrumb={["Academy", "Cohorts"]} />
         <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
-          {cohortQuery.isError && (
+          {cohortQuery.isError ? (
             <p className="font-work text-sm text-text-error">
               {getProgramOptionsErrorMessage(cohortQuery.error)}
             </p>
+          ) : (
+            <CohortDetailSkeleton />
           )}
         </main>
       </>
@@ -433,6 +436,42 @@ function HeaderStat({
         <p className="mt-0.5 text-lg font-semibold text-text-primary">
           {value}
         </p>
+      </div>
+    </div>
+  );
+}
+
+function CohortDetailSkeleton() {
+  return (
+    <div aria-busy>
+      <div className="flex items-center gap-3.5">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-6 w-16 rounded-full" />
+      </div>
+      <Skeleton className="mt-1.5 h-4 w-40" />
+      <Skeleton className="mt-1 h-4 w-28" />
+
+      <div className="mt-6 flex flex-wrap gap-6">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="flex items-start gap-3">
+            <Skeleton className="size-8 rounded-lg" />
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-6 w-10" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-[22px] flex flex-wrap gap-2">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Skeleton key={index} className="h-10 w-24 rounded-lg" />
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <Skeleton className="h-48 rounded-2xl bg-white" />
+        <Skeleton className="h-48 rounded-2xl bg-white" />
       </div>
     </div>
   );
