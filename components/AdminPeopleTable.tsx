@@ -311,7 +311,7 @@ export function AdminPeopleTable({
                 ? Array.from({ length: 5 }).map((_, index) => (
                     <tr
                       key={index}
-                      className="h-[85px] border-b border-neutral-200"
+                      className="h-[85px] border-b border-neutral-200 bg-neutral-50"
                     >
                       <td className="pl-3.5">
                         <Skeleton className="size-4" />
@@ -354,7 +354,7 @@ export function AdminPeopleTable({
                         onClick={href ? () => router.push(href) : undefined}
                         className={
                           href
-                            ? "h-[85px] cursor-pointer border-b border-neutral-200 hover:bg-neutral-50"
+                            ? "h-[85px] bg-neutral-50 cursor-pointer border-b border-neutral-200 hover:bg-neutral-50"
                             : "h-[85px] border-b border-neutral-200"
                         }
                       >
