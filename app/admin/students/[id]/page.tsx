@@ -29,6 +29,7 @@ import { ControlTowerTab } from "@/components/student-profile/ControlTowerTab";
 import { ProgressTab } from "@/components/student-profile/ProgressTab";
 import {
   AttendanceGrid,
+  BrandBadge,
   Card,
   CardHeader,
   CardSelect,
@@ -38,7 +39,6 @@ import {
   attendanceCell,
   attendanceLabels,
 } from "@/components/student-profile/shared";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -97,18 +97,28 @@ const moduleTones = {
 } as const;
 
 const deadlineTones = {
-  error: { box: "bg-surface-error-badge text-icon-error", badge: "error" },
-  warning: {
-    box: "bg-surface-warning-badge text-icon-warning",
-    badge: "warning",
-  },
-  neutral: { box: "bg-surface-subtle text-icon-secondary", badge: "neutral" },
+  error: { box: "bg-surface-brand text-icon-error", badge: "text-text-error" },
+  warning: { box: "bg-surface-brand text-icon-warning", badge: "text-text-warning" },
+  neutral: { box: "bg-surface-subtle text-icon-muted", badge: "text-text-info" },
 } as const;
 
+/** The Overview's badges all sit on the brand surface, coloured by text only. */
+const badgeText = {
+  success: "text-text-success",
+  warning: "text-text-warning",
+  error: "text-text-error",
+  info: "text-text-info",
+  neutral: "text-text-default-badge",
+} as const;
+
+// The Overview card marks absences in brand surface rather than error.
+const overviewCells = { ...attendanceCell, absent: "bg-surface-brand" };
+
+
 const activityKinds = {
-  assignment: { icon: File01, box: "bg-surface-info-badge text-icon-info" },
-  lesson: { icon: File01, box: "bg-surface-success-badge text-icon-success" },
-  session: { icon: Video, box: "bg-surface-info-badge text-icon-info" },
+  assignment: { icon: File01, box: "bg-surface-brand text-icon-info" },
+  lesson: { icon: File01, box: "bg-surface-brand text-icon-success" },
+  session: { icon: Video, box: "bg-surface-brand text-icon-info" },
 } as const;
 
 function formatLongDate(value: string) {
@@ -239,7 +249,7 @@ function MessageButton() {
   // PENDING-BACKEND: there's no messaging yet.
   return (
     <Button variant="tertiary" size="medium">
-      <Message01 className="size-5" />
+      <Message01 className="size-[18px]" />
       Message
     </Button>
   );
@@ -294,17 +304,17 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
             </p>
             <div className="flex flex-wrap gap-2">
               {tracks.map((track) => (
-                <Badge key={track} variant="light" status="info" size="lg">
+                <BrandBadge key={track} size="lg" className="text-text-info">
                   {track}
-                </Badge>
+                </BrandBadge>
               ))}
-              <Badge variant="light" status={status.badge} size="lg">
+              <BrandBadge size="lg" className={badgeText[status.badge]}>
                 {status.label}
-              </Badge>
+              </BrandBadge>
               {cohorts.map((cohort) => (
-                <Badge key={cohort} variant="light" status="neutral" size="lg">
+                <BrandBadge key={cohort} size="lg" className="text-text-info">
                   {cohort}
-                </Badge>
+                </BrandBadge>
               ))}
             </div>
           </div>
@@ -496,9 +506,7 @@ function DeadlinesCard() {
                 title={deadline.title}
                 detail={deadline.type}
                 trailing={
-                  <Badge variant="light" status={tone.badge}>
-                    {deadline.due}
-                  </Badge>
+                  <BrandBadge className={tone.badge}>{deadline.due}</BrandBadge>
                 }
               />
             );
@@ -542,6 +550,7 @@ function AttendanceCard() {
           monthLabel={attendanceMonth.label}
           leadingBlanks={leadingBlanks}
           days={days.map((status) => ({ status }))}
+          cells={overviewCells}
         />
 
         <ul className="flex w-[88px] shrink-0 flex-col gap-2">
@@ -553,7 +562,7 @@ function AttendanceCard() {
               className="flex items-center gap-2 font-work text-xs font-medium text-text-secondary"
             >
               <span
-                className={cn("size-4 rounded-sm", attendanceCell[status])}
+                className={cn("size-4 rounded-sm", overviewCells[status])}
               />
               {attendanceLabels[status]}
             </li>

@@ -14,7 +14,6 @@ import {
   type PeopleFilter,
   type PeopleFilterValues,
 } from "@/components/cohorts/PeopleFilterDialog";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -29,6 +28,13 @@ import {
 } from "@/app/admin/students/student-display";
 
 const pageSize = 20;
+
+/** Status pills sit on the brand surface; only the text is coloured. */
+const statusText = {
+  success: "text-text-success",
+  warning: "text-text-warning",
+  error: "text-text-error",
+} as const;
 
 /** Delays a value so typing in the search box doesn't fire a request per key. */
 function useDebounced<T>(value: T, delay = 350) {
@@ -284,7 +290,7 @@ export function AdminPeopleTable({
                     checked={allSelected}
                     indeterminate={someSelected && !allSelected}
                     onCheckedChange={toggleAll}
-                    className="size-4"
+                    className="size-4 border-icon-secondary"
                   />
                 </th>
                 <th className="w-[319px] border-r border-neutral-200 px-3 font-medium">
@@ -354,8 +360,8 @@ export function AdminPeopleTable({
                         onClick={href ? () => router.push(href) : undefined}
                         className={
                           href
-                            ? "h-[85px] bg-neutral-50 cursor-pointer border-b border-neutral-200 hover:bg-neutral-50"
-                            : "h-[85px] border-b border-neutral-200"
+                            ? "h-[85px] cursor-pointer border-b border-border-default bg-neutral-50 hover:bg-neutral-100"
+                            : "h-[85px] border-b border-border-default"
                         }
                       >
                         <td
@@ -368,7 +374,7 @@ export function AdminPeopleTable({
                             onCheckedChange={(checked) =>
                               toggleOne(user.id, checked)
                             }
-                            className="size-4"
+                            className="size-4 border-icon-secondary"
                           />
                         </td>
                         <td className="px-3">
@@ -382,12 +388,12 @@ export function AdminPeopleTable({
                                 <Link
                                   href={href}
                                   onClick={(event) => event.stopPropagation()}
-                                  className="block truncate text-sm font-medium text-text-primary hover:underline"
+                                  className="block truncate font-work text-sm font-medium tracking-[-0.01em] text-text-secondary hover:underline"
                                 >
                                   {name}
                                 </Link>
                               ) : (
-                                <p className="truncate text-sm font-medium text-text-primary">
+                                <p className="truncate font-work text-sm font-medium tracking-[-0.01em] text-text-secondary">
                                   {name}
                                 </p>
                               )}
@@ -400,23 +406,21 @@ export function AdminPeopleTable({
                         <td className="truncate px-3 font-work text-sm text-text-primary">
                           {tracks.join(", ") || "--"}
                         </td>
-                        <td className="truncate px-3 font-work text-sm text-text-primary">
+                        <td className="truncate px-2.5 font-work text-sm text-text-secondary">
                           {cohorts.join(", ") || "--"}
                         </td>
-                        <td className="px-3">
-                          <Badge
-                            variant="light"
-                            status={status.badge}
-                            className="font-medium"
+                        <td className="px-2.5">
+                          <span
+                            className={`inline-flex h-6 items-center rounded-full bg-surface-brand p-1.5 text-xs font-medium ${statusText[status.badge]}`}
                           >
                             {status.label}
-                          </Badge>
+                          </span>
                         </td>
-                        <td className="px-3 font-work text-sm text-text-primary">
+                        <td className="px-2.5 font-work text-sm text-text-secondary">
                           {formatJoined(user)}
                         </td>
                         <td
-                          className="px-3"
+                          className="px-2.5"
                           onClick={(event) => event.stopPropagation()}
                         >
                           <UserRowActions user={user} />

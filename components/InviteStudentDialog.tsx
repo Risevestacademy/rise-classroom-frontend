@@ -10,7 +10,6 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import {
-  Plus,
   UserPlus,
   Upload,
   CloudUpload,
@@ -24,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 
+import { Add01 } from "@/assets/icons";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -333,7 +333,7 @@ export function InviteStudentDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <Button size="medium" onClick={() => setOpen(true)} className="gap-2">
-        <Plus className="h-4 w-4" />
+        <Add01 className="size-[18px]" />
         Invite students
       </Button>
 

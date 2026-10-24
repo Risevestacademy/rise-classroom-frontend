@@ -83,7 +83,7 @@ export function IconBox({
         className,
       )}
     >
-      <Icon className="size-5" />
+      <Icon className="size-6" />
     </span>
   );
 }
@@ -110,6 +110,29 @@ export function CardSelect<T extends string>({
       chevron={<ArrowDown01 className="size-4" />}
       chevronClassName="text-icon-secondary"
     />
+  );
+}
+
+/** A pill on the brand surface; only the text carries the colour. */
+export function BrandBadge({
+  size = "sm",
+  className,
+  children,
+}: {
+  size?: "sm" | "lg";
+  className: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center rounded-full bg-surface-brand font-medium whitespace-nowrap",
+        size === "lg" ? "h-7 p-2 text-sm" : "h-6 p-1.5 text-xs",
+        className,
+      )}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -159,11 +182,14 @@ export function AttendanceGrid({
   leadingBlanks,
   days,
   size,
+  cells = attendanceCell,
 }: {
   monthLabel: string;
   leadingBlanks: number;
   days: { status: AttendanceStatus; multiple?: boolean }[];
   size: "small" | "large";
+  /** Square colours per status; defaults to `attendanceCell`. */
+  cells?: Record<AttendanceStatus, string>;
 }) {
   const large = size === "large";
 
@@ -199,7 +225,7 @@ export function AttendanceGrid({
           title={`${monthLabel} ${index + 1}: ${attendanceLabels[day.status]}${
             day.multiple ? " (multiple sessions)" : ""
           }`}
-          className={cn("relative rounded-md", attendanceCell[day.status])}
+          className={cn("relative rounded-md", cells[day.status])}
         >
           {day.multiple && (
             <span className="absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-0.5">
