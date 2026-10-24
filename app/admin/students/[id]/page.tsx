@@ -150,7 +150,11 @@ export default function StudentDetailsPage({
     <>
       <AdminTopNav
         breadcrumb={
-          student ? ["People", "Students", name] : ["People", "Students"]
+          [
+            "People",
+            { label: "Students", href: "/admin/students" },
+            ...(student ? [{ label: name, href: `/admin/students/${id}` }] : []),
+          ]
         }
       />
       <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">

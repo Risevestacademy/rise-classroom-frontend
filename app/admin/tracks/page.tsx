@@ -45,7 +45,7 @@ export default function TracksPage() {
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", "Tracks"]} />
+      <AdminTopNav breadcrumb={["Academy", { label: "Tracks", href: "/admin/tracks" }]} />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         {tracksQuery.isError ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">

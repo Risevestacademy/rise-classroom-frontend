@@ -189,7 +189,7 @@ export default function CohortDetailPage({
   if (!cohort) {
     return (
       <>
-        <AdminTopNav breadcrumb={["Academy", "Cohorts"]} />
+        <AdminTopNav breadcrumb={["Academy", { label: "Cohorts", href: "/admin/cohorts" }]} />
         <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
           {cohortQuery.isError ? (
             <p className="font-work text-sm text-text-error">
@@ -208,7 +208,11 @@ export default function CohortDetailPage({
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", "Cohorts", cohort.name]} />
+      <AdminTopNav breadcrumb={[
+          "Academy",
+          { label: "Cohorts", href: "/admin/cohorts" },
+          { label: cohort.name, href: `/admin/cohorts/${id}` },
+        ]} />
       <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3.5">
           <h1 className="text-2xl font-semibold text-text-primary">

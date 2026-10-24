@@ -100,9 +100,9 @@ export default function NewAssignmentPage({
       <AdminTopNav
         breadcrumb={[
           "Academy",
-          "Curriculum",
-          curriculum?.title ?? "…",
-          "Add Assignment",
+          { label: "Curriculum", href: "/admin/curriculum" },
+          { label: curriculum?.title ?? "…", href: `/admin/curriculum/${id}` },
+          { label: "Add Assignment", href: `/admin/curriculum/${id}/assignments/new` },
         ]}
       />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">

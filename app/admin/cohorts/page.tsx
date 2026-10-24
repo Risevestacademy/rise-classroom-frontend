@@ -67,7 +67,9 @@ export default function CohortsPage({
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", "Cohorts"]} />
+      <AdminTopNav 
+        breadcrumb={["Academy", { label: "Cohorts", href: "/admin/cohorts" }]} 
+      />
       <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>

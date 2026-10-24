@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Error } from "@/components/ui/hint"
 import { PasswordVisibilityToggle } from "@/components/ui/password-visibility-toggle"
 import { SquareLock } from "@/assets/icons"
-import { Logo } from "@/assets/logo"
+import { AuthShell } from "@/components/AuthShell"
 import { getSignInErrorMessage, landingPathFor, signIn } from "@/lib/auth"
 
 const signInSchema = z.object({
@@ -116,112 +116,97 @@ function SignInForm() {
   };
 
   return (
-    <main className="min-h-[100vh] bg-neutral-50 lg:flex lg:items-center lg:justify-center lg:p-4">
-      <div className="mx-auto w-full md:w-[100vw] lg:grid lg:grid-cols-2 lg:overflow-hidden ">
-        <div className="relative hidden flex-col justify-between rounded-lg bg-brand-primary p-10 lg:flex">
-          <div className="flex flex-1 items-center justify-center">
-            <Logo variant="white" size="lg" />
-          </div>
-          <p className="text-4xl [word-spacing:0.8rem] leading-tight font-bold text-neutral-0">
-            Learn. Practice. Progress.
-          </p>
-        </div>
+    <AuthShell>
+      <Image
+        className="h-auto w-full rounded-2xl"
+        src="/login.png"
+        alt="Sign in to your account"
+        width={358}
+        height={113}
+        priority
+      />
 
-        <div className="flex flex-col min-h-[100vh]">
-          <div className="flex items-center px-6 pt-6 lg:hidden">
-            <Logo variant="teal" size="sm" />
-          </div>
-
-          <div className="flex flex-col gap-6 px-6 py-10 sm:px-12 lg:px-24">
-            <div className="mx-auto flex h-[140px] my-10 w-full  items-center justify-center">
-              <Image className="rounded-2xl" src="/login.png" alt="Sign in to your account" width={500} height={0} />
-            </div>
-
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-800">Welcome Back</h1>
-              <p className="mt-1 text-sm text-neutral-500">
-                Sign in to your Classroom account to continue
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
-              {formError && (
-                <p
-                  role="alert"
-                  className="rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
-                >
-                  {formError}
-                </p>
-              )}
-
-              <Field.Root
-                className="flex flex-col gap-1.5"
-                invalid={Boolean(errors.email)}
-              >
-                <label className="text-sm font-medium text-neutral-700">Email Address</label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={handleEmailChange}
-                  disabled={submitting}
-                  placeholder="rise@email.com"
-                />
-                {errors.email && <Error match={true}>{errors.email}</Error>}
-              </Field.Root>
-
-              <Field.Root
-                className="flex flex-col gap-1.5"
-                invalid={Boolean(errors.password)}
-              >
-                <label htmlFor="password" className="text-sm font-medium text-neutral-700">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type={showPassword ? "basic" : "password"}
-                  leadingIcon={<SquareLock />}
-                  trailingIcon={
-                    <PasswordVisibilityToggle
-                      visible={showPassword}
-                      onToggle={() => setShowPassword((value) => !value)}
-                    />
-                  }
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={handlePasswordChange}
-                  disabled={submitting}
-                />
-
-                {errors.password && <Error match={true}>{errors.password}</Error>}
-              </Field.Root>
-
-              <div className="text-right text-sm">
-                <Link href="/forgot-password" className="font-medium text-brand-primary hover:underline">
-                  Forgot Password?
-                </Link>
-              </div>
-
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                disabled={!formFilled || submitting}
-                className="w-full rounded-full cursor-pointer"
-              >
-                {submitting ? "Signing in…" : "Sign in"}
-              </Button>
-
-              <p className="text-center text-sm text-neutral-500">
-                Haven&apos;t been invited?{" "}
-                <Link href="#" className="font-medium text-brand-primary hover:underline">
-                  Contact Support
-                </Link>
-              </p>
-            </form>
-          </div>
-
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-neutral-800">Welcome back</h1>
+        <p className="mt-2 max-w-60 font-work text-sm text-neutral-500">
+          Sign in to continue your learning journey
+        </p>
       </div>
-    </main>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+        {formError && (
+          <p
+            role="alert"
+            className="rounded-lg border border-border-error bg-surface-error-badge px-4 py-3 text-sm text-text-error"
+          >
+            {formError}
+          </p>
+        )}
+
+        <Field.Root
+          className="flex flex-col gap-2"
+          invalid={Boolean(errors.email)}
+        >
+          <label className="text-sm font-medium text-neutral-700">Email Address</label>
+          <Input
+            type="email"
+            value={email}
+            onChange={handleEmailChange}
+            disabled={submitting}
+            placeholder="rise@email.com"
+          />
+          {errors.email && <Error match={true}>{errors.email}</Error>}
+        </Field.Root>
+
+        <Field.Root
+          className="flex flex-col gap-2"
+          invalid={Boolean(errors.password)}
+        >
+          <label htmlFor="password" className="text-sm font-medium text-neutral-700">
+            Password
+          </label>
+          <Input
+            id="password"
+            type={showPassword ? "basic" : "password"}
+            leadingIcon={<SquareLock />}
+            trailingIcon={
+              <PasswordVisibilityToggle
+                visible={showPassword}
+                onToggle={() => setShowPassword((value) => !value)}
+              />
+            }
+            placeholder="Enter your password"
+            value={password}
+            onChange={handlePasswordChange}
+            disabled={submitting}
+          />
+
+          {errors.password && <Error match={true}>{errors.password}</Error>}
+        </Field.Root>
+
+        <div className="text-right font-work text-sm">
+          <Link href="/forgot-password" className="text-brand-primary hover:underline">
+            Forgot password?
+          </Link>
+        </div>
+
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          disabled={!formFilled || submitting}
+          className="mt-6 w-full cursor-pointer rounded-full"
+        >
+          {submitting ? "Signing in…" : "Sign in"}
+        </Button>
+
+        <p className="mt-2 text-center font-work text-sm text-neutral-800">
+          Haven&apos;t been invited?{" "}
+          <Link href="#" className="text-brand-primary hover:underline">
+            Contact support
+          </Link>
+        </p>
+      </form>
+    </AuthShell>
   )
 }

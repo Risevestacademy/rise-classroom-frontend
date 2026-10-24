@@ -95,9 +95,12 @@ export default function ModuleDetailPage({
       <AdminTopNav
         breadcrumb={[
           "Academy",
-          "Curriculum",
-          curriculum.title,
-          `Module ${position}`,
+          { label: "Curriculum", href: "/admin/curriculum" },
+          { label: curriculum.title, href: `/admin/curriculum/${id}` },
+          {
+            label: `Module ${position}`,
+            href: `/admin/curriculum/${id}/modules/${moduleId}`,
+          },
         ]}
       />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
