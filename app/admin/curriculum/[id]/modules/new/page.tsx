@@ -51,9 +51,9 @@ export default function NewModulePage({
       <AdminTopNav
         breadcrumb={[
           "Academy",
-          "Curriculum",
-          curriculum?.title ?? "…",
-          "Add Module",
+          { label: "Curriculum", href: "/admin/curriculum" },
+          { label: curriculum?.title ?? "…", href: `/admin/curriculum/${id}` },
+          { label: "Add Module", href: `/admin/curriculum/${id}/modules/new` },
         ]}
       />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">

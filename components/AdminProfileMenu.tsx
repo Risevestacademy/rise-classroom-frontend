@@ -52,8 +52,8 @@ export function AdminProfileMenu() {
           </div>
         ) : (
           <div className="hidden flex-col sm:flex">
-            <span className="text-sm font-bold text-neutral-800">{name}</span>
-            <span className="text-xs text-neutral-400">
+            <span className="font-work text-sm font-medium tracking-[-0.14px] text-text-primary">{name}</span>
+            <span className="font-work text-[13px] leading-[18px] text-text-secondary">
               {user ? roleLabels[user.role] : "Not signed in"}
             </span>
           </div>

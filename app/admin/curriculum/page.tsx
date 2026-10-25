@@ -73,7 +73,7 @@ export default function CurriculumPage({
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", "Curriculum"]} />
+      <AdminTopNav breadcrumb={["Academy", { label: "Curriculum", href: "/admin/curriculum" }]} />
       <main className="flex min-w-0 flex-1 flex-col p-4 sm:p-6 bg-neutral-50 lg:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>

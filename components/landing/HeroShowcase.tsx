@@ -20,7 +20,7 @@ const PRODUCT_TABS = [
   { label: "Learning", screen: "/landing/dashboard-mockup.webp" },
   { label: "Community", screen: "/landing/dashboard-mockup.webp" },
   { label: "Chat", screen: "/landing/dashboard-mockup.webp" },
-  { label: "Calender", screen: "/landing/dashboard-mockup.webp" },
+  { label: "Calender", screen: "/landing/calendar-mockup.webp" },
 ];
 const TAB_COUNT = PRODUCT_TABS.length;
 /** How long each tab stays up before advancing to the next. */

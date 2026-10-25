@@ -1,16 +1,16 @@
-import { Badge } from "@/components/ui/badge";
 import {
   cohortStatusLabels,
   type CohortStatus,
 } from "@/app/admin/cohorts/cohort-data";
 import { cn } from "@/lib/utils";
 
-const badgeProps = {
-  active: { variant: "light", status: "success" },
-  upcoming: { variant: "stroked", status: "info" },
-  completed: { variant: "stroked", status: "neutral" },
-  terminated: { variant: "light", status: "error" },
-} as const;
+/** Every status sits on the brand surface; only the text colour changes. */
+const statusText: Record<CohortStatus, string> = {
+  active: "text-text-success",
+  upcoming: "text-text-info",
+  completed: "text-text-default-badge",
+  terminated: "text-text-error",
+};
 
 export function CohortStatusBadge({
   status,
@@ -22,12 +22,15 @@ export function CohortStatusBadge({
   className?: string;
 }) {
   return (
-    <Badge
-      {...badgeProps[status]}
-      size={size}
-      className={cn("font-work font-normal", className)}
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full bg-surface-brand font-medium whitespace-nowrap",
+        size === "lg" ? "h-7 p-2 text-sm" : "h-6 p-1.5 text-xs",
+        statusText[status],
+        className,
+      )}
     >
       {cohortStatusLabels[status]}
-    </Badge>
+    </span>
   );
 }

@@ -35,7 +35,7 @@ export function CohortTabs<T extends string>({
             aria-selected={active}
             onClick={() => onChange(tab.value)}
             className={cn(
-              "h-8 shrink-0 rounded-lg px-[13px] text-sm font-medium whitespace-nowrap transition-colors",
+              "h-8 shrink-0 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors",
               active
                 ? "bg-white text-text-primary"
                 : "text-text-muted hover:text-text-primary",

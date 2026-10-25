@@ -2,23 +2,22 @@
 
 import * as React from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   checkInQuestions,
   checkIns,
   type CheckInStatus,
 } from "@/app/admin/students/[id]/profile-data";
-import { Card, CardHeader } from "./shared";
+import { BrandBadge, Card, CardHeader } from "./shared";
 
 const checkInStatus: Record<
   CheckInStatus,
-  { label: string; badge: "neutral" | "warning" | "error" | "success" }
+  { label: string; text: string }
 > = {
-  ongoing: { label: "Ongoing", badge: "neutral" },
-  pending: { label: "Pending", badge: "warning" },
-  overdue: { label: "Overdue", badge: "error" },
-  submitted: { label: "Submitted", badge: "success" },
+  ongoing: { label: "Ongoing", text: "text-text-info" },
+  pending: { label: "Pending", text: "text-text-warning" },
+  overdue: { label: "Overdue", text: "text-text-error" },
+  submitted: { label: "Submitted", text: "text-text-success" },
 };
 
 function answeredCount(answers: Record<string, string | undefined>) {
@@ -45,6 +44,8 @@ export function ControlTowerTab({
           subtitle={cohort}
           subtitleClassName="text-[13px]/[18px]"
         />
+        {/* The design leaves an empty 8px row under the header. */}
+        <div aria-hidden className="h-2" />
         <ul className="flex flex-col">
           {checkIns.map((item) => {
             const active = item.id === current.id;
@@ -70,9 +71,7 @@ export function ControlTowerTab({
                     </span>
                   </span>
                   <span className="flex w-[85px] shrink-0 flex-col items-end gap-1">
-                    <Badge variant="light" status={status.badge}>
-                      {status.label}
-                    </Badge>
+                    <BrandBadge className={status.text}>{status.label}</BrandBadge>
                     <span className="font-work text-sm text-text-secondary">
                       {count === 0 ? "--" : `${count} answered`}
                     </span>
@@ -85,7 +84,7 @@ export function ControlTowerTab({
       </Card>
 
       <div className="flex min-w-0 flex-col gap-4">
-        <Card className="flex-row items-start justify-between gap-4">
+        <Card className="flex-row items-center justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
             <h2 className="text-xl font-semibold text-text-primary">
               Week {current.week} check-in
@@ -101,9 +100,9 @@ export function ControlTowerTab({
                 : `Week ${checkInStatus[current.status].label.toLowerCase()}`}
             </p>
             {current.daysLeft !== undefined && (
-              <Badge variant="light" status="warning" size="lg">
+              <BrandBadge size="lg" className="text-text-warning">
                 {current.daysLeft} days left
-              </Badge>
+              </BrandBadge>
             )}
           </div>
         </Card>
@@ -123,9 +122,9 @@ export function ControlTowerTab({
           {checkInQuestions.map((question) => (
             <React.Fragment key={question.key}>
               {"section" in question && (
-                <Badge variant="light" status="info">
+                <BrandBadge className="w-fit text-text-info">
                   {question.section}
-                </Badge>
+                </BrandBadge>
               )}
               <div className="flex flex-col gap-1">
                 <p className="py-0.5 text-sm font-medium text-text-primary">

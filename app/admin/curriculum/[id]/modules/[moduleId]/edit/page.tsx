@@ -55,10 +55,16 @@ export default function EditModulePage({
       <AdminTopNav
         breadcrumb={[
           "Academy",
-          "Curriculum",
-          curriculum?.title ?? "…",
-          `Module ${position || "…"}`,
-          "Edit",
+          { label: "Curriculum", href: "/admin/curriculum" },
+          { label: curriculum?.title ?? "…", href: `/admin/curriculum/${id}` },
+          {
+            label: `Module ${position || "…"}`,
+            href: `/admin/curriculum/${id}/modules/${moduleId}`,
+          },
+          {
+            label: "Edit",
+            href: `/admin/curriculum/${id}/modules/${moduleId}/edit`,
+          },
         ]}
       />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">

@@ -24,6 +24,7 @@ export function ValuePropSection() {
   return (
     <section
       data-bg="#20286F"
+      data-value-section
       className="flex flex-col items-center bg-brand-800 px-4 pt-[72px] pb-[64px] lg:pt-[100px] lg:pb-[84px]"
     >
       <h2

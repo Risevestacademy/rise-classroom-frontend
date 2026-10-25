@@ -136,7 +136,11 @@ export default function CurriculumDetailPage({
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", "Curriculum", curriculum.title]} />
+      <AdminTopNav breadcrumb={[
+          "Academy",
+          { label: "Curriculum", href: "/admin/curriculum" },
+          { label: curriculum.title, href: `/admin/curriculum/${id}` },
+        ]} />
       <main className="relative min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         <div className="relative h-32 w-full overflow-hidden rounded-2xl sm:h-40">
           <Image

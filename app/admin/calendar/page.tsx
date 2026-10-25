@@ -118,7 +118,7 @@ export default function CalendarPage() {
   return (
     <>
       {/* "Calender" is the design's spelling. */}
-      <AdminTopNav breadcrumb={["Overview", "Calender"]} />
+      <AdminTopNav breadcrumb={["Overview", { label: "Calendar", href: "/admin/calendar" }]} />
       <main className="min-w-0 flex-1 px-4 pt-5 pb-8 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center">

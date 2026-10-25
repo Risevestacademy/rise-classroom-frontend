@@ -31,7 +31,7 @@ export function UserMenu({
    * `muted` sits on a white sidebar; `card` sits on a grey footer; `plain` is
    * flat with no background or chevron.
    */
-  variant?: "muted" | "card" | "plain";
+  variant?: "muted" | "card" | "plain" | "plain-white";
   /** What to show under the name: the user's role (default) or their email. */
   subtitle?: "role" | "email";
   withMenu?: boolean;
@@ -82,7 +82,9 @@ export function UserMenu({
             ? "rounded-2xl bg-white p-3 shadow-sm"
             : variant === "plain"
               ? "rounded-xl p-2"
-              : "rounded-2xl bg-neutral-50 p-3"
+              : variant === "plain-white"
+                ? "rounded-xl p-2"
+                : "rounded-2xl bg-neutral-50 p-3"
         )}
       >
         {details}
@@ -100,7 +102,9 @@ export function UserMenu({
             ? "rounded-2xl bg-white p-3 shadow-sm hover:bg-neutral-0 data-[popup-open]:bg-neutral-0"
             : variant === "plain"
               ? "rounded-xl p-2 hover:bg-neutral-100 data-[popup-open]:bg-neutral-100"
-              : "rounded-2xl bg-neutral-50 p-3 hover:bg-neutral-100 data-[popup-open]:bg-neutral-100"
+              : variant === "plain-white"
+                ? "rounded-xl p-2 bg-white hover:bg-white data-[popup-open]:bg-white"
+                : "rounded-2xl bg-neutral-50 p-3 hover:bg-neutral-100 data-[popup-open]:bg-neutral-100"
         )}
       >
         {details}

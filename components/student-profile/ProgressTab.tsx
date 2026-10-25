@@ -4,7 +4,6 @@ import * as React from "react";
 import { Menu } from "@base-ui/react/menu";
 
 import { MoreHorizontal } from "@/assets/icons";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -14,17 +13,17 @@ import {
   type LearningItem,
   type LearningItemStatus,
 } from "@/app/admin/students/[id]/profile-data";
-import { Card, CardHeader, ProgressBar } from "./shared";
+import { BrandBadge, Card, CardHeader, ProgressBar } from "./shared";
 
 const itemStatus: Record<
   LearningItemStatus,
-  { label: string; badge: "success" | "warning" | "error" }
+  { label: string; text: string }
 > = {
-  attended: { label: "Attended", badge: "success" },
-  absent: { label: "Absent", badge: "error" },
-  graded: { label: "Graded", badge: "success" },
-  pending: { label: "Pending", badge: "warning" },
-  notSubmitted: { label: "Not submitted", badge: "error" },
+  attended: { label: "Attended", text: "text-text-success" },
+  absent: { label: "Absent", text: "text-text-error" },
+  graded: { label: "Graded", text: "text-text-success" },
+  pending: { label: "Pending", text: "text-text-warning" },
+  notSubmitted: { label: "Not submitted", text: "text-text-error" },
 };
 
 const noteTone = {
@@ -175,9 +174,7 @@ function LearningItemCard({ item }: { item: LearningItem }) {
     <li className="flex min-h-[208px] flex-col justify-between gap-4 rounded-xl bg-surface-default p-4 shadow-[0_1px_3px_rgb(0_0_0/0.15)]">
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <Badge variant="light" status={status.badge}>
-            {status.label}
-          </Badge>
+          <BrandBadge className={status.text}>{status.label}</BrandBadge>
           <LearningItemMenu item={item} />
         </div>
         <div className="flex flex-col gap-1">
@@ -196,12 +193,15 @@ function LearningItemCard({ item }: { item: LearningItem }) {
           </p>
         </div>
         {item.score && (
-          <Badge
-            variant="light"
-            status={item.status === "graded" ? "info" : "neutral"}
+          <BrandBadge
+            className={
+              item.status === "graded"
+                ? "text-text-info"
+                : "text-text-default-badge"
+            }
           >
             {item.score}
-          </Badge>
+          </BrandBadge>
         )}
       </div>
     </li>
@@ -222,7 +222,7 @@ function LearningItemMenu({ item }: { item: LearningItem }) {
           />
         }
       >
-        <MoreHorizontal className="size-5" />
+        <MoreHorizontal className="size-4" />
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} className="z-50">

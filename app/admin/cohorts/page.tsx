@@ -67,7 +67,9 @@ export default function CohortsPage({
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", "Cohorts"]} />
+      <AdminTopNav 
+        breadcrumb={["Academy", { label: "Cohorts", href: "/admin/cohorts" }]} 
+      />
       <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -136,7 +138,7 @@ function CreateCohortLink({ label = "Create cohort" }: { label?: string }) {
       href="/admin/cohorts/create"
       className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-interactive-primary-hover"
     >
-      <Add01 className="size-5" />
+      <Add01 className="size-[18px]" />
       {label}
     </Link>
   );
@@ -173,7 +175,7 @@ function CohortCard({
   return (
     <article
       className={cn(
-        "relative rounded-3xl p-6 shadow-[0_2px_4px_rgb(17_24_25/0.06)]",
+        "relative rounded-3xl p-6 shadow-[0_1px_3px_rgb(0_0_0/0.15)]",
         cardSurface[cohort.status],
       )}
     >
@@ -199,7 +201,7 @@ function CohortCard({
         <CardStat icon={Track} value={cohort.tracks} label="Tracks" />
       </div>
 
-      <p className="mt-3.5 text-xs font-medium text-text-primary">
+      <p className="mt-4 text-xs font-medium text-text-primary">
         {completed ? "Completed" : `${cohort.progress}% Complete`}
       </p>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-brand-100">
@@ -267,10 +269,10 @@ function CardStat({
   label: string;
 }) {
   return (
-    <div className="grid grid-cols-[24px_auto] gap-x-3">
+    <div className="grid grid-cols-[24px_auto] gap-x-3 gap-y-1">
       <Icon className="size-6 text-text-primary" />
-      <p className="text-xl font-semibold text-text-primary">{value}</p>
-      <p className="col-start-2 font-work text-sm text-text-secondary">
+      <p className="text-lg/6 font-semibold text-black">{value}</p>
+      <p className="col-start-2 font-work text-[13px]/[18px] text-text-secondary">
         {label}
       </p>
     </div>

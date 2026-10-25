@@ -9,7 +9,7 @@ import { InviteStudentDialog } from "@/components/InviteStudentDialog";
 export default function StudentsPage() {
   return (
     <>
-      <AdminTopNav breadcrumb={["People", "Students"]} />
+      <AdminTopNav breadcrumb={["People", { label: "Students", href: "/admin/students" }]} />
       <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
         <AdminPeopleTable
           role="STUDENT"
