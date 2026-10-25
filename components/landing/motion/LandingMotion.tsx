@@ -20,6 +20,7 @@ import {
   solutionStack,
   testimonialsExpand,
   valueCards,
+  valueDeal,
 } from "./scroll";
 
 /**
@@ -48,6 +49,32 @@ export function LandingMotion() {
     };
   }, []);
 
+  // A sticky footer taller than the screen never shows its top, so pull its
+  // pinned edge down by the overflow.
+  useEffect(() => {
+    const footer = document.querySelector<HTMLElement>("[data-landing-footer]");
+    if (!footer) return;
+
+    const fit = () => {
+      // The strip tucked under main (negative margin) doesn't need to show.
+      const tucked = -parseFloat(getComputedStyle(footer).marginTop) || 0;
+      const overflow = Math.min(
+        0,
+        window.innerHeight - (footer.offsetHeight - tucked),
+      );
+      footer.style.setProperty("--footer-offset", `${overflow}px`);
+    };
+    fit();
+
+    const observer = new ResizeObserver(fit);
+    observer.observe(footer);
+    window.addEventListener("resize", fit);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, []);
+
   useGSAP(() => {
     navScrolledState();
 
@@ -70,14 +97,14 @@ export function LandingMotion() {
 
     mm.add(MEDIA.desktop, () => {
       heroDashboardTilt();
-      valueCards({ spread: true });
+      valueDeal();
       revealGroups({ perItem: false });
       pricingCards({ perItem: false });
       testimonialsExpand();
     });
 
     mm.add(MEDIA.mobile, () => {
-      valueCards({ spread: false });
+      valueCards();
       revealGroups({ perItem: true });
       pricingCards({ perItem: true });
     });

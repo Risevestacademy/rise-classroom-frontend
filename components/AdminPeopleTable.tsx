@@ -361,7 +361,7 @@ export function AdminPeopleTable({
                         className={
                           href
                             ? "h-[85px] cursor-pointer border-b border-border-default bg-neutral-50 hover:bg-neutral-100"
-                            : "h-[85px] border-b border-border-default"
+                            : "h-[85px] border-b border-border-default bg-neutral-50"
                         }
                       >
                         <td

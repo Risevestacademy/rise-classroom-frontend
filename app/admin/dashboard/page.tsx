@@ -120,14 +120,14 @@ export default function AdminDashboardPage() {
               </p>
             </div>
             {/* PENDING-BACKEND: nothing on the dashboard can be filtered by date yet. */}
-            <button
+            {/* <button
               type="button"
               className="flex h-10 items-center gap-2 rounded-lg border border-border-default bg-surface-default px-4 text-sm font-medium text-text-primary"
             >
               <Calendar03 className="size-5" />
               This week
               <ArrowDown01 className="size-5" />
-            </button>
+            </button> */}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -145,11 +145,7 @@ export default function AdminDashboardPage() {
               value={tracks.length}
               isPending={activeTracks.isPending}
               isError={activeTracks.isError}
-              description={
-                tracks.length
-                  ? tracks.map((track) => track.name).join(" · ")
-                  : "No active tracks yet"
-              }
+              description={"Active learning tracks"}
               icon={ListView}
               iconClassName="bg-surface-brand text-text-success"
             />

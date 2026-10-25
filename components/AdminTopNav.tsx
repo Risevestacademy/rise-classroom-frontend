@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
 import { ArrowRight01, Calendar, Notification02, Search } from "@/assets/icons";
+import { AdminCohortSelect } from "@/components/AdminCohortSelect";
 import { AdminProfileMenu } from "@/components/AdminProfileMenu";
 import { useAdminNav } from "@/components/AdminNavContext";
 import {
@@ -66,7 +67,11 @@ export function AdminTopNav({
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-        <div className="hidden h-10 items-center gap-2 rounded-lg border border-neutral-200 px-3 text-neutral-300 md:flex md:w-48 lg:w-[280px]">
+        <div className="hidden md:block">
+          <AdminCohortSelect />
+        </div>
+
+        <div className="hidden h-10 items-center gap-2 rounded-lg border border-neutral-200 p-[10px] text-neutral-300 md:flex md:w-50 lg:w-50">
           <Search />
           <input
             type="search"
