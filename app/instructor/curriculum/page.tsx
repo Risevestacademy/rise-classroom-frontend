@@ -6,15 +6,20 @@ import { useState } from "react";
 
 import {
   BookOpen,
+  ChevronDown,
   FileEdit,
   GraduationCap,
   Info,
   Pencil,
   Plus,
-  ChevronDown,
 } from "lucide-react";
 
-import { useQuery } from "@tanstack/react-query";
+
+import {
+  formatDate,
+  instructorQueries,
+} from "@/lib/instructor";
+import { useQueries, useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -45,12 +50,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { AssignmentsList } from "@/components/instructor-dashboard/AssignmentsList";
-import {
-  assignmentsData,
-  modulesData,
-  notesData,
-  resourcesData
-} from "@/components/instructor-dashboard/data";
+import { notesData } from "@/components/instructor-dashboard/data";
 import { ModulesList } from "@/components/instructor-dashboard/ModulesList";
 import { NotesList } from "@/components/instructor-dashboard/NotesList";
 import { ResourcesList } from "@/components/instructor-dashboard/ResourcesList";
@@ -63,22 +63,127 @@ export default function Curriculum() {
   const { data: session, isPending } = useQuery(sessionQuery());
   const user = session?.user;
 
-  const [activeTab, setActiveTab] = useState("overview");
+  const myTracks = useQuery(instructorQueries.myTracks());
+  const tracks = myTracks.data ?? [];
+  const selectedTrack = tracks[0];
+  const selectedCohort = selectedTrack?.cohort;
 
-  const assignments = assignmentsData;
-  const resources = resourcesData;
+  const students = useQuery(
+    instructorQueries.students({
+      trackId: selectedTrack?.trackId,
+      cohortId: selectedTrack?.cohortId,
+    })
+  );
+  const studentCount = students.data?.length ?? 0;
+
+  const curriculums = useQuery(
+    instructorQueries.curriculums({ trackId: selectedTrack?.trackId })
+  );
+  const currentCurriculum = curriculums.data?.[0];
+
+  const topics = useQuery(
+    instructorQueries.topics({ curriculumId: currentCurriculum?.id })
+  );
+
+  const topicsData = [...(topics.data ?? [])].sort(
+    (a, b) => a.position - b.position
+  );
+
+  const lessonQueries = useQueries({
+    queries: topicsData.map((topic) =>
+      instructorQueries.lessons({ topicId: topic.id })
+    ),
+  });
+
+  const lessonsData = topicsData.flatMap((topic, topicIndex) =>
+    [...(lessonQueries[topicIndex]?.data ?? [])]
+      .sort((a, b) => a.position - b.position)
+      .map((lesson, lessonIndex) => ({
+        ...lesson,
+        moduleTitle: topic.title,
+        moduleNumber: `Module ${topicIndex + 1}`,
+        lessonNumber: lessonIndex + 1,
+      }))
+  );
+
+  const resourceQueries = useQueries({
+    queries: lessonsData.map((lesson) =>
+      instructorQueries.resources({ lessonId: lesson.id })
+    ),
+  });
+  const resourcesData = lessonsData.flatMap((lesson, i) =>
+    (resourceQueries[i]?.data ?? []).map((resource) => ({
+      ...resource,
+      name: resource.title,
+      lessonTitle: lesson.title,
+      lessonNumber: lesson.lessonNumber,
+      moduleTitle: lesson.moduleTitle,
+      moduleNumber: lesson.moduleNumber,
+      uploaded: formatDate(resource.createdAt)
+    }))
+  );
+
+  const assignmentQueries = useQueries({
+    queries: lessonsData.map((lesson) =>
+      instructorQueries.assignments({ lessonId: lesson.id })
+    ),
+  });
+  const assignmentsData = lessonsData.flatMap((lesson, i) =>
+    (assignmentQueries[i]?.data ?? []).map((assignment) => ({
+      ...assignment,
+      lessonTitle: lesson.title,
+      lessonNumber: lesson.lessonNumber,
+      moduleTitle: lesson.moduleTitle,
+      moduleNumber: lesson.moduleNumber,
+      afterLesson: `After lesson ${lesson.lessonNumber}`,
+      dueDateLabel: formatDate(assignment.dueDate),
+    }))
+  );
+
+  const recordingQueries = useQueries({
+    queries: lessonsData.map((lesson) =>
+      instructorQueries.recordings({ lessonId: lesson.id })
+    ),
+  });
+
+  const totalsByTopic = lessonsData.reduce<
+    Record<string, { recordings: number; assignments: number; resources: number }>
+  >((acc, lesson, i) => {
+    const entry = acc[lesson.topicId] ?? {
+      recordings: 0,
+      assignments: 0,
+      resources: 0,
+    };
+    entry.recordings += recordingQueries[i]?.data?.length ?? 0;
+    entry.assignments += assignmentQueries[i]?.data?.length ?? 0;
+    entry.resources += resourceQueries[i]?.data?.length ?? 0;
+    acc[lesson.topicId] = entry;
+    return acc;
+  }, {});
+
+  const modulesData = topicsData.map((topic) => ({
+    ...topic,
+    included: {
+      lessons: topic._count.lessons,
+      recordings: totalsByTopic[topic.id]?.recordings ?? 0,
+      assignments: totalsByTopic[topic.id]?.assignments ?? 0,
+      resources: totalsByTopic[topic.id]?.resources ?? 0,
+    },
+  }));
+
+  const [activeTab, setActiveTab] = useState("overview");
   const [isAddNoteOpen, setIsAddNoteOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
   const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
 
-  const filteredAssignments = assignments.filter((item) =>
+  const filteredAssignments = assignmentsData.filter((item) =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.moduleTitle.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredResources = resources.filter((item) =>
+  const filteredResources = resourcesData.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.moduleTitle.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -114,16 +219,16 @@ export default function Curriculum() {
   const getTabButtonConfig = () => {
     switch (activeTab) {
       case "modules":
-        return modulesData.length > 0
-          ? { label: "Add Module", onClick: () => router.push("/instructor/curriculum/modules/create") }
+        return topicsData.length > 0
+          ? { label: "Add Module", onClick: () => router.push(`/instructor/curriculum/${currentCurriculum.id}/modules/create`) }
           : null;
       case "assignments":
-        return assignments.length > 0
-          ? { label: "Add Assignment", onClick: () => router.push("/instructor/curriculum/assignments/create") }
+        return assignmentsData.length > 0
+          ? { label: "Add Assignment", onClick: () => router.push(`/instructor/curriculum/${currentCurriculum.id}/assignments/create`) }
           : null;
       case "resources":
-        return resources.length > 0
-          ? { label: "Add Resource", onClick: () => router.push("/instructor/curriculum/resources/create") }
+        return resourcesData.length > 0
+          ? { label: "Add Resource", onClick: () => router.push(`/instructor/curriculum/${currentCurriculum.id}/resources/create`) }
           : null;
       case "notes":
         return { label: "Add Note", onClick: () => setIsAddNoteOpen(true) };
@@ -150,17 +255,17 @@ export default function Curriculum() {
         <div className="left">
           <div className="title flex flex-row space-x-6">
             <h1 className="text-2xl font-semibold text-neutral-800 tracking-tight">
-              Design Track Curriculum
+              {currentCurriculum?.title}
             </h1>
             <Badge
               variant="light"
               className="bg-emerald-100/70 text-emerald-700 hover:bg-emerald-100 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
             >
-              Active
+              {currentCurriculum?.status}
             </Badge>
           </div>
           <div className="subtitle text-xs font-medium text-neutral-500 mt-1">
-            <p className="tracking-wide">Design · Cohort 2026</p>
+            <p className="tracking-wide">{selectedTrack?.track.name} · {selectedCohort?.name}</p>
           </div>
 
           <div className="flex items-center gap-8 mt-3">
@@ -170,7 +275,7 @@ export default function Curriculum() {
               </div>
               <div>
                 <p className="text-xs font-medium text-neutral-500">Total modules</p>
-                <p className="text-sm font-bold text-neutral-900">0</p>
+                <p className="text-sm font-bold text-neutral-800">{topicsData.length}</p>
               </div>
             </div>
 
@@ -180,7 +285,7 @@ export default function Curriculum() {
               </div>
               <div>
                 <p className="text-xs font-medium text-neutral-500">Total Lessons</p>
-                <p className="text-sm font-bold text-neutral-900">0</p>
+                <p className="text-sm font-bold text-neutral-800">{lessonsData.length}</p>
               </div>
             </div>
 
@@ -190,7 +295,7 @@ export default function Curriculum() {
               </div>
               <div>
                 <p className="text-xs font-medium text-neutral-500">Total Assignments</p>
-                <p className="text-sm font-bold text-neutral-900">0</p>
+                <p className="text-sm font-bold text-neutral-900">{assignmentsData.length}</p>
               </div>
             </div>
           </div>
@@ -252,7 +357,7 @@ export default function Curriculum() {
             {buttonConfig && (
               <button
                 onClick={buttonConfig.onClick}
-                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium text-white bg-brand-primary hover:bg-brand-primary-hovercursor-pointer shadow-xs"
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium text-white bg-brand-primary hover:bg-brand-primary-hover cursor-pointer shadow-xs"
               >
                 <Plus className="h-3.5 w-3.5 text-white" />
                 <span>{buttonConfig.label}</span>
@@ -266,9 +371,7 @@ export default function Curriculum() {
                 About this curriculum
               </h2>
               <p className="text-sm text-neutral-500 leading-relaxed tracking-wider">
-                This curriculum is designed to help students build a strong foundation
-                in product and ux design. It covers the full design process from research
-                and ideation to prototyping and design systems.
+                {currentCurriculum?.description}
               </p>
             </div>
 
@@ -285,18 +388,19 @@ export default function Curriculum() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-neutral-900">
-                      Design · Cohort 2026
+                      {selectedTrack?.track.name} · {selectedCohort?.name}
                     </p>
                     <p className="text-xs font-medium text-neutral-500">
-                      16 Students
+                      {studentCount} Students
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="modules" className="space-y-4 max-w-4xl outline-none">
-            {modulesData.length === 0 ? (
+            {topicsData.length === 0 ? (
               <EmptyState
                 icon={BookOpen}
                 title="No module yet"
@@ -304,7 +408,7 @@ export default function Curriculum() {
                 button={{
                   label: "Add Module",
                   onClick: () => {
-                    router.push("/instructor/curriculum/modules/create")
+                    router.push(`/instructor/curriculum/${currentCurriculum.id}/modules/create`);
                   },
                 }}
               />
@@ -312,8 +416,9 @@ export default function Curriculum() {
                 <ModulesList modules={modulesData} />
             )}
           </TabsContent>
+
           <TabsContent value="assignments" className="space-y-4 outline-none mt-0">
-            {assignments.length === 0 ? (
+            {assignmentsData.length === 0 ? (
               <EmptyState
                 icon={BookOpen}
                 title="No Assignment yet"
@@ -321,7 +426,7 @@ export default function Curriculum() {
                 button={{
                   label: "Add Assignment",
                   onClick: () => {
-                    router.push("/instructor/curriculum/assignments/create");
+                    router.push(`/instructor/curriculum/${currentCurriculum.id}/assignments/create`);
                   },
                 }}
               />
@@ -336,18 +441,19 @@ export default function Curriculum() {
                 />
             )}
           </TabsContent>
+
           <TabsContent value="resources">
-            {resources.length === 0 ? (
-            <EmptyState
-              icon={BookOpen}
-              title="No resource yet"
-              description="Add your first resource and attach to a lesson in a module for students."
-              button={{
-                label: "Add Resource",
-                onClick: () => {
-                  router.push("/instructor/curriculum/resources/create");
-                },
-              }}
+            {resourcesData.length === 0 ? (
+              <EmptyState
+                icon={BookOpen}
+                title="No resource yet"
+                description="Add your first resource and attach to a lesson in a module for students."
+                button={{
+                  label: "Add Resource",
+                  onClick: () => {
+                    router.push(`/instructor/curriculum/${currentCurriculum.id}/resources/create`);
+                  },
+                }}
               />
             ) : (
               <ResourcesList
@@ -360,25 +466,27 @@ export default function Curriculum() {
               />
             )}
           </TabsContent>
+
           <TabsContent value="notes">
             {notesData.length === 0 ? (
-            <EmptyState
-              icon={BookOpen}
-              title="No notes yet"
-              description="Add your first note. All notes are visible only to admins and assigned instructors"
-              button={{
-                label: "Add Note",
-                onClick: () => {
-                  setIsAddNoteOpen(true);
-                },
-              }}
-            />
+              <EmptyState
+                icon={BookOpen}
+                title="No notes yet"
+                description="Add your first note. All notes are visible only to admins and assigned instructors"
+                button={{
+                  label: "Add Note",
+                  onClick: () => {
+                    setIsAddNoteOpen(true);
+                  },
+                }}
+              />
             ) : (
               <NotesList
                 notes={notesData}
               />
             )}
           </TabsContent>
+
           <TabsContent value="settings" className="w-full flex flex-col space-y-6">
             <div className="mb-2">
               <h1 className="text-[24px] font-semibold mb-[4px]">
@@ -540,9 +648,15 @@ export default function Curriculum() {
                 <select
                   className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
                 >
-                  <option value="module-1">Module 1 - Introduction to Design</option>
-                  <option value="module-2">Module 2 - Design Thinking</option>
-                  <option value="module-3">Module 3 - User Research</option>
+                  {topicsData.length === 0 ? (
+                    <option value="">No modules yet</option>
+                  ) : (
+                    topicsData.map((topic, i) => (
+                      <option key={topic.id} value={topic.id}>
+                        Module {i + 1} - {topic.title}
+                      </option>
+                    ))
+                  )}
                 </select>
                 <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
               </div>

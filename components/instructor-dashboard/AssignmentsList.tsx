@@ -3,7 +3,7 @@
 import { MoreHorizontal, Search, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 
-import { submissionsData, type AssignmentItem } from "@/components/instructor-dashboard/data";
+import { submissionsData } from "@/components/instructor-dashboard/data";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { AssignmentRecord } from "@/lib/instructor";
 
 import {
   DropdownMenu,
@@ -45,8 +46,18 @@ import {
   CardTitle
 } from "@/components/ui/card";
 
+export type AssignmentRow = AssignmentRecord & {
+  moduleNumber: string;
+  moduleTitle: string;
+  lessonTitle: string;
+  lessonNumber: number;
+  afterLesson: string;
+  dueDateLabel: string;
+  dueRelative: string;
+};
+
 interface AssignmentsListProps {
-  assignments: AssignmentItem[];
+  assignments: AssignmentRow[];
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   selectedIds: string[];
@@ -62,7 +73,7 @@ export function AssignmentsList({
   onToggleSelectRow,
   onToggleSelectAll,
 }: AssignmentsListProps) {
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewing, setViewing] = useState<AssignmentRow | null>(null);
   const [submissionSelectedIds, setSubmissionSelectedIds] = useState<string[]>([]);
 
   const mockSubmissions = submissionsData;
@@ -170,53 +181,44 @@ export function AssignmentsList({
                   </TableCell>
 
                   <TableCell className="py-4">
-                    <div>
-                      <p className="text-xs font-semibold text-neutral-900">
-                        {assignment.title}
-                      </p>
-                      <p className="text-[11px] text-neutral-500 mt-0.5">
-                        {assignment.type}
-                      </p>
-                    </div>
+                    <p className="text-xs font-semibold text-neutral-900">
+                      {assignment.title}
+                    </p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      {assignment.type ?? "—"}
+                    </p>
                   </TableCell>
 
                   <TableCell className="py-4">
-                    <div>
-                      <p className="text-xs font-medium text-neutral-700">
-                        {assignment.moduleNumber}
-                      </p>
-                      <p className="text-[11px] text-neutral-500 mt-0.5">
-                        {assignment.moduleTitle}
-                      </p>
-                    </div>
+                    <p className="text-xs font-medium text-neutral-700">
+                      {assignment.moduleNumber}
+                    </p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      {assignment.moduleTitle}
+                    </p>
                   </TableCell>
 
                   <TableCell className="py-4">
-                    <div>
-                      <p className="text-xs font-medium text-neutral-700">
-                        {assignment.dueDate}
-                      </p>
-                      <p className="text-[11px] text-neutral-500 mt-0.5">
-                        {assignment.dueRelative}
-                      </p>
-                    </div>
+                    <p className="text-xs font-medium text-neutral-700">
+                      {assignment.dueDate ? assignment.dueDateLabel : "No due date"}
+                    </p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      After Lesson {assignment.lessonNumber}
+                    </p>
                   </TableCell>
 
                   <TableCell className="py-4 text-xs font-medium text-neutral-700">
-                    {assignment.submissions.completed}/
-                    {assignment.submissions.total}
+                    {assignment.submissions
+                      ? `${assignment.submissions.completed}/${assignment.submissions.total}`
+                      : "—"}
                   </TableCell>
 
                   <TableCell className="py-4">
                     <Badge
                       variant="light"
-                      className={
-                        assignment.status === "Published"
-                          ? "bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0"
-                          : "bg-neutral-100 text-neutral-600 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0"
-                      }
+                      className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0"
                     >
-                      {assignment.status}
+                      Published
                     </Badge>
                   </TableCell>
 
@@ -232,9 +234,11 @@ export function AssignmentsList({
                         >
                           <DropdownMenuGroup>
                             <DropdownMenuItem
-                              onClick={() => setIsViewModalOpen(true)}
+                              onClick={() => setViewing(assignment)}
                               className="cursor-pointer"
-                            >View</DropdownMenuItem>
+                            >
+                              View
+                            </DropdownMenuItem>
                           </DropdownMenuGroup>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -246,7 +250,13 @@ export function AssignmentsList({
           </TableBody>
         </Table>
       </div>
-      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+
+      <Dialog
+        open={Boolean(viewing)}
+        onOpenChange={(open) => {
+          if (!open) setViewing(null);
+        }}
+      >
         <DialogContent className="w-[80%] !max-w-none h-[80%] !bottom-4 !right-4 !left-auto !top-auto !translate-x-0 !translate-y-0">
           <Tabs defaultValue="overview" className="w-full space-y-4">
             <TabsList className="bg-neutral-200 px-2 py-1 !h-auto rounded-lg gap-1 inline-flex shadow-[0px_1px_3px_0px_rgba(0,0,0,0.15)]">
@@ -266,7 +276,7 @@ export function AssignmentsList({
 
             <TabsContent value="overview" className="outline-none tracking-wide">
               <DialogHeader>
-                <DialogTitle>Introduction to Design Exercise</DialogTitle>
+                <DialogTitle>{viewing?.title}</DialogTitle>
                 <DialogDescription>
                   Project . Individual
                 </DialogDescription>
@@ -281,25 +291,18 @@ export function AssignmentsList({
                   <CardContent className="p-0 space-y-5 text-[14px]">
                     <div className="space-y-1">
                       <p className="font-medium">Assignment title</p>
-                      <p className="font-regular">Visual Hierarchy</p>
+                      <p className="font-regular">{viewing?.title}</p>
                     </div>
 
                     <div className="space-y-1">
                       <p className="font-medium">Description</p>
-                      <p className="font-regular">Redesign a simple landing page using hierarchy and contrast</p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <p className="font-medium">Instruction for students</p>
-                      <p className="font-regular">Use typography, spacing, and color to guide the viewer through the page.</p>
-                    </div>
-
-                    <div className="space-y-2 pt-2">
-                      <p className="font-regular">Supporting resources</p>
-
+                      <p className="font-regular">
+                        {viewing?.description || "No description"}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
+
                 <Card className="w-[30%] bg-white border-neutral-200 ring-1 ring-neutral-300 shadow-lg rounded-2xl p-4">
                   <CardHeader className="p-0">
                     <CardTitle className="text-[18px] font-semibold">
@@ -309,25 +312,35 @@ export function AssignmentsList({
                   <CardContent className="p-0 space-y-6">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-neutral-500 font-medium">Type:</span>
-                      <span className="text-neutral-900 font-semibold">Project</span>
+                      <span className="text-neutral-900 font-semibold">
+                        {viewing?.type ?? "—"}
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-neutral-500 font-medium">Submission type:</span>
-                      <span className="text-neutral-900 font-semibold">File Upload</span>
+                      <span className="text-neutral-900 font-semibold">
+                        {viewing?.submissionType ?? "—"}
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-neutral-500 font-medium">Due date:</span>
                       <div className="text-right">
-                        <p className="text-neutral-900 font-semibold">Oct 12, 2025</p>
-                        <p className="text-neutral-500 text-[11px]">11:59 PM</p>
+                        <p className="text-neutral-900 font-semibold">
+                          {viewing?.dueDateLabel}
+                        </p>
+                        <p className="text-neutral-500 text-[11px]">
+                          {viewing?.dueRelative}
+                        </p>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-neutral-500 font-medium">Relative to lesson:</span>
-                      <span className="text-neutral-900 font-semibold">After lesson 4</span>
+                      <span className="text-neutral-900 font-semibold">
+                        {viewing?.afterLesson}
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs pt-1">
@@ -344,6 +357,7 @@ export function AssignmentsList({
                 </Card>
               </div>
             </TabsContent>
+
             <TabsContent value="submissions" className="space-y-4 outline-none">
               <div className="w-full bg-white rounded-2xl border border-neutral-200/80 shadow-xs overflow-hidden">
                 <Table>
@@ -442,7 +456,7 @@ export function AssignmentsList({
                           </TableCell>
                           <TableCell className="w-16 py-4 pr-6">
                             <div className="flex w-full justify-end">
-                            <MoreHorizontal className="h-4 w-4" />
+                              <MoreHorizontal className="h-4 w-4" />
                             </div>
                           </TableCell>
                         </TableRow>
@@ -453,7 +467,6 @@ export function AssignmentsList({
               </div>
             </TabsContent>
           </Tabs>
-
         </DialogContent>
       </Dialog>
     </div>
