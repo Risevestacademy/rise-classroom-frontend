@@ -84,7 +84,7 @@ export function ModulesList({ modules }: { modules: ModuleRow[] }) {
                   {hasIncluded(mod) && (
                     <div>
                       <p className="text-xs font-semibold text-neutral-800 mb-2">
-                        What’s Included
+                        What&rsquor;s Included
                       </p>
                       <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-600">
                         {mod.included.recordings > 0 && (

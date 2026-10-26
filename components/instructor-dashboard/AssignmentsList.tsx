@@ -6,6 +6,7 @@ import { useState } from "react";
 import { submissionsData } from "@/components/instructor-dashboard/data";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   Table,
   TableBody,
@@ -45,6 +46,7 @@ import {
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
+import { useDeleteItem } from "@/lib/use-instructor-forms";
 
 export type AssignmentRow = AssignmentRecord & {
   moduleNumber: string;
@@ -74,7 +76,9 @@ export function AssignmentsList({
   onToggleSelectAll,
 }: AssignmentsListProps) {
   const [viewing, setViewing] = useState<AssignmentRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AssignmentRow | null>(null);
   const [submissionSelectedIds, setSubmissionSelectedIds] = useState<string[]>([]);
+  const deleteMutation = useDeleteItem("assignment");
 
   const mockSubmissions = submissionsData;
 
@@ -238,6 +242,12 @@ export function AssignmentsList({
                               className="cursor-pointer"
                             >
                               View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDeleteTarget(assignment)}
+                              className="cursor-pointer text-error-text"
+                            >
+                              Delete
                             </DropdownMenuItem>
                           </DropdownMenuGroup>
                         </DropdownMenuContent>
@@ -469,6 +479,19 @@ export function AssignmentsList({
           </Tabs>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        itemName={deleteTarget?.title ?? ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() =>
+          deleteTarget &&
+          deleteMutation.mutate(deleteTarget.id, {
+            onSuccess: () => setDeleteTarget(null),
+          })
+        }
+      />
     </div>
   );
 }

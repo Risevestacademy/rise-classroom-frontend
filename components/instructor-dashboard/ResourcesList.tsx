@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   Table,
   TableBody,
@@ -39,6 +40,8 @@ import {
   CardTitle
 } from "@/components/ui/card";
 
+import { useDeleteItem } from "@/lib/use-instructor-forms";
+
 export type ResourceRow = ResourceRecord & {
   name: string;
   moduleNumber: string;
@@ -68,6 +71,8 @@ export function ResourcesList({
   onToggleSelectAll,
 }: ResourcesListProps) {
   const [viewing, setViewing] = useState<ResourceRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AssignmentRow | null>(null);
+    const deleteMutation = useDeleteItem("resource");
 
   return (
     <div className="space-y-6 max-full">
@@ -209,6 +214,12 @@ export function ResourcesList({
                             >
                               View
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDeleteTarget(resource)}
+                              className="cursor-pointer text-error-text"
+                            >
+                              Delete
+                            </DropdownMenuItem>
                           </DropdownMenuGroup>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -297,6 +308,19 @@ export function ResourcesList({
           </div>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        itemName={deleteTarget?.title ?? ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() =>
+          deleteTarget &&
+          deleteMutation.mutate(deleteTarget.id, {
+            onSuccess: () => setDeleteTarget(null),
+          })
+        }
+      />
     </div>
   );
 }
