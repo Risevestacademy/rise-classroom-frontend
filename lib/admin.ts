@@ -42,7 +42,7 @@ export type AdminUser = {
 export type InviteUserInput = {
   cohortId: string;
   trackId: string;
-  role: "STUDENT" | "INSTRUCTOR";
+  role: "STUDENT" | "INSTRUCTOR" | "MENTOR";
   firstName: string;
   lastName: string;
   email: string;

@@ -21,9 +21,10 @@ export type AdminControlTower = {
   }[];
 };
 
-async function getAdminControlTower() {
+async function getAdminControlTower(cohortId?: string) {
   const { data } = await api.get<Envelope<AdminControlTower>>(
     "/control-tower/admin",
+    { query: { cohortId } },
   );
   return data;
 }
@@ -183,15 +184,16 @@ const mockNotifications: AdminNotification[] = [
 ];
 
 export const adminDashboardKeys = {
-  controlTower: () => ["admin", "control-tower"] as const,
+  controlTower: (cohortId?: string) =>
+    ["admin", "control-tower", cohortId] as const,
   notifications: () => ["admin", "notifications"] as const,
 };
 
 export const adminDashboardQueries = {
-  controlTower: () =>
+  controlTower: (cohortId?: string) =>
     queryOptions({
-      queryKey: adminDashboardKeys.controlTower(),
-      queryFn: getAdminControlTower,
+      queryKey: adminDashboardKeys.controlTower(cohortId),
+      queryFn: () => getAdminControlTower(cohortId),
     }),
 
   notifications: () =>

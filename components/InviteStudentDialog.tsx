@@ -10,7 +10,6 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import {
-  Plus,
   UserPlus,
   Upload,
   CloudUpload,
@@ -24,11 +23,12 @@ import {
   X,
 } from "lucide-react";
 
+import { Add01 } from "@/assets/icons";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/field";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { parseInstructorCsv } from "@/components/InviteInstructorDialog";
 import {
   Dialog,
@@ -49,6 +49,7 @@ import {
   type InviteUserInput,
   type Track,
 } from "@/lib/admin";
+import { useSelectedCohort } from "@/lib/selected-cohort";
 import {
   isSpreadsheetFile,
   isXlsxFile,
@@ -161,6 +162,7 @@ export function InviteStudentDialog({
 
 
   const [chosenCohortId, setChosenCohortId] = React.useState(defaultCohortId);
+  const { cohortId: topNavCohortId } = useSelectedCohort();
   const [chosenTrackId, setChosenTrackId] = React.useState("");
   const [emailSent, setEmailSent] = React.useState(true);
 
@@ -181,7 +183,12 @@ export function InviteStudentDialog({
 
   const cohorts = cohortsQuery.data ?? [];
   const tracks = tracksQuery.data ?? [];
-  const cohortId = chosenCohortId || cohorts[0]?.id || "";
+  // Defaults to the cohort picked in the top nav when it's one of the options.
+  const cohortId =
+    chosenCohortId ||
+    cohorts.find((cohort) => cohort.id === topNavCohortId)?.id ||
+    cohorts[0]?.id ||
+    "";
   const trackId = chosenTrackId || tracks[0]?.id || "";
   const selectedCohort = cohorts.find((cohort) => cohort.id === cohortId);
   const selectedTrack = tracks.find((track) => track.id === trackId);
@@ -333,7 +340,7 @@ export function InviteStudentDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <Button size="medium" onClick={() => setOpen(true)} className="gap-2">
-        <Plus className="h-4 w-4" />
+        <Add01 className="size-[18px]" />
         Invite students
       </Button>
 
@@ -837,10 +844,7 @@ function SingleReviewStep({
 
       <div className="mt-6 rounded-xl border border-neutral-200 p-5">
         <div className="flex items-center gap-3 pb-6">
-          <InitialsAvatar
-            name={name}
-            className="h-12 w-12 bg-surface-warning-badge text-base text-text-warning"
-          />
+          <PersonAvatar name={name} size={48} />
           <div className="min-w-0">
             <p className="truncate font-semibold text-neutral-800">{name}</p>
             <p className="truncate text-sm text-neutral-400">{email}</p>
@@ -1188,7 +1192,7 @@ function BulkReviewStep({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <InitialsAvatar name={name} className="h-8 w-8" />
+                      <PersonAvatar name={name} size={32} />
                       <span className="font-medium text-neutral-800">
                         {name}
                       </span>

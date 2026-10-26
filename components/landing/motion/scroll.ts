@@ -318,62 +318,117 @@ export function keywordMarquee() {
 }
 
 /**
- * Value prop cards start stacked in the middle and spread into their row as
- * the section scrolls in ("works together"). Mobile gets a simple stagger.
+ * Value prop cards on smaller screens: each card, and then its icon, reveals
+ * as it arrives. Desktop deals them in one at a time with valueDeal instead.
  */
-export function valueCards({ spread }: { spread: boolean }) {
+export function valueCards() {
   const grid = one("[data-value-grid]");
   if (!grid) return;
-  const cards = all("[data-value-card]", grid);
-  const icons = all("[data-value-icon]", grid);
 
-  if (spread) {
-    const middle = Math.floor(cards.length / 2);
-    gsap.set(cards[middle], { zIndex: 2 });
-    gsap.from(cards, {
-      x: (_, el: HTMLElement) =>
-        grid.offsetWidth / 2 - (el.offsetLeft + el.offsetWidth / 2),
-      y: (i) => (i === middle ? 0 : 32),
-      rotate: (i) => (i - middle) * 6,
-      scale: (i) => (i === middle ? 1 : 0.92),
-      ease: "none",
+  all("[data-value-card]", grid).forEach((card) => {
+    gsap
+      .timeline({
+        scrollTrigger: { trigger: card, start: "top 88%", once: true },
+      })
+      .from(card, { y: 32, opacity: 0, duration: 0.9, ease: EASE_OUT })
+      .from(
+        card.querySelector("[data-value-icon]"),
+        { scale: 0, rotate: -30, duration: 0.8, ease: "back.out(2)" },
+        0.3
+      );
+  });
+}
+
+/**
+ * "Works together", desktop: the cards are dealt in one after the other. Each
+ * rises from a deck below the middle of the row, tilted, and fans out into its
+ * own column; its icon pops as it lands. The first is dealt as the row scrolls
+ * in, then the section holds still while the other two follow.
+ */
+export function valueDeal() {
+  const section = one("[data-value-section]");
+  const grid = one("[data-value-grid]");
+  if (!section || !grid) return;
+  const cards = all("[data-value-card]", grid);
+  if (cards.length !== 3) return;
+  const [first, middle, last] = cards;
+
+  // Hold once the whole row is on screen: the row just clear of the bottom
+  // (not the section's padding, so more of the heading stays in view on
+  // short screens), or the section's centre on the centre when it fits.
+  const holdAt = () => {
+    if (section.offsetHeight <= window.innerHeight) return "center center";
+    const below = section.getBoundingClientRect().bottom -
+      grid.getBoundingClientRect().bottom;
+    return `bottom-=${Math.max(0, below - 24)} bottom`;
+  };
+
+  const deal = (
+    tl: gsap.core.Timeline,
+    card: HTMLElement,
+    tilt: number,
+    at: number
+  ) =>
+    tl
+      .fromTo(
+        card,
+        {
+          x: () => middle.offsetLeft - card.offsetLeft,
+          y: () => window.innerHeight * 0.85,
+          rotate: tilt,
+          autoAlpha: 0,
+        },
+        {
+          x: 0,
+          y: 0,
+          rotate: 0,
+          autoAlpha: 1,
+          duration: 1,
+          ease: "power3.out",
+        },
+        at
+      )
+      .from(
+        card.querySelector("[data-value-icon]"),
+        { scale: 0, rotate: -30, duration: 0.45, ease: "back.out(2)" },
+        at + 0.7
+      );
+
+  deal(
+    gsap.timeline({
       scrollTrigger: {
         trigger: grid,
-        start: "top 85%",
-        end: "top 30%",
-        scrub: true,
+        start: "top bottom",
+        endTrigger: section,
+        end: holdAt,
+        // The row sits inside the section that pins next; measure it as such.
+        pinnedContainer: section,
+        scrub: 0.8,
         invalidateOnRefresh: true,
       },
-    });
-  } else {
-    // Stacked on mobile: each card, and then its icon, reveals as it arrives.
-    cards.forEach((card) => {
-      gsap
-        .timeline({
-          scrollTrigger: { trigger: card, start: "top 88%", once: true },
-        })
-        .from(card, { y: 32, opacity: 0, duration: 0.9, ease: EASE_OUT })
-        .from(
-          card.querySelector("[data-value-icon]"),
-          { scale: 0, rotate: -30, duration: 0.8, ease: "back.out(2)" },
-          0.3
-        );
-    });
-    return;
-  }
+    }),
+    first,
+    -9,
+    0
+  );
 
-  gsap.from(icons, {
-    scale: 0,
-    rotate: -30,
-    duration: 0.9,
-    ease: "back.out(2)",
-    stagger: 0.1,
+  const held = gsap.timeline({
     scrollTrigger: {
-      trigger: grid,
-      start: "top 40%",
-      once: true,
+      trigger: section,
+      start: holdAt,
+      end: () => `+=${window.innerHeight * 1.4}`,
+      pin: true,
+      scrub: 0.8,
+      invalidateOnRefresh: true,
+      // The pin adds scroll space, so it must be measured before the
+      // triggers further down the page (created earlier) are.
+      refreshPriority: 1,
     },
   });
+  deal(held, middle, 4, 0);
+  deal(held, last, 9, 1.1);
+  // A beat with all three in place before the page moves on.
+  held.to({}, { duration: 0.6 });
 }
 
 /** Audience cards: the photo is unclipped bottom-up, then the copy and bullets follow. */

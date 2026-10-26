@@ -26,6 +26,7 @@ import {
   type Curriculum,
   type CurriculumFilters,
 } from "@/lib/curriculum";
+import { useSelectedCohort } from "@/lib/selected-cohort";
 
 export default function CurriculumPage({
   searchParams,
@@ -38,7 +39,11 @@ export default function CurriculumPage({
   const [filters, setFilters] =
     React.useState<CurriculumFilters>(noCurriculumFilters);
   const [filterOpen, setFilterOpen] = React.useState(false);
-  const curriculaQuery = useQuery(curriculumQueries.list(filters.trackIds));
+  const { cohortId, isReady } = useSelectedCohort();
+  const curriculaQuery = useQuery({
+    ...curriculumQueries.list(filters, cohortId),
+    enabled: isReady,
+  });
   const [search, setSearch] = React.useState("");
   const [deleteTarget, setDeleteTarget] = React.useState<Curriculum | null>(
     null,
@@ -59,21 +64,19 @@ export default function CurriculumPage({
 
   const curricula = curriculaQuery.data ?? [];
   const query = search.trim().toLowerCase();
-  const filtered = curricula.filter(
-    (curriculum) =>
-      curriculum.title.toLowerCase().includes(query) &&
-      (filters.statuses.length === 0 ||
-        filters.statuses.includes(curriculum.publishStatus)),
+  const filtered = curricula.filter((curriculum) =>
+    curriculum.title.toLowerCase().includes(query),
   );
-  // A track filter can empty the list too; that isn't "no curriculum yet".
+  // Filters can empty the list too; that isn't "no curriculum yet".
   const showEmptyState =
     curriculaQuery.isSuccess &&
     curricula.length === 0 &&
-    filters.trackIds.length === 0;
+    filters.trackIds.length === 0 &&
+    filters.statuses.length === 0;
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", "Curriculum"]} />
+      <AdminTopNav breadcrumb={["Academy", { label: "Curriculum", href: "/admin/curriculum" }]} />
       <main className="flex min-w-0 flex-1 flex-col p-4 sm:p-6 bg-neutral-50 lg:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>

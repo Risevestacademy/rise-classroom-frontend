@@ -10,6 +10,8 @@ import { EditTrackDialog } from "@/components/EditTrackDialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminQueries, type TrackStatus } from "@/lib/admin";
+import { cohortQueries } from "@/lib/cohorts";
+import { useSelectedCohort } from "@/lib/selected-cohort";
 
 const STATUS_FILTERS: { label: string; value: TrackStatus | undefined }[] = [
   { label: "All statuses", value: undefined },
@@ -32,20 +34,34 @@ export default function TracksPage() {
 
   const tracksQuery = useQuery(adminQueries.tracks(statusFilter));
   const allTracksQuery = useQuery(adminQueries.tracks());
+  // The API can't filter tracks by cohort, so this works out which ones it runs.
+  const { cohortId, isReady } = useSelectedCohort();
+  const cohortTracksQuery = useQuery({
+    ...cohortQueries.trackIds(cohortId ?? ""),
+    enabled: Boolean(cohortId),
+  });
+  const inCohort = (track: { id: string }) =>
+    !cohortId || (cohortTracksQuery.data ?? []).includes(track.id);
 
-  const tracks = tracksQuery.data ?? [];
-  const allTracks = allTracksQuery.data ?? [];
+  const cohortPending =
+    !isReady || (Boolean(cohortId) && cohortTracksQuery.isPending);
+
+  const tracks = (tracksQuery.data ?? []).filter(inCohort);
+  const allTracks = (allTracksQuery.data ?? []).filter(inCohort);
   const activeCount = allTracks.filter((t) => t.status === "ACTIVE").length;
   const suspendedCount = allTracks.filter(
     (t) => t.status === "SUSPENDED",
   ).length;
 
   const showEmptyState =
-    !tracksQuery.isPending && allTracks.length === 0 && !statusFilter;
+    // A cohort with no tracks yet still shows the (empty) table.
+    !allTracksQuery.isPending &&
+    allTracksQuery.data?.length === 0 &&
+    !statusFilter;
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", "Tracks"]} />
+      <AdminTopNav breadcrumb={["Academy", { label: "Tracks", href: "/admin/tracks" }]} />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         {tracksQuery.isError ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
@@ -89,7 +105,7 @@ export default function TracksPage() {
             <div className="rounded-xl border border-neutral-200 bg-white">
               <div className="flex flex-col gap-4 border-b border-neutral-100 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  {allTracksQuery.isPending ? (
+                  {allTracksQuery.isPending || cohortPending ? (
                     <>
                       <Skeleton className="h-5 w-20" />
                       <Skeleton className="mt-2 h-4 w-32" />
@@ -139,7 +155,7 @@ export default function TracksPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tracksQuery.isPending ? (
+                    {tracksQuery.isPending || cohortPending ? (
                       Array.from({ length: 5 }).map((_, index) => (
                         <tr key={index} className="border-t border-neutral-100">
                           <td className="px-5 py-4">

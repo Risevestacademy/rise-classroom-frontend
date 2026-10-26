@@ -17,7 +17,7 @@ import {
 export type PeopleFilter<T> = {
   key: string;
   title: string;
-  description: string;
+  description?: string;
   allLabel: string;
   options: { value: string; label: string }[];
   /** The option values a row has; it matches when any of them is selected. */
@@ -46,12 +46,15 @@ export function PeopleFilterDialog<T>({
   onOpenChange,
   filters,
   value,
+  singleSelect = false,
   onApply,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   filters: PeopleFilter<T>[];
   value: PeopleFilterValues;
+  /** Allow at most one option per section, for APIs that take one value. */
+  singleSelect?: boolean;
   onApply: (value: PeopleFilterValues) => void;
 }) {
   return (
@@ -64,6 +67,7 @@ export function PeopleFilterDialog<T>({
           <FilterForm
             filters={filters}
             initial={value}
+            singleSelect={singleSelect}
             onApply={(next) => {
               onApply(next);
               onOpenChange(false);
@@ -78,10 +82,12 @@ export function PeopleFilterDialog<T>({
 function FilterForm<T>({
   filters,
   initial,
+  singleSelect,
   onApply,
 }: {
   filters: PeopleFilter<T>[];
   initial: PeopleFilterValues;
+  singleSelect: boolean;
   onApply: (value: PeopleFilterValues) => void;
 }) {
   const [selected, setSelected] = React.useState(initial);
@@ -122,7 +128,14 @@ function FilterForm<T>({
                   label={option.label}
                   checked={picked.includes(option.value)}
                   onCheckedChange={(checked) =>
-                    set(filter.key, toggle(picked, option.value, checked))
+                    set(
+                      filter.key,
+                      singleSelect
+                        ? checked
+                          ? [option.value]
+                          : []
+                        : toggle(picked, option.value, checked),
+                    )
                   }
                 />
               ))}

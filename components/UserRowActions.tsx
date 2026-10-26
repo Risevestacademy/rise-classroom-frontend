@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Menu } from "@base-ui/react/menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "@/assets/icons";
 
 import { cn } from "@/lib/utils";
 import { EditUserDialog } from "@/components/EditUserDialog";
@@ -50,9 +50,9 @@ export function UserRowActions({ user }: { user: AdminUser }) {
       <Menu.Root open={menuOpen} onOpenChange={handleMenuOpenChange}>
         <Menu.Trigger
           aria-label="Row actions"
-          className="text-neutral-400 hover:text-neutral-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex size-8 items-center justify-center text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="size-6" />
         </Menu.Trigger>
 
         <Menu.Portal>

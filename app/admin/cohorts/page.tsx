@@ -15,6 +15,7 @@ import { AdminTopNav } from "@/components/AdminTopNav";
 import { CohortActionsMenu } from "@/components/cohorts/CohortActionsMenu";
 import { CohortStatusBadge } from "@/components/cohorts/CohortStatusBadge";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SuccessToast } from "@/components/ui/toast";
 import { getProgramOptionsErrorMessage } from "@/lib/admin";
 import { cohortQueries } from "@/lib/cohorts";
@@ -66,7 +67,9 @@ export default function CohortsPage({
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", "Cohorts"]} />
+      <AdminTopNav 
+        breadcrumb={["Academy", { label: "Cohorts", href: "/admin/cohorts" }]} 
+      />
       <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -90,7 +93,9 @@ export default function CohortsPage({
           <p className="mt-8 font-work text-sm text-text-error">
             {getProgramOptionsErrorMessage(cohortsQuery.error)}
           </p>
-        ) : cohortsQuery.isPending ? null : visible.length === 0 ? (
+        ) : cohortsQuery.isPending ? (
+          <CohortCardsSkeleton />
+        ) : visible.length === 0 ? (
           <EmptyState />
         ) : (
           <ul className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -133,7 +138,7 @@ function CreateCohortLink({ label = "Create cohort" }: { label?: string }) {
       href="/admin/cohorts/create"
       className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-interactive-primary-hover"
     >
-      <Add01 className="size-5" />
+      <Add01 className="size-[18px]" />
       {label}
     </Link>
   );
@@ -170,7 +175,7 @@ function CohortCard({
   return (
     <article
       className={cn(
-        "relative rounded-3xl p-6 shadow-[0_2px_4px_rgb(17_24_25/0.06)]",
+        "relative rounded-3xl p-6 shadow-[0_1px_3px_rgb(0_0_0/0.15)]",
         cardSurface[cohort.status],
       )}
     >
@@ -196,7 +201,7 @@ function CohortCard({
         <CardStat icon={Track} value={cohort.tracks} label="Tracks" />
       </div>
 
-      <p className="mt-3.5 text-xs font-medium text-text-primary">
+      <p className="mt-4 text-xs font-medium text-text-primary">
         {completed ? "Completed" : `${cohort.progress}% Complete`}
       </p>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-brand-100">
@@ -211,6 +216,39 @@ function CohortCard({
         </p>
       )}
     </article>
+  );
+}
+
+function CohortCardsSkeleton() {
+  return (
+    <ul aria-busy className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <li
+          key={index}
+          className="rounded-3xl bg-white p-6 shadow-[0_2px_4px_rgb(17_24_25/0.06)]"
+        >
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="size-5" />
+          </div>
+          <Skeleton className="mt-3 h-7 w-40" />
+          <Skeleton className="mt-1 h-4 w-32" />
+          <div className="mt-4 flex gap-8">
+            {Array.from({ length: 2 }).map((_, stat) => (
+              <div key={stat} className="flex gap-3">
+                <Skeleton className="size-6" />
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-6 w-8" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <Skeleton className="mt-3.5 h-4 w-24" />
+          <Skeleton className="mt-1 h-2 w-full rounded-full" />
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -231,10 +269,10 @@ function CardStat({
   label: string;
 }) {
   return (
-    <div className="grid grid-cols-[24px_auto] gap-x-3">
+    <div className="grid grid-cols-[24px_auto] gap-x-3 gap-y-1">
       <Icon className="size-6 text-text-primary" />
-      <p className="text-xl font-semibold text-text-primary">{value}</p>
-      <p className="col-start-2 font-work text-sm text-text-secondary">
+      <p className="text-lg/6 font-semibold text-black">{value}</p>
+      <p className="col-start-2 font-work text-[13px]/[18px] text-text-secondary">
         {label}
       </p>
     </div>

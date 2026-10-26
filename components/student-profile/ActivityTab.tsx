@@ -78,7 +78,7 @@ export function ActivityTab({ firstName }: { firstName: string }) {
             No activity of this kind yet.
           </p>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 p-2.5">
             {groups.map((group) => (
               <div key={group.label} className="flex flex-col gap-8">
                 <p className="text-sm font-medium text-black">{group.label}</p>
@@ -108,6 +108,8 @@ export function ActivityTab({ firstName }: { firstName: string }) {
         <h2 className="text-lg/6 font-semibold text-text-primary">
           Activity at a glance
         </h2>
+        {/* The design leaves an empty 8px row under the title. */}
+        <div aria-hidden className="h-2" />
         <div className="flex flex-col gap-8">
           {activitySummary.map((row, index) => (
             <div key={index} className="flex justify-between gap-4">

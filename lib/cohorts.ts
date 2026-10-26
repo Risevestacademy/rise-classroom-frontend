@@ -130,17 +130,8 @@ export function trackKeyFor(name: string, index = 0): TrackKey {
   );
 }
 
-const tones = ["info", "warning", "success", "accent", "error"] as const;
-
 function personFor(id: string, name: string, email: string): Person {
-  const initials = name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  const hash = [...id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return { name, email, initials, tone: tones[hash % tones.length] };
+  return { id, name, email };
 }
 
 function studentTracks(user: AdminUser, cohortId: string) {
@@ -252,6 +243,15 @@ async function listCohortSummaries() {
       return toSummary(cohort, page.total, tracks.size);
     }),
   );
+}
+
+/** Ids of the tracks a cohort runs. */
+async function listCohortTrackIds(cohortId: string) {
+  const [assignments, students] = await Promise.all([
+    listInstructorTracks(cohortId),
+    listAllStudents(cohortId),
+  ]);
+  return Array.from(cohortTrackNames(cohortId, assignments, students).keys());
 }
 
 async function getCohortDetail(id: string): Promise<CohortDetail> {
@@ -414,6 +414,8 @@ export const cohortKeys = {
   all: adminKeys.allCohorts,
   summaries: () => [...adminKeys.allCohorts(), "summaries"] as const,
   detail: (id: string) => [...adminKeys.allCohorts(), "overview", id] as const,
+  trackIds: (id: string) =>
+    [...adminKeys.allCohorts(), "track-ids", id] as const,
 };
 
 export const cohortQueries = {
@@ -427,5 +429,11 @@ export const cohortQueries = {
     queryOptions({
       queryKey: cohortKeys.detail(id),
       queryFn: () => getCohortDetail(id),
+    }),
+
+  trackIds: (id: string) =>
+    queryOptions({
+      queryKey: cohortKeys.trackIds(id),
+      queryFn: () => listCohortTrackIds(id),
     }),
 };

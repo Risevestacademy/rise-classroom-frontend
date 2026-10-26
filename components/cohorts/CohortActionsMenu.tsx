@@ -104,12 +104,23 @@ export function CohortActionsMenu({
   return (
     <>
       <Menu.Root>
+        
         <Menu.Trigger
           aria-label={`${cohort.name} options`}
-          className="relative z-10 flex size-8 items-center justify-center rounded-lg bg-white text-text-primary hover:bg-neutral-100"
+          className={cn(
+            "relative z-10 flex size-8 items-center justify-center rounded-lg text-text-primary transition-colors hover:bg-neutral-100",
+            cohort.status === "completed"
+              ? "bg-success-surface"
+              : cohort.status === "terminated"
+                ? "bg-surface-error-badge"
+                : cohort.status === "upcoming"
+                  ? "bg-info-surface"
+                  : "bg-brand-50",
+          )}
         >
           <MoreHorizontal className="size-4" />
         </Menu.Trigger>
+
         <Menu.Portal>
           <Menu.Positioner align="end" sideOffset={6} className="z-50">
             <Menu.Popup className="w-48 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg outline-none">

@@ -89,29 +89,33 @@ export function AdminSidebar() {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 -translate-x-full flex-col border-r border-neutral-200 bg-white transition-transform duration-200 ease-in-out",
-          "lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-60 lg:shrink-0 lg:self-start lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 -translate-x-full flex-col border-r-2 border-neutral-200 bg-white transition-transform duration-200 ease-in-out",
+          "lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-60 lg:shrink-0 lg:self-start lg:translate-x-0 lg:bg-transparent",
           open && "translate-x-0",
         )}
       >
-        <div className="flex items-center h-16 justify-between gap-2.5 border-b border-neutral-200 px-4 py-5">
+        <div className="flex h-16 items-center justify-between">
           <Link
             href="/admin/dashboard"
-            className="flex items-center overflow-hidden"
+            className="flex items-center gap-3 overflow-hidden"
           >
-            <Logo variant="teal" size="sm" />
+            <div className="flex items-center pl-10 pt-6 pb-4">
+              <Logo variant="teal" size="sm" />
+            </div>
           </Link>
           <button
             type="button"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
-            className="text-neutral-400 hover:text-neutral-600 lg:hidden"
+            className="mr-4 text-neutral-400 hover:text-neutral-600 lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto px-4 py-4">
+        <hr className="mx-4 text-neutral-200" />
+
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-4">
           <NavSection
             label="Overview"
             items={overviewNavItems}
@@ -144,7 +148,7 @@ export function AdminSidebar() {
           />
         </div>
 
-        <div className="px-4 pb-4">
+        <div className="mb-3 px-3.5">
           <div className="space-y-1">
             {accountNavItems.map((item) => (
               <SidebarNavItem
@@ -154,11 +158,11 @@ export function AdminSidebar() {
               />
             ))}
           </div>
-
-          <hr className="my-3 text-neutral-200" />
-
-          {/* Sign-out lives in the top nav's profile menu. */}
-          <UserMenu withMenu={false} />
+          <hr className="mx-2 text-neutral-200" />
+          <div className="mt-auto p-2">
+            {/* Sign-out lives in the top nav's profile menu. */}
+            <UserMenu variant="plain-white" subtitle="email" withMenu={false} />
+          </div>
         </div>
       </aside>
     </>
@@ -200,22 +204,31 @@ function SidebarNavItem({
   const Icon = item.icon;
 
   return (
-    <Link
-      href={item.href}
-      className={cn(
-        "flex h-10 w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium",
-        isActive
-          ? "border-brand-primary bg-surface-brand text-brand-primary"
-          : "border-transparent text-[#505258]",
+    <div className="relative flex w-full items-center px-2">
+      {isActive && (
+        <span className="absolute top-1/2 -left-4 h-8 w-2 -translate-y-1/2 rounded-r-md bg-brand-primary" />
       )}
-    >
-      <Icon
-        // Figma icons switch to their solid variant when active; others (e.g. lucide) ignore it.
-        {...("variants" in Icon && { variant: isActive ? "solid" : "stroke" })}
-        className="h-6 w-6 shrink-0"
-      />
-      <span className="truncate">{item.title}</span>
-    </Link>
+
+      <Link
+        href={item.href}
+        className={cn(
+          "flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium",
+          isActive
+            ? "border-2 border-brand-primary bg-neutral-100 text-brand-primary"
+            : "text-neutral-400",
+        )}
+      >
+        <Icon
+          // Figma icons switch to their solid variant when active; others (e.g. lucide) ignore it.
+          {...("variants" in Icon && { variant: isActive ? "solid" : "stroke" })}
+          className={cn(
+            "h-5 w-5 shrink-0",
+            isActive ? "text-brand-primary" : "text-neutral-400",
+          )}
+        />
+        <span className="truncate">{item.title}</span>
+      </Link>
+    </div>
   );
 }
 

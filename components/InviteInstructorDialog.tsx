@@ -30,6 +30,7 @@ import {
   inviteUsersBulk,
   type InviteUserInput,
 } from "@/lib/admin";
+import { useSelectedCohort } from "@/lib/selected-cohort";
 import { readSpreadsheetAsCsv, spreadsheetAccept } from "@/lib/spreadsheet";
 
 /** One row parsed out of an uploaded CSV. */
@@ -61,6 +62,25 @@ const STEP_WIDTH: Partial<Record<Step, string>> = {
   "bulk-confirm": "w-[620px]",
   "bulk-success": "w-[560px]",
 };
+
+/** Who the dialog invites; the steps are the same for both roles. */
+type InviteRole = "INSTRUCTOR" | "MENTOR";
+
+const roleNouns = {
+  INSTRUCTOR: {
+    one: "instructor",
+    many: "instructors",
+    One: "Instructor",
+    Many: "Instructors",
+  },
+  MENTOR: { one: "mentor", many: "mentors", One: "Mentor", Many: "Mentors" },
+} satisfies Record<InviteRole, Record<string, string>>;
+
+const NounContext = React.createContext(roleNouns.INSTRUCTOR);
+
+function useNoun() {
+  return React.useContext(NounContext);
+}
 
 function initials(name: string) {
   return name
@@ -129,11 +149,30 @@ export function parseInstructorCsv(text: string) {
   return { rows, skipped };
 }
 
-/** `defaultCohortId` preselects a cohort, e.g. when inviting from a cohort's page. */
-export function InviteInstructorDialog({
+type InviteDialogProps = {
+  /** Preselects a cohort, e.g. when inviting from a cohort's page. */
+  defaultCohortId?: string;
+  role?: InviteRole;
+  /** Replaces the default button; call `open` to show the dialog. */
+  renderTrigger?: (open: () => void) => React.ReactNode;
+};
+
+/** Invites instructors, or mentors with `role="MENTOR"`. */
+export function InviteInstructorDialog(props: InviteDialogProps = {}) {
+  return (
+    <NounContext.Provider value={roleNouns[props.role ?? "INSTRUCTOR"]}>
+      <InviteDialog {...props} />
+    </NounContext.Provider>
+  );
+}
+
+function InviteDialog({
   defaultCohortId = "",
-}: { defaultCohortId?: string } = {}) {
+  role = "INSTRUCTOR",
+  renderTrigger,
+}: InviteDialogProps) {
   const queryClient = useQueryClient();
+  const noun = useNoun();
 
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState<Step>("choice");
@@ -146,6 +185,7 @@ export function InviteInstructorDialog({
   // Only the explicit choice is stored; the effective value falls back to the
   // first option, so there is no state to sync once the lists load.
   const [chosenCohortId, setChosenCohortId] = React.useState(defaultCohortId);
+  const { cohortId: topNavCohortId } = useSelectedCohort();
   const [chosenTrackId, setChosenTrackId] = React.useState("");
   const [csvRows, setCsvRows] = React.useState<CsvRow[]>([]);
   const [csvSkipped, setCsvSkipped] = React.useState(0);
@@ -177,7 +217,12 @@ export function InviteInstructorDialog({
     !programLoading && (cohorts.length === 0 || tracks.length === 0);
 
   // Fall back to the first option rather than syncing state in an effect.
-  const cohortId = chosenCohortId || cohorts[0]?.id || "";
+  // Defaults to the cohort picked in the top nav when it's one of the options.
+  const cohortId =
+    chosenCohortId ||
+    cohorts.find((cohort) => cohort.id === topNavCohortId)?.id ||
+    cohorts[0]?.id ||
+    "";
   const trackId = chosenTrackId || tracks[0]?.id || "";
 
   function refreshInstructors() {
@@ -250,10 +295,14 @@ export function InviteInstructorDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <Button onClick={() => setOpen(true)} className="gap-2">
-        <UserPlus className="h-4 w-4" />
-        Invite Instructors
-      </Button>
+      {renderTrigger ? (
+        renderTrigger(() => setOpen(true))
+      ) : (
+        <Button onClick={() => setOpen(true)} className="gap-2">
+          <UserPlus className="h-4 w-4" />
+          Invite {noun.Many}
+        </Button>
+      )}
 
       <DialogContent className={STEP_WIDTH[step]}>
         {step === "choice" && (
@@ -306,9 +355,9 @@ export function InviteInstructorDialog({
               singleInvite.mutate({
                 cohortId,
                 trackId,
-                role: "INSTRUCTOR",
+                role,
                 firstName: firstName.trim() || email.split("@")[0],
-                lastName: lastName.trim() || firstName.trim() || "Instructor",
+                lastName: lastName.trim() || firstName.trim() || noun.One,
                 email: email.trim(),
               })
             }
@@ -369,7 +418,7 @@ export function InviteInstructorDialog({
                     ...row,
                     cohortId,
                     trackId,
-                    role: "INSTRUCTOR" as const,
+                    role,
                   }))
               )
             }
@@ -378,7 +427,7 @@ export function InviteInstructorDialog({
 
         {step === "bulk-success" && (
           <SuccessStep
-            message={`${selectedCount} instructor${selectedCount === 1 ? "" : "s"} have been invited to join Rise Classroom. They will receive an email with instructions to create their account.`}
+            message={`${selectedCount} ${noun.one}${selectedCount === 1 ? "" : "s"} have been invited to join Rise Classroom. They will receive an email with instructions to create their account.`}
             onInviteAnother={reset}
             onViewInstructors={() => handleOpenChange(false)}
           />
@@ -413,6 +462,7 @@ function ChoiceStep({
   onSingle: () => void;
   onBulk: () => void;
 }) {
+  const noun = useNoun();
   const missing = [noTracks && "an active track", noCohorts && "a cohort"]
     .filter(Boolean)
     .join(" and ");
@@ -420,9 +470,9 @@ function ChoiceStep({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Invite Instructors</DialogTitle>
+        <DialogTitle>Invite {noun.Many}</DialogTitle>
         <DialogDescription>
-          How would you like to invite instructors?
+          How would you like to invite {noun.many}?
         </DialogDescription>
       </DialogHeader>
 
@@ -441,7 +491,7 @@ function ChoiceStep({
             <ArrowRight className="h-4 w-4 text-neutral-300" />
           </span>
           <span className="text-sm text-neutral-400">
-            Add one instructor at a time
+            Add one {noun.one} at a time
           </span>
         </button>
 
@@ -459,7 +509,7 @@ function ChoiceStep({
             <ArrowRight className="h-4 w-4 text-neutral-300" />
           </span>
           <span className="text-sm text-neutral-400">
-            Invite multiple instructors at once
+            Invite multiple {noun.many} at once
           </span>
         </button>
       </div>
@@ -472,7 +522,7 @@ function ChoiceStep({
         </ErrorNote>
       ) : (
         <p className="mt-6 text-sm text-neutral-400">
-          Instructors will receive an email invitation to join Rise Classroom
+          {noun.Many} will receive an email invitation to join Rise Classroom
           and complete their profile.
         </p>
       )}
@@ -499,13 +549,16 @@ function SingleFormStep({
   onCancel: () => void;
   onNext: () => void;
 }) {
+  const noun = useNoun();
   const canContinue = email.trim().includes("@");
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Invite an Instructor</DialogTitle>
-        <DialogDescription>Enter the instructors information</DialogDescription>
+        <DialogTitle>
+          Invite {noun.one === "instructor" ? "an" : "a"} {noun.One}
+        </DialogTitle>
+        <DialogDescription>Enter the {noun.many} information</DialogDescription>
       </DialogHeader>
 
       <div className="mt-6 flex flex-col gap-6">
@@ -660,12 +713,13 @@ function ProgramDetailsStep({
   onCancel: () => void;
   onNext: () => void;
 }) {
+  const noun = useNoun();
   return (
     <>
       <DialogHeader>
         <DialogTitle>Program details</DialogTitle>
         <DialogDescription>
-          Assign the instructor to a cohort and track
+          Assign the {noun.one} to a cohort and track
         </DialogDescription>
       </DialogHeader>
 
@@ -774,6 +828,7 @@ function SuccessStep({
   onInviteAnother: () => void;
   onViewInstructors: () => void;
 }) {
+  const noun = useNoun();
   return (
     <div className="flex flex-col items-center py-4 text-center">
       <span className="flex h-20 w-20 items-center justify-center rounded-full bg-surface-success-badge">
@@ -790,7 +845,7 @@ function SuccessStep({
           onClick={onInviteAnother}
           className="w-full sm:w-auto"
         >
-          Invite another instructor
+          Invite another {noun.one}
         </Button>
         <Button
           variant="secondary"
@@ -798,7 +853,7 @@ function SuccessStep({
           onClick={onViewInstructors}
           className="w-full sm:w-auto"
         >
-          View instructors
+          View {noun.many}
         </Button>
       </div>
     </div>
@@ -814,6 +869,7 @@ function BulkUploadStep({
   onCancel: () => void;
   onFile: (file: File) => void;
 }) {
+  const noun = useNoun();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = React.useState(false);
 
@@ -827,7 +883,7 @@ function BulkUploadStep({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Upload Instructor file</DialogTitle>
+        <DialogTitle>Upload {noun.One} file</DialogTitle>
         <DialogDescription>
           Upload a CSV or Excel file with the columns <code>firstName</code>,{" "}
           <code>lastName</code> and <code>email</code>. We&apos;ll help you
@@ -905,12 +961,14 @@ function BulkReviewStep({
   onCancel: () => void;
   onNext: () => void;
 }) {
+  const noun = useNoun();
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Review Instructors</DialogTitle>
+        <DialogTitle>Review {noun.Many}</DialogTitle>
         <DialogDescription>
-          We found {rows.length} instructor{rows.length === 1 ? "" : "s"} in{" "}
+          We found {rows.length} {noun.one}
+          {rows.length === 1 ? "" : "s"} in{" "}
           {fileName}
           {skipped > 0 &&
             ` · ${skipped} row${skipped === 1 ? "" : "s"} skipped (no valid email)`}
@@ -1006,12 +1064,13 @@ function BulkConfirmStep({
   onCancel: () => void;
   onSend: () => void;
 }) {
+  const noun = useNoun();
   return (
     <>
       <DialogHeader>
         <DialogTitle>Confirm and send</DialogTitle>
         <DialogDescription>
-          You&apos;re about to invite {selectedCount} instructor
+          You&apos;re about to invite {selectedCount} {noun.one}
           {selectedCount === 1 ? "" : "s"}. Choose the cohort and track
           they&apos;ll all be assigned to.
         </DialogDescription>

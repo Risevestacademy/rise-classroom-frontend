@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { api, type Envelope, type Paginated } from "@/lib/api";
-import type { AdminUser, Cohort as CohortRecord, Track } from "@/lib/admin";
+import type { AdminUser, Track } from "@/lib/admin";
 import { getSession } from "@/lib/auth";
 
 // The API models a curriculum as Curriculum → Topic → Lesson, with resources,
@@ -226,7 +226,6 @@ export type Curriculum = {
   publishStatus: ModuleStatus;
   progressMode: ProgressMode;
   history: CurriculumHistoryEntry[];
-  notes: CurriculumNote[];
 };
 
 export const progressModes = {
@@ -263,8 +262,8 @@ export type CreateCurriculumInput = {
   title: string;
   description: string;
   trackId: string;
-  /** Not stored by the API yet — kept for the session only. */
-  cohort: string;
+  /** Empty when no cohort is picked. */
+  cohortId: string;
 };
 
 export type SaveModuleInput = Omit<
@@ -296,9 +295,17 @@ type Timestamps = { createdAt?: string; updatedAt?: string };
 type CurriculumRecord = Timestamps & {
   id: string;
   trackId: string;
+  cohortId?: string | null;
   title: string;
   description?: string | null;
   status: "ONGOING" | "COMPLETED";
+  publishStatus: ModuleStatus;
+  progressMode: ProgressMode;
+  totalModules: number;
+  totalLessons: number;
+  totalAssignments: number;
+  cohort?: { id: string; name: string } | null;
+  assignedInstructors: { id: string; name: string; email: string }[];
 };
 
 type TopicRecord = Timestamps & {
@@ -307,6 +314,8 @@ type TopicRecord = Timestamps & {
   title: string;
   description: string;
   position: number;
+  publishStatus: ModuleStatus;
+  outcomes: string[];
 };
 
 type LessonRecord = Timestamps & {
@@ -319,17 +328,41 @@ type LessonRecord = Timestamps & {
 
 type ResourceRecord = Timestamps & {
   id: string;
-  lessonId: string;
+  /** Set for lesson resources; `null` for ones on the whole module. */
+  lessonId?: string | null;
+  topicId?: string | null;
   title: string;
   description?: string | null;
   url: string;
+  type?: "PDF" | "VIDEO" | "DOCUMENT" | "IMAGE" | "LINK";
+  fileName?: string | null;
+  sizeBytes?: number | null;
+  mimeType?: string | null;
+  publishStatus: ModuleStatus;
 };
 
 type AssignmentRecord = Timestamps & {
   id: string;
-  lessonId: string;
+  /** Set for lesson assignments; `null` for ones on the whole module. */
+  lessonId?: string | null;
+  topicId?: string | null;
   title: string;
   description?: string | null;
+  instructions?: string | null;
+  dueAt?: string | null;
+  submissionType: SubmissionType;
+  publishStatus: ModuleStatus;
+  attachments: string[];
+};
+
+type NoteRecord = Timestamps & {
+  id: string;
+  topicId?: string | null;
+  title: string;
+  body: string;
+  isPinned?: boolean;
+  pinned?: boolean;
+  author?: { firstName: string; lastName: string } | null;
 };
 
 type RecordingRecord = Timestamps & {
@@ -340,44 +373,37 @@ type RecordingRecord = Timestamps & {
   durationSec?: number | null;
 };
 
-type InstructorTrackRecord = {
-  id: string;
-  trackId: string;
-  cohortId: string;
-  instructor?: { firstName: string; lastName: string; email: string };
-  cohort?: CohortRecord;
-};
-
 type LessonTree = LessonRecord & {
   resources: ResourceRecord[];
   assignments: AssignmentRecord[];
   recordings: RecordingRecord[];
 };
 
-type TopicTree = TopicRecord & { lessons: LessonTree[] };
+type TopicTree = TopicRecord & {
+  lessons: LessonTree[];
+  /** Resources and assignments on the whole module rather than a lesson. */
+  resources: ResourceRecord[];
+  assignments: AssignmentRecord[];
+};
 
 // ---- Session-only store for fields the API doesn't have ------------------------
 
-type AssignmentExtras = Omit<
-  ModuleAssignment,
-  "id" | "title" | "description" | "afterLesson"
+/**
+ * PENDING-BACKEND: the API has no assignment type, group mode or submissions
+ * list for admins, and no file upload, so picked files stay in the session.
+ */
+type AssignmentExtras = Partial<
+  Pick<ModuleAssignment, "type" | "mode" | "submissions"> & { files: ResourceFile[] }
 >;
 
 const local = {
-  curricula: new Map<
-    string,
-    Partial<Pick<Curriculum, "cohort" | "publishStatus" | "progressMode" | "history">>
-  >(),
-  modules: new Map<
-    string,
-    Partial<Pick<CurriculumModule, "status" | "outcomes" | "resources">>
-  >(),
-  /** Lesson topic labels and files uploaded to a lesson. */
+  /** PENDING-BACKEND: the API has no version history. */
+  history: new Map<string, CurriculumHistoryEntry[]>(),
+  /** Files uploaded to a whole module. */
+  moduleFiles: new Map<string, ResourceFile[]>(),
+  /** PENDING-BACKEND: lesson topic labels and lesson file uploads. */
   lessons: new Map<string, { topic?: string; files?: ResourceFile[] }>(),
-  assignments: new Map<string, Partial<AssignmentExtras>>(),
-  /** Draft/published state of resources saved in the API. */
-  resourceStatus: new Map<string, ModuleStatus>(),
-  notes: new Map<string, CurriculumNote[]>(),
+  assignments: new Map<string, AssignmentExtras>(),
 };
 
 // ---- Helpers -----------------------------------------------------------------
@@ -441,8 +467,18 @@ async function loadLesson(lesson: LessonRecord): Promise<LessonTree> {
 }
 
 async function loadTopic(topic: TopicRecord): Promise<TopicTree> {
-  const lessons = await getData<LessonRecord[]>(`/admin/topics/${topic.id}/lessons`);
-  return { ...topic, lessons: await Promise.all(byPosition(lessons).map(loadLesson)) };
+  const [lessons, resources, assignments] = await Promise.all([
+    getData<LessonRecord[]>(`/admin/topics/${topic.id}/lessons`),
+    getData<ResourceRecord[]>(`/admin/topics/${topic.id}/resources`),
+    getData<AssignmentRecord[]>(`/admin/topics/${topic.id}/assignments`),
+  ]);
+  return {
+    ...topic,
+    lessons: await Promise.all(byPosition(lessons).map(loadLesson)),
+    // Lesson items are read per lesson, so keep only the module-wide ones.
+    resources: resources.filter((r) => !r.lessonId),
+    assignments: assignments.filter((a) => !a.lessonId),
+  };
 }
 
 async function listTopics(curriculumId: string) {
@@ -459,39 +495,58 @@ async function loadTree(curriculumId: string) {
 function toResourceFile(record: ResourceRecord): ResourceFile {
   return {
     id: record.id,
-    name: fileNameFromUrl(record.url),
-    sizeBytes: null,
+    name: record.fileName || fileNameFromUrl(record.url),
+    sizeBytes: record.sizeBytes ?? null,
     title: record.title,
     description: record.description ?? "",
     uploadedAt: record.createdAt ?? record.updatedAt ?? new Date().toISOString(),
+    // PENDING-BACKEND: the API only gives the uploader's id, not their name.
     uploadedBy: "--",
-    status: local.resourceStatus.get(record.id) ?? "PUBLISHED",
+    status: record.publishStatus,
     url: record.url,
   };
 }
 
-function toAssignment(record: AssignmentRecord, lessonPosition: number): ModuleAssignment {
+/** An assignment attachment, which the API stores as a bare link. */
+function attachmentFile(url: string): ResourceFile {
+  return newResourceFile(
+    { name: fileNameFromUrl(url), sizeBytes: null },
+    { id: url, url, uploadedBy: "--" }
+  );
+}
+
+function toAssignment(
+  record: AssignmentRecord,
+  lessonPosition: number | null
+): ModuleAssignment {
+  const { files = [], ...extras } = local.assignments.get(record.id) ?? {};
   return {
     ...emptyAssignment(record.id),
-    status: "PUBLISHED",
-    ...local.assignments.get(record.id),
+    ...extras,
     title: record.title,
     description: record.description ?? "",
+    instructions: record.instructions ?? "",
+    resources: [...(record.attachments ?? []).map(attachmentFile), ...files],
+    submissionType: record.submissionType,
+    dueAt: record.dueAt ?? null,
     afterLesson: lessonPosition,
+    status: record.publishStatus,
   };
 }
 
 function toModule(topic: TopicTree): CurriculumModule {
-  const extras = local.modules.get(topic.id);
   return {
     id: topic.id,
     curriculumId: topic.curriculumId,
     title: topic.title,
     description: topic.description,
-    status: extras?.status ?? "PUBLISHED",
-    outcomes: extras?.outcomes ?? [],
+    status: topic.publishStatus,
+    outcomes: topic.outcomes ?? [],
     recordingLink: topic.lessons.flatMap((l) => l.recordings)[0]?.url ?? "",
-    resources: extras?.resources ?? [],
+    resources: [
+      ...topic.resources.map(toResourceFile),
+      ...(local.moduleFiles.get(topic.id) ?? []),
+    ],
     lessons: topic.lessons.map((lesson) => {
       const lessonExtras = local.lessons.get(lesson.id);
       return {
@@ -505,59 +560,49 @@ function toModule(topic: TopicTree): CurriculumModule {
         ],
       };
     }),
-    assignments: topic.lessons.flatMap((lesson, index) =>
-      lesson.assignments.map((a) => toAssignment(a, index + 1))
-    ),
-    // No cover images or recording thumbnails in the API.
+    assignments: [
+      ...topic.lessons.flatMap((lesson, index) =>
+        lesson.assignments.map((a) => toAssignment(a, index + 1))
+      ),
+      ...topic.assignments.map((a) => toAssignment(a, null)),
+    ],
+    // PENDING-BACKEND: no cover images or recording thumbnails in the API.
     coverImage: null,
     liveClassRecordings: [],
   };
 }
 
 async function toCurriculum(record: CurriculumRecord, knownTrack?: Track): Promise<Curriculum> {
-  const [track, staff, students, tree] = await Promise.all([
+  const [track, students] = await Promise.all([
     knownTrack ?? getData<Track>(`/admin/tracks/${record.trackId}`),
-    getData<InstructorTrackRecord[]>("/admin/instructor-tracks", {
-      trackId: record.trackId,
-    }),
     getData<Paginated<AdminUser>>("/admin/users", {
       role: "STUDENT",
       trackId: record.trackId,
+      ...(record.cohortId && { cohortId: record.cohortId }),
       limit: 1,
     }),
-    loadTree(record.id),
   ]);
-
-  const extras = local.curricula.get(record.id);
-  const instructor = staff.find((s) => s.instructor)?.instructor;
-  const staffCohorts = Array.from(
-    new Set(staff.flatMap((s) => (s.cohort?.name ? [s.cohort.name] : [])))
-  );
-  const lessons = tree.flatMap((t) => t.lessons);
+  const instructor = record.assignedInstructors[0];
 
   return {
     id: record.id,
     title: record.title,
     description: record.description ?? "",
     track: { id: track.id, name: track.name },
-    cohort: extras?.cohort || staffCohorts.join(", ") || "No cohort",
+    cohort: record.cohort?.name ?? "No cohort",
     status: record.status === "COMPLETED" ? "Completed" : "Active",
-    totalModules: tree.length,
-    totalLessons: lessons.length,
-    totalAssignments: lessons.reduce((sum, l) => sum + l.assignments.length, 0),
+    totalModules: record.totalModules,
+    totalLessons: record.totalLessons,
+    totalAssignments: record.totalAssignments,
     studentCount: students.total,
     instructor: instructor
-      ? {
-          name: `${instructor.firstName} ${instructor.lastName}`.trim(),
-          email: instructor.email,
-        }
+      ? { name: instructor.name, email: instructor.email }
       : { name: "Not assigned", email: "" },
-    // No live classes, publish state, progress mode or history in the API.
+    // PENDING-BACKEND: no live classes in the API.
     liveClasses: [],
-    publishStatus: extras?.publishStatus ?? "PUBLISHED",
-    progressMode: extras?.progressMode ?? "SEQUENTIAL",
-    history: extras?.history ?? [],
-    notes: local.notes.get(record.id) ?? [],
+    publishStatus: record.publishStatus,
+    progressMode: record.progressMode,
+    history: local.history.get(record.id) ?? [],
   };
 }
 
@@ -565,30 +610,33 @@ async function toCurriculum(record: CurriculumRecord, knownTrack?: Track): Promi
 
 /** Filters for the curriculum list. An empty list means "all". */
 export type CurriculumFilters = {
-  /**
-   * PENDING-BACKEND: draft/published lives in the session-only store, so this
-   * is applied on the page rather than sent to the API.
-   */
   statuses: ModuleStatus[];
   trackIds: string[];
 };
 
 export const noCurriculumFilters: CurriculumFilters = { statuses: [], trackIds: [] };
 
-async function listCurricula(trackIds: string[] = []) {
-  // Curricula are only listed per track, so walk every selected track.
-  const tracks = await getData<Track[]>("/admin/tracks");
-  const selected =
-    trackIds.length > 0 ? tracks.filter((track) => trackIds.includes(track.id)) : tracks;
-  const perTrack = await Promise.all(
-    selected.map(async (track) => {
-      const records = await getData<CurriculumRecord[]>(
-        `/admin/tracks/${track.id}/curriculums`
-      );
-      return Promise.all(records.map((record) => toCurriculum(record, track)));
-    })
+async function listCurricula(filters: CurriculumFilters, cohortId?: string) {
+  const { statuses, trackIds } = filters;
+  const [tracks, records] = await Promise.all([
+    getData<Track[]>("/admin/tracks"),
+    // The API takes a single track and status, so wider picks are filtered here.
+    getData<CurriculumRecord[]>("/admin/curriculums", {
+      ...(cohortId && { cohortId }),
+      ...(trackIds.length === 1 && { trackId: trackIds[0] }),
+      ...(statuses.length === 1 && { publishStatus: statuses[0] }),
+    }),
+  ]);
+  const matches = records.filter(
+    (record) =>
+      (trackIds.length === 0 || trackIds.includes(record.trackId)) &&
+      (statuses.length === 0 || statuses.includes(record.publishStatus))
   );
-  return perTrack.flat();
+  return Promise.all(
+    matches.map((record) =>
+      toCurriculum(record, tracks.find((track) => track.id === record.trackId))
+    )
+  );
 }
 
 async function getCurriculum(id: string) {
@@ -596,16 +644,13 @@ async function getCurriculum(id: string) {
 }
 
 export async function createCurriculum(input: CreateCurriculumInput) {
-  const record = await postData<CurriculumRecord>(
-    `/admin/tracks/${input.trackId}/curriculums`,
-    {
-      title: input.title,
-      ...optionalText("description", input.description),
-      status: "ONGOING",
-    }
-  );
-  local.curricula.set(record.id, { cohort: input.cohort, publishStatus: "DRAFT" });
-  return record;
+  return postData<CurriculumRecord>(`/admin/tracks/${input.trackId}/curriculums`, {
+    title: input.title,
+    ...optionalText("description", input.description),
+    ...optionalText("cohortId", input.cohortId),
+    status: "ONGOING",
+    publishStatus: "DRAFT",
+  });
 }
 
 /** Describes a settings change for the version history, e.g. "changed module access to Flexible". */
@@ -618,60 +663,62 @@ function describeChange(input: UpdateCurriculumInput) {
 
 export async function updateCurriculum(id: string, input: UpdateCurriculumInput) {
   const { title, description, publishStatus, progressMode } = input;
-  if (title !== undefined || description !== undefined) {
-    await api.patch(`/admin/curriculums/${id}`, { title, description });
-  }
-
-  const extras = local.curricula.get(id) ?? {};
-  local.curricula.set(id, {
-    ...extras,
-    ...(publishStatus && { publishStatus }),
-    ...(progressMode && { progressMode }),
-    history: [
-      {
-        id: crypto.randomUUID(),
-        actor: await currentUserName(),
-        action: describeChange(input),
-        at: new Date().toISOString(),
-      },
-      ...(extras.history ?? []),
-    ],
+  await api.patch(`/admin/curriculums/${id}`, {
+    title,
+    description,
+    publishStatus,
+    progressMode,
   });
+
+  local.history.set(id, [
+    {
+      id: crypto.randomUUID(),
+      actor: await currentUserName(),
+      action: describeChange(input),
+      at: new Date().toISOString(),
+    },
+    ...(local.history.get(id) ?? []),
+  ]);
 }
 
 export async function deleteCurriculum(id: string) {
   await api.delete(`/admin/curriculums/${id}`);
-  local.curricula.delete(id);
-  local.notes.delete(id);
+  local.history.delete(id);
 }
 
-// ---- Notes (no API yet — session only) -------------------------------------------
+// ---- Notes ---------------------------------------------------------------------
+
+function toNote(record: NoteRecord): CurriculumNote {
+  return {
+    id: record.id,
+    title: record.title,
+    body: record.body,
+    moduleId: record.topicId ?? null,
+    author: record.author
+      ? `${record.author.firstName} ${record.author.lastName}`.trim()
+      : "--",
+    createdAt: record.createdAt ?? new Date().toISOString(),
+    pinned: record.isPinned ?? record.pinned ?? false,
+  };
+}
 
 async function listNotes(curriculumId: string) {
-  return [...(local.notes.get(curriculumId) ?? [])].sort(
-    (a, b) =>
-      Number(b.pinned) - Number(a.pinned) ||
-      b.createdAt.localeCompare(a.createdAt)
-  );
-}
-
-function saveNotes(
-  curriculumId: string,
-  change: (notes: CurriculumNote[]) => CurriculumNote[]
-) {
-  local.notes.set(curriculumId, change(local.notes.get(curriculumId) ?? []));
+  const records = await getData<NoteRecord[]>(`/admin/curriculums/${curriculumId}/notes`);
+  return records
+    .map(toNote)
+    .sort(
+      (a, b) =>
+        Number(b.pinned) - Number(a.pinned) || b.createdAt.localeCompare(a.createdAt)
+    );
 }
 
 export async function createNote(curriculumId: string, input: SaveNoteInput) {
-  const note: CurriculumNote = {
-    ...input,
-    id: crypto.randomUUID(),
-    author: await currentUserName(),
-    createdAt: new Date().toISOString(),
-    pinned: false,
-  };
-  saveNotes(curriculumId, (notes) => [note, ...notes]);
-  return note;
+  const record = await postData<NoteRecord>(`/admin/curriculums/${curriculumId}/notes`, {
+    title: input.title,
+    body: input.body,
+    ...(input.moduleId && { topicId: input.moduleId }),
+  });
+  return toNote(record);
 }
 
 export async function updateNote(
@@ -679,13 +726,16 @@ export async function updateNote(
   noteId: string,
   changes: Partial<CurriculumNote>
 ) {
-  saveNotes(curriculumId, (notes) =>
-    notes.map((n) => (n.id === noteId ? { ...n, ...changes } : n))
-  );
+  const path = `/admin/curriculums/${curriculumId}/notes/${noteId}`;
+  const { title, body, moduleId, pinned } = changes;
+  if (title !== undefined || body !== undefined || moduleId !== undefined) {
+    await api.patch(path, { title, body, topicId: moduleId });
+  }
+  if (pinned !== undefined) await api.patch(`${path}/pin`, { isPinned: pinned });
 }
 
 export async function deleteNote(curriculumId: string, noteId: string) {
-  saveNotes(curriculumId, (notes) => notes.filter((n) => n.id !== noteId));
+  await api.delete(`/admin/curriculums/${curriculumId}/notes/${noteId}`);
 }
 
 // ---- Modules -------------------------------------------------------------------
@@ -704,10 +754,9 @@ async function getModule(id: string) {
 
 /** Throws before anything is saved if the content can't be attached anywhere. */
 function assertModuleContent(lessonCount: number, input: Partial<SaveModuleInput>) {
-  const needsLesson = !!input.assignments?.length || !!input.recordingLink;
-  if (needsLesson && lessonCount === 0) {
+  if (input.recordingLink && lessonCount === 0) {
     throw new Error(
-      "Add at least one lesson. Assignments and the class recording are saved on this module's lessons."
+      "Add at least one lesson. The class recording is saved on this module's lessons."
     );
   }
   if (input.recordingLink) assertHttpsLink(input.recordingLink, "The class recording link");
@@ -720,33 +769,44 @@ export async function createModule(curriculumId: string, input: SaveModuleInput)
     title: input.title,
     description: input.description,
     position: topics.reduce((next, t) => Math.max(next, t.position + 1), 0),
+    publishStatus: input.status,
+    outcomes: input.outcomes,
   });
-  await updateModule(topic.id, { ...input, title: undefined, description: undefined });
+  await updateModule(topic.id, {
+    ...input,
+    title: undefined,
+    description: undefined,
+    status: undefined,
+    outcomes: undefined,
+  });
   return getModule(topic.id);
 }
 
 /**
- * Saves whichever parts of the module are given. Lessons, assignments and the
- * recording link are synced with the API; the rest is session only.
+ * Saves whichever parts of the module are given. Uploaded files and lesson
+ * topic labels are session only; everything else is synced with the API.
  */
 export async function updateModule(id: string, input: Partial<SaveModuleInput>) {
   const tree = await getTopicTree(id);
   assertModuleContent(input.lessons?.length ?? tree.lessons.length, input);
 
-  if (input.title !== undefined || input.description !== undefined) {
+  const { title, description, status, outcomes } = input;
+  if ([title, description, status, outcomes].some((value) => value !== undefined)) {
     await api.patch(`/admin/topics/${id}`, {
-      title: input.title,
-      description: input.description,
+      title,
+      description,
+      publishStatus: status,
+      outcomes,
     });
   }
 
-  const { status, outcomes, resources } = input;
-  local.modules.set(id, {
-    ...local.modules.get(id),
-    ...(status && { status }),
-    ...(outcomes && { outcomes }),
-    ...(resources && { resources }),
-  });
+  if (input.resources) {
+    await deleteRemovedResources(tree.resources, input.resources);
+    local.moduleFiles.set(
+      id,
+      input.resources.filter((r) => !r.url)
+    );
+  }
 
   const lessons = input.lessons
     ? await syncLessons(id, tree.lessons, input.lessons)
@@ -754,7 +814,19 @@ export async function updateModule(id: string, input: Partial<SaveModuleInput>) 
   if (input.recordingLink !== undefined) {
     await syncRecording(lessons, input.recordingLink);
   }
-  if (input.assignments) await syncAssignments(lessons, input.assignments);
+  if (input.assignments) {
+    await syncAssignments(id, lessons, tree.assignments, input.assignments);
+  }
+}
+
+/** Deletes saved resources that were removed in the form. */
+async function deleteRemovedResources(saved: ResourceRecord[], kept: ResourceFile[]) {
+  const keptIds = new Set(kept.map((r) => r.id));
+  await Promise.all(
+    saved
+      .filter((r) => !keptIds.has(r.id))
+      .map((r) => api.delete(`/admin/resources/${r.id}`))
+  );
 }
 
 async function syncLessons(
@@ -791,16 +863,10 @@ async function syncLessons(
           position,
         });
       }
-      // Resources removed in the form are deleted from the API too.
-      const keptResourceIds = new Set(draft.resources.map((r) => r.id));
-      await Promise.all(
-        lesson.resources
-          .filter((r) => !keptResourceIds.has(r.id))
-          .map((r) => api.delete(`/admin/resources/${r.id}`))
-      );
+      await deleteRemovedResources(lesson.resources, draft.resources);
     }
 
-    // Topic labels and uploaded files have no API field.
+    // PENDING-BACKEND: topic labels and uploaded files have no API field.
     local.lessons.set(lesson.id, {
       topic: draft.topic,
       files: draft.resources.filter((r) => !r.url),
@@ -825,45 +891,33 @@ async function syncRecording(lessons: LessonTree[], link: string) {
   }
 }
 
-function assignmentExtras(assignment: ModuleAssignment): Partial<AssignmentExtras> {
-  const { instructions, resources, type, mode, submissionType, dueAt, status, submissions } =
-    assignment;
-  return { instructions, resources, type, mode, submissionType, dueAt, status, submissions };
-}
-
-async function syncAssignments(lessons: LessonTree[], drafts: ModuleAssignment[]) {
-  const existing = lessons.flatMap((l) => l.assignments);
+async function syncAssignments(
+  topicId: string,
+  lessons: LessonTree[],
+  moduleAssignments: AssignmentRecord[],
+  drafts: ModuleAssignment[]
+) {
+  const existing = [...lessons.flatMap((l) => l.assignments), ...moduleAssignments];
   const draftIds = new Set(drafts.map((d) => d.id));
   await Promise.all(
     existing
       .filter((a) => !draftIds.has(a.id))
-      .map((a) => api.delete(`/admin/assignments/${a.id}`))
+      .map((a) => deleteAssignment(a.id))
   );
 
   for (const draft of drafts) {
-    const current = existing.find((a) => a.id === draft.id);
-    if (!current) {
-      const lesson = lessons[(draft.afterLesson ?? lessons.length) - 1] ?? lessons.at(-1)!;
-      const created = await postData<AssignmentRecord>(
-        `/admin/lessons/${lesson.id}/assignments`,
-        { title: draft.title, ...optionalText("description", draft.description) }
-      );
-      local.assignments.set(created.id, assignmentExtras(draft));
-      continue;
+    if (existing.some((a) => a.id === draft.id)) {
+      await updateAssignment(draft.id, draft);
+    } else {
+      const lesson = draft.afterLesson ? lessons[draft.afterLesson - 1] : undefined;
+      await postAssignment(topicId, lesson?.id, draft);
     }
-    if (current.title !== draft.title || (current.description ?? "") !== draft.description) {
-      await api.patch(`/admin/assignments/${current.id}`, {
-        title: draft.title,
-        description: draft.description || null,
-      });
-    }
-    local.assignments.set(current.id, assignmentExtras(draft));
   }
 }
 
 export async function deleteModule(id: string) {
   await api.delete(`/admin/topics/${id}`);
-  local.modules.delete(id);
+  local.moduleFiles.delete(id);
 }
 
 /** Saves a new module order as each topic's `position`. */
@@ -900,45 +954,78 @@ function toAssignments(modules: CurriculumModule[]) {
   );
 }
 
-export async function createAssignment(moduleId: string, input: CreateAssignmentInput) {
-  const { lessons } = await getTopicTree(moduleId);
-  if (lessons.length === 0) {
-    throw new Error(
-      "This module has no lessons yet. Assignments are saved on a lesson, so add one to the module first."
-    );
-  }
+/** Links to send as attachments; picked files have no link and stay local. */
+function attachmentLinks(resources: ResourceFile[]) {
+  return resources.flatMap((r) => (r.url ? [r.url] : []));
+}
 
-  // "Due relative to lesson" picks the lesson; otherwise use the last one.
-  const lesson = lessons[(input.afterLesson ?? lessons.length) - 1] ?? lessons.at(-1)!;
-  const record = await postData<AssignmentRecord>(
-    `/admin/lessons/${lesson.id}/assignments`,
-    { title: input.title, ...optionalText("description", input.description) }
+function toIsoDate(value: string | null) {
+  return value ? new Date(value).toISOString() : null;
+}
+
+/** Saves the fields the API doesn't have. */
+function saveAssignmentExtras(id: string, changes: Partial<ModuleAssignment>) {
+  const { type, mode, submissions, resources } = changes;
+  local.assignments.set(id, {
+    ...local.assignments.get(id),
+    ...(type && { type }),
+    ...(mode && { mode }),
+    ...(submissions && { submissions }),
+    ...(resources && { files: resources.filter((r) => !r.url) }),
+  });
+}
+
+/** Creates an assignment on a lesson, or on the whole module without one. */
+async function postAssignment(
+  topicId: string,
+  lessonId: string | undefined,
+  assignment: ModuleAssignment
+) {
+  const record = await postData<AssignmentRecord>(`/admin/topics/${topicId}/assignments`, {
+    title: assignment.title,
+    ...optionalText("description", assignment.description),
+    ...optionalText("instructions", assignment.instructions),
+    ...(assignment.dueAt && { dueAt: toIsoDate(assignment.dueAt) }),
+    submissionType: assignment.submissionType,
+    publishStatus: assignment.status,
+    attachments: attachmentLinks(assignment.resources),
+    ...(lessonId && { lessonId }),
+  });
+  saveAssignmentExtras(record.id, assignment);
+  return record;
+}
+
+export async function createAssignment(moduleId: string, input: CreateAssignmentInput) {
+  const lessons = byPosition(
+    await getData<LessonRecord[]>(`/admin/topics/${moduleId}/lessons`)
   );
-  const assignment: ModuleAssignment = {
-    ...emptyAssignment(record.id),
+  // "Due relative to lesson" picks the lesson; otherwise it's on the whole module.
+  const lesson = input.afterLesson ? lessons[input.afterLesson - 1] : undefined;
+  const draft: ModuleAssignment = {
+    ...emptyAssignment(),
     ...input,
-    afterLesson: lessons.indexOf(lesson) + 1,
+    afterLesson: lesson ? input.afterLesson : null,
   };
-  local.assignments.set(record.id, assignmentExtras(assignment));
-  return assignment;
+  const record = await postAssignment(moduleId, lesson?.id, draft);
+  return { ...draft, id: record.id };
 }
 
 export async function updateAssignment(
   assignmentId: string,
   changes: Partial<ModuleAssignment>
 ) {
-  const { title, description } = changes;
-  if (title !== undefined || description !== undefined) {
-    await api.patch(`/admin/assignments/${assignmentId}`, { title, description });
-  }
-  // Everything else (status, due date, …) has no API field.
-  const apiFields = ["id", "title", "description", "afterLesson"];
-  local.assignments.set(assignmentId, {
-    ...local.assignments.get(assignmentId),
-    ...Object.fromEntries(
-      Object.entries(changes).filter(([key]) => !apiFields.includes(key))
-    ),
+  const { title, description, instructions, submissionType, dueAt, status, resources } =
+    changes;
+  await api.patch(`/admin/assignments/${assignmentId}`, {
+    title,
+    description,
+    instructions,
+    submissionType,
+    ...(dueAt !== undefined && { dueAt: toIsoDate(dueAt) }),
+    publishStatus: status,
+    ...(resources && { attachments: attachmentLinks(resources) }),
   });
+  saveAssignmentExtras(assignmentId, changes);
 }
 
 export async function deleteAssignment(assignmentId: string) {
@@ -969,8 +1056,8 @@ function toResources(modules: CurriculumModule[]) {
 }
 
 /**
- * Links are saved to the API. It has no upload endpoint though, so a picked
- * file can't be saved there and is kept for the session only.
+ * Links are saved to the API. PENDING-BACKEND: it has no upload endpoint, so a
+ * picked file can't be saved there and is kept for the session only.
  */
 export async function createResource(
   moduleId: string,
@@ -979,16 +1066,18 @@ export async function createResource(
 ) {
   if (input.url) {
     assertHttpsLink(input.url, "The link");
-    if (!lessonId) {
-      throw new Error(
-        "Links are saved on a lesson. Pick a lesson instead of the whole module."
-      );
-    }
-    const record = await postData<ResourceRecord>(`/admin/lessons/${lessonId}/resources`, {
-      title: input.title,
-      ...optionalText("description", input.description),
-      url: input.url,
-    });
+    const record = await postData<ResourceRecord>(
+      lessonId
+        ? `/admin/lessons/${lessonId}/resources`
+        : `/admin/topics/${moduleId}/resources`,
+      {
+        title: input.title,
+        ...optionalText("description", input.description),
+        url: input.url,
+        type: "LINK",
+        publishStatus: "PUBLISHED",
+      }
+    );
     return toResourceFile(record);
   }
 
@@ -997,11 +1086,7 @@ export async function createResource(
     const extras = local.lessons.get(lessonId) ?? {};
     local.lessons.set(lessonId, { ...extras, files: [...(extras.files ?? []), created] });
   } else {
-    const extras = local.modules.get(moduleId) ?? {};
-    local.modules.set(moduleId, {
-      ...extras,
-      resources: [...(extras.resources ?? []), created],
-    });
+    local.moduleFiles.set(moduleId, [...(local.moduleFiles.get(moduleId) ?? []), created]);
   }
   return created;
 }
@@ -1013,9 +1098,9 @@ function editLocalResources(
 ) {
   const holds = (list?: ResourceFile[]) => !!list?.some((r) => r.id === resourceId);
 
-  for (const [id, extras] of local.modules) {
-    if (holds(extras.resources)) {
-      local.modules.set(id, { ...extras, resources: change(extras.resources!) });
+  for (const [id, files] of local.moduleFiles) {
+    if (holds(files)) {
+      local.moduleFiles.set(id, change(files));
       return true;
     }
   }
@@ -1035,10 +1120,11 @@ export async function updateResource(resourceId: string, changes: Partial<Resour
   if (isLocal) return;
 
   const { title, description, status } = changes;
-  if (title !== undefined || description !== undefined) {
-    await api.patch(`/admin/resources/${resourceId}`, { title, description });
-  }
-  if (status) local.resourceStatus.set(resourceId, status);
+  await api.patch(`/admin/resources/${resourceId}`, {
+    title,
+    description,
+    publishStatus: status,
+  });
 }
 
 export async function deleteResource(resourceId: string) {
@@ -1075,8 +1161,16 @@ export const curriculumKeys = {
   all: () => ["curriculum"] as const,
   list: () => ["curriculum", "list"] as const,
   /** Sits under `list()`, so invalidating that refreshes every filtered list. */
-  listByTracks: (trackIds: string[]) =>
-    ["curriculum", "list", { trackIds: [...trackIds].sort() }] as const,
+  listBy: ({ statuses, trackIds }: CurriculumFilters, cohortId?: string) =>
+    [
+      "curriculum",
+      "list",
+      {
+        statuses: [...statuses].sort(),
+        trackIds: [...trackIds].sort(),
+        cohortId,
+      },
+    ] as const,
   detail: (id: string) => ["curriculum", "detail", id] as const,
   // Assignments and resources are read from this same tree, so invalidating
   // it refreshes every tab.
@@ -1092,10 +1186,10 @@ const modulesQuery = (curriculumId: string) => ({
 });
 
 export const curriculumQueries = {
-  list: (trackIds: string[] = []) =>
+  list: (filters: CurriculumFilters = noCurriculumFilters, cohortId?: string) =>
     queryOptions({
-      queryKey: curriculumKeys.listByTracks(trackIds),
-      queryFn: () => listCurricula(trackIds),
+      queryKey: curriculumKeys.listBy(filters, cohortId),
+      queryFn: () => listCurricula(filters, cohortId),
     }),
 
   detail: (id: string) =>

@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Code, PenLine, Smartphone } from "lucide-react";
 
 import {
+  Add01,
   Calendar03,
   Call02,
   File01,
@@ -14,7 +15,6 @@ import {
   Message01,
   MoreVertical,
   Search01,
-  User,
   UserCircle,
   Video,
 } from "@/assets/icons";
@@ -22,13 +22,17 @@ import { cn } from "@/lib/utils";
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { ActivityTab } from "@/components/student-profile/ActivityTab";
+import { AssignmentsTab } from "@/components/student-profile/AssignmentsTab";
 import { AttendanceTab } from "@/components/student-profile/AttendanceTab";
 import { ControlTowerTab } from "@/components/student-profile/ControlTowerTab";
+import { MentorshipTab } from "@/components/student-profile/MentorshipTab";
+import { NotesTab } from "@/components/student-profile/NotesTab";
 import { ProgressTab } from "@/components/student-profile/ProgressTab";
 import {
   AttendanceGrid,
+  BrandBadge,
   Card,
   CardHeader,
   CardSelect,
@@ -38,7 +42,6 @@ import {
   attendanceCell,
   attendanceLabels,
 } from "@/components/student-profile/shared";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -97,18 +100,28 @@ const moduleTones = {
 } as const;
 
 const deadlineTones = {
-  error: { box: "bg-surface-error-badge text-icon-error", badge: "error" },
-  warning: {
-    box: "bg-surface-warning-badge text-icon-warning",
-    badge: "warning",
-  },
-  neutral: { box: "bg-surface-subtle text-icon-secondary", badge: "neutral" },
+  error: { box: "bg-surface-brand text-icon-error", badge: "text-text-error" },
+  warning: { box: "bg-surface-brand text-icon-warning", badge: "text-text-warning" },
+  neutral: { box: "bg-surface-subtle text-icon-muted", badge: "text-text-info" },
 } as const;
 
+/** The Overview's badges all sit on the brand surface, coloured by text only. */
+const badgeText = {
+  success: "text-text-success",
+  warning: "text-text-warning",
+  error: "text-text-error",
+  info: "text-text-info",
+  neutral: "text-text-default-badge",
+} as const;
+
+// The Overview card marks absences in brand surface rather than error.
+const overviewCells = { ...attendanceCell, absent: "bg-surface-brand" };
+
+
 const activityKinds = {
-  assignment: { icon: File01, box: "bg-surface-info-badge text-icon-info" },
-  lesson: { icon: File01, box: "bg-surface-success-badge text-icon-success" },
-  session: { icon: Video, box: "bg-surface-info-badge text-icon-info" },
+  assignment: { icon: File01, box: "bg-surface-brand text-icon-info" },
+  lesson: { icon: File01, box: "bg-surface-brand text-icon-success" },
+  session: { icon: Video, box: "bg-surface-brand text-icon-info" },
 } as const;
 
 function formatLongDate(value: string) {
@@ -144,13 +157,16 @@ export default function StudentDetailsPage({
   const firstName = student?.firstName || name.split(" ")[0];
   const assignments = student ? assignmentsFor(student) : undefined;
   const cohort = assignments?.cohorts[0];
-  const tabLabel = tabs.find((item) => item.value === tab)?.label ?? "";
 
   return (
     <>
       <AdminTopNav
         breadcrumb={
-          student ? ["People", "Students", name] : ["People", "Students"]
+          [
+            "People",
+            { label: "Students", href: "/admin/students" },
+            ...(student ? [{ label: name, href: `/admin/students/${id}` }] : []),
+          ]
         }
       />
       <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
@@ -158,17 +174,33 @@ export default function StudentDetailsPage({
           Students Profile
         </h1>
 
-        <CohortTabs
-          label="Student profile sections"
-          tabs={tabs}
-          value={tab}
-          onChange={(next) =>
-            router.replace(`/admin/students/${id}?tab=${next}`, {
-              scroll: false,
-            })
-          }
-          className="mt-6 shadow-[0_1px_3px_rgb(0_0_0/0.15)]"
-        />
+        {/* The Overview has its own profile card; every other tab leads
+          with this summary. */}
+        {student && tab !== "overview" && (
+          <StudentSummary student={student} name={name} />
+        )}
+
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <CohortTabs
+            label="Student profile sections"
+            tabs={tabs}
+            value={tab}
+            onChange={(next) =>
+              router.replace(`/admin/students/${id}?tab=${next}`, {
+                scroll: false,
+              })
+            }
+            className="shadow-[0_1px_3px_rgb(0_0_0/0.15)]"
+          />
+          {tab === "notes" && (
+            // PENDING-BACKEND: notes can't be added yet, and the flow has no
+            // add note modal.
+            <Button size="medium" className="shrink-0 gap-2">
+              <Add01 className="size-[18px]" />
+              Add Note
+            </Button>
+          )}
+        </div>
 
         <div className="mt-6">
           {studentQuery.isPending && <OverviewSkeleton />}
@@ -196,17 +228,11 @@ export default function StudentDetailsPage({
           {student && tab === "attendance" && (
             <AttendanceTab firstName={firstName} />
           )}
-          {student &&
-            (tab === "assignments" ||
-              tab === "mentorship" ||
-              tab === "notes") && (
-              // The flow has no design for these tabs yet.
-              <CohortEmptyState
-                icon={User}
-                title="Nothing to show yet"
-                description={`${name}'s ${tabLabel.toLowerCase()} will show up here.`}
-              />
-            )}
+          {student && tab === "assignments" && (
+            <AssignmentsTab firstName={firstName} />
+          )}
+          {student && tab === "mentorship" && <MentorshipTab />}
+          {student && tab === "notes" && <NotesTab />}
         </div>
       </main>
     </>
@@ -231,11 +257,49 @@ function OverviewTab({ student, name }: { student: AdminUser; name: string }) {
   );
 }
 
+/** The compact profile shown above the tabs on every tab but the Overview. */
+function StudentSummary({
+  student,
+  name,
+}: {
+  student: AdminUser;
+  name: string;
+}) {
+  const { tracks, cohorts } = assignmentsFor(student);
+  const status = getStudentStatus(student);
+
+  return (
+    <div className="mt-6 flex w-fit max-w-full items-center gap-3 rounded-lg bg-surface-default px-3 py-6 shadow-[0_1px_3px_rgb(0_0_0/0.25)]">
+      <PersonAvatar name={student.name} colorKey={student.id} size={60} />
+      <div className="flex min-w-0 flex-col gap-2">
+        <p className="truncate text-lg/6 font-semibold text-text-primary">
+          {name}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {tracks.map((track) => (
+            <BrandBadge key={track} size="lg" className="text-text-info">
+              {track}
+            </BrandBadge>
+          ))}
+          <BrandBadge size="lg" className={badgeText[status.badge]}>
+            {status.label}
+          </BrandBadge>
+          {cohorts.map((cohort) => (
+            <BrandBadge key={cohort} size="lg" className="text-text-info">
+              {cohort}
+            </BrandBadge>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MessageButton() {
   // PENDING-BACKEND: there's no messaging yet.
   return (
     <Button variant="tertiary" size="medium">
-      <Message01 className="size-5" />
+      <Message01 className="size-[18px]" />
       Message
     </Button>
   );
@@ -280,27 +344,24 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
     <Card>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <InitialsAvatar
-            name={student.name}
-            className="size-[80px] text-2xl"
-          />
+          <PersonAvatar name={student.name} colorKey={student.id} size={80} />
           <div className="flex min-w-0 flex-col gap-2">
             <p className="truncate text-2xl font-semibold text-text-primary">
               {name}
             </p>
             <div className="flex flex-wrap gap-2">
               {tracks.map((track) => (
-                <Badge key={track} variant="light" status="info" size="lg">
+                <BrandBadge key={track} size="lg" className="text-text-info">
                   {track}
-                </Badge>
+                </BrandBadge>
               ))}
-              <Badge variant="light" status={status.badge} size="lg">
+              <BrandBadge size="lg" className={badgeText[status.badge]}>
                 {status.label}
-              </Badge>
+              </BrandBadge>
               {cohorts.map((cohort) => (
-                <Badge key={cohort} variant="light" status="neutral" size="lg">
+                <BrandBadge key={cohort} size="lg" className="text-text-info">
                   {cohort}
-                </Badge>
+                </BrandBadge>
               ))}
             </div>
           </div>
@@ -337,7 +398,7 @@ function MentorCard() {
       <CardHeader title="Mentor" />
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <InitialsAvatar name={mentor.name} className="size-[60px] text-lg" />
+          <PersonAvatar name={mentor.name} size={60} />
           <div className="flex min-w-0 flex-col gap-1">
             <p className="truncate text-lg/6 font-semibold text-text-primary">
               {mentor.name}
@@ -492,9 +553,7 @@ function DeadlinesCard() {
                 title={deadline.title}
                 detail={deadline.type}
                 trailing={
-                  <Badge variant="light" status={tone.badge}>
-                    {deadline.due}
-                  </Badge>
+                  <BrandBadge className={tone.badge}>{deadline.due}</BrandBadge>
                 }
               />
             );
@@ -538,6 +597,7 @@ function AttendanceCard() {
           monthLabel={attendanceMonth.label}
           leadingBlanks={leadingBlanks}
           days={days.map((status) => ({ status }))}
+          cells={overviewCells}
         />
 
         <ul className="flex w-[88px] shrink-0 flex-col gap-2">
@@ -549,7 +609,7 @@ function AttendanceCard() {
               className="flex items-center gap-2 font-work text-xs font-medium text-text-secondary"
             >
               <span
-                className={cn("size-4 rounded-sm", attendanceCell[status])}
+                className={cn("size-4 rounded-sm", overviewCells[status])}
               />
               {attendanceLabels[status]}
             </li>

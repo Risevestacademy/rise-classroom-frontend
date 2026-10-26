@@ -1,6 +1,6 @@
 import { api, ApiError } from "@/lib/api";
 
-export type Role = "SUPERADMIN" | "INSTRUCTOR" | "STUDENT";
+export type Role = "SUPERADMIN" | "INSTRUCTOR" | "MENTOR" | "STUDENT";
 export type UserStatus = "ACTIVE" | "SUSPENDED";
 export type OnboardingStatus = "INVITED" | "COMPLETED";
 

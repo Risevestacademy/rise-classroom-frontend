@@ -17,6 +17,7 @@ import { FormField } from "@/components/ui/field";
 import { Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { adminQueries } from "@/lib/admin";
+import { useSelectedCohort } from "@/lib/selected-cohort";
 import { createCurriculum, curriculumKeys } from "@/lib/curriculum";
 
 const placeholderTitle = "Design Track Curriculum";
@@ -33,7 +34,10 @@ export default function CreateCurriculumPage() {
   const tracks = useQuery(adminQueries.tracks()).data ?? [];
   const cohorts = useQuery(adminQueries.cohorts()).data ?? [];
   const track = tracks.find((t) => t.id === trackId) ?? tracks[0];
-  const cohort = cohorts.find((c) => c.id === cohortId) ?? cohorts[0];
+  const { cohort: topNavCohort } = useSelectedCohort();
+  // Defaults to the cohort picked in the top nav.
+  const cohort =
+    cohorts.find((c) => c.id === cohortId) ?? topNavCohort ?? cohorts[0];
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -41,7 +45,7 @@ export default function CreateCurriculumPage() {
         title: title.trim(),
         description: description.trim(),
         trackId: track.id,
-        cohort: cohort?.name ?? "",
+        cohortId: cohort?.id ?? "",
       }),
     onSuccess: (curriculum) => {
       queryClient.invalidateQueries({ queryKey: curriculumKeys.list() });
@@ -56,7 +60,11 @@ export default function CreateCurriculumPage() {
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", "Curriculum", "Add Curriculum"]} />
+      <AdminTopNav breadcrumb={[
+          "Academy",
+          { label: "Curriculum", href: "/admin/curriculum" },
+          { label: "Add Curriculum", href: "/admin/curriculum/create" },
+        ]} />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         <Link
           href="/admin/curriculum"

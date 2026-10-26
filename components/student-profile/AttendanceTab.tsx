@@ -4,9 +4,14 @@ import * as React from "react";
 
 import { ArrowLeft01, ArrowRight01, Calendar03 } from "@/assets/icons";
 import { cn } from "@/lib/utils";
-import { attendanceByMonth } from "@/app/admin/students/[id]/profile-data";
+import {
+  attendanceByMonth,
+  sessionsOn,
+  type AttendanceSession,
+} from "@/app/admin/students/[id]/profile-data";
 import {
   AttendanceGrid,
+  BrandBadge,
   Card,
   CardHeader,
   attendanceCell,
@@ -100,6 +105,15 @@ export function AttendanceTab({ firstName }: { firstName: string }) {
                 monthLabel={shortMonth(year, month)}
                 leadingBlanks={new Date(year, month, 1).getDay()}
                 days={days}
+                details={(day) => {
+                  const sessions = sessionsOn(days[day - 1]);
+                  return sessions.length > 0 ? (
+                    <SessionSummary
+                      date={new Date(year, month, day)}
+                      sessions={sessions}
+                    />
+                  ) : null;
+                }}
               />
             </div>
           );
@@ -126,5 +140,63 @@ export function AttendanceTab({ firstName }: { firstName: string }) {
         </li>
       </ul>
     </Card>
+  );
+}
+
+const sessionStatus = {
+  attended: { label: "Attended", dot: "bg-brand-500", text: "text-text-success" },
+  absent: {
+    label: "Absent",
+    dot: attendanceCell.absent,
+    text: "text-text-error",
+  },
+} as const;
+
+/** The card a day with sessions shows on hover. */
+function SessionSummary({
+  date,
+  sessions,
+}: {
+  date: Date;
+  sessions: AttendanceSession[];
+}) {
+  return (
+    <>
+      <div className="flex flex-col gap-1">
+        <p className="text-xs font-medium text-text-primary">
+          {/* The design drops the comma after the weekday: "Mon Oct 12, 2026". */}
+          {date.toLocaleDateString("en-US", { weekday: "short" })}{" "}
+          {date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </p>
+        <p className="font-work text-[13px]/[18px] text-text-secondary">
+          {sessions.length} {sessions.length === 1 ? "session" : "sessions"}
+        </p>
+      </div>
+      <ul className="flex flex-col gap-3">
+        {sessions.map((session, index) => {
+          const status = sessionStatus[session.status];
+          return (
+            <li key={index} className="flex items-start gap-2">
+              <span className="flex px-0.5 py-[3px]">
+                <span className={cn("size-2.5 rounded-full", status.dot)} />
+              </span>
+              <div className="flex min-w-0 flex-col gap-1 font-work text-xs">
+                <p className="truncate font-medium text-text-primary">
+                  {session.name}
+                </p>
+                <p className="text-text-secondary">{session.time}</p>
+                <BrandBadge className={cn("w-fit", status.text)}>
+                  {status.label}
+                </BrandBadge>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }
