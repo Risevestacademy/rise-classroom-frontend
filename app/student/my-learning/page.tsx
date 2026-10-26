@@ -248,9 +248,10 @@ function WeekList({
 }) {
   // Weeks the student can't reach yet aren't in the design, so they're hidden.
   const weekOf = new Map(topics.map((topic, index) => [topic.id, index + 1]));
-  const visible = topics.filter(
-    (topic) => topic.lock.unlocked || topic.id === currentTopicId,
-  );
+  const visible = topics;
+  //.filter(
+    //(topic) => topic.lock.unlocked || topic.id === currentTopicId,
+  //);
 
   // Newest first. The current week and the two before it stay on their own;
   // anything older is grouped, as in the design.
