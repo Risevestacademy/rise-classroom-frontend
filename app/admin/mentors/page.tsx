@@ -7,7 +7,7 @@ import { Menu } from "@base-ui/react/menu";
 import { Add01, Filter, MoreHorizontal, Search01 } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { EditUserDialog } from "@/components/EditUserDialog";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { InviteInstructorDialog } from "@/components/InviteInstructorDialog";
 import {
   matchesPeopleFilters,
@@ -270,10 +270,7 @@ export default function MentorsPage() {
                       </td>
                       <td className="px-3">
                         <div className="flex items-center gap-3">
-                          <InitialsAvatar
-                            name={mentor.name}
-                            className="size-10 font-work text-base font-normal"
-                          />
+                          <PersonAvatar name={mentor.name} colorKey={mentor.id} size={40} />
                           <div className="min-w-0">
                             <p className="truncate font-work text-sm font-medium tracking-[-0.01em] text-black">
                               {mentor.name}

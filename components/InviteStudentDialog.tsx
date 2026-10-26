@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/field";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { parseInstructorCsv } from "@/components/InviteInstructorDialog";
 import {
   Dialog,
@@ -844,10 +844,7 @@ function SingleReviewStep({
 
       <div className="mt-6 rounded-xl border border-neutral-200 p-5">
         <div className="flex items-center gap-3 pb-6">
-          <InitialsAvatar
-            name={name}
-            className="h-12 w-12 bg-surface-warning-badge text-base text-text-warning"
-          />
+          <PersonAvatar name={name} size={48} />
           <div className="min-w-0">
             <p className="truncate font-semibold text-neutral-800">{name}</p>
             <p className="truncate text-sm text-neutral-400">{email}</p>
@@ -1195,7 +1192,7 @@ function BulkReviewStep({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <InitialsAvatar name={name} className="h-8 w-8" />
+                      <PersonAvatar name={name} size={32} />
                       <span className="font-medium text-neutral-800">
                         {name}
                       </span>

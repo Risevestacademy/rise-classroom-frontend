@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Filter, MoreHorizontal, Search01 } from "@/assets/icons";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { UserRowActions } from "@/components/UserRowActions";
 import {
   PeopleFilterDialog,
@@ -397,10 +397,7 @@ export function AdminPeopleTable({
                         </td>
                         <td className="px-3">
                           <div className="flex items-center gap-3">
-                            <InitialsAvatar
-                              name={user.name}
-                              className="size-11 font-work text-lg font-normal"
-                            />
+                            <PersonAvatar name={user.name} colorKey={user.id} size={44} />
                             <div className="min-w-0">
                               {href ? (
                                 <Link

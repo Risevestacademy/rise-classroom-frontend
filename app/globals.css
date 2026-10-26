@@ -90,6 +90,20 @@
   --color-surface-info-badge: #e8f1ff;
   --color-surface-default-badge: #f8fafa;
 
+  /* Component · Avatar initials */
+  --color-avatar-grey-surface: #f6f8fa;
+  --color-avatar-grey-text: #0a0d14;
+  --color-avatar-yellow-surface: #fbdfb1;
+  --color-avatar-yellow-text: #6e330c;
+  --color-avatar-blue-surface: #c2d6ff;
+  --color-avatar-blue-text: #162664;
+  --color-avatar-teal-surface: #c2efff;
+  --color-avatar-teal-text: #164564;
+  --color-avatar-purple-surface: #cac2ff;
+  --color-avatar-purple-text: #2b1664;
+  --color-avatar-red-surface: #f8c9d2;
+  --color-avatar-red-text: #710e21;
+
   /* Semantic · Border */
   --color-border-default: #e2e8e8; /* neutral-200 */
   --color-border-strong: #cbd5d6; /* neutral-300 */
