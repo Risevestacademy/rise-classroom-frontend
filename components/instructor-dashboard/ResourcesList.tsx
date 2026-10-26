@@ -46,8 +46,8 @@ export type ResourceRow = ResourceRecord & {
   lessonTitle: string;
   lessonNumber: number;
   uploaded: string;
-  fileType: string;
-  fileSizeLabel: string;
+  // fileType?: string;
+  // fileSizeLabel?: string;
 };
 
 interface ResourcesListProps {
@@ -123,9 +123,9 @@ export function ResourcesList({
               <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
                 Uploaded
               </TableHead>
-              <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
+              {/* <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
                 Type & Size
-              </TableHead>
+              </TableHead> */}
               <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
                 Status
               </TableHead>
@@ -174,14 +174,14 @@ export function ResourcesList({
                     </p>
                   </TableCell>
 
-                  <TableCell className="py-4">
+                  {/* <TableCell className="py-4">
                     <p className="text-xs font-medium text-neutral-700">
-                      {resource.fileType}
+                      {resource?.fileType}
                     </p>
                     <p className="text-[11px] text-neutral-500 mt-0.5">
-                      {resource.fileSizeLabel}
+                      {resource?.fileSizeLabel}
                     </p>
-                  </TableCell>
+                  </TableCell> */}
 
                   <TableCell className="py-4">
                     <Badge
@@ -259,7 +259,7 @@ export function ResourcesList({
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 space-y-6">
-                <div className="flex items-center justify-between text-xs">
+                {/* <div className="flex items-center justify-between text-xs">
                   <span className="text-neutral-500 font-medium">Type:</span>
                   <span className="text-neutral-900 font-semibold">
                     {viewing?.fileType}
@@ -271,7 +271,7 @@ export function ResourcesList({
                   <span className="text-neutral-900 font-semibold">
                     {viewing?.fileSizeLabel}
                   </span>
-                </div>
+                </div> */}
 
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-neutral-500 font-medium">Date uploaded:</span>

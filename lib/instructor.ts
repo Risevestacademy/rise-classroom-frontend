@@ -463,21 +463,21 @@ export async function deleteRecording(recordingId: string) {
 
 export async function getALesson(lessonId: string) {
   const { data } = await api.get<Envelope<LessonRecord>>(
-    `/instructor/lessons/${params.id}`
+    `/instructor/lessons/${lessonId}`
   );
   return data;
 }
 
 export async function getAResource(resourceId: string) {
   const { data } = await api.get<Envelope<ResourceRecord>>(
-    `/instructor/resources/${params.id}`
+    `/instructor/resources/${resourceId}`
   );
   return data;
 }
 
 export async function getAnAssignment(assignmentId: string) {
   const { data } = await api.get<Envelope<AssignmentRecord>>(
-    `/instructor/assignments/${params.id}`
+    `/instructor/assignments/${assignmentId}`
   );
   return data;
 }
@@ -506,11 +506,11 @@ export const instructorKeys = {
   // ["instructor", "track-content"] after creating any of them.
   trackContent: (params: { trackId?: string }) =>
     ["instructor", "track-content", params] as const,
-  lessonById: (params: { id?: string }) =>
+  lessonById: (params: { lessonId?: string }) =>
     ["instructor", "lesson-item", params] as const,
-  resourceById: (params: { id?: string }) =>
+  resourceById: (params: { resourceId?: string }) =>
     ["instructor", "resource-item", params] as const,
-  assignmentById: (params: { id?: string }) =>
+  assignmentById: (params: { assignmentId?: string }) =>
     ["instructor", "assignment-item", params] as const,
 };
 
@@ -616,24 +616,33 @@ export const instructorQueries = {
       select: (content: TrackContent) => content.recordings,
     }),
 
-  lessonById: (params: { id?: string }) =>
+  lessonById: (params: { lessonId?: string }) =>
     queryOptions({
       queryKey: instructorKeys.lessonById(params),
-      queryFn: () => getAlesson(params as { lessonId: string }),
-      enabled: Boolean(params.id),
+      queryFn: () => {
+        if (!params.lessonId) throw new Error("Lesson ID is required");
+        return getALesson(params.lessonId);
+      },
+      enabled: Boolean(params.lessonId),
     }),
 
-  resourceById: (params: { id?: string }) =>
+  resourceById: (params: { resourceId?: string }) =>
     queryOptions({
       queryKey: instructorKeys.resourceById(params),
-      queryFn: () => getAResource(params as { resourceId: string }),
-      enabled: Boolean(params.id),
+      queryFn: () => {
+        if (!params.resourceId) throw new Error("Resource ID is required");
+        return getAResource(params.resourceId);
+      },
+      enabled: Boolean(params.resourceId),
     }),
 
-  assignmentById: (params: { id?: string }) =>
+  assignmentById: (params: { assignmentId?: string }) =>
     queryOptions({
       queryKey: instructorKeys.assignmentById(params),
-      queryFn: () => getAnAssignment(params as { assignmentId: string }),
-      enabled: Boolean(params.id),
+      queryFn: () => {
+        if (!params.assignmentId) throw new Error("Assignment ID is required");
+        return getAnAssignment(params.assignmentId);
+      },
+      enabled: Boolean(params.assignmentId),
     }),
 };

@@ -53,7 +53,7 @@ export type AssignmentRow = AssignmentRecord & {
   lessonNumber: number;
   afterLesson: string;
   dueDateLabel: string;
-  dueRelative: string;
+  // dueRelative: string;
 };
 
 interface AssignmentsListProps {
@@ -330,9 +330,9 @@ export function AssignmentsList({
                         <p className="text-neutral-900 font-semibold">
                           {viewing?.dueDateLabel}
                         </p>
-                        <p className="text-neutral-500 text-[11px]">
+                        {/* <p className="text-neutral-500 text-[11px]">
                           {viewing?.dueRelative}
-                        </p>
+                        </p> */}
                       </div>
                     </div>
 

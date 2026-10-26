@@ -25,7 +25,11 @@ import {
   updateTopic,
 } from "@/lib/instructor";
 
-import type { AssignmentPageValues, ModuleFormValues } from "./instructor-schema";
+import type {
+  AssignmentPageValues,
+  ModuleFormValues,
+  ResourcePageValues,
+} from "./instructor-schema";
 
 const text = (value?: string | null) => (value ?? "").trim();
 
@@ -340,12 +344,12 @@ export function useSaveAssignment() {
 export function useSaveResource() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (values: ResourceItemValues) => {
+    mutationFn: async (values: ResourcePageValues) => {
       const title = text(values.title);
       const url = text(values.url);
       const description = text(values.description);
 
-      createResource(values.lessonId, {
+      return createResource(values.lessonId, {
         title,
         url,
         description: description || undefined,

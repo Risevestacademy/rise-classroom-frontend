@@ -119,7 +119,7 @@ export default function Curriculum() {
       lessonNumber: lesson.lessonNumber,
       moduleTitle: lesson.moduleTitle,
       moduleNumber: lesson.moduleNumber,
-      uploaded: formatDate(resource.createdAt)
+      uploaded: formatDate(resource.createdAt),
     }))
   );
 
@@ -177,6 +177,7 @@ export default function Curriculum() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
   const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
+  const curriculumId = currentCurriculum?.id;
 
   const filteredAssignments = assignmentsData.filter((item) =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -219,16 +220,16 @@ export default function Curriculum() {
   const getTabButtonConfig = () => {
     switch (activeTab) {
       case "modules":
-        return topicsData.length > 0
-          ? { label: "Add Module", onClick: () => router.push(`/instructor/curriculum/${currentCurriculum.id}/modules/create`) }
+        return topicsData.length > 0 && curriculumId
+          ? { label: "Add Module", onClick: () => router.push(`/instructor/curriculum/${curriculumId}/modules/create`) }
           : null;
       case "assignments":
-        return assignmentsData.length > 0
-          ? { label: "Add Assignment", onClick: () => router.push(`/instructor/curriculum/${currentCurriculum.id}/assignments/create`) }
+        return assignmentsData.length > 0 && curriculumId
+          ? { label: "Add Assignment", onClick: () => router.push(`/instructor/curriculum/${curriculumId}/assignments/create`) }
           : null;
       case "resources":
-        return resourcesData.length > 0
-          ? { label: "Add Resource", onClick: () => router.push(`/instructor/curriculum/${currentCurriculum.id}/resources/create`) }
+        return resourcesData.length > 0 && curriculumId
+          ? { label: "Add Resource", onClick: () => router.push(`/instructor/curriculum/${curriculumId}/resources/create`) }
           : null;
       case "notes":
         return { label: "Add Note", onClick: () => setIsAddNoteOpen(true) };
@@ -405,12 +406,10 @@ export default function Curriculum() {
                 icon={BookOpen}
                 title="No module yet"
                 description="Modules group your lessons and assignments. Start by creating your first module."
-                button={{
+                button={curriculumId ? {
                   label: "Add Module",
-                  onClick: () => {
-                    router.push(`/instructor/curriculum/${currentCurriculum.id}/modules/create`);
-                  },
-                }}
+                  onClick: () => router.push(`/instructor/curriculum/${curriculumId}/modules/create`),
+                } : undefined}
               />
             ) : (
                 <ModulesList modules={modulesData} />
@@ -423,12 +422,10 @@ export default function Curriculum() {
                 icon={BookOpen}
                 title="No Assignment yet"
                 description="Add your first and attach to a lesson in a module for students."
-                button={{
+                button={curriculumId ? {
                   label: "Add Assignment",
-                  onClick: () => {
-                    router.push(`/instructor/curriculum/${currentCurriculum.id}/assignments/create`);
-                  },
-                }}
+                  onClick: () => router.push(`/instructor/curriculum/${curriculumId}/assignments/create`),
+                } : undefined}
               />
             ) : (
                 <AssignmentsList
@@ -448,12 +445,10 @@ export default function Curriculum() {
                 icon={BookOpen}
                 title="No resource yet"
                 description="Add your first resource and attach to a lesson in a module for students."
-                button={{
+                button={curriculumId ? {
                   label: "Add Resource",
-                  onClick: () => {
-                    router.push(`/instructor/curriculum/${currentCurriculum.id}/resources/create`);
-                  },
-                }}
+                  onClick: () => router.push(`/instructor/curriculum/${curriculumId}/resources/create`),
+                } : undefined}
               />
             ) : (
               <ResourcesList
