@@ -29,8 +29,9 @@ import {
   dashboardMock,
   type ActivityKind,
 } from "@/lib/admin-dashboard";
-import { trackKeyFor } from "@/lib/cohorts";
+import { cohortQueries, trackKeyFor } from "@/lib/cohorts";
 import { daysLeftIn, weekRangeFor } from "@/lib/control-tower";
+import { useSelectedCohort } from "@/lib/selected-cohort";
 import { sessionQuery } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
 import type { TrackKey } from "@/app/admin/cohorts/cohort-data";
@@ -86,13 +87,32 @@ function checkInDue(now = new Date()) {
 export default function AdminDashboardPage() {
   const router = useRouter();
   const session = useQuery(sessionQuery());
-  const participants = useQuery(
-    adminQueries.userCount({ role: "STUDENT", status: "ACTIVE" }),
-  );
-  const activeTracks = useQuery(adminQueries.tracks("ACTIVE"));
-  const controlTower = useQuery(adminDashboardQueries.controlTower());
+  const { cohortId, isReady } = useSelectedCohort();
+  const participants = useQuery({
+    ...adminQueries.userCount({ role: "STUDENT", status: "ACTIVE", cohortId }),
+    enabled: isReady,
+  });
+  const allActiveTracks = useQuery(adminQueries.tracks("ACTIVE"));
+  // The API can't filter tracks by cohort, so this works out which ones it runs.
+  const cohortTracks = useQuery({
+    ...cohortQueries.trackIds(cohortId ?? ""),
+    enabled: Boolean(cohortId),
+  });
+  const activeTracks = {
+    isPending:
+      allActiveTracks.isPending ||
+      !isReady ||
+      (Boolean(cohortId) && cohortTracks.isPending),
+    isError: allActiveTracks.isError || cohortTracks.isError,
+  };
+  const controlTower = useQuery({
+    ...adminDashboardQueries.controlTower(cohortId),
+    enabled: isReady,
+  });
 
-  const tracks = activeTracks.data ?? [];
+  const tracks = (allActiveTracks.data ?? []).filter(
+    (track) => !cohortId || (cohortTracks.data ?? []).includes(track.id),
+  );
   const adminName = session.data?.user.firstName ?? "Admin";
 
   const overview = controlTower.data?.overview;

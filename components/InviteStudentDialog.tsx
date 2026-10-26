@@ -49,6 +49,7 @@ import {
   type InviteUserInput,
   type Track,
 } from "@/lib/admin";
+import { useSelectedCohort } from "@/lib/selected-cohort";
 import {
   isSpreadsheetFile,
   isXlsxFile,
@@ -161,6 +162,7 @@ export function InviteStudentDialog({
 
 
   const [chosenCohortId, setChosenCohortId] = React.useState(defaultCohortId);
+  const { cohortId: topNavCohortId } = useSelectedCohort();
   const [chosenTrackId, setChosenTrackId] = React.useState("");
   const [emailSent, setEmailSent] = React.useState(true);
 
@@ -181,7 +183,12 @@ export function InviteStudentDialog({
 
   const cohorts = cohortsQuery.data ?? [];
   const tracks = tracksQuery.data ?? [];
-  const cohortId = chosenCohortId || cohorts[0]?.id || "";
+  // Defaults to the cohort picked in the top nav when it's one of the options.
+  const cohortId =
+    chosenCohortId ||
+    cohorts.find((cohort) => cohort.id === topNavCohortId)?.id ||
+    cohorts[0]?.id ||
+    "";
   const trackId = chosenTrackId || tracks[0]?.id || "";
   const selectedCohort = cohorts.find((cohort) => cohort.id === cohortId);
   const selectedTrack = tracks.find((track) => track.id === trackId);
