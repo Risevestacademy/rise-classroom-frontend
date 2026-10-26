@@ -254,6 +254,15 @@ async function listCohortSummaries() {
   );
 }
 
+/** Ids of the tracks a cohort runs. */
+async function listCohortTrackIds(cohortId: string) {
+  const [assignments, students] = await Promise.all([
+    listInstructorTracks(cohortId),
+    listAllStudents(cohortId),
+  ]);
+  return Array.from(cohortTrackNames(cohortId, assignments, students).keys());
+}
+
 async function getCohortDetail(id: string): Promise<CohortDetail> {
   const [{ data: cohort }, assignments, students, instructors] =
     await Promise.all([
@@ -414,6 +423,8 @@ export const cohortKeys = {
   all: adminKeys.allCohorts,
   summaries: () => [...adminKeys.allCohorts(), "summaries"] as const,
   detail: (id: string) => [...adminKeys.allCohorts(), "overview", id] as const,
+  trackIds: (id: string) =>
+    [...adminKeys.allCohorts(), "track-ids", id] as const,
 };
 
 export const cohortQueries = {
@@ -427,5 +438,11 @@ export const cohortQueries = {
     queryOptions({
       queryKey: cohortKeys.detail(id),
       queryFn: () => getCohortDetail(id),
+    }),
+
+  trackIds: (id: string) =>
+    queryOptions({
+      queryKey: cohortKeys.trackIds(id),
+      queryFn: () => listCohortTrackIds(id),
     }),
 };

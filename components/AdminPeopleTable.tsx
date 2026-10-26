@@ -22,6 +22,7 @@ import {
   type AdminUser,
   type UserFilters,
 } from "@/lib/admin";
+import { useSelectedCohort } from "@/lib/selected-cohort";
 import {
   formatJoined,
   getStudentStatus,
@@ -152,22 +153,39 @@ export function AdminPeopleTable({
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const debouncedSearch = useDebounced(search);
   const userFilters = toUserFilters(filterValues);
+  const { cohortId, isReady } = useSelectedCohort();
 
-  const usersQuery = useQuery(
-    adminQueries.users({
+  // Another cohort has its own pages, so start it from the first one.
+  const [listedCohortId, setListedCohortId] = React.useState(cohortId);
+  if (listedCohortId !== cohortId) {
+    setListedCohortId(cohortId);
+    setPage(1);
+    setSelected(new Set());
+  }
+
+  const usersQuery = useQuery({
+    ...adminQueries.users({
       role,
+      cohortId,
       ...userFilters,
       search: debouncedSearch || undefined,
       page,
       limit: pageSize,
     }),
-  );
-  const activeQuery = useQuery(
-    adminQueries.userCount({ role, onboardingStatus: "COMPLETED" }),
-  );
-  const pendingQuery = useQuery(
-    adminQueries.userCount({ role, onboardingStatus: "INVITED" }),
-  );
+    enabled: isReady,
+  });
+  const activeQuery = useQuery({
+    ...adminQueries.userCount({
+      role,
+      cohortId,
+      onboardingStatus: "COMPLETED",
+    }),
+    enabled: isReady,
+  });
+  const pendingQuery = useQuery({
+    ...adminQueries.userCount({ role, cohortId, onboardingStatus: "INVITED" }),
+    enabled: isReady,
+  });
   const tracksQuery = useQuery(adminQueries.tracks());
 
   const users = usersQuery.data?.items ?? [];

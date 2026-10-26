@@ -30,6 +30,7 @@ import {
   inviteUsersBulk,
   type InviteUserInput,
 } from "@/lib/admin";
+import { useSelectedCohort } from "@/lib/selected-cohort";
 import { readSpreadsheetAsCsv, spreadsheetAccept } from "@/lib/spreadsheet";
 
 /** One row parsed out of an uploaded CSV. */
@@ -146,6 +147,7 @@ export function InviteInstructorDialog({
   // Only the explicit choice is stored; the effective value falls back to the
   // first option, so there is no state to sync once the lists load.
   const [chosenCohortId, setChosenCohortId] = React.useState(defaultCohortId);
+  const { cohortId: topNavCohortId } = useSelectedCohort();
   const [chosenTrackId, setChosenTrackId] = React.useState("");
   const [csvRows, setCsvRows] = React.useState<CsvRow[]>([]);
   const [csvSkipped, setCsvSkipped] = React.useState(0);
@@ -177,7 +179,12 @@ export function InviteInstructorDialog({
     !programLoading && (cohorts.length === 0 || tracks.length === 0);
 
   // Fall back to the first option rather than syncing state in an effect.
-  const cohortId = chosenCohortId || cohorts[0]?.id || "";
+  // Defaults to the cohort picked in the top nav when it's one of the options.
+  const cohortId =
+    chosenCohortId ||
+    cohorts.find((cohort) => cohort.id === topNavCohortId)?.id ||
+    cohorts[0]?.id ||
+    "";
   const trackId = chosenTrackId || tracks[0]?.id || "";
 
   function refreshInstructors() {

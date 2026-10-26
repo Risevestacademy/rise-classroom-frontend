@@ -50,5 +50,13 @@ export function useSelectedCohort() {
     cohorts.find((c) => c.status === "ONGOING") ??
     cohorts[0];
 
-  return { cohort, cohorts, cohortsQuery };
+  return {
+    cohort,
+    cohorts,
+    cohortsQuery,
+    /** Pages scope their requests to this; undefined means every cohort. */
+    cohortId: cohort?.id,
+    /** False until the cohort list loads, so pages don't fetch twice. */
+    isReady: !cohortsQuery.isPending,
+  };
 }
