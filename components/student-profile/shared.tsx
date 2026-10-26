@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Popover } from "@base-ui/react/popover";
 
 import { ArrowDown01 } from "@/assets/icons";
 import { SelectInput } from "@/components/ui/select";
@@ -183,6 +184,7 @@ export function AttendanceGrid({
   days,
   size,
   cells = attendanceCell,
+  details,
 }: {
   monthLabel: string;
   leadingBlanks: number;
@@ -190,6 +192,8 @@ export function AttendanceGrid({
   size: "small" | "large";
   /** Square colours per status; defaults to `attendanceCell`. */
   cells?: Record<AttendanceStatus, string>;
+  /** What a day shows on hover, by day of the month; null shows nothing. */
+  details?: (day: number) => React.ReactNode;
 }) {
   const large = size === "large";
 
@@ -219,22 +223,47 @@ export function AttendanceGrid({
       {Array.from({ length: leadingBlanks }).map((_, index) => (
         <span key={`blank-${index}`} />
       ))}
-      {days.map((day, index) => (
-        <span
-          key={index}
-          title={`${monthLabel} ${index + 1}: ${attendanceLabels[day.status]}${
-            day.multiple ? " (multiple sessions)" : ""
-          }`}
-          className={cn("relative rounded-md", cells[day.status])}
-        >
-          {day.multiple && (
-            <span className="absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-0.5">
-              <span className="size-1.5 rounded-full bg-brand-900" />
-              <span className="size-1.5 rounded-full bg-surface-error-badge" />
+      {days.map((day, index) => {
+        const label = `${monthLabel} ${index + 1}: ${attendanceLabels[day.status]}${
+          day.multiple ? " (multiple sessions)" : ""
+        }`;
+        const className = cn("relative rounded-md", cells[day.status]);
+        const dots = day.multiple && (
+          <span className="absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-0.5">
+            <span className="size-1.5 rounded-full bg-brand-900" />
+            <span className="size-1.5 rounded-full bg-surface-error-badge" />
+          </span>
+        );
+        const content = details?.(index + 1);
+
+        if (!content) {
+          return (
+            <span key={index} title={label} className={className}>
+              {dots}
             </span>
-          )}
-        </span>
-      ))}
+          );
+        }
+
+        return (
+          <Popover.Root key={index}>
+            <Popover.Trigger
+              openOnHover
+              delay={100}
+              aria-label={label}
+              className={cn(className, "cursor-default")}
+            >
+              {dots}
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Positioner side="bottom" sideOffset={8} className="z-50">
+                <Popover.Popup className="flex w-[188px] flex-col gap-3 rounded-lg bg-surface-default p-5 shadow-[0_1px_3px_rgb(0_0_0/0.25)] outline-none">
+                  {content}
+                </Popover.Popup>
+              </Popover.Positioner>
+            </Popover.Portal>
+          </Popover.Root>
+        );
+      })}
     </div>
   );
 }

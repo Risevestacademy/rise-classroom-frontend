@@ -1,6 +1,6 @@
 // PENDING-BACKEND: the admin API has no curriculum progress, check-in,
-// activity or attendance data for a student yet, so these tabs show the
-// design's sample content until it does.
+// activity, attendance, assignment, mentorship or notes data for a student
+// yet, so these tabs show the design's sample content until it does.
 
 import type { AttendanceStatus } from "./overview-data";
 
@@ -302,3 +302,139 @@ export const attendanceByMonth: Record<
     29: { status: "attended" },
   },
 };
+
+export type AssignmentStatus =
+  | "notSubmitted"
+  | "submitted"
+  | "awaitingGrading"
+  | "graded"
+  | "overdue";
+
+export const assignments: {
+  id: string;
+  title: string;
+  kind: string;
+  module: string;
+  moduleName: string;
+  /** ISO date, so the due date filter can compare it with today. */
+  due: string;
+  dueContext: string;
+  status: AssignmentStatus;
+  /** Graded assignments only. */
+  score?: number;
+  outOf?: number;
+}[] = [
+  {
+    id: "a1",
+    title: "Visual Hierarchy",
+    kind: "Project · Individual",
+    module: "Module 1",
+    moduleName: "Introduction to Design",
+    due: "2026-10-12",
+    dueContext: "After lesson 3",
+    status: "graded",
+    score: 85,
+    outOf: 100,
+  },
+  {
+    id: "a2",
+    title: "User Research Report",
+    kind: "Report · Individual",
+    module: "Module 2",
+    moduleName: "User Research",
+    due: "2026-10-21",
+    dueContext: "After lesson 4",
+    status: "submitted",
+  },
+  {
+    id: "a3",
+    title: "Visual Hierarchy",
+    kind: "Project · Individual",
+    module: "Module 1",
+    moduleName: "Introduction to Design",
+    due: "2026-10-12",
+    dueContext: "After lesson 3",
+    status: "overdue",
+  },
+  {
+    id: "a4",
+    title: "Visual Hierarchy",
+    kind: "Project · Individual",
+    module: "Module 1",
+    moduleName: "Introduction to Design",
+    due: "2026-10-12",
+    dueContext: "After lesson 3",
+    status: "graded",
+    score: 92,
+    outOf: 100,
+  },
+];
+
+export const mentorship = {
+  mentor: {
+    name: "David Orobosa",
+    role: "Senior Product Designer",
+    track: "Design",
+    status: "Active",
+    cohort: "Cohort 2026",
+  },
+  sessions: { total: 12, attended: 8, missed: 4 },
+  upcoming: [
+    { date: "Mon, Oct 12 2026", time: "6:00 PM -7:00 PM" },
+    { date: "Mon, Oct 12 2026", time: "6:50 PM -7:00 PM" },
+  ],
+};
+
+export const profileNotes: {
+  id: string;
+  title: string;
+  body: string;
+  author: string;
+  role: string;
+  date: string;
+  pinned: boolean;
+}[] = [
+  {
+    id: "n1",
+    title: "Needs additional support with API concepts",
+    body: "Seyi is finding it challenging to grasp API integration concepts. Recommended assigning additional resources and a follow up session.",
+    author: "David Orobosa",
+    role: "Mentor",
+    date: "Sep 28, 2026",
+    pinned: true,
+  },
+  {
+    id: "n2",
+    title: "Great Progress on UI project",
+    body: "Seyi showed significant improvement in the recent UI project review. Demonstrated strong problem-solving skills and good attention to detail.",
+    author: "Aishat Lawal",
+    role: "Instructor",
+    date: "Sep 28, 2026",
+    pinned: false,
+  },
+];
+
+export type AttendanceSession = {
+  name: string;
+  time: string;
+  status: "attended" | "absent";
+};
+
+/** The sessions behind a day on the attendance calendar, as in the design. */
+export function sessionsOn(day: {
+  status: AttendanceStatus;
+  multiple?: boolean;
+}): AttendanceSession[] {
+  if (day.status === "none") return [];
+  const liveClass: AttendanceSession = {
+    name: "Rise Academy live class",
+    time: "6:00 PM – 8:00 PM",
+    status: day.status,
+  };
+  if (!day.multiple) return [liveClass];
+  return [
+    liveClass,
+    { name: "Mentorship session", time: "6:00 PM – 8:00 PM", status: "absent" },
+    { name: "Sprint session", time: "9:00 PM – 10:00 PM", status: "absent" },
+  ];
+}
