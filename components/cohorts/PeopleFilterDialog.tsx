@@ -17,7 +17,7 @@ import {
 export type PeopleFilter<T> = {
   key: string;
   title: string;
-  description: string;
+  description?: string;
   allLabel: string;
   options: { value: string; label: string }[];
   /** The option values a row has; it matches when any of them is selected. */

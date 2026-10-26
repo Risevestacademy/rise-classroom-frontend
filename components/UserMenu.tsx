@@ -14,6 +14,7 @@ import type { Role } from "@/lib/auth";
 const roleLabels: Record<Role, string> = {
   SUPERADMIN: "Super Admin",
   INSTRUCTOR: "Instructor",
+  MENTOR: "Mentor",
   STUDENT: "Student",
 };
 

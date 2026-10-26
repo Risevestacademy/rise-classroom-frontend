@@ -13,7 +13,7 @@ export function FilterSection({
   children,
 }: {
   title: string;
-  description: string;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -21,7 +21,9 @@ export function FilterSection({
       <legend className="text-lg leading-7 font-medium text-text-primary">
         {title}
       </legend>
-      <p className="text-sm leading-5 text-text-secondary">{description}</p>
+      {description && (
+        <p className="text-sm leading-5 text-text-secondary">{description}</p>
+      )}
       <div className="mt-3 flex flex-col gap-3">{children}</div>
     </fieldset>
   );
