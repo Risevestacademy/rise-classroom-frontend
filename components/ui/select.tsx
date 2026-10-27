@@ -34,8 +34,9 @@ function toList<T extends string>(
       }));
 }
 
+// States follow the design system's Dropdown, which matches the Text Input.
 const triggerClass =
-  "flex w-full min-w-0 items-center gap-2 rounded-lg border border-neutral-200 bg-transparent text-left text-sm text-neutral-800 outline-none focus-visible:border-brand-primary data-[popup-open]:border-brand-primary data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50";
+  "flex w-full min-w-0 items-center gap-2 rounded-lg border border-border-default bg-transparent text-left font-work text-sm text-text-primary outline-none transition-colors hover:bg-surface-subtle focus-visible:border-border-focus focus-visible:bg-surface-subtle data-[popup-open]:border-border-focus data-[popup-open]:bg-surface-subtle data-[disabled]:cursor-not-allowed data-[disabled]:bg-transparent data-[disabled]:text-text-disabled";
 
 const itemClass =
   "flex min-h-10 cursor-pointer items-center gap-3 px-4 py-1.5 text-sm text-text-primary outline-none select-none data-[highlighted]:bg-brand-100 data-[selected]:bg-brand-100 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50";
@@ -83,7 +84,7 @@ export function SelectInput<T extends string>({
   id,
   "aria-label": ariaLabel,
   className,
-  chevron = <ChevronDown className="size-4" />,
+  chevron = <ChevronDown className="size-5" />,
   chevronClassName,
   popupClassName,
 }: {
@@ -133,7 +134,7 @@ export function SelectInput<T extends string>({
         </SelectPrimitive.Value>
         {showChevron && (
           <SelectPrimitive.Icon
-            className={cn("flex shrink-0 text-neutral-400", chevronClassName)}
+            className={cn("flex shrink-0 text-icon-primary in-data-[disabled]:text-icon-disabled", chevronClassName)}
           >
             {chevron}
           </SelectPrimitive.Icon>
@@ -170,7 +171,7 @@ export function MultiSelectInput<T extends string>({
   id,
   "aria-label": ariaLabel,
   className,
-  chevron = <ChevronDown className="size-4" />,
+  chevron = <ChevronDown className="size-5" />,
   chevronClassName,
   popupClassName,
 }: {
@@ -240,7 +241,7 @@ export function MultiSelectInput<T extends string>({
           {summary || placeholder}
         </span>
         <SelectPrimitive.Icon
-          className={cn("flex shrink-0 text-neutral-400", chevronClassName)}
+          className={cn("flex shrink-0 text-icon-primary in-data-[disabled]:text-icon-disabled", chevronClassName)}
         >
           {chevron}
         </SelectPrimitive.Icon>

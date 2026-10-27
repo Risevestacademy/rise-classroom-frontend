@@ -22,7 +22,7 @@ const badgeVariants = cva(
 
       size: {
         sm: "h-6 gap-1 p-[6px] text-xs [&>svg]:size-3!",
-        lg: "h-7 gap-1 p-2 text-sm [&>svg]:size-3.5!", 
+        lg: "h-7 gap-1 p-2 text-sm [&>svg]:size-4!",
       },
     },
     compoundVariants: [

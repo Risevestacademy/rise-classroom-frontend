@@ -123,6 +123,8 @@ export function ActivityCard<K extends string>({
               aria-pressed={active}
               onClick={() => setFilter(item.value)}
               className={cn(
+                // Filter pills are filled, without the secondary button's border.
+                "border-transparent hover:border-transparent",
                 active
                   ? "bg-brand-100 text-text-brand hover:bg-brand-100"
                   : "bg-surface-subtle text-text-muted hover:bg-neutral-200",

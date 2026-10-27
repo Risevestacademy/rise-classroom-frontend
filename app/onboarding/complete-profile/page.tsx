@@ -20,14 +20,18 @@ import {
   getOnboardingErrorMessage,
   PROFILE_IMAGE_TYPES,
   validateProfileImage,
+  type onboardingCopy,
   type OnboardingDetails,
+  type OnboardingRole,
 } from "@/lib/onboarding"
 
 type StepId = 1 | 2 | 3
 
+type OnboardingCopy = (typeof onboardingCopy)[OnboardingRole]
+
 const DISPLAY_NAME_MAX = 100
 
-function stepContent(step: StepId, isInstructor: boolean) {
+function stepContent(step: StepId, copy: OnboardingCopy) {
   switch (step) {
     case 1:
       return {
@@ -35,18 +39,11 @@ function stepContent(step: StepId, isInstructor: boolean) {
         subtitle: "Tell us a little about yourself",
       }
     case 2:
-      return {
-        title: "Confirm your Program",
-        subtitle: isInstructor
-          ? "Review your program and teaching assignment before continuing."
-          : "Make sure these details are correct before you continue",
-      }
+      return { title: copy.confirmTitle, subtitle: copy.confirmSubtitle }
     case 3:
       return {
         title: "Welcome to Rise Classroom",
-        subtitle: isInstructor
-          ? "Your teaching space is ready. Let’s get you set up to support your learners."
-          : "",
+        subtitle: copy.welcomeSubtitle,
       }
   }
 }
@@ -229,12 +226,12 @@ function ConfirmProgramStep({
   )
 }
 
-function WelcomeStep() {
+function WelcomeStep({ message }: { message: string }) {
   return (
     <>
       <div className="aspect-square w-full rounded-2xl bg-surface-brand" />
       <p className="text-base font-medium text-neutral-800">
-        Learn, track progress, complete assignments, and stay connected.
+        {message}
       </p>
     </>
   )
@@ -243,7 +240,7 @@ function WelcomeStep() {
 export default function CompleteProfilePage() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { token, details, isInstructor, hrefFor, password, setPassword } =
+  const { token, details, copy, hrefFor, password, setPassword } =
     useOnboarding()
 
   const [step, setStep] = useState<StepId>(1)
@@ -307,7 +304,7 @@ export default function CompleteProfilePage() {
 
   if (needsPassword) return <OnboardingLoading />
 
-  const { title, subtitle } = stepContent(step, isInstructor)
+  const { title, subtitle } = stepContent(step, copy)
   const canContinue =
     !finish.isPending && (step !== 1 || displayName.trim().length > 0)
 
@@ -329,7 +326,7 @@ export default function CompleteProfilePage() {
           : "Yes, continue"
         : finish.data === "/sign-in"
           ? "Go to sign in"
-          : "Go to your dashboard"
+          : copy.dashboardLabel
 
   return (
     <AuthShell>
@@ -361,7 +358,7 @@ export default function CompleteProfilePage() {
           />
         )}
         {step === 2 && <ConfirmProgramStep memberships={details.memberships} />}
-        {step === 3 && <WelcomeStep />}
+        {step === 3 && <WelcomeStep message={copy.welcomeMessage} />}
 
         {finish.isError && (
           <p

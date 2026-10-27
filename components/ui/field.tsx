@@ -52,7 +52,7 @@ function FormField({
         {label}
       </Label>
 
-      <div className="mt-1.5">
+      <div className="mt-1">
         {textarea? 
 
         <Textarea maxLength={maxLength} showCount={showCount} />
