@@ -21,6 +21,7 @@ import { Field } from "@base-ui/react/field";
 
 import { ApiError } from "@/lib/api";
 import { instructorQueries } from "@/lib/instructor";
+import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
 
 import {
   resourcePageSchema,
