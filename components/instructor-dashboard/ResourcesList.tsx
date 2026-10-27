@@ -3,10 +3,10 @@
 import { MoreHorizontal, Search, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 
-import type { ResourceItem } from "@/components/instructor-dashboard/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   Table,
   TableBody,
@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { ResourceRecord } from "@/lib/instructor";
 
 import {
   DropdownMenu,
@@ -32,7 +33,6 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 
-
 import {
   Card,
   CardContent,
@@ -40,8 +40,21 @@ import {
   CardTitle
 } from "@/components/ui/card";
 
+import { useDeleteItem } from "@/lib/use-instructor-forms";
+
+export type ResourceRow = ResourceRecord & {
+  name: string;
+  moduleNumber: string;
+  moduleTitle: string;
+  lessonTitle: string;
+  lessonNumber: number;
+  uploaded: string;
+  // fileType?: string;
+  // fileSizeLabel?: string;
+};
+
 interface ResourcesListProps {
-  resources: ResourceItem[];
+  resources: ResourceRow[];
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   selectedIds: string[];
@@ -57,8 +70,10 @@ export function ResourcesList({
   onToggleSelectRow,
   onToggleSelectAll,
 }: ResourcesListProps) {
+  const [viewing, setViewing] = useState<ResourceRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ResourceRow | null>(null);
+  const deleteMutation = useDeleteItem("resource");
 
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   return (
     <div className="space-y-6 max-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -113,9 +128,9 @@ export function ResourcesList({
               <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
                 Uploaded
               </TableHead>
-              <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
+              {/* <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
                 Type & Size
-              </TableHead>
+              </TableHead> */}
               <TableHead className="text-[11px] font-semibold tracking-wider text-neutral-500 uppercase">
                 Status
               </TableHead>
@@ -144,53 +159,41 @@ export function ResourcesList({
                   </TableCell>
 
                   <TableCell className="py-4">
-                    <div>
-                      <p className="text-xs font-semibold text-neutral-900">
-                        {resource.name}
-                      </p>
-                    </div>
+                    <p className="text-xs font-semibold text-neutral-900">
+                      {resource.name}
+                    </p>
                   </TableCell>
 
                   <TableCell className="py-4">
-                    <div>
-                      <p className="text-xs font-medium text-neutral-700">
-                        {resource.moduleNumber}
-                      </p>
-                      <p className="text-[11px] text-neutral-500 mt-0.5">
-                        {resource.moduleTitle}
-                      </p>
-                    </div>
+                    <p className="text-xs font-medium text-neutral-700">
+                      {resource.moduleNumber}
+                    </p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      {resource.moduleTitle}
+                    </p>
                   </TableCell>
 
                   <TableCell className="py-4">
-                    <div>
-                      <p className="text-xs font-medium text-neutral-700">
-                        {resource.uploaded}
-                      </p>
-                    </div>
+                    <p className="text-xs font-medium text-neutral-700">
+                      {resource.uploaded}
+                    </p>
                   </TableCell>
 
-                  <TableCell className="py-4">
-                    <div>
-                      <p className="text-xs font-medium text-neutral-700">
-                        {resource.fileType}
-                      </p>
-                      <p className="text-[11px] text-neutral-500 mt-0.5">
-                        {resource.fileSize}
-                      </p>
-                    </div>
-                  </TableCell>
+                  {/* <TableCell className="py-4">
+                    <p className="text-xs font-medium text-neutral-700">
+                      {resource?.fileType}
+                    </p>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">
+                      {resource?.fileSizeLabel}
+                    </p>
+                  </TableCell> */}
 
                   <TableCell className="py-4">
                     <Badge
                       variant="light"
-                      className={
-                        resource.status === "Published"
-                          ? "bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0"
-                          : "bg-neutral-100 text-neutral-600 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0"
-                      }
+                      className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0"
                     >
-                      {resource.status}
+                      Published
                     </Badge>
                   </TableCell>
 
@@ -206,9 +209,17 @@ export function ResourcesList({
                         >
                           <DropdownMenuGroup>
                             <DropdownMenuItem
-                              onClick={() => setIsViewModalOpen(true)}
+                              onClick={() => setViewing(resource)}
                               className="cursor-pointer"
-                            >View</DropdownMenuItem>
+                            >
+                              View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDeleteTarget(resource)}
+                              className="cursor-pointer text-error-text"
+                            >
+                              Delete
+                            </DropdownMenuItem>
                           </DropdownMenuGroup>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -220,12 +231,18 @@ export function ResourcesList({
           </TableBody>
         </Table>
       </div>
-      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+
+      <Dialog
+        open={Boolean(viewing)}
+        onOpenChange={(open) => {
+          if (!open) setViewing(null);
+        }}
+      >
         <DialogContent className="w-[80%] !max-w-none h-[80%] !bottom-4 !right-4 !left-auto !top-auto !translate-x-0 !translate-y-0">
           <DialogHeader>
-            <DialogTitle>Visual Hierarchy</DialogTitle>
+            <DialogTitle>{viewing?.name}</DialogTitle>
             <DialogDescription>
-              Attached to Module 1 . Lesson2
+              Attached to {viewing?.moduleNumber} · Lesson {viewing?.lessonNumber}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col sm:flex-row pt-4 gap-3">
@@ -245,6 +262,7 @@ export function ResourcesList({
                 </div>
               </CardContent>
             </Card>
+
             <Card className="w-[30%] h-full bg-white border-neutral-200 ring-1 ring-neutral-300 shadow-lg rounded-2xl p-4">
               <CardHeader className="p-0">
                 <CardTitle className="text-[18px] font-semibold">
@@ -252,27 +270,27 @@ export function ResourcesList({
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 space-y-6">
-                <div className="flex items-center justify-between text-xs">
+                {/* <div className="flex items-center justify-between text-xs">
                   <span className="text-neutral-500 font-medium">Type:</span>
-                  <span className="text-neutral-900 font-semibold">PDF</span>
+                  <span className="text-neutral-900 font-semibold">
+                    {viewing?.fileType}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-neutral-500 font-medium">Size:</span>
-                  <span className="text-neutral-900 font-semibold">1.2 MB</span>
-                </div>
+                  <span className="text-neutral-900 font-semibold">
+                    {viewing?.fileSizeLabel}
+                  </span>
+                </div> */}
 
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-neutral-500 font-medium">Date uploaded:</span>
                   <div className="text-right">
-                    <p className="text-neutral-900 font-semibold">Oct 12, 2025</p>
-                    <p className="text-neutral-500 text-[11px]">11:59 PM</p>
+                    <p className="text-neutral-900 font-semibold">
+                      {viewing?.uploaded}
+                    </p>
                   </div>
-                </div>
-
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-neutral-500 font-medium">Uploaded by:</span>
-                  <span className="text-neutral-900 font-semibold">After lesson 4</span>
                 </div>
 
                 <div className="flex items-center justify-between text-xs pt-1">
@@ -290,6 +308,19 @@ export function ResourcesList({
           </div>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        itemName={deleteTarget?.title ?? ""}
+        isPending={deleteMutation.isPending}
+        onConfirm={() =>
+          deleteTarget &&
+          deleteMutation.mutate(deleteTarget.id, {
+            onSuccess: () => setDeleteTarget(null),
+          })
+        }
+      />
     </div>
   );
 }
