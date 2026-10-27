@@ -17,7 +17,7 @@ function Label({
   return (
     <Field.Label
       className={cn(
-        "flex items-center gap-1 text-[14px] font-medium text-neutral-700 data-[disabled]:text-neutral-300",
+        "flex items-center gap-1 text-sm font-medium text-text-primary",
         className
       )}
       {...props}
@@ -28,7 +28,7 @@ function Label({
         <span className="text-text-error">*</span>
       ) : (
         <>
-          <span className="font-medium text-[12px] text-neutral-300">(Optional)</span>
+          <span className="text-xs font-medium text-text-muted">(Optional)</span>
 
           <span className="shrink-0 text-neutral-300 [&>svg]:size-3.5">
             {icon ?? <InfoIcon />}
