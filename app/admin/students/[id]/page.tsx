@@ -12,7 +12,6 @@ import {
   File01,
   Location01,
   Mail02,
-  Message01,
   MoreVertical,
   Search01,
   UserCircle,
@@ -36,8 +35,10 @@ import {
   Card,
   CardHeader,
   CardSelect,
+  DetailItem,
   GroupLabel,
   IconBox,
+  MessageButton,
   ProgressBar,
   attendanceCell,
   attendanceLabels,
@@ -291,34 +292,6 @@ function StudentSummary({
           ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-function MessageButton() {
-  // PENDING-BACKEND: there's no messaging yet.
-  return (
-    <Button variant="tertiary" size="medium">
-      <Message01 className="size-[18px]" />
-      Message
-    </Button>
-  );
-}
-
-/** A row of text items, each led by an icon, as in the profile and mentor cards. */
-function DetailItem({
-  icon: Icon,
-  children,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-2 p-2">
-      <Icon className="size-6 shrink-0 text-icon-secondary" />
-      <span className="truncate font-work text-sm font-medium text-text-secondary">
-        {children}
-      </span>
     </div>
   );
 }

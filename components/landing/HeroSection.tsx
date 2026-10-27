@@ -34,7 +34,7 @@ export function HeroSection() {
           <RollText>Explore the platform</RollText>
         </Link>
         <Link
-          href="/onboarding/create-account"
+          href="/sign-up"
           data-magnetic
           className="landing-btn flex h-[54px] items-center rounded-[16px] bg-brand-950 px-5 lg:px-6 text-[14px] leading-5 font-medium text-white ring-2 ring-brand-200"
         >
