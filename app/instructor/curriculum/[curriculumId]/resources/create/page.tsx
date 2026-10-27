@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, Info } from "lucide-react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
@@ -39,6 +39,7 @@ function FieldError({ message }: { message?: string }) {
 
 export default function CreateResourcePage({ }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { curriculumId } = useParams<{ curriculumId: string }>();
 
   const {
@@ -96,170 +97,173 @@ export default function CreateResourcePage({ }) {
   });
 
   return (
-    <div className="w-full flex flex-col p-6 space-y-6 tracking-wide">
-      <div className="mb-2">
-        <p onClick={() => (router.back())} className="cursor-pointer text-sm mb-2">
-          &lt; Back to Curriculum
-        </p>
-        <h1 className="text-[24px] font-semibold mb-[4px]">
-          Add Resource
-        </h1>
-        <p className="text-[14px] font-regular text-neutral-500">
-          Upload a new resource for this Curriculum
-        </p>
-      </div>
+    <>
+      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: "Add Resource", href: pathname }]} />
+      <main className="w-full flex flex-col p-6 space-y-6 tracking-wide">
+        <div className="mb-2">
+          <p onClick={() => (router.back())} className="cursor-pointer text-sm mb-2">
+            &lt; Back to Curriculum
+          </p>
+          <h1 className="text-[24px] font-semibold mb-[4px]">
+            Add Resource
+          </h1>
+          <p className="text-[14px] font-regular text-neutral-500">
+            Upload a new resource for this Curriculum
+          </p>
+        </div>
 
-      <div className="flex flex-row gap-6 w-full items-start">
-        <form
-          onSubmit={onSubmit}
-          noValidate
-          className="w-[70%]">
-          <Card className="bg-white border-none ring-0 shadow-xs rounded-2xl  p-4">
-            <CardHeader className="p-0 mb-2">
-              <CardTitle className="text-[18px] font-semibold">
-                Basic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="space-y-4">
-                {errors.root?.message && (
-                  <Field.Root invalid className="w-fit">
-                    <FieldError message={errors.root.message} />
+        <div className="flex flex-row gap-6 w-full items-start">
+          <form
+            onSubmit={onSubmit}
+            noValidate
+            className="w-[70%]">
+            <Card className="bg-white border-none ring-0 shadow-xs rounded-2xl  p-4">
+              <CardHeader className="p-0 mb-2">
+                <CardTitle className="text-[18px] font-semibold">
+                  Basic Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="space-y-4">
+                  {errors.root?.message && (
+                    <Field.Root invalid className="w-fit">
+                      <FieldError message={errors.root.message} />
+                    </Field.Root>
+                  )}
+                  <Field.Root
+                    className="flex flex-col gap-1.5"
+                    invalid={Boolean(errors.type)}
+                  >
+                    <label className="text-sm font-medium text-neutral-800">
+                      Resource type
+                    </label>
+                    <div className="relative">
+                      <select
+                        {...register("type")}
+                        className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
+                      >
+                        <option value="pdf">PDF</option>
+                        <option value="docx">DOCX</option>
+                        <option value="docx">PPT</option>
+                      </select>
+                      <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
+                      <FieldError message={errors.type?.message} />
+                    </div>
                   </Field.Root>
-                )}
-                <Field.Root
-                  className="flex flex-col gap-1.5"
-                  invalid={Boolean(errors.type)}
-                >
-                  <label className="text-sm font-medium text-neutral-800">
-                    Resource type
-                  </label>
-                  <div className="relative">
-                    <select
-                      {...register("type")}
-                      className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
-                    >
-                      <option value="pdf">PDF</option>
-                      <option value="docx">DOCX</option>
-                      <option value="docx">PPT</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
-                    <FieldError message={errors.type?.message} />
-                  </div>
-                </Field.Root>
 
-                <Field.Root
-                  className="flex flex-col space-y-1.5"
-                  invalid={Boolean(errors.title)}
-                >
-                  <Field.Label className="text-[14px] font-medium text-text-primary">
-                    Title <span className="text-red-500">*</span>
-                  </Field.Label>
-                  <Input
-                    {...register("title")}
-                    placeholder="Type assignment title..."
-                    leadingIcon={null}
-                  />
-                  <FieldError message={errors.title?.message} />
-                </Field.Root>
+                  <Field.Root
+                    className="flex flex-col space-y-1.5"
+                    invalid={Boolean(errors.title)}
+                  >
+                    <Field.Label className="text-[14px] font-medium text-text-primary">
+                      Title <span className="text-red-500">*</span>
+                    </Field.Label>
+                    <Input
+                      {...register("title")}
+                      placeholder="Type assignment title..."
+                      leadingIcon={null}
+                    />
+                    <FieldError message={errors.title?.message} />
+                  </Field.Root>
 
-                <Field.Root
-                  className="flex flex-col space-y-1.5"
-                  invalid={Boolean(errors.description)}
-                >
-                  <Field.Label className="text-[14px] font-medium text-text-primary">
-                    Description <span className="text-neutral-400 font-normal">(Optional)</span>
-                  </Field.Label>
-                  <textarea
-                    {...register("description")}
-                    className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-neutral-800"
-                  />
-                  <FieldError message={errors.description?.message} />
-                </Field.Root>
+                  <Field.Root
+                    className="flex flex-col space-y-1.5"
+                    invalid={Boolean(errors.description)}
+                  >
+                    <Field.Label className="text-[14px] font-medium text-text-primary">
+                      Description <span className="text-neutral-400 font-normal">(Optional)</span>
+                    </Field.Label>
+                    <textarea
+                      {...register("description")}
+                      className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-neutral-800"
+                    />
+                    <FieldError message={errors.description?.message} />
+                  </Field.Root>
 
-                <Field.Root
-                  className="flex flex-col space-y-1.5"
+                  <Field.Root
+                    className="flex flex-col space-y-1.5"
 
-                  invalid={Boolean(errors.url)}>
-                  <Field.Label className="text-[14px] font-medium text-text-primary">
-                    Resources <span className="text-neutral-400 font-normal">(Optional)</span>
-                  </Field.Label>
-                  <Input
-                    {...register("url")}
-                    placeholder="Type module title..."
-                    leadingIcon={null}
-                  />
-                  <FieldError message={errors.url?.message} />
-                </Field.Root>
+                    invalid={Boolean(errors.url)}>
+                    <Field.Label className="text-[14px] font-medium text-text-primary">
+                      Resources <span className="text-neutral-400 font-normal">(Optional)</span>
+                    </Field.Label>
+                    <Input
+                      {...register("url")}
+                      placeholder="Type module title..."
+                      leadingIcon={null}
+                    />
+                    <FieldError message={errors.url?.message} />
+                  </Field.Root>
 
-                <Field.Root className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-neutral-800">
-                    Attach to <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      {...register("moduleId", {
-                        onChange: () => setValue("lessonId", ""),
-                      })}
-                      className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
-                    >
-                      <option value="">Choose a module</option>
-                      {modules.map((module, i) => (
-                        <option key={module.id} value={module.id}>
-                          Module {i + 1} - {module.title}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
-                    <FieldError message={errors.moduleId?.message} />
-                  </div>
-                </Field.Root>
+                  <Field.Root className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-neutral-800">
+                      Attach to <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        {...register("moduleId", {
+                          onChange: () => setValue("lessonId", ""),
+                        })}
+                        className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
+                      >
+                        <option value="">Choose a module</option>
+                        {modules.map((module, i) => (
+                          <option key={module.id} value={module.id}>
+                            Module {i + 1} - {module.title}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
+                      <FieldError message={errors.moduleId?.message} />
+                    </div>
+                  </Field.Root>
 
-                <Field.Root className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-neutral-800">
-                    Lesson
-                  </label>
-                  <div className="relative">
-                    <select
-                     {...register("lessonId")}
-                      className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
-                    >
-                       {lessonsData.map((lesson, i) => (
-                        <option key={lesson.id} value={lesson.id}>
-                          After lesson {i + 1}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
-                  </div>
-                </Field.Root>
+                  <Field.Root className="flex flex-col gap-1.5">
+                    <label className="text-sm font-medium text-neutral-800">
+                      Lesson
+                    </label>
+                    <div className="relative">
+                      <select
+                        {...register("lessonId")}
+                        className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
+                      >
+                        {lessonsData.map((lesson, i) => (
+                          <option key={lesson.id} value={lesson.id}>
+                            After lesson {i + 1}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
+                    </div>
+                  </Field.Root>
+                </div>
+              </CardContent>
+            </Card>
+            <div className="flex justify-end gap-3 w-full sm:w-auto mt-4">
+              <Button type="button" variant="secondary" className="flex-1 sm:flex-none border-neutral-300 rounded-lg px-5 py-4 text-sm font-medium">
+                Cancel
+              </Button>
+              <Button type="submit" className="flex-1 sm:flex-none bg-brand-primary text-white rounded-lg px-6 py-4 text-sm font-medium">
+                Create Resource
+              </Button>
+            </div>
+          </form>
+
+          <div className="w-[30%] hidden md:block space-y-4">
+            <div className="rounded-2xl bg-indigo-50/50 border border-indigo-100 p-4 flex gap-3 text-neutral-700">
+              <Info className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-sm">
+                <p className="font-semibold text-neutral-900">
+                  Create now, build next
+                </p>
+                <p className="text-neutral-500 leading-relaxed">
+                  After creating your module, add lessons, quizzes and assignments from its detail page. Draft modules aren&apos;t visible to students until you publish them.
+                </p>
               </div>
-            </CardContent>
-          </Card>
-          <div className="flex justify-end gap-3 w-full sm:w-auto mt-4">
-            <Button type="button" variant="secondary" className="flex-1 sm:flex-none border-neutral-300 rounded-lg px-5 py-4 text-sm font-medium">
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1 sm:flex-none bg-brand-primary text-white rounded-lg px-6 py-4 text-sm font-medium">
-              Create Resource
-            </Button>
-          </div>
-        </form>
-
-        <div className="w-[30%] hidden md:block space-y-4">
-          <div className="rounded-2xl bg-indigo-50/50 border border-indigo-100 p-4 flex gap-3 text-neutral-700">
-            <Info className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
-            <div className="space-y-1 text-sm">
-              <p className="font-semibold text-neutral-900">
-                Create now, build next
-              </p>
-              <p className="text-neutral-500 leading-relaxed">
-                After creating your module, add lessons, quizzes and assignments from its detail page. Draft modules aren&apos;t visible to students until you publish them.
-              </p>
             </div>
           </div>
         </div>
-      </div>
-    </div >
+      </main>
+    </>
   )
 }

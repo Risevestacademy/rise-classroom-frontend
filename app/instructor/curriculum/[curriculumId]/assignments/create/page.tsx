@@ -1,7 +1,8 @@
 "use client";
 
+import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
 import { CalendarDays, ChevronDown, Info } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
@@ -40,6 +41,7 @@ function FieldError({ message }: { message?: string }) {
 
 export default function CreateAssignmentPage({ }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { curriculumId } = useParams<{ curriculumId: string }>();
 
   const {
@@ -99,23 +101,25 @@ export default function CreateAssignmentPage({ }) {
   });
 
   return (
-    <div className="w-full flex flex-col p-6 space-y-6 tracking-wide">
-      <div className="mb-2">
-        <p onClick={() => (router.back())} className="cursor-pointer text-sm mb-2">
-          &lt; Back to Module
-        </p>
-        <h1 className="text-[24px] font-semibold mb-[4px]">
-          Add Assignment
-        </h1>
-        <p className="text-[14px] font-regular text-neutral-500">
-          Create a new assignment for this curriculum.
-        </p>
-      </div>
+    <>
+      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: "Add Assignment", href: pathname }]} />
+      <main className="w-full flex flex-col p-6 space-y-6 tracking-wide">
+        <div className="mb-2">
+          <p onClick={() => (router.back())} className="cursor-pointer text-sm mb-2">
+            &lt; Back to Module
+          </p>
+          <h1 className="text-[24px] font-semibold mb-[4px]">
+            Add Assignment
+          </h1>
+          <p className="text-[14px] font-regular text-neutral-500">
+            Create a new assignment for this curriculum.
+          </p>
+        </div>
 
-      <div className="flex flex-row gap-6 w-full items-start">
         <form
           onSubmit={onSubmit}
           noValidate
+          className="flex flex-row gap-6 w-full items-start"
         >
           <div className="w-[70%]">
             <Card className="bg-white border-none ring-0 shadow-xs rounded-2xl  p-4">
@@ -318,7 +322,7 @@ export default function CreateAssignmentPage({ }) {
             </div>
           </div>
         </form>
-      </div>
-    </div >
+      </main>
+    </>
   )
 }

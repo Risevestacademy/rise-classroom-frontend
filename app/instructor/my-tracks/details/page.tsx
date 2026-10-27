@@ -19,7 +19,7 @@ import {
   FileClock,
   Users,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import * as React from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
@@ -88,6 +88,10 @@ export default function TrackDetails() {
 function TrackDetailsContent() {
   const searchParams = useSearchParams();
   const assignmentId = searchParams.get("id");
+  const pathname = usePathname();
+
+  const searchString = searchParams.toString();
+  const fullHref = searchString ? `${pathname}?${searchString}` : pathname;
 
   const trackQuery = useQuery({
     ...instructorQueries.myTracks(),
@@ -160,7 +164,7 @@ function TrackDetailsContent() {
 
   return (
     <>
-      <InstructorNavbar breadcrumb={["Program", { label: "My Tracks", href: "/instructor/my-tracks" }, { label: `${trackName}`, href: `/instructor/my-tracks/${trackName}` }]} />
+      <InstructorNavbar breadcrumb={["Program", { label: "My Tracks", href: "/instructor/my-tracks" }, { label: `${trackName}`, href: fullHref }]} />
       <main className="flex flex-col h-full bg-neutral-100 p-6 space-y-6">
         <div id="heading" className="flex flex-row w-full items-center justify-between">
           <div>
