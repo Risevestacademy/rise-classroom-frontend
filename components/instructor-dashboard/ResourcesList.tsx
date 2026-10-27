@@ -71,8 +71,8 @@ export function ResourcesList({
   onToggleSelectAll,
 }: ResourcesListProps) {
   const [viewing, setViewing] = useState<ResourceRow | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<AssignmentRow | null>(null);
-    const deleteMutation = useDeleteItem("resource");
+  const [deleteTarget, setDeleteTarget] = useState<ResourceRow | null>(null);
+  const deleteMutation = useDeleteItem("resource");
 
   return (
     <div className="space-y-6 max-full">
