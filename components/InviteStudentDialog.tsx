@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/field";
+import { LockedField } from "@/components/ui/locked-field";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { parseInstructorCsv } from "@/components/InviteInstructorDialog";
 import {
@@ -49,6 +50,7 @@ import {
   type InviteUserInput,
   type Track,
 } from "@/lib/admin";
+import { cohortLabel } from "@/lib/cohorts";
 import { useSelectedCohort } from "@/lib/selected-cohort";
 import {
   isSpreadsheetFile,
@@ -144,7 +146,11 @@ function getProgramOptions(
   return { status: "loading" };
 }
 
-/** `defaultCohortId` preselects a cohort, e.g. when inviting from a cohort's page. */
+/**
+ * Invites go to the cohort picked in the top nav, or to `defaultCohortId`
+ * when inviting from a cohort's page. The cohort is shown but can't be
+ * changed here: a cohort shouldn't be edited from inside another one.
+ */
 export function InviteStudentDialog({
   defaultCohortId = "",
 }: { defaultCohortId?: string } = {}) {
@@ -161,7 +167,6 @@ export function InviteStudentDialog({
   );
 
 
-  const [chosenCohortId, setChosenCohortId] = React.useState(defaultCohortId);
   const { cohortId: topNavCohortId } = useSelectedCohort();
   const [chosenTrackId, setChosenTrackId] = React.useState("");
   const [emailSent, setEmailSent] = React.useState(true);
@@ -183,12 +188,7 @@ export function InviteStudentDialog({
 
   const cohorts = cohortsQuery.data ?? [];
   const tracks = tracksQuery.data ?? [];
-  // Defaults to the cohort picked in the top nav when it's one of the options.
-  const cohortId =
-    chosenCohortId ||
-    cohorts.find((cohort) => cohort.id === topNavCohortId)?.id ||
-    cohorts[0]?.id ||
-    "";
+  const cohortId = defaultCohortId || topNavCohortId || "";
   const trackId = chosenTrackId || tracks[0]?.id || "";
   const selectedCohort = cohorts.find((cohort) => cohort.id === cohortId);
   const selectedTrack = tracks.find((track) => track.id === trackId);
@@ -222,7 +222,6 @@ export function InviteStudentDialog({
     setFirstName("");
     setLastName("");
     setDetailsErrors({});
-    setChosenCohortId(defaultCohortId);
     setChosenTrackId("");
     setEmailSent(true);
     setUpload({ status: "idle" });
@@ -380,7 +379,6 @@ export function InviteStudentDialog({
             options={programOptions}
             cohortId={cohortId}
             trackId={trackId}
-            onCohortChange={setChosenCohortId}
             onTrackChange={setChosenTrackId}
             onRetry={retryProgramOptions}
             onCancel={() => handleOpenChange(false)}
@@ -457,7 +455,6 @@ export function InviteStudentDialog({
             options={programOptions}
             cohortId={cohortId}
             trackId={trackId}
-            onCohortChange={setChosenCohortId}
             onTrackChange={setChosenTrackId}
             onRetry={retryProgramOptions}
             submitting={bulkInviteMutation.isPending}
@@ -696,14 +693,12 @@ function ProgramFields({
   options,
   cohortId,
   trackId,
-  onCohortChange,
   onTrackChange,
   onRetry,
 }: {
   options: ProgramOptions;
   cohortId: string;
   trackId: string;
-  onCohortChange: (value: string) => void;
   onTrackChange: (value: string) => void;
   onRetry: () => void;
 }) {
@@ -727,20 +722,15 @@ function ProgramFields({
     );
   }
 
+  const cohort = options.cohorts.find((option) => option.id === cohortId);
+
   return (
     <>
-      {options.cohorts.length > 0 ? (
-        <SimpleSelect
-          label="Cohort"
-          value={cohortId}
-          options={options.cohorts.map((cohort) => ({
-            value: cohort.id,
-            label: cohort.name,
-          }))}
-          onChange={onCohortChange}
-        />
+      {cohort ? (
+        <LockedField label="Cohort" value={cohort.name} />
       ) : (
-        <ErrorMessage message="There are no ongoing cohorts. Create one before inviting students." />
+        // Only ongoing cohorts take new students.
+        <ErrorMessage message="Students can only join an ongoing cohort. Pick one in the cohort menu at the top of the page." />
       )}
 
       {options.tracks.length > 0 ? (
@@ -764,7 +754,6 @@ function ProgramDetailsStep({
   options,
   cohortId,
   trackId,
-  onCohortChange,
   onTrackChange,
   onRetry,
   onCancel,
@@ -773,14 +762,15 @@ function ProgramDetailsStep({
   options: ProgramOptions;
   cohortId: string;
   trackId: string;
-  onCohortChange: (value: string) => void;
   onTrackChange: (value: string) => void;
   onRetry: () => void;
   onCancel: () => void;
   onNext: () => void;
 }) {
   const canContinue =
-    options.status === "ready" && Boolean(cohortId) && Boolean(trackId);
+    options.status === "ready" &&
+    options.cohorts.some((cohort) => cohort.id === cohortId) &&
+    Boolean(trackId);
 
   return (
     <>
@@ -796,7 +786,6 @@ function ProgramDetailsStep({
           options={options}
           cohortId={cohortId}
           trackId={trackId}
-          onCohortChange={onCohortChange}
           onTrackChange={onTrackChange}
           onRetry={onRetry}
         />
@@ -1228,7 +1217,6 @@ function BulkConfirmStep({
   options,
   cohortId,
   trackId,
-  onCohortChange,
   onTrackChange,
   onRetry,
   submitting,
@@ -1240,7 +1228,6 @@ function BulkConfirmStep({
   options: ProgramOptions;
   cohortId: string;
   trackId: string;
-  onCohortChange: (value: string) => void;
   onTrackChange: (value: string) => void;
   onRetry: () => void;
   submitting: boolean;
@@ -1248,8 +1235,14 @@ function BulkConfirmStep({
   onBack: () => void;
   onSend: () => void;
 }) {
+  const cohortName =
+    options.status === "ready"
+      ? options.cohorts.find((cohort) => cohort.id === cohortId)?.name
+      : undefined;
   const canSend =
-    options.status === "ready" && Boolean(cohortId) && Boolean(trackId);
+    options.status === "ready" &&
+    options.cohorts.some((cohort) => cohort.id === cohortId) &&
+    Boolean(trackId);
 
   return (
     <>
@@ -1260,7 +1253,8 @@ function BulkConfirmStep({
           <span className="font-semibold text-neutral-800">
             {selectedCount} selected student{selectedCount === 1 ? "" : "s"}.
           </span>{" "}
-          Choose the cohort and track they&apos;ll all join.
+          Choose the track they&apos;ll all join
+          {cohortName ? ` in ${cohortLabel(cohortName)}` : ""}.
         </DialogDescription>
       </DialogHeader>
 
@@ -1269,7 +1263,6 @@ function BulkConfirmStep({
           options={options}
           cohortId={cohortId}
           trackId={trackId}
-          onCohortChange={onCohortChange}
           onTrackChange={onTrackChange}
           onRetry={onRetry}
         />

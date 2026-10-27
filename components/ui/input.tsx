@@ -4,10 +4,11 @@ import { User, Calendar, Mail2, SquareLock } from "@/assets/icons"
 import { PhoneInput, type PhoneInputProps } from "./phone-input"
 import { WebsiteInput, type WebsiteInputProps } from "./website-input"
 
+// Text and icon sizes per size, from the design system's Text Input.
 const sizeVariant = {
-  large: "h-[52px] gap-2 p-[14px]",
-  medium: "h-11 gap-2 p-3",
-  small: "h-9 gap-1 p-[10px]",
+  large: "h-[52px] gap-2 p-[14px] text-base [&_svg]:size-5",
+  medium: "h-11 gap-2 p-3 text-sm [&_svg]:size-[18px]",
+  small: "h-9 gap-1 p-[10px] text-sm [&_svg]:size-4",
 } as const
 
 type InputSize = keyof typeof sizeVariant
@@ -67,11 +68,11 @@ function InputWrapper({
     <div
       className={cn(
         sizeVariant[size],
-        "flex items-center rounded-lg text-neutral-800 border border-neutral-200 bg-transparent transition-colors",
-        "has-[input:placeholder-shown]:border-neutral-200 has-[input:placeholder-shown]:text-neutral-400",
-        "hover:bg-neutral-100",
-        "has-[input:focus]:border-brand-primary",
-        "has-[[data-disabled]]:border-neutral-200 has-[[data-disabled]]:bg-transparent has-[[data-disabled]]:text-text-disabled/30",
+        "flex items-center rounded-lg border border-border-default bg-transparent font-work text-text-primary transition-colors",
+        "has-[input:placeholder-shown]:text-icon-muted",
+        "hover:bg-surface-subtle",
+        "has-[input:focus]:border-border-focus has-[input:focus]:bg-surface-subtle",
+        "has-[[data-disabled]]:border-border-default has-[[data-disabled]]:bg-transparent has-[[data-disabled]]:text-text-disabled",
         "has-[[data-invalid]]:border-border-error has-[[data-invalid]]:bg-transparent has-[[data-invalid]]:text-text-error",
         className
       )}
@@ -107,21 +108,22 @@ function Input(props: InputProps) {
   return (
     <InputWrapper size={size}>
       {leadingIcon && (
-        <span className="shrink-0 [&>svg]:size-4 w-5 h-5 flex items-center justify-center">
+        <span className="flex shrink-0 items-center justify-center">
           {leadingIcon}
         </span>
       )}
       <Field.Control
         type={nativeInputType[type]}
         className={cn(
-          "w-full  outline-none ",
-          "disabled:cursor-not-allowed",
+          "w-full outline-none placeholder:text-text-muted",
+          "disabled:cursor-not-allowed disabled:placeholder:text-text-disabled",
+          "data-[invalid]:placeholder:text-text-error",
           className
         )}
         {...inputProps}
       />
       {trailingIcon && (
-        <span className="shrink-0 [&>svg]:size-4">
+        <span className="flex shrink-0 items-center">
           {trailingIcon}
         </span>
       )}

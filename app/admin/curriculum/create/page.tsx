@@ -10,6 +10,7 @@ import { ChevronLeft, Pencil } from "lucide-react";
 
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { CurriculumStats } from "@/components/curriculum/CurriculumStats";
+import { LockedField } from "@/components/ui/locked-field";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,14 +31,11 @@ export default function CreateCurriculumPage() {
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [trackId, setTrackId] = React.useState("");
-  const [cohortId, setCohortId] = React.useState("");
   const tracks = useQuery(adminQueries.tracks()).data ?? [];
-  const cohorts = useQuery(adminQueries.cohorts()).data ?? [];
   const track = tracks.find((t) => t.id === trackId) ?? tracks[0];
-  const { cohort: topNavCohort } = useSelectedCohort();
-  // Defaults to the cohort picked in the top nav.
-  const cohort =
-    cohorts.find((c) => c.id === cohortId) ?? topNavCohort ?? cohorts[0];
+  // The cohort picked in the top nav. It's shown but can't be changed
+  // here: a cohort shouldn't be edited from inside another one.
+  const { cohort } = useSelectedCohort();
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -132,12 +130,10 @@ export default function CreateCurriculumPage() {
                   onChange={setTrackId}
                   options={tracks.map((t) => ({ value: t.id, label: t.name }))}
                 />
-                <Select
+                <LockedField
                   size="large"
                   label="Cohort"
-                  value={cohort?.id ?? ""}
-                  onChange={setCohortId}
-                  options={cohorts.map((c) => ({ value: c.id, label: c.name }))}
+                  value={cohort?.name ?? ""}
                 />
               </div>
             </section>

@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
+import { LockedField } from "@/components/ui/locked-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -30,6 +31,7 @@ import {
   inviteUsersBulk,
   type InviteUserInput,
 } from "@/lib/admin";
+import { cohortLabel } from "@/lib/cohorts";
 import { useSelectedCohort } from "@/lib/selected-cohort";
 import { readSpreadsheetAsCsv, spreadsheetAccept } from "@/lib/spreadsheet";
 
@@ -150,7 +152,11 @@ export function parseInstructorCsv(text: string) {
 }
 
 type InviteDialogProps = {
-  /** Preselects a cohort, e.g. when inviting from a cohort's page. */
+  /**
+   * The cohort to invite into when inviting from a cohort's page; otherwise
+   * it's the one picked in the top nav. Either way it can't be changed here:
+   * a cohort shouldn't be edited from inside another one.
+   */
   defaultCohortId?: string;
   role?: InviteRole;
   /** Replaces the default button; call `open` to show the dialog. */
@@ -184,7 +190,6 @@ function InviteDialog({
   const [fileName, setFileName] = React.useState("");
   // Only the explicit choice is stored; the effective value falls back to the
   // first option, so there is no state to sync once the lists load.
-  const [chosenCohortId, setChosenCohortId] = React.useState(defaultCohortId);
   const { cohortId: topNavCohortId } = useSelectedCohort();
   const [chosenTrackId, setChosenTrackId] = React.useState("");
   const [csvRows, setCsvRows] = React.useState<CsvRow[]>([]);
@@ -217,12 +222,7 @@ function InviteDialog({
     !programLoading && (cohorts.length === 0 || tracks.length === 0);
 
   // Fall back to the first option rather than syncing state in an effect.
-  // Defaults to the cohort picked in the top nav when it's one of the options.
-  const cohortId =
-    chosenCohortId ||
-    cohorts.find((cohort) => cohort.id === topNavCohortId)?.id ||
-    cohorts[0]?.id ||
-    "";
+  const cohortId = defaultCohortId || topNavCohortId || "";
   const trackId = chosenTrackId || tracks[0]?.id || "";
 
   function refreshInstructors() {
@@ -335,7 +335,6 @@ function InviteDialog({
             trackId={trackId}
             cohorts={cohorts}
             tracks={tracks}
-            onCohortChange={setChosenCohortId}
             onTrackChange={setChosenTrackId}
             onCancel={() => handleOpenChange(false)}
             onNext={() => setStep("single-review")}
@@ -405,7 +404,6 @@ function InviteDialog({
             trackId={trackId}
             cohorts={cohorts}
             tracks={tracks}
-            onCohortChange={setChosenCohortId}
             onTrackChange={setChosenTrackId}
             isSending={bulkInvite.isPending}
             error={bulkInvite.error?.message ?? null}
@@ -648,7 +646,6 @@ function ProgramSelects({
   trackId,
   cohorts,
   tracks,
-  onCohortChange,
   onTrackChange,
 }: {
   isLoading: boolean;
@@ -656,7 +653,6 @@ function ProgramSelects({
   trackId: string;
   cohorts: { id: string; name: string }[];
   tracks: { id: string; name: string }[];
-  onCohortChange: (value: string) => void;
   onTrackChange: (value: string) => void;
 }) {
   if (isLoading) {
@@ -676,11 +672,9 @@ function ProgramSelects({
 
   return (
     <>
-      <SimpleSelect
+      <LockedField
         label="Cohort"
-        value={cohortId}
-        options={cohorts}
-        onChange={onCohortChange}
+        value={cohorts.find((cohort) => cohort.id === cohortId)?.name ?? ""}
       />
       <SimpleSelect
         label="Track"
@@ -698,7 +692,6 @@ function ProgramDetailsStep({
   trackId,
   cohorts,
   tracks,
-  onCohortChange,
   onTrackChange,
   onCancel,
   onNext,
@@ -708,7 +701,6 @@ function ProgramDetailsStep({
   trackId: string;
   cohorts: { id: string; name: string }[];
   tracks: { id: string; name: string }[];
-  onCohortChange: (value: string) => void;
   onTrackChange: (value: string) => void;
   onCancel: () => void;
   onNext: () => void;
@@ -730,7 +722,6 @@ function ProgramDetailsStep({
           trackId={trackId}
           cohorts={cohorts}
           tracks={tracks}
-          onCohortChange={onCohortChange}
           onTrackChange={onTrackChange}
         />
       </div>
@@ -1044,7 +1035,6 @@ function BulkConfirmStep({
   trackId,
   cohorts,
   tracks,
-  onCohortChange,
   onTrackChange,
   isSending,
   error,
@@ -1057,7 +1047,6 @@ function BulkConfirmStep({
   trackId: string;
   cohorts: { id: string; name: string }[];
   tracks: { id: string; name: string }[];
-  onCohortChange: (value: string) => void;
   onTrackChange: (value: string) => void;
   isSending: boolean;
   error: string | null;
@@ -1065,14 +1054,15 @@ function BulkConfirmStep({
   onSend: () => void;
 }) {
   const noun = useNoun();
+  const cohortName = cohorts.find((cohort) => cohort.id === cohortId)?.name;
   return (
     <>
       <DialogHeader>
         <DialogTitle>Confirm and send</DialogTitle>
         <DialogDescription>
           You&apos;re about to invite {selectedCount} {noun.one}
-          {selectedCount === 1 ? "" : "s"}. Choose the cohort and track
-          they&apos;ll all be assigned to.
+          {selectedCount === 1 ? "" : "s"}. Choose the track they&apos;ll all
+          join{cohortName ? ` in ${cohortLabel(cohortName)}` : ""}.
         </DialogDescription>
       </DialogHeader>
 
@@ -1083,7 +1073,6 @@ function BulkConfirmStep({
           trackId={trackId}
           cohorts={cohorts}
           tracks={tracks}
-          onCohortChange={onCohortChange}
           onTrackChange={onTrackChange}
         />
       </div>

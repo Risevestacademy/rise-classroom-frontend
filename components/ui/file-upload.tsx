@@ -70,23 +70,26 @@ export function UploadedFileRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2.5">
+    // The design system's File Upload card, in its Completed state.
+    <div className="flex items-center gap-4 rounded-xl border border-border-default bg-white py-4 pr-4 pl-3.5">
       <FileTypeIcon name={file.name} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-neutral-800">{file.name}</p>
-        <p className="flex items-center gap-1 text-xs text-neutral-400">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className="truncate text-sm font-medium text-text-primary">
+          {file.name}
+        </p>
+        <p className="flex items-center gap-1 font-work text-xs text-text-secondary">
           {formatFileSize(file.sizeBytes)} ·
-          <CheckCircle2 className="h-3 w-3 text-text-success" />
-          Uploaded
+          <CheckCircle2 className="size-4 text-text-success" />
+          Completed
         </p>
       </div>
       <button
         type="button"
         aria-label={`Remove ${file.name}`}
         onClick={onRemove}
-        className="text-neutral-800 hover:text-text-error"
+        className="text-text-primary hover:text-text-error"
       >
-        <X className="h-4 w-4" />
+        <X className="size-5" />
       </button>
     </div>
   );

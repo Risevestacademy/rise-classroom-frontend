@@ -1,6 +1,6 @@
 import { Field } from "@base-ui/react/field"
 
-import { InfoIcon } from "@/assets/icons"
+import { AlertCircle } from "@/assets/icons"
 
 import { cn } from "cn"
 
@@ -12,13 +12,13 @@ function Hint({
   return (
     <Field.Description
       className={cn(
-        "mt-1.5 flex items-center gap-1 text-xs text-neutral-500",
+        "mt-1 flex items-center gap-1 font-work text-[13px]/[18px] text-text-secondary data-[disabled]:text-text-disabled",
         className
       )}
       {...props}
     >
-      <span className="shrink-0 [&>svg]:size-3.5">
-        <InfoIcon />
+      <span className="shrink-0">
+        <AlertCircle variant="solid" size={14} />
       </span>
 
       {children}
@@ -34,13 +34,13 @@ function Error({
   return (
     <Field.Error
       className={cn(
-        "mt-1.5 flex items-center gap-1 text-xs text-text-error",
+        "mt-1 flex items-center gap-1 font-work text-[13px]/[18px] text-text-error",
         className
       )}
       {...props}
     >
-      <span className="shrink-0 [&>svg]:size-3.5">
-        <InfoIcon />
+      <span className="shrink-0">
+        <AlertCircle variant="solid" size={14} />
       </span>
 
       {children}

@@ -122,6 +122,11 @@ const trackKeys: { key: TrackKey; pattern: RegExp }[] = [
   { key: "mobile", pattern: /mobile|android|ios/i },
 ];
 
+/** "Spring" reads "Spring cohort"; a name that already says cohort stays as is. */
+export function cohortLabel(name: string) {
+  return /cohort/i.test(name) ? name : `${name} cohort`;
+}
+
 /** Picks the design colour set for a track by its name, cycling for unknown names. */
 export function trackKeyFor(name: string, index = 0): TrackKey {
   return (
