@@ -27,7 +27,7 @@ function mentorStatus(user: AdminUser): MentorStatus {
   return "active";
 }
 
-function toMentor(user: AdminUser): Mentor {
+export function toMentor(user: AdminUser): Mentor {
   return {
     id: user.id,
     name: user.displayName ?? user.name,
