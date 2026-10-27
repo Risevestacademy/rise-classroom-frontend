@@ -2,7 +2,67 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { api, ApiError, type Envelope } from "@/lib/api";
 
-export type OnboardingRole = "STUDENT" | "INSTRUCTOR";
+export type OnboardingRole = "STUDENT" | "INSTRUCTOR" | "MENTOR";
+
+/** The onboarding wording that differs by role, as in each role's designs. */
+export const onboardingCopy: Record<
+  OnboardingRole,
+  {
+    inviteTitle: (firstName: string) => string;
+    createAccountSubtitle: string;
+    /** Mentors see an "Account created" step before completing their profile. */
+    showsAccountCreated: boolean;
+    confirmTitle: string;
+    confirmSubtitle: string;
+    welcomeSubtitle: string;
+    welcomeMessage: string;
+    dashboardLabel: string;
+  }
+> = {
+  STUDENT: {
+    inviteTitle: (firstName) =>
+      `Hi ${firstName}, you've been invited to Rise Classroom`,
+    createAccountSubtitle:
+      "Set up your account to start your learning journey with Rise Classroom",
+    showsAccountCreated: false,
+    confirmTitle: "Confirm your Program",
+    confirmSubtitle: "Make sure these details are correct before you continue",
+    welcomeSubtitle: "",
+    welcomeMessage:
+      "Learn, track progress, complete assignments, and stay connected.",
+    dashboardLabel: "Go to your dashboard",
+  },
+  INSTRUCTOR: {
+    inviteTitle: (firstName) =>
+      `Hi ${firstName}, you've been invited to Rise Classroom as an instructor`,
+    createAccountSubtitle:
+      "Set up your account to get started with Rise Classroom.",
+    showsAccountCreated: false,
+    confirmTitle: "Confirm your Program",
+    confirmSubtitle:
+      "Review your program and teaching assignment before continuing.",
+    welcomeSubtitle:
+      "Your teaching space is ready. Let’s get you set up to support your learners.",
+    welcomeMessage:
+      "Learn, track progress, complete assignments, and stay connected.",
+    dashboardLabel: "Go to your dashboard",
+  },
+  MENTOR: {
+    // PENDING-BACKEND: the design names the program ("Rise Academy"), but the
+    // invite details don't include it.
+    inviteTitle: () => "Your invitation to Rise Classroom has been accepted",
+    createAccountSubtitle:
+      "Set up your account to start mentoring with Rise Classroom.",
+    showsAccountCreated: true,
+    confirmTitle: "Confirm your Assignment",
+    confirmSubtitle: "Make sure these details are correct before you continue",
+    welcomeSubtitle: "",
+    welcomeMessage:
+      "Support your students, track their progress, and guide them throughout their learning journey.",
+    // PENDING-DESIGN: there's no tour yet, so this goes to the dashboard.
+    dashboardLabel: "Take a quick tour",
+  },
+};
 
 /** What `POST /onboarding/details` returns for an invite link's token. */
 export type OnboardingDetails = {

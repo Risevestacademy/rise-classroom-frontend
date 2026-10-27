@@ -19,7 +19,7 @@ import { evaluatePassword } from "@/lib/password-strength"
 
 export default function CreateAccountPage() {
   const router = useRouter()
-  const { details, isInstructor, hrefFor, password: savedPassword, setPassword: savePassword } =
+  const { details, copy, hrefFor, password: savedPassword, setPassword: savePassword } =
     useOnboarding()
 
   // Coming back from the next step keeps what was already typed.
@@ -43,7 +43,13 @@ export default function CreateAccountPage() {
     if (!canSubmit) return
 
     savePassword(password)
-    router.push(hrefFor("/onboarding/complete-profile"))
+    router.push(
+      hrefFor(
+        copy.showsAccountCreated
+          ? "/onboarding/account-created"
+          : "/onboarding/complete-profile"
+      )
+    )
   }
 
   return (
@@ -55,9 +61,7 @@ export default function CreateAccountPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-800">Create your account</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {isInstructor
-            ? "Set up your account to get started with Rise Classroom."
-            : "Set up your account to start your learning journey with Rise Classroom"}
+          {copy.createAccountSubtitle}
         </p>
       </div>
 
