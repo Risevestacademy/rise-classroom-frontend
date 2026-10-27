@@ -50,7 +50,7 @@ export function LandingNav() {
             <RollText>Sign in</RollText>
           </Link>
           <Link
-            href="/onboarding/create-account"
+            href="/sign-up"
             className="landing-btn flex h-10 items-center rounded-[14px] bg-brand-950 px-4 text-[14px] leading-5 font-medium text-white"
           >
             <RollText>Start for free</RollText>
