@@ -12,7 +12,6 @@ import {
   File01,
   Location01,
   Mail02,
-  Message01,
   MoreVertical,
   Search01,
   UserCircle,
@@ -22,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { ActivityTab } from "@/components/student-profile/ActivityTab";
 import { AssignmentsTab } from "@/components/student-profile/AssignmentsTab";
 import { AttendanceTab } from "@/components/student-profile/AttendanceTab";
@@ -36,8 +35,10 @@ import {
   Card,
   CardHeader,
   CardSelect,
+  DetailItem,
   GroupLabel,
   IconBox,
+  MessageButton,
   ProgressBar,
   attendanceCell,
   attendanceLabels,
@@ -270,7 +271,7 @@ function StudentSummary({
 
   return (
     <div className="mt-6 flex w-fit max-w-full items-center gap-3 rounded-lg bg-surface-default px-3 py-6 shadow-[0_1px_3px_rgb(0_0_0/0.25)]">
-      <InitialsAvatar name={student.name} className="size-[60px] text-lg" />
+      <PersonAvatar name={student.name} colorKey={student.id} size={60} />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="truncate text-lg/6 font-semibold text-text-primary">
           {name}
@@ -291,34 +292,6 @@ function StudentSummary({
           ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-function MessageButton() {
-  // PENDING-BACKEND: there's no messaging yet.
-  return (
-    <Button variant="tertiary" size="medium">
-      <Message01 className="size-[18px]" />
-      Message
-    </Button>
-  );
-}
-
-/** A row of text items, each led by an icon, as in the profile and mentor cards. */
-function DetailItem({
-  icon: Icon,
-  children,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-2 p-2">
-      <Icon className="size-6 shrink-0 text-icon-secondary" />
-      <span className="truncate font-work text-sm font-medium text-text-secondary">
-        {children}
-      </span>
     </div>
   );
 }
@@ -344,10 +317,7 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
     <Card>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <InitialsAvatar
-            name={student.name}
-            className="size-[80px] text-2xl"
-          />
+          <PersonAvatar name={student.name} colorKey={student.id} size={80} />
           <div className="flex min-w-0 flex-col gap-2">
             <p className="truncate text-2xl font-semibold text-text-primary">
               {name}
@@ -401,7 +371,7 @@ function MentorCard() {
       <CardHeader title="Mentor" />
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <InitialsAvatar name={mentor.name} className="size-[60px] text-lg" />
+          <PersonAvatar name={mentor.name} size={60} />
           <div className="flex min-w-0 flex-col gap-1">
             <p className="truncate text-lg/6 font-semibold text-text-primary">
               {mentor.name}

@@ -4,7 +4,7 @@ import { Menu } from "@base-ui/react/menu";
 import { Pin } from "lucide-react";
 
 import { InformationCircle, MoreHorizontal } from "@/assets/icons";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { cn } from "@/lib/utils";
 import { profileNotes } from "@/app/admin/students/[id]/profile-data";
 
@@ -68,10 +68,7 @@ function NoteCard({ note }: { note: Note }) {
       <p className="font-work text-sm text-text-secondary">{note.body}</p>
 
       <div className="flex items-center gap-2.5">
-        <InitialsAvatar
-          name={note.author}
-          className="size-8 font-work text-xs font-normal"
-        />
+        <PersonAvatar name={note.author} size={32} />
         <div className="flex flex-col font-work">
           <p className="text-sm font-medium text-text-primary">{note.author}</p>
           <p className="text-[13px]/[18px] text-text-secondary">{note.role}</p>

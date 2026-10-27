@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Menu } from "@base-ui/react/menu";
-
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { Add01, Filter, MoreHorizontal, Search01 } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
-import { EditUserDialog } from "@/components/EditUserDialog";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { InviteInstructorDialog } from "@/components/InviteInstructorDialog";
+import { MentorActionsMenu } from "@/components/MentorActionsMenu";
+import { StatCard } from "@/components/StatCard";
 import {
   matchesPeopleFilters,
   PeopleFilterDialog,
@@ -18,10 +18,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getUpdateUserErrorMessage, updateUser } from "@/lib/admin";
 import { mentorQueries, type Mentor, type MentorStatus } from "@/lib/mentors";
 import { useSelectedCohort } from "@/lib/selected-cohort";
-import { sessionQuery } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
 
 /** Status pills sit on the brand surface; only the text is coloured. */
@@ -146,21 +144,12 @@ export default function MentorsPage() {
 
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
-            <div
+            <StatCard
               key={stat.title}
-              className="flex min-h-[120px] flex-col gap-1 rounded-xl bg-surface-default p-5 pb-11 shadow-[0_1px_3px_rgb(0_0_0/0.15)]"
-            >
-              <p className="text-sm font-medium text-text-primary">
-                {stat.title}
-              </p>
-              {isLoading ? (
-                <Skeleton className="h-8 w-12" />
-              ) : (
-                <p className="text-2xl leading-8 font-semibold text-black">
-                  {stat.value}
-                </p>
-              )}
-            </div>
+              title={stat.title}
+              value={stat.value}
+              loading={isLoading}
+            />
           ))}
         </div>
 
@@ -270,14 +259,11 @@ export default function MentorsPage() {
                       </td>
                       <td className="px-3">
                         <div className="flex items-center gap-3">
-                          <InitialsAvatar
-                            name={mentor.name}
-                            className="size-10 font-work text-base font-normal"
-                          />
+                          <PersonAvatar name={mentor.name} colorKey={mentor.id} size={40} />
                           <div className="min-w-0">
-                            <p className="truncate font-work text-sm font-medium tracking-[-0.01em] text-black">
+                            <Link href={`/admin/mentors/${mentor.id}`} className="truncate font-work text-sm font-medium tracking-[-0.01em] text-black cursor-pointer">
                               {mentor.name}
-                            </p>
+                            </Link>
                             <p className="mt-1 truncate font-work text-sm text-text-secondary">
                               {mentor.email}
                             </p>
@@ -301,7 +287,7 @@ export default function MentorsPage() {
                         {mentor.joined}
                       </td>
                       <td className="px-2.5">
-                        <MentorRowActions mentor={mentor} />
+                        <MentorActionsMenu mentor={mentor} />
                       </td>
                     </tr>
                   );
@@ -333,83 +319,6 @@ export default function MentorsPage() {
           />
         </section>
       </main>
-    </>
-  );
-}
-
-/**
- * The "…" menu on a mentor row. PENDING-BACKEND: the mentor profile isn't
- * designed, assigning students has no picker design, and there's no delete
- * endpoint, so those items don't do anything yet.
- */
-function MentorRowActions({ mentor }: { mentor: Mentor }) {
-  const queryClient = useQueryClient();
-  const { data: session } = useQuery(sessionQuery());
-  const [editOpen, setEditOpen] = React.useState(false);
-  const canManage = session?.user.role === "SUPERADMIN";
-
-  // Suspending the account is how a mentor is deactivated; Edit mentor can
-  // set them back to active.
-  const deactivate = useMutation({
-    mutationFn: () => updateUser(mentor.id, { status: "SUSPENDED" }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
-  });
-
-  const itemClass =
-    "flex cursor-pointer p-2 text-text-primary outline-none data-highlighted:bg-neutral-200 data-[disabled]:cursor-not-allowed data-[disabled]:text-text-muted";
-
-  return (
-    <>
-      <Menu.Root onOpenChange={(open) => open && deactivate.reset()}>
-        <Menu.Trigger
-          aria-label={`${mentor.name} actions`}
-          className="flex size-8 items-center justify-center text-text-primary"
-        >
-          <MoreHorizontal className="size-6" />
-        </Menu.Trigger>
-        <Menu.Portal>
-          <Menu.Positioner align="end" sideOffset={4} className="z-50">
-            <Menu.Popup className="flex flex-col gap-3 bg-surface-subtle p-2.5 font-work text-sm shadow-[0_1px_3px_rgb(0_0_0/0.15)] outline-none">
-              <Menu.Item className={itemClass}>View profile</Menu.Item>
-              <Menu.Item
-                disabled={!canManage}
-                onClick={() => setEditOpen(true)}
-                className={itemClass}
-              >
-                Edit mentor
-              </Menu.Item>
-              <Menu.Item className={itemClass}>Assign students</Menu.Item>
-              <Menu.Item
-                disabled={
-                  !canManage ||
-                  mentor.status === "inactive" ||
-                  deactivate.isPending
-                }
-                closeOnClick={false}
-                onClick={() => deactivate.mutate()}
-                className={cn(itemClass, deactivate.isError && "text-text-error")}
-              >
-                {deactivate.isPending
-                  ? "Deactivating…"
-                  : deactivate.isError
-                    ? getUpdateUserErrorMessage(deactivate.error)
-                    : "Deactivate mentor"}
-              </Menu.Item>
-              <Menu.Item className="flex cursor-pointer p-2 text-text-error outline-none data-highlighted:bg-neutral-200">
-                Delete mentor
-              </Menu.Item>
-            </Menu.Popup>
-          </Menu.Positioner>
-        </Menu.Portal>
-      </Menu.Root>
-
-      <EditUserDialog
-        user={mentor.user}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        isSelf={session?.user.id === mentor.id}
-      />
     </>
   );
 }

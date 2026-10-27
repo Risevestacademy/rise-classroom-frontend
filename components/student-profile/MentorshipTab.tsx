@@ -7,7 +7,7 @@ import {
   Message01,
   MoreVertical,
 } from "@/assets/icons";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import { mentorship } from "@/app/admin/students/[id]/profile-data";
 import { BrandBadge, Card, CardHeader } from "./shared";
@@ -43,7 +43,7 @@ export function MentorshipTab() {
         <CardHeader title="Assigned mentor" />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <InitialsAvatar name={mentor.name} className="size-[80px] text-2xl" />
+            <PersonAvatar name={mentor.name} size={80} />
             <div className="flex min-w-0 flex-col gap-2">
               <div className="flex flex-col">
                 <p className="truncate text-xl font-semibold text-text-primary">

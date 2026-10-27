@@ -3,7 +3,8 @@
 import * as React from "react";
 import { Popover } from "@base-ui/react/popover";
 
-import { ArrowDown01 } from "@/assets/icons";
+import { ArrowDown01, Message01 } from "@/assets/icons";
+import { Button } from "@/components/ui/button";
 import { SelectInput } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -134,6 +135,68 @@ export function BrandBadge({
     >
       {children}
     </span>
+  );
+}
+
+export function MessageButton() {
+  // PENDING-BACKEND: there's no messaging yet.
+  return (
+    <Button variant="tertiary" size="medium">
+      <Message01 className="size-[18px]" />
+      Message
+    </Button>
+  );
+}
+
+/** A row of text items, each led by an icon, as in the profile and mentor cards. */
+export function DetailItem({
+  icon: Icon,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 p-2">
+      <Icon className="size-6 shrink-0 text-icon-secondary" />
+      <span className="truncate font-work text-sm font-medium text-text-secondary">
+        {children}
+      </span>
+    </div>
+  );
+}
+
+export type TimelineGroup = {
+  label: string;
+  items: { time: string; title: string; detail: string }[];
+};
+
+/** Days of events on a vertical line, as in the Activity tabs. */
+export function ActivityTimeline({ groups }: { groups: TimelineGroup[] }) {
+  return (
+    <div className="flex flex-col gap-4 p-2.5">
+      {groups.map((group) => (
+        <div key={group.label} className="flex flex-col gap-8">
+          <p className="text-sm font-medium text-black">{group.label}</p>
+          <ol className="relative ml-[22px] flex flex-col gap-[38px] border-l-2 border-border-strong pl-4">
+            {group.items.map((item) => (
+              <li key={item.time + item.title} className="relative">
+                <span className="absolute top-1 -left-[21px] size-2 rounded-full bg-border-strong" />
+                <p className="font-work text-xs font-medium text-text-secondary">
+                  {item.time}
+                </p>
+                <p className="mt-1 font-work text-sm font-medium tracking-[-0.01em] text-black">
+                  {item.title}
+                </p>
+                <p className="mt-1 font-work text-[13px]/[18px] text-text-secondary">
+                  {item.detail}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </div>
   );
 }
 
