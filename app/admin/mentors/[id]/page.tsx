@@ -25,7 +25,7 @@ import {
   type PeopleFilter,
   type PeopleFilterValues,
 } from "@/components/cohorts/PeopleFilterDialog";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { MentorActionsMenu } from "@/components/MentorActionsMenu";
 import { StatCard } from "@/components/StatCard";
 import { ActivityCard } from "@/components/student-profile/ActivityTab";
@@ -210,7 +210,7 @@ function MentorBadges({ mentor }: { mentor: Mentor }) {
 function MentorSummary({ mentor }: { mentor: Mentor }) {
   return (
     <div className="mt-6 flex w-fit max-w-full items-center gap-3 rounded-lg bg-surface-default px-3 py-6 shadow-[0_1px_3px_rgb(0_0_0/0.25)]">
-      <InitialsAvatar name={mentor.name} className="size-[60px] text-lg" />
+      <PersonAvatar name={mentor.name} colorKey={mentor.id} size={60} />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="truncate text-lg/6 font-semibold text-text-primary">
           {mentor.name}
@@ -231,7 +231,7 @@ function OverviewTab({ mentor }: { mentor: Mentor }) {
       <div className="flex min-w-0 flex-col gap-4">
         <UpcomingSessionsCard />
         <Card className="gap-4">
-          <CardHeader title="Recent Activites" />
+          <CardHeader title="Recent Activities" />
           {/* The Overview shows the two most recent days. */}
           <ActivityTimeline groups={mentorActivity(mentor.name).slice(0, 2)} />
         </Card>
@@ -261,7 +261,7 @@ function ProfileCard({ mentor }: { mentor: Mentor }) {
     <Card>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <InitialsAvatar name={mentor.name} className="size-[80px] text-2xl" />
+          <PersonAvatar name={mentor.name} colorKey={mentor.id} size={80} />
           <div className="flex min-w-0 flex-col gap-1">
             <p className="truncate text-2xl font-semibold text-text-primary">
               {mentor.name}
@@ -332,9 +332,10 @@ function AssignedStudentsCard() {
               className="flex min-h-[68px] items-center justify-between gap-4 pl-3"
             >
               <div className="flex min-w-0 items-center gap-3">
-                <InitialsAvatar
+                <PersonAvatar
                   name={student.name}
-                  className="size-10 font-work text-base font-normal"
+                  colorKey={student.id}
+                  size={40}
                 />
                 <div className="min-w-0">
                   <StudentName student={student} />
@@ -548,9 +549,10 @@ function StudentsTab() {
                     </td>
                     <td className="px-3">
                       <div className="flex items-center gap-3">
-                        <InitialsAvatar
+                        <PersonAvatar
                           name={student.name}
-                          className="size-10 font-work text-base font-normal"
+                          colorKey={student.id}
+                          size={40}
                         />
                         <div className="min-w-0">
                           <StudentName student={student} />

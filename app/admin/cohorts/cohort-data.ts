@@ -35,11 +35,13 @@ export const studentStatusLabels: Record<StudentStatus, string> = {
   needsAttention: "Needs atttention",
 };
 
-/** `avatar` is an image path; otherwise the initials are shown in `tone`. */
+/**
+ * `avatar` is an image path; without one the initials show on a colour
+ * picked from `id`.
+ */
 export type Person = {
+  id?: string;
   name: string;
   email: string;
-  initials?: string;
-  tone?: "warning" | "info" | "success" | "accent" | "error";
   avatar?: string;
 };

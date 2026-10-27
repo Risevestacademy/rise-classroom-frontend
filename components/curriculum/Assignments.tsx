@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, NotebookPen, Plus } from "lucide-react";
 
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import {
   RowActionsMenu,
   StatusBadge,
@@ -445,10 +445,7 @@ function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
               </td>
               <td className="px-4 py-5">
                 <div className="flex items-center gap-3">
-                  <InitialsAvatar
-                    name={submission.studentName}
-                    className="h-10 w-10"
-                  />
+                  <PersonAvatar name={submission.studentName} size={40} />
                   <div>
                     <p className="font-medium text-neutral-800">
                       {submission.studentName}

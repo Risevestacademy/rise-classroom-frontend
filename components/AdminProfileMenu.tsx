@@ -11,7 +11,7 @@ import {
   User,
   type IconProps,
 } from "@/assets/icons";
-import { UserAvatar } from "@/components/UserAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionQuery } from "@/lib/session-query";
 import { useSignOut } from "@/lib/use-sign-out";
@@ -37,7 +37,9 @@ export function AdminProfileMenu() {
   const signOut = useSignOut();
   const user = session?.user;
   const name = user?.displayName ?? user?.name ?? "Account";
-  const avatar = { name, avatar: user?.image ?? "/default-avatar.png" };
+  const avatar = (
+    <PersonAvatar name={name} src={user?.image} colorKey={user?.id} size={36} />
+  );
 
   return (
     <Menu.Root>
@@ -45,7 +47,11 @@ export function AdminProfileMenu() {
         disabled={isPending}
         className="flex items-center gap-2.5 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-brand-primary cursor-pointer data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
       >
-        <UserAvatar user={avatar} isLoading={isPending} />
+        {isPending ? (
+          <Skeleton className="size-[36px] rounded-full" />
+        ) : (
+          avatar
+        )}
         {isPending ? (
           <div className="hidden flex-col gap-1 sm:flex">
             <Skeleton className="h-4 w-20" />
@@ -80,7 +86,7 @@ export function AdminProfileMenu() {
                   </span>
                 )}
               </div>
-              <UserAvatar user={avatar} />
+              {avatar}
             </div>
 
             <MenuLink href="/admin/profile" icon={User}>

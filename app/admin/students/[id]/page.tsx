@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
-import { InitialsAvatar } from "@/components/InitialsAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { ActivityTab } from "@/components/student-profile/ActivityTab";
 import { AssignmentsTab } from "@/components/student-profile/AssignmentsTab";
 import { AttendanceTab } from "@/components/student-profile/AttendanceTab";
@@ -271,7 +271,7 @@ function StudentSummary({
 
   return (
     <div className="mt-6 flex w-fit max-w-full items-center gap-3 rounded-lg bg-surface-default px-3 py-6 shadow-[0_1px_3px_rgb(0_0_0/0.25)]">
-      <InitialsAvatar name={student.name} className="size-[60px] text-lg" />
+      <PersonAvatar name={student.name} colorKey={student.id} size={60} />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="truncate text-lg/6 font-semibold text-text-primary">
           {name}
@@ -317,10 +317,7 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
     <Card>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <InitialsAvatar
-            name={student.name}
-            className="size-[80px] text-2xl"
-          />
+          <PersonAvatar name={student.name} colorKey={student.id} size={80} />
           <div className="flex min-w-0 flex-col gap-2">
             <p className="truncate text-2xl font-semibold text-text-primary">
               {name}
@@ -374,7 +371,7 @@ function MentorCard() {
       <CardHeader title="Mentor" />
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <InitialsAvatar name={mentor.name} className="size-[60px] text-lg" />
+          <PersonAvatar name={mentor.name} size={60} />
           <div className="flex min-w-0 flex-col gap-1">
             <p className="truncate text-lg/6 font-semibold text-text-primary">
               {mentor.name}

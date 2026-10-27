@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 
 import { Filter, MoreHorizontal, Search01 } from "@/assets/icons";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -20,14 +20,6 @@ export type PeopleColumn<T> = {
   /** Tailwind width class for the column. */
   width: string;
   cell: (row: T) => React.ReactNode;
-};
-
-const initialsTone: Record<NonNullable<Person["tone"]>, string> = {
-  warning: "bg-surface-warning-badge text-text-warning",
-  info: "bg-info-surface text-text-info",
-  success: "bg-success-surface text-text-success",
-  accent: "bg-[#eddeff] text-[#7e22ce]",
-  error: "bg-surface-error-badge text-text-error",
 };
 
 /** The searchable people table used by the Students, Instructors and Mentors tabs. */
@@ -153,7 +145,12 @@ export function CohortPeopleTable<T extends Person>({
                 </td>
                 <td className="px-3">
                   <div className="flex items-center gap-3">
-                    <PersonAvatar person={row} />
+                    <PersonAvatar
+                      name={row.name}
+                      src={row.avatar}
+                      colorKey={row.id}
+                      size={44}
+                    />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-text-primary">
                         {row.name}
@@ -214,29 +211,5 @@ export function StatusPill({
     <Badge variant="light" status={status} className="font-medium">
       {children}
     </Badge>
-  );
-}
-
-function PersonAvatar({ person }: { person: Person }) {
-  if (person.avatar) {
-    return (
-      <Image
-        src={person.avatar}
-        alt=""
-        width={44}
-        height={44}
-        className="size-11 shrink-0 rounded-full"
-      />
-    );
-  }
-  return (
-    <span
-      className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-full font-work text-lg",
-        initialsTone[person.tone ?? "info"],
-      )}
-    >
-      {person.initials}
-    </span>
   );
 }

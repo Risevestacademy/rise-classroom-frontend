@@ -130,17 +130,8 @@ export function trackKeyFor(name: string, index = 0): TrackKey {
   );
 }
 
-const tones = ["info", "warning", "success", "accent", "error"] as const;
-
 function personFor(id: string, name: string, email: string): Person {
-  const initials = name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  const hash = [...id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return { name, email, initials, tone: tones[hash % tones.length] };
+  return { id, name, email };
 }
 
 function studentTracks(user: AdminUser, cohortId: string) {
