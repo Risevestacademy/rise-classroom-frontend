@@ -9,7 +9,7 @@ const PLANS = [
     status: "Available",
     title: "Free to start",
     body: "For independent instructors and small learning communities getting started with Rise Classroom.",
-    cta: { label: "Get started for free", href: "/onboarding/create-account" },
+    cta: { label: "Get started for free", href: "/sign-up" },
     featured: true,
   },
   {
