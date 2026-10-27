@@ -11,14 +11,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AuthShell } from "@/components/AuthShell";
 import {
   getOnboardingErrorMessage,
+  onboardingCopy,
   onboardingQueries,
   type OnboardingDetails,
+  type OnboardingRole,
 } from "@/lib/onboarding";
 
 type OnboardingContextValue = {
   token: string;
   details: OnboardingDetails;
-  isInstructor: boolean;
+  role: OnboardingRole;
+  /** The wording for this invite's role. */
+  copy: (typeof onboardingCopy)[OnboardingRole];
   /** Builds an onboarding URL that keeps the invite token attached. */
   hrefFor: (path: string) => string;
   /**
@@ -126,7 +130,8 @@ export function OnboardingProvider({
       value={{
         token,
         details: detailsQuery.data,
-        isInstructor: detailsQuery.data.role === "INSTRUCTOR",
+        role: detailsQuery.data.role,
+        copy: onboardingCopy[detailsQuery.data.role],
         hrefFor,
         password,
         setPassword,

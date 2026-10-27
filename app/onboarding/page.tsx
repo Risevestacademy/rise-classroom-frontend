@@ -7,13 +7,12 @@ import { AuthShell } from "@/components/AuthShell"
 import { useOnboarding } from "@/components/onboarding/OnboardingProvider"
 
 export default function OnboardingInvitePage() {
-  const { details, isInstructor, hrefFor } = useOnboarding()
+  const { details, copy, hrefFor } = useOnboarding()
 
   return (
     <AuthShell>
       <h1 className="text-xl font-bold text-neutral-800">
-        Hi {details.firstName}, you&apos;ve been invited to Rise Classroom
-        {isInstructor ? " as an instructor" : ""}
+        {copy.inviteTitle(details.firstName)}
       </h1>
 
       <div className="h-[350px] w-full rounded-2xl bg-surface-brand" />
