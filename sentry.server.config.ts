@@ -6,10 +6,15 @@ import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT,
+  // Local `next dev` errors are tagged "development" so they don't mix with
+  // the deployed environment's (e.g. "staging") events.
+  environment:
+    process.env.NODE_ENV === "development"
+      ? "development"
+      : process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT,
 
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
+  // Trace every request locally, but sample 10% in production to save quota.
+  tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1,
 
   dataCollection: {
     // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
