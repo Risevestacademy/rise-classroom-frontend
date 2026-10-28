@@ -8,7 +8,7 @@ import { cn } from "cn";
 import { Search } from "@/assets/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { ModuleStatus } from "@/lib/curriculum";
+import type { ModuleStatus } from "@/lib/curriculum.types";
 
 export type StatusFilter = ModuleStatus | "ALL";
 

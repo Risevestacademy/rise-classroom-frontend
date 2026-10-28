@@ -9,12 +9,8 @@ import { ChevronLeft } from "lucide-react";
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { ModuleForm } from "@/components/curriculum/ModuleForm";
 import { ApiError } from "@/lib/api";
-import {
-  curriculumKeys,
-  curriculumQueries,
-  updateModule,
-  type SaveModuleInput,
-} from "@/lib/curriculum";
+import { curriculumKeys, curriculumQueries, updateModule } from "@/lib/curriculum.api";
+import type { SaveModuleInput } from "@/lib/curriculum.types";
 
 export default function EditModulePage({
   params,

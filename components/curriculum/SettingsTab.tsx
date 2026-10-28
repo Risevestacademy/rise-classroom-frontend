@@ -11,15 +11,14 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
 import { Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  curriculumKeys,
-  formatDate,
-  updateCurriculum,
-  type Curriculum,
-  type ModuleStatus,
-  type ProgressMode,
-  type UpdateCurriculumInput,
-} from "@/lib/curriculum";
+import { curriculumKeys, updateCurriculum } from "@/lib/curriculum.api";
+import { formatDate } from "@/lib/curriculum.mappers";
+import type {
+  Curriculum,
+  ModuleStatus,
+  ProgressMode,
+  UpdateCurriculumInput,
+} from "@/lib/curriculum.types";
 
 const statusOptions: RadioOption<ModuleStatus>[] = [
   {

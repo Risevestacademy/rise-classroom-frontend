@@ -17,15 +17,13 @@ import { FormField } from "@/components/ui/field";
 import { Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
+import { createResource, curriculumKeys, curriculumQueries } from "@/lib/curriculum.api";
+import { resourceFromUpload } from "@/lib/curriculum.mappers";
 import {
   resourceKinds,
-  createResource,
-  curriculumKeys,
-  curriculumQueries,
-  resourceFromUpload,
   type ResourceFile,
   type ResourceKind,
-} from "@/lib/curriculum";
+} from "@/lib/curriculum.types";
 
 const maxFileBytes = 50e6;
 const wholeModule = "module";

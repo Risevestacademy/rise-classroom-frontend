@@ -23,17 +23,18 @@ import { FileChip } from "@/components/ui/file-upload";
 import { DetailRows, DetailSheet } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  submissionTypes,
   curriculumKeys,
   curriculumQueries,
   deleteAssignment,
-  formatDate,
-  formatTime,
   updateAssignment,
+} from "@/lib/curriculum.api";
+import { formatDate, formatTime } from "@/lib/curriculum.mappers";
+import {
+  submissionTypes,
   type CurriculumAssignment,
   type ModuleAssignment,
   type ModuleStatus,
-} from "@/lib/curriculum";
+} from "@/lib/curriculum.types";
 
 export function AddAssignmentButton({
   curriculumId,

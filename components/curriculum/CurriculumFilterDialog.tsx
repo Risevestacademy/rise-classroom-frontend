@@ -18,7 +18,7 @@ import {
   noCurriculumFilters,
   type CurriculumFilters,
   type ModuleStatus,
-} from "@/lib/curriculum";
+} from "@/lib/curriculum.types";
 
 const statuses: { value: ModuleStatus; label: string }[] = [
   { value: "PUBLISHED", label: "Active" },

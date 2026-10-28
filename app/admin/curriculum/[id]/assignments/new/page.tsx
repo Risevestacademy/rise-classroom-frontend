@@ -18,15 +18,16 @@ import { Hint, InputWrapper, Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
 import {
-  submissionTypes,
-  trackDetails,
   createAssignment,
   curriculumKeys,
   curriculumQueries,
-  resourceFromUpload,
+} from "@/lib/curriculum.api";
+import { trackDetails, resourceFromUpload } from "@/lib/curriculum.mappers";
+import {
+  submissionTypes,
   type ResourceFile,
   type SubmissionType,
-} from "@/lib/curriculum";
+} from "@/lib/curriculum.types";
 
 const acceptedExtensions = [".jpeg", ".jpg", ".png", ".pdf", ".mp4"];
 const maxFileBytes = 50e6;

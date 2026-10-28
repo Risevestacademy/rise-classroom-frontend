@@ -44,14 +44,13 @@ import { SuccessToast } from "@/components/ui/toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/lib/api";
 import {
-  trackDetails,
   curriculumKeys,
   curriculumQueries,
   deleteCurriculum,
-  formatModuleNumber,
   reorderModules,
-  type CurriculumModule,
-} from "@/lib/curriculum";
+} from "@/lib/curriculum.api";
+import { trackDetails, formatModuleNumber } from "@/lib/curriculum.mappers";
+import type { CurriculumModule } from "@/lib/curriculum.types";
 
 const tabLabels = {
   overview: "Overview",
