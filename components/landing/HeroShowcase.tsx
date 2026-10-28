@@ -18,8 +18,6 @@ import { cn } from "@/lib/utils";
 const PRODUCT_TABS = [
   { label: "Analytics", screen: "/landing/analytics-mockup.webp" },
   { label: "Learning", screen: "/landing/dashboard-mockup.webp" },
-  { label: "Community", screen: "/landing/dashboard-mockup.webp" },
-  { label: "Chat", screen: "/landing/dashboard-mockup.webp" },
   { label: "Calendar", screen: "/landing/calendar-mockup.webp" },
 ];
 const TAB_COUNT = PRODUCT_TABS.length;
