@@ -1,12 +1,13 @@
 "use client";
 
-import * as React from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { useQuery, useQueries } from "@tanstack/react-query";
-import { ChevronDown, Calendar, FileClock } from "lucide-react";
 import { Search } from "@/assets/icons";
-import { instructorQueries } from "@/lib/instructor";
+import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { instructorQueries } from "@/lib/instructor";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { Calendar, ChevronDown, FileClock } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import * as React from "react";
 
 export default function MyTracks() {
   const router = useRouter();
@@ -38,7 +39,9 @@ export default function MyTracks() {
   );
 
   return (
-    <div className="flex flex-col bg-neutral-100 h-full p-6 space-y-6">
+    <>
+      <InstructorNavbar breadcrumb={["Program", { label: "My Tracks", href: "/instructor/my-tracks" }]} />
+      <main className="flex flex-col bg-neutral-100 h-full p-6 space-y-6">
       <div id="heading" className="flex flex-row w-full items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-neutral-800 tracking-tight">
@@ -141,6 +144,7 @@ export default function MyTracks() {
           </p>
         </div>
       )}
-    </div>
+      </main>
+    </>
   );
 }

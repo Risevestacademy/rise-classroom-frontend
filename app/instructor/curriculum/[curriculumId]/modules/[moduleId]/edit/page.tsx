@@ -1,11 +1,14 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 
 import ModuleForm from "@/components/instructor-dashboard/ModuleForm";
 import { useModuleInitialValues } from "@/lib/use-instructor-forms";
 
+import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
+
 export default function EditModulePage() {
+  const pathname = usePathname();
   const { curriculumId, moduleId } = useParams<{
     curriculumId: string;
     moduleId: string;
@@ -18,12 +21,15 @@ export default function EditModulePage() {
   }
 
   return (
-    <ModuleForm
-      key={moduleId}
-      mode="edit"
-      curriculumId={curriculumId}
-      moduleId={moduleId}
-      initialValues={initialValues}
-    />
+    <>
+      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: "Edit Module", href: pathname }]} />
+      <ModuleForm
+        key={moduleId}
+        mode="edit"
+        curriculumId={curriculumId}
+        moduleId={moduleId}
+        initialValues={initialValues}
+      />
+    </>
   );
 }
