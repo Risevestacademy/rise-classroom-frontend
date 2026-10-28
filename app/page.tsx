@@ -6,7 +6,8 @@ import { LandingNav } from "@/components/landing/LandingNav";
 import { LandingMotion } from "@/components/landing/motion/LandingMotion";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
-import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
+// Hidden until we have real testimonials.
+// import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { ValuePropSection } from "@/components/landing/ValuePropSection";
 import type { Metadata } from "next";
 
@@ -27,7 +28,7 @@ export default function HomePage() {
         <KeywordMarquee />
         <ValuePropSection />
         <SolutionSection />
-        <TestimonialsSection />
+        {/* <TestimonialsSection /> */}
         <PricingSection />
         <FaqSection />
       </main>

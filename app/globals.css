@@ -327,6 +327,10 @@ body {
   transition-delay: calc(var(--i) * 14ms);
 }
 
+.roll-text > span::before {
+  content: attr(data-char);
+}
+
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   :is(a, button):hover .roll-text > span {
     transform: translateY(-1lh);

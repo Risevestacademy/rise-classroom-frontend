@@ -54,10 +54,10 @@ export function LandingFooter() {
           (~0.28 × width tall) until the footer fits the screen height. */}
       <div className="mx-auto flex w-full flex-1 flex-col justify-between gap-16 lg:max-w-[min(1248px,calc((100svh_-_254px)*3.6))] lg:gap-10">
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
-          <Link href="/" aria-label="Rise Classroom home" className="shrink-0">
+          <Link href="/" className="shrink-0">
             <Image
               src="/classroom-logo-white.svg"
-              alt=""
+              alt="Rise Classroom home"
               width={74}
               height={60}
             />

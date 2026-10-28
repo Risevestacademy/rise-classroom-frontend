@@ -2,7 +2,9 @@ import type { CSSProperties } from "react";
 
 /**
  * Link/button label whose letters roll up to a copy of themselves on hover.
- * The visible letters are decorative; screen readers get the plain label.
+ * The label is in the DOM once, for screen readers and find-in-page; the
+ * rolling letters are drawn by CSS (`data-char`), so they aren't text nodes
+ * that get read or copied one by one.
  */
 export function RollText({ children }: { children: string }) {
   return (
@@ -10,9 +12,11 @@ export function RollText({ children }: { children: string }) {
       <span className="sr-only">{children}</span>
       <span aria-hidden className="roll-text">
         {Array.from(children).map((char, index) => (
-          <span key={index} style={{ "--i": index } as CSSProperties}>
-            {char === " " ? " " : char}
-          </span>
+          <span
+            key={index}
+            data-char={char === " " ? " " : char}
+            style={{ "--i": index } as CSSProperties}
+          />
         ))}
       </span>
     </>

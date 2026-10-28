@@ -4,6 +4,8 @@ import { RollText } from "@/components/landing/RollText";
 
 import { cn } from "@/lib/utils";
 
+const CONTACT_EMAIL = "contact@riseclassroom.com";
+
 const PLANS = [
   {
     status: "Available",
@@ -16,8 +18,10 @@ const PLANS = [
     status: "Coming later",
     title: "For organizations",
     body: "For academies, schools, and teams managing learning at scale.",
-    // TODO: no contact destination yet.
-    cta: { label: "Talk to our team", href: "#pricing" },
+    cta: {
+      label: "Talk to our team",
+      href: `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Rise Classroom for organizations")}`,
+    },
     featured: false,
   },
 ];
