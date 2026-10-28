@@ -118,7 +118,7 @@ export default function SignUpPage() {
                   size="medium"
                   leadingIcon={null}
                   className={inputClass}
-                  placeholder="Placeholder text"
+                  placeholder="e.g Ada Okafor"
                   autoComplete="name"
                   value={fullName}
                   onChange={(event: React.ChangeEvent<HTMLInputElement>) =>

@@ -20,7 +20,7 @@ const PRODUCT_TABS = [
   { label: "Learning", screen: "/landing/dashboard-mockup.webp" },
   { label: "Community", screen: "/landing/dashboard-mockup.webp" },
   { label: "Chat", screen: "/landing/dashboard-mockup.webp" },
-  { label: "Calender", screen: "/landing/calendar-mockup.webp" },
+  { label: "Calendar", screen: "/landing/calendar-mockup.webp" },
 ];
 const TAB_COUNT = PRODUCT_TABS.length;
 /** How long each tab stays up before advancing to the next. */
@@ -242,11 +242,7 @@ export function HeroShowcase() {
               key={tab.label}
               data-screen={index}
               src={tab.screen}
-              alt={
-                index === active
-                  ? `Rise Classroom ${tab.label.toLowerCase()} dashboard`
-                  : ""
-              }
+              alt={`Rise Classroom ${tab.label.toLowerCase()} dashboard`}
               aria-hidden={index !== active}
               width={1208}
               height={861}

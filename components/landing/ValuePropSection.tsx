@@ -6,16 +6,19 @@ const VALUE_PROPS = [
   {
     body: "Bring your learning structure into one place. Organize cohorts, manage tracks, and keep lessons and learning resources connected to the right students.",
     icon: "/landing/icon-structured.png",
+    iconAlt: "Stacked layers icon",
     title: ["Structured", "Learning."],
   },
   {
     body: "Give instructors and students a shared space to learn, teach, access materials, and stay connected throughout the learning experience.",
     icon: "/landing/icon-connected.png",
+    iconAlt: "Three connected people icon",
     title: ["Keep everyone", "connected."],
   },
   {
     body: "Make learning progress easier to understand. Follow assignments, goals, feedback, and milestones so learners and educators know what needs attention next.",
     icon: "/landing/icon-progress.png",
+    iconAlt: "Progress pie chart icon",
     title: ["Make progress", "visible."],
   },
 ];
@@ -64,7 +67,7 @@ export function ValuePropSection() {
             </p>
             <Image
               src={item.icon}
-              alt=""
+              alt={item.iconAlt}
               data-value-icon
               width={96}
               height={96}

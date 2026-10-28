@@ -14,7 +14,6 @@ export default function robots(): MetadataRoute.Robots {
         "/onboarding/",
         "/api/",
         "/design-system",
-        "/sentry-example-page",
       ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
