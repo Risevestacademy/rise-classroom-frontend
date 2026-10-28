@@ -18,14 +18,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  trackDetails,
   curriculumKeys,
   curriculumQueries,
   deleteCurriculum,
+} from "@/lib/curriculum.api";
+import { trackDetails } from "@/lib/curriculum.mappers";
+import {
   noCurriculumFilters,
   type Curriculum,
   type CurriculumFilters,
-} from "@/lib/curriculum";
+} from "@/lib/curriculum.types";
 import { useSelectedCohort } from "@/lib/selected-cohort";
 
 export default function CurriculumPage({

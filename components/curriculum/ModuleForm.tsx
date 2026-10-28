@@ -15,16 +15,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/field";
 import { Hint, Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  emptyAssignment,
-  resourceFromUpload,
-  type Curriculum,
-  type CurriculumModule,
-  type ModuleAssignment,
-  type ModuleLesson,
-  type ResourceFile,
-  type SaveModuleInput,
-} from "@/lib/curriculum";
+import { emptyAssignment, resourceFromUpload } from "@/lib/curriculum.mappers";
+import type {
+  Curriculum,
+  CurriculumModule,
+  ModuleAssignment,
+  ModuleLesson,
+  ResourceFile,
+  SaveModuleInput,
+} from "@/lib/curriculum.types";
 
 const acceptedExtensions = [".pdf", ".pptx", ".docx"];
 const maxFileBytes = 20e6;

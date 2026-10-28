@@ -23,13 +23,10 @@ import {
   curriculumKeys,
   curriculumQueries,
   deleteResource,
-  formatDate,
-  formatTime,
-  resourceKind,
   updateResource,
-  type CurriculumResource,
-  type ModuleStatus,
-} from "@/lib/curriculum";
+} from "@/lib/curriculum.api";
+import { formatDate, formatTime, resourceKind } from "@/lib/curriculum.mappers";
+import type { CurriculumResource, ModuleStatus } from "@/lib/curriculum.types";
 import { formatFileSize } from "@/lib/utils";
 
 export function AddResourceButton({

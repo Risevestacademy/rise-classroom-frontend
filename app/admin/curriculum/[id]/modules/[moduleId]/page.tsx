@@ -24,14 +24,12 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/curriculum/ContentTable";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api";
-import {
-  curriculumKeys,
-  curriculumQueries,
-  updateModule,
-  type CurriculumModule,
-  type ModuleLesson,
-  type ModuleStatus,
-} from "@/lib/curriculum";
+import { curriculumKeys, curriculumQueries, updateModule } from "@/lib/curriculum.api";
+import type {
+  CurriculumModule,
+  ModuleLesson,
+  ModuleStatus,
+} from "@/lib/curriculum.types";
 
 const statusLabels: Record<ModuleStatus, string> = {
   PUBLISHED: "Published",

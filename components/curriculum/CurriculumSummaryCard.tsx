@@ -2,7 +2,8 @@ import Image from "next/image";
 import { BookOpen, Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { trackDetails, type Curriculum } from "@/lib/curriculum";
+import { trackDetails } from "@/lib/curriculum.mappers";
+import type { Curriculum } from "@/lib/curriculum.types";
 
 export function CurriculumSummaryCard({
   curriculum,

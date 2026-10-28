@@ -1,409 +1,60 @@
 import { queryOptions } from "@tanstack/react-query";
-import {
-  BookOpen,
-  Code,
-  Database,
-  PenTool,
-  Smartphone,
-  type LucideIcon,
-} from "lucide-react";
 
 import { api, type Envelope, type Paginated } from "@/lib/api";
 import type { AdminUser, Track } from "@/lib/admin";
 import { getSession } from "@/lib/auth";
+import {
+  attachmentLinks,
+  byPosition,
+  describeChange,
+  emptyAssignment,
+  newResourceFile,
+  toAssignments,
+  toCurriculum,
+  toIsoDate,
+  toModule,
+  toNote,
+  toResourceFile,
+  toResources,
+} from "@/lib/curriculum.mappers";
+import {
+  noCurriculumFilters,
+  type AssignmentRecord,
+  type CreateAssignmentInput,
+  type CreateCurriculumInput,
+  type CreateResourceInput,
+  type CurriculumFilters,
+  type CurriculumModule,
+  type CurriculumNote,
+  type CurriculumRecord,
+  type LessonRecord,
+  type LessonTree,
+  type ModuleAssignment,
+  type ModuleLesson,
+  type NoteRecord,
+  type RecordingRecord,
+  type ResourceFile,
+  type ResourceRecord,
+  type SaveModuleInput,
+  type SaveNoteInput,
+  type SessionExtras,
+  type TopicRecord,
+  type TopicTree,
+  type UpdateCurriculumInput,
+} from "@/lib/curriculum.types";
 
-// The API models a curriculum as Curriculum → Topic → Lesson, with resources,
-// assignments and recordings attached to each lesson. The UI calls a topic a
-// "module". Anything the design shows that the API doesn't store yet lives in
+// Requests, the session store and React Query options for the curriculum
+// screens. Anything the design shows that the API doesn't store yet lives in
 // the in-memory `local` store below: it works for the session but resets on a
 // full page reload. Search for "local." to find every such field.
 
-// ---- Tracks ----------------------------------------------------------------
-
-type TrackDetails = { label: string; icon: LucideIcon; iconClassName: string };
-
-// Matched against the track name, so "Product Design" gets the design icon.
-const trackStyles: (Omit<TrackDetails, "label"> & { match: string })[] = [
-  {
-    match: "design",
-    icon: PenTool,
-    iconClassName: "bg-surface-brand text-brand-primary",
-  },
-  {
-    match: "frontend",
-    icon: Code,
-    iconClassName: "bg-surface-info-badge text-text-info",
-  },
-  {
-    match: "backend",
-    icon: Database,
-    iconClassName: "bg-fuchsia-50 text-fuchsia-700",
-  },
-  {
-    match: "mobile",
-    icon: Smartphone,
-    iconClassName: "bg-fuchsia-50 text-fuchsia-700",
-  },
-];
-
-/** Label, icon and colours for a track, picked from its name. */
-export function trackDetails(trackName: string): TrackDetails {
-  const name = trackName.toLowerCase().replace(/[^a-z]/g, "");
-  const style = trackStyles.find((s) => name.includes(s.match)) ?? {
-    icon: BookOpen,
-    iconClassName: "bg-surface-brand text-brand-primary",
-  };
-  return { label: trackName, icon: style.icon, iconClassName: style.iconClassName };
-}
-
-// ---- View types (what the screens render) -----------------------------------
-
-export type ModuleStatus = "PUBLISHED" | "DRAFT";
-
-export type ResourceFile = {
-  id: string;
-  /** The file's name, e.g. "visual-hierarchy.pdf". */
-  name: string;
-  /** `null` for resources saved as links — the API doesn't store a size. */
-  sizeBytes: number | null;
-  /** Display name shown in the Resources tab. */
-  title: string;
-  description: string;
-  uploadedAt: string;
-  uploadedBy: string;
-  status: ModuleStatus;
-  /** Set for resources saved in the API; local uploads have no link. */
-  url?: string;
-};
-
-export const resourceKinds = {
-  PDF: { extensions: [".pdf"], formats: "PDF" },
-  Video: { extensions: [".mp4"], formats: "MP4" },
-  Document: { extensions: [".docx", ".pptx"], formats: "DOCX and PPTX" },
-  Image: { extensions: [".jpeg", ".jpg", ".png"], formats: "JPEG and PNG" },
-  /** An external page (Drive, Figma, YouTube…) rather than an uploaded file. */
-  Link: { extensions: [], formats: "Link" },
-} as const;
-
-export type ResourceKind = keyof typeof resourceKinds;
-
-/** Picks the kind from the file extension; links without one are "Link". */
-export function resourceKind(fileName: string, url?: string): ResourceKind | "File" {
-  const extension = `.${fileName.split(".").pop()?.toLowerCase()}`;
-  const match = (Object.keys(resourceKinds) as ResourceKind[]).find((kind) =>
-    (resourceKinds[kind].extensions as readonly string[]).includes(extension)
-  );
-  return match ?? (url ? "Link" : "File");
-}
-
-export function newResourceFile(
-  file: { name: string; sizeBytes: number | null },
-  overrides: Partial<ResourceFile> = {}
-): ResourceFile {
-  return {
-    id: crypto.randomUUID(),
-    title: file.name.replace(/\.[^.]+$/, ""),
-    description: "",
-    uploadedAt: new Date().toISOString(),
-    uploadedBy: "You",
-    status: "PUBLISHED",
-    ...file,
-    ...overrides,
-  };
-}
-
-/** Builds a resource record for a file the admin just picked. */
-export function resourceFromUpload(file: File) {
-  return newResourceFile({ name: file.name, sizeBytes: file.size });
-}
-
-/** A resource together with where it's attached in the curriculum. */
-export type CurriculumResource = {
-  resource: ResourceFile;
-  module: CurriculumModule;
-  modulePosition: number;
-  lessonPosition: number | null;
-};
-
-export type CreateResourceInput = Pick<
-  ResourceFile,
-  "name" | "sizeBytes" | "title" | "description" | "url"
->;
-
-export type ModuleLesson = {
-  id: string;
-  topic: string;
-  title: string;
-  description: string;
-  resources: ResourceFile[];
-};
-
-export const submissionTypes = {
-  FILE_UPLOAD: "File Upload",
-  LINK: "Link",
-  TEXT: "Text Entry",
-} as const;
-
-export type SubmissionType = keyof typeof submissionTypes;
-
-export type AssignmentSubmission = {
-  id: string;
-  studentName: string;
-  studentEmail: string;
-  submittedAt: string | null;
-  grade: string | null;
-};
-
-export type ModuleAssignment = {
-  id: string;
-  title: string;
-  description: string;
-  instructions: string;
-  resources: ResourceFile[];
-  type: "Project" | "Report";
-  mode: "Individual" | "Group";
-  submissionType: SubmissionType;
-  dueAt: string | null;
-  /** The lesson the assignment is attached to in the API (1-based). */
-  afterLesson: number | null;
-  status: ModuleStatus;
-  submissions: AssignmentSubmission[];
-};
-
-export type CreateAssignmentInput = Pick<
-  ModuleAssignment,
-  | "title"
-  | "description"
-  | "instructions"
-  | "resources"
-  | "submissionType"
-  | "dueAt"
-  | "afterLesson"
->;
-
-/** An assignment together with the module it belongs to. */
-export type CurriculumAssignment = {
-  assignment: ModuleAssignment;
-  module: CurriculumModule;
-  modulePosition: number;
-};
-
-export type CurriculumModule = {
-  id: string;
-  curriculumId: string;
-  title: string;
-  description: string;
-  status: ModuleStatus;
-  outcomes: string[];
-  recordingLink: string;
-  resources: ResourceFile[];
-  lessons: ModuleLesson[];
-  assignments: ModuleAssignment[];
-  coverImage: string | null;
-  liveClassRecordings: { title: string; thumbnail: string }[];
-};
-
-export type LiveClass = {
-  id: string;
-  title: string;
-  scheduledFor: string | null;
-};
-
-export type Curriculum = {
-  id: string;
-  title: string;
-  description: string;
-  track: { id: string; name: string };
-  /** Cohort names, e.g. "Cohort 2026"; empty when none is known. */
-  cohort: string;
-  status: "Active" | "Completed";
-  totalModules: number;
-  totalLessons: number;
-  totalAssignments: number;
-  studentCount: number;
-  instructor: { name: string; email: string };
-  liveClasses: LiveClass[];
-  publishStatus: ModuleStatus;
-  progressMode: ProgressMode;
-  history: CurriculumHistoryEntry[];
-};
-
-export const progressModes = {
-  SEQUENTIAL: "Sequential",
-  FLEXIBLE: "Flexible",
-} as const;
-
-export type ProgressMode = keyof typeof progressModes;
-
-export type CurriculumHistoryEntry = {
-  id: string;
-  actor: string;
-  action: string;
-  at: string;
-};
-
-export type CurriculumNote = {
-  id: string;
-  title: string;
-  body: string;
-  moduleId: string | null;
-  author: string;
-  createdAt: string;
-  pinned: boolean;
-};
-
-export type UpdateCurriculumInput = Partial<
-  Pick<Curriculum, "title" | "description" | "publishStatus" | "progressMode">
->;
-
-export type SaveNoteInput = Pick<CurriculumNote, "title" | "body" | "moduleId">;
-
-export type CreateCurriculumInput = {
-  title: string;
-  description: string;
-  trackId: string;
-  /** Empty when no cohort is picked. */
-  cohortId: string;
-};
-
-export type SaveModuleInput = Omit<
-  CurriculumModule,
-  "id" | "curriculumId" | "coverImage" | "liveClassRecordings"
->;
-
-export function emptyAssignment(id: string = crypto.randomUUID()): ModuleAssignment {
-  return {
-    id,
-    title: "",
-    description: "",
-    instructions: "",
-    resources: [],
-    type: "Project",
-    mode: "Individual",
-    submissionType: "FILE_UPLOAD",
-    dueAt: null,
-    afterLesson: null,
-    status: "DRAFT",
-    submissions: [],
-  };
-}
-
-// ---- API records -------------------------------------------------------------
-
-type Timestamps = { createdAt?: string; updatedAt?: string };
-
-type CurriculumRecord = Timestamps & {
-  id: string;
-  trackId: string;
-  cohortId?: string | null;
-  title: string;
-  description?: string | null;
-  status: "ONGOING" | "COMPLETED";
-  publishStatus: ModuleStatus;
-  progressMode: ProgressMode;
-  totalModules: number;
-  totalLessons: number;
-  totalAssignments: number;
-  cohort?: { id: string; name: string } | null;
-  assignedInstructors: { id: string; name: string; email: string }[];
-};
-
-type TopicRecord = Timestamps & {
-  id: string;
-  curriculumId: string;
-  title: string;
-  description: string;
-  position: number;
-  publishStatus: ModuleStatus;
-  outcomes: string[];
-};
-
-type LessonRecord = Timestamps & {
-  id: string;
-  topicId: string;
-  title: string;
-  description?: string | null;
-  position?: number | null;
-};
-
-type ResourceRecord = Timestamps & {
-  id: string;
-  /** Set for lesson resources; `null` for ones on the whole module. */
-  lessonId?: string | null;
-  topicId?: string | null;
-  title: string;
-  description?: string | null;
-  url: string;
-  type?: "PDF" | "VIDEO" | "DOCUMENT" | "IMAGE" | "LINK";
-  fileName?: string | null;
-  sizeBytes?: number | null;
-  mimeType?: string | null;
-  publishStatus: ModuleStatus;
-};
-
-type AssignmentRecord = Timestamps & {
-  id: string;
-  /** Set for lesson assignments; `null` for ones on the whole module. */
-  lessonId?: string | null;
-  topicId?: string | null;
-  title: string;
-  description?: string | null;
-  instructions?: string | null;
-  dueAt?: string | null;
-  submissionType: SubmissionType;
-  publishStatus: ModuleStatus;
-  attachments: string[];
-};
-
-type NoteRecord = Timestamps & {
-  id: string;
-  topicId?: string | null;
-  title: string;
-  body: string;
-  isPinned?: boolean;
-  pinned?: boolean;
-  author?: { firstName: string; lastName: string } | null;
-};
-
-type RecordingRecord = Timestamps & {
-  id: string;
-  lessonId: string;
-  title: string;
-  url: string;
-  durationSec?: number | null;
-};
-
-type LessonTree = LessonRecord & {
-  resources: ResourceRecord[];
-  assignments: AssignmentRecord[];
-  recordings: RecordingRecord[];
-};
-
-type TopicTree = TopicRecord & {
-  lessons: LessonTree[];
-  /** Resources and assignments on the whole module rather than a lesson. */
-  resources: ResourceRecord[];
-  assignments: AssignmentRecord[];
-};
-
 // ---- Session-only store for fields the API doesn't have ------------------------
 
-/**
- * PENDING-BACKEND: the API has no assignment type, group mode or submissions
- * list for admins, and no file upload, so picked files stay in the session.
- */
-type AssignmentExtras = Partial<
-  Pick<ModuleAssignment, "type" | "mode" | "submissions"> & { files: ResourceFile[] }
->;
-
-const local = {
-  /** PENDING-BACKEND: the API has no version history. */
-  history: new Map<string, CurriculumHistoryEntry[]>(),
-  /** Files uploaded to a whole module. */
-  moduleFiles: new Map<string, ResourceFile[]>(),
-  /** PENDING-BACKEND: lesson topic labels and lesson file uploads. */
-  lessons: new Map<string, { topic?: string; files?: ResourceFile[] }>(),
-  assignments: new Map<string, AssignmentExtras>(),
+const local: SessionExtras = {
+  history: new Map(),
+  moduleFiles: new Map(),
+  lessons: new Map(),
+  assignments: new Map(),
 };
 
 // ---- Helpers -----------------------------------------------------------------
@@ -418,16 +69,6 @@ async function postData<T>(path: string, body: unknown) {
   return data;
 }
 
-/** Orders by `position`; items without one go last, oldest first. */
-function byPosition<T extends Timestamps & { position?: number | null }>(items: T[]) {
-  const last = Number.MAX_SAFE_INTEGER;
-  return [...items].sort(
-    (a, b) =>
-      (a.position ?? last) - (b.position ?? last) ||
-      (a.createdAt ?? "").localeCompare(b.createdAt ?? "")
-  );
-}
-
 /** Leaves optional text out of create payloads when it's blank. */
 function optionalText(key: string, value: string) {
   return value ? { [key]: value } : {};
@@ -439,23 +80,12 @@ function assertHttpsLink(url: string, label: string) {
   }
 }
 
-/** The last path segment of a link, e.g. "visual-hierarchy.pdf". */
-function fileNameFromUrl(url: string) {
-  try {
-    const { hostname, pathname } = new URL(url);
-    const last = pathname.split("/").filter(Boolean).pop();
-    return last ? decodeURIComponent(last) : hostname;
-  } catch {
-    return url;
-  }
-}
-
 async function currentUserName() {
   const session = await getSession().catch(() => null);
   return session?.user.name ?? "Admin";
 }
 
-// ---- Loading + mapping ---------------------------------------------------------
+// ---- Loading -------------------------------------------------------------------
 
 async function loadLesson(lesson: LessonRecord): Promise<LessonTree> {
   const [resources, assignments, recordings] = await Promise.all([
@@ -492,87 +122,8 @@ async function loadTree(curriculumId: string) {
   return Promise.all((await listTopics(curriculumId)).map(loadTopic));
 }
 
-function toResourceFile(record: ResourceRecord): ResourceFile {
-  return {
-    id: record.id,
-    name: record.fileName || fileNameFromUrl(record.url),
-    sizeBytes: record.sizeBytes ?? null,
-    title: record.title,
-    description: record.description ?? "",
-    uploadedAt: record.createdAt ?? record.updatedAt ?? new Date().toISOString(),
-    // PENDING-BACKEND: the API only gives the uploader's id, not their name.
-    uploadedBy: "--",
-    status: record.publishStatus,
-    url: record.url,
-  };
-}
-
-/** An assignment attachment, which the API stores as a bare link. */
-function attachmentFile(url: string): ResourceFile {
-  return newResourceFile(
-    { name: fileNameFromUrl(url), sizeBytes: null },
-    { id: url, url, uploadedBy: "--" }
-  );
-}
-
-function toAssignment(
-  record: AssignmentRecord,
-  lessonPosition: number | null
-): ModuleAssignment {
-  const { files = [], ...extras } = local.assignments.get(record.id) ?? {};
-  return {
-    ...emptyAssignment(record.id),
-    ...extras,
-    title: record.title,
-    description: record.description ?? "",
-    instructions: record.instructions ?? "",
-    resources: [...(record.attachments ?? []).map(attachmentFile), ...files],
-    submissionType: record.submissionType,
-    dueAt: record.dueAt ?? null,
-    afterLesson: lessonPosition,
-    status: record.publishStatus,
-  };
-}
-
-function toModule(topic: TopicTree): CurriculumModule {
-  return {
-    id: topic.id,
-    curriculumId: topic.curriculumId,
-    title: topic.title,
-    description: topic.description,
-    status: topic.publishStatus,
-    outcomes: topic.outcomes ?? [],
-    recordingLink: topic.lessons.flatMap((l) => l.recordings)[0]?.url ?? "",
-    resources: [
-      ...topic.resources.map(toResourceFile),
-      ...(local.moduleFiles.get(topic.id) ?? []),
-    ],
-    lessons: topic.lessons.map((lesson) => {
-      const lessonExtras = local.lessons.get(lesson.id);
-      return {
-        id: lesson.id,
-        topic: lessonExtras?.topic ?? "",
-        title: lesson.title,
-        description: lesson.description ?? "",
-        resources: [
-          ...lesson.resources.map(toResourceFile),
-          ...(lessonExtras?.files ?? []),
-        ],
-      };
-    }),
-    assignments: [
-      ...topic.lessons.flatMap((lesson, index) =>
-        lesson.assignments.map((a) => toAssignment(a, index + 1))
-      ),
-      ...topic.assignments.map((a) => toAssignment(a, null)),
-    ],
-    // PENDING-BACKEND: no cover images or recording thumbnails in the API.
-    coverImage: null,
-    liveClassRecordings: [],
-  };
-}
-
-async function toCurriculum(record: CurriculumRecord, knownTrack?: Track): Promise<Curriculum> {
+/** Fetches the track (unless known) and student count a curriculum card shows. */
+async function loadCurriculum(record: CurriculumRecord, knownTrack?: Track) {
   const [track, students] = await Promise.all([
     knownTrack ?? getData<Track>(`/admin/tracks/${record.trackId}`),
     getData<Paginated<AdminUser>>("/admin/users", {
@@ -582,39 +133,10 @@ async function toCurriculum(record: CurriculumRecord, knownTrack?: Track): Promi
       limit: 1,
     }),
   ]);
-  const instructor = record.assignedInstructors[0];
-
-  return {
-    id: record.id,
-    title: record.title,
-    description: record.description ?? "",
-    track: { id: track.id, name: track.name },
-    cohort: record.cohort?.name ?? "No cohort",
-    status: record.status === "COMPLETED" ? "Completed" : "Active",
-    totalModules: record.totalModules,
-    totalLessons: record.totalLessons,
-    totalAssignments: record.totalAssignments,
-    studentCount: students.total,
-    instructor: instructor
-      ? { name: instructor.name, email: instructor.email }
-      : { name: "Not assigned", email: "" },
-    // PENDING-BACKEND: no live classes in the API.
-    liveClasses: [],
-    publishStatus: record.publishStatus,
-    progressMode: record.progressMode,
-    history: local.history.get(record.id) ?? [],
-  };
+  return toCurriculum(record, track, students.total, local.history.get(record.id) ?? []);
 }
 
 // ---- Curriculum ----------------------------------------------------------------
-
-/** Filters for the curriculum list. An empty list means "all". */
-export type CurriculumFilters = {
-  statuses: ModuleStatus[];
-  trackIds: string[];
-};
-
-export const noCurriculumFilters: CurriculumFilters = { statuses: [], trackIds: [] };
 
 async function listCurricula(filters: CurriculumFilters, cohortId?: string) {
   const { statuses, trackIds } = filters;
@@ -634,13 +156,13 @@ async function listCurricula(filters: CurriculumFilters, cohortId?: string) {
   );
   return Promise.all(
     matches.map((record) =>
-      toCurriculum(record, tracks.find((track) => track.id === record.trackId))
+      loadCurriculum(record, tracks.find((track) => track.id === record.trackId))
     )
   );
 }
 
 async function getCurriculum(id: string) {
-  return toCurriculum(await getData<CurriculumRecord>(`/admin/curriculums/${id}`));
+  return loadCurriculum(await getData<CurriculumRecord>(`/admin/curriculums/${id}`));
 }
 
 export async function createCurriculum(input: CreateCurriculumInput) {
@@ -651,14 +173,6 @@ export async function createCurriculum(input: CreateCurriculumInput) {
     status: "ONGOING",
     publishStatus: "DRAFT",
   });
-}
-
-/** Describes a settings change for the version history, e.g. "changed module access to Flexible". */
-function describeChange(input: UpdateCurriculumInput) {
-  if (input.progressMode) return `changed module access to ${progressModes[input.progressMode]}`;
-  if (input.publishStatus)
-    return `changed curriculum status to ${input.publishStatus === "PUBLISHED" ? "Published" : "Draft"}`;
-  return "updated the curriculum details";
 }
 
 export async function updateCurriculum(id: string, input: UpdateCurriculumInput) {
@@ -687,20 +201,6 @@ export async function deleteCurriculum(id: string) {
 }
 
 // ---- Notes ---------------------------------------------------------------------
-
-function toNote(record: NoteRecord): CurriculumNote {
-  return {
-    id: record.id,
-    title: record.title,
-    body: record.body,
-    moduleId: record.topicId ?? null,
-    author: record.author
-      ? `${record.author.firstName} ${record.author.lastName}`.trim()
-      : "--",
-    createdAt: record.createdAt ?? new Date().toISOString(),
-    pinned: record.isPinned ?? record.pinned ?? false,
-  };
-}
 
 async function listNotes(curriculumId: string) {
   const records = await getData<NoteRecord[]>(`/admin/curriculums/${curriculumId}/notes`);
@@ -741,7 +241,7 @@ export async function deleteNote(curriculumId: string, noteId: string) {
 // ---- Modules -------------------------------------------------------------------
 
 async function listModules(curriculumId: string) {
-  return (await loadTree(curriculumId)).map(toModule);
+  return (await loadTree(curriculumId)).map((topic) => toModule(topic, local));
 }
 
 async function getTopicTree(id: string) {
@@ -749,7 +249,7 @@ async function getTopicTree(id: string) {
 }
 
 async function getModule(id: string) {
-  return toModule(await getTopicTree(id));
+  return toModule(await getTopicTree(id), local);
 }
 
 /** Throws before anything is saved if the content can't be attached anywhere. */
@@ -942,27 +442,6 @@ export async function reorderModules(curriculumId: string, orderedIds: string[])
 
 // ---- Assignments ---------------------------------------------------------------
 
-function toAssignments(modules: CurriculumModule[]) {
-  return modules.flatMap((m, index) =>
-    m.assignments.map(
-      (assignment): CurriculumAssignment => ({
-        assignment,
-        module: m,
-        modulePosition: index + 1,
-      })
-    )
-  );
-}
-
-/** Links to send as attachments; picked files have no link and stay local. */
-function attachmentLinks(resources: ResourceFile[]) {
-  return resources.flatMap((r) => (r.url ? [r.url] : []));
-}
-
-function toIsoDate(value: string | null) {
-  return value ? new Date(value).toISOString() : null;
-}
-
 /** Saves the fields the API doesn't have. */
 function saveAssignmentExtras(id: string, changes: Partial<ModuleAssignment>) {
   const { type, mode, submissions, resources } = changes;
@@ -1034,26 +513,6 @@ export async function deleteAssignment(assignmentId: string) {
 }
 
 // ---- Resources -----------------------------------------------------------------
-
-function toResources(modules: CurriculumModule[]) {
-  return modules.flatMap((m, index) => {
-    const base = { module: m, modulePosition: index + 1 };
-    return [
-      ...m.resources.map(
-        (resource): CurriculumResource => ({ ...base, resource, lessonPosition: null })
-      ),
-      ...m.lessons.flatMap((lesson, lessonIndex) =>
-        lesson.resources.map(
-          (resource): CurriculumResource => ({
-            ...base,
-            resource,
-            lessonPosition: lessonIndex + 1,
-          })
-        )
-      ),
-    ];
-  });
-}
 
 /**
  * Links are saved to the API. PENDING-BACKEND: it has no upload endpoint, so a
@@ -1132,27 +591,6 @@ export async function deleteResource(resourceId: string) {
     resources.filter((r) => r.id !== resourceId)
   );
   if (!isLocal) await api.delete(`/admin/resources/${resourceId}`);
-}
-
-// ---- Formatting ----------------------------------------------------------------
-
-export function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-export function formatTime(value: string) {
-  return new Date(value).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-export function formatModuleNumber(index: number) {
-  return String(index + 1).padStart(2, "0");
 }
 
 // ---- Query keys + options ------------------------------------------------------

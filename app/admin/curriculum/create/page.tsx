@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { adminQueries } from "@/lib/admin";
 import { useSelectedCohort } from "@/lib/selected-cohort";
-import { createCurriculum, curriculumKeys } from "@/lib/curriculum";
+import { createCurriculum, curriculumKeys } from "@/lib/curriculum.api";
 
 const placeholderTitle = "Design Track Curriculum";
 const placeholderDescription =

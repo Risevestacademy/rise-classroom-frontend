@@ -28,11 +28,10 @@ import {
   curriculumKeys,
   curriculumQueries,
   deleteNote,
-  formatDate,
   updateNote,
-  type CurriculumNote,
-  type SaveNoteInput,
-} from "@/lib/curriculum";
+} from "@/lib/curriculum.api";
+import { formatDate } from "@/lib/curriculum.mappers";
+import type { CurriculumNote, SaveNoteInput } from "@/lib/curriculum.types";
 
 const menuItemClass =
   "flex cursor-pointer rounded-md px-3 py-2 text-neutral-700 outline-none data-highlighted:bg-neutral-100";
