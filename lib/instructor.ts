@@ -11,6 +11,16 @@ export type WeeklyTaskStatus =
   | "REVIEWED"
   | "OVERDUE";
 
+export type PublishStatus = "DRAFT" | "PUBLISHED";
+export type SubmissionType = "FILE_UPLOAD" | "LINK" | "TEXT";
+export type ResourceType = "PDF" | "VIDEO" | "DOCUMENT" | "IMAGE" | "LINK";
+export type SubmissionStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "UNDER_REVIEW"
+  | "CHANGES_REQUESTED"
+  | "GRADED";
+
 /** An instructor's assignment to one track within one cohort. */
 export type InstructorTrack = {
   id: string;
@@ -61,19 +71,26 @@ export type CurriculumRecord = {
   title: string;
   description?: string | null;
   status: "ONGOING" | "COMPLETED";
+  publishStatus: PublishStatus;
+  progressMode: "SEQUENTIAL" | "FLEXIBLE";
   trackId: string;
-  _count: {
-    topics: number;
-  };
+  cohortId?: string | null;
+  cohort?: { id: string; name: string } | null;
+  totalModules: number;
+  totalLessons: number;
+  totalAssignments: number;
+  assignedInstructors: { id: string; name: string; email: string }[];
 };
 
 export type TopicRecord = {
   id: string;
   title: string;
-  description: string | null;
+  description: string;
   position: number;
   curriculumId: string;
-  _count: {
+  publishStatus: PublishStatus;
+  outcomes: string[];
+  _count?: {
     lessons: number;
     prerequisites: number;
   };
@@ -83,20 +100,26 @@ export type LessonRecord = {
   id: string;
   topicId: string;
   title: string;
-  description: string;
+  description: string | null;
   position: number;
+  topic?: { id: string; title: string };
 };
 
 export type ResourceRecord = {
   id: string;
-  lessonId: string;
+  lessonId?: string | null;
+  topicId?: string | null;
   title: string;
   description?: string | null;
   url: string;
+  type: ResourceType;
+  fileName?: string | null;
+  sizeBytes?: number | null;
+  mimeType?: string | null;
+  publishStatus: PublishStatus;
+  uploadedById?: string | null;
   createdAt?: string;
   updatedAt?: string;
-  fileSize?: number | null;
-  status?: "DRAFT" | "PUBLISHED";
 };
 
 export type RecordingRecord = {
@@ -109,31 +132,111 @@ export type RecordingRecord = {
 
 export type AssignmentRecord = {
   id: string;
-  lessonId: string;
+  lessonId?: string | null;
+  topicId?: string | null;
   title: string;
   description?: string | null;
+  instructions?: string | null;
+  dueAt?: string | null;
+  submissionType: SubmissionType;
+  publishStatus: PublishStatus;
+  attachments: string[];
   createdAt?: string;
   updatedAt?: string;
-  type?: string | null;
-  submissionType?: string | null;
-  dueDate?: string | null;
-  status?: "DRAFT" | "PUBLISHED";
-  submissions?: { completed: number; total: number };
 };
 
-export type LessonContext = {
+export type AssignmentSubmissionRecord = {
+  id: string;
+  assignmentId: string;
+  studentProfileId: string;
+  enrollmentId: string;
+  submissionType: SubmissionType;
+  linkUrl?: string | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileSizeBytes?: number | null;
+  textContent?: string | null;
+  status: SubmissionStatus;
+  submittedAt?: string | null;
+  isLate: boolean;
+  grade?: number | null;
+  feedback?: string | null;
+  reviewerId?: string | null;
+  reviewedAt?: string | null;
+  changesRequestedReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignment?: {
+    id: string;
+    title: string;
+    dueAt?: string | null;
+    submissionType: SubmissionType;
+    instructions?: string | null;
+  };
+  studentProfile?: {
+    id: string;
+    userId: string;
+    user: { id: string; name: string; email: string; image?: string | null };
+  };
+  enrollment?: { id: string; cohortId: string; cohort?: { id: string; name: string } };
+  reviewer?: { id: string; name: string; email: string; image?: string | null } | null;
+};
+
+export type SubmissionFilters = {
+  assignmentId?: string;
+  page?: number;
+  limit?: number;
+  status?: SubmissionStatus;
+  cohortId?: string;
+  studentId?: string;
+  isLate?: boolean;
+  search?: string;
+};
+
+export type ReviewSubmissionInput =
+  | { status: "UNDER_REVIEW" }
+  | { status: "CHANGES_REQUESTED"; changesRequestedReason: string }
+  | { status: "GRADED"; grade: number; feedback?: string };
+
+export type NoteRecord = {
+  id: string;
+  curriculumId: string;
+  authorId: string;
+  topicId?: string | null;
+  title: string;
+  body: string;
+  isPinned: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  author?: { id: string; firstName: string; lastName: string; email: string } | null;
+  topic?: { id: string; title: string } | null;
+};
+
+/** Where an item sits in the track. Module-level items have no lesson. */
+export type TopicContext = {
   curriculum: { id: string; title: string };
   topic: { id: string; title: string };
+};
+
+export type LessonContext = TopicContext & {
   lesson: { id: string; title: string };
 };
 
-export type InTrack<T> = T & LessonContext;
+export type TrackContext = TopicContext & {
+  lesson: { id: string; title: string } | null;
+};
+
+export type InTrack<T> = T & TrackContext;
 
 export type TrackContent = {
   assignments: InTrack<AssignmentRecord>[];
   resources: InTrack<ResourceRecord>[];
   recordings: InTrack<RecordingRecord>[];
 };
+
+/* -------------------------------------------------------------------------- */
+/* Display helpers                                                            */
+/* -------------------------------------------------------------------------- */
 
 export function fileTypeFromUrl(url: string): string {
   let host = "";
@@ -170,6 +273,16 @@ export function fileTypeFromUrl(url: string): string {
   return types[path.split(".").pop() ?? ""] ?? "Link";
 }
 
+/** Default resource type for a link, for forms that don't ask. */
+export function resourceTypeFromUrl(url: string): ResourceType {
+  const label = fileTypeFromUrl(url);
+  if (label === "PDF") return "PDF";
+  if (label === "Video") return "VIDEO";
+  if (label === "Image") return "IMAGE";
+  if (["Doc", "Slides", "Sheet"].includes(label)) return "DOCUMENT";
+  return "LINK";
+}
+
 export function formatFileSize(bytes?: number | null): string {
   if (bytes == null) return "—";
   if (bytes < 1024) return `${bytes} B`;
@@ -185,6 +298,10 @@ export function formatDate(iso?: string | null): string {
     year: "numeric",
   });
 }
+
+/* -------------------------------------------------------------------------- */
+/* Read requests                                                              */
+/* -------------------------------------------------------------------------- */
 
 async function listMyTracks() {
   const { data } = await api.get<Envelope<InstructorTrack[]>>(
@@ -225,6 +342,45 @@ async function listCurriculum(params: { trackId: string }) {
   return response.data;
 }
 
+/** Curriculums across all of the instructor's tracks, with optional filters. */
+async function listAllCurriculums(filters: {
+  trackId?: string;
+  cohortId?: string;
+  publishStatus?: PublishStatus;
+  status?: "ONGOING" | "COMPLETED";
+}) {
+  const response = await api.get<Envelope<CurriculumRecord[]>>(
+    "/instructor/curriculums",
+    { query: filters }
+  );
+  return response.data;
+}
+
+async function getACurriculum(params: { curriculumId: string}) {
+  const response = await api.get<Envelope<CurriculumRecord>>(
+    `/instructor/curriculums/${params.curriculumId}`,
+  );
+  return response.data;
+}
+
+export type CurriculumUpdateInput = {
+  title: string;
+  description: string;
+  publishStatus: PublishStatus;
+  progressMode: "SEQUENTIAL" | "FLEXIBLE";
+};
+
+export async function updateCurriculum(
+  curriculumId: string,
+  input: CurriculumUpdateInput
+) {
+  const response = await api.patch<Envelope<CurriculumRecord>>(
+    `/instructor/curriculums/${curriculumId}`,
+    input
+  );
+  return response.data;
+}
+
 async function listTopics(params: { curriculumId: string }) {
   const response = await api.get<Envelope<TopicRecord[]>>(
     `/instructor/curriculums/${params.curriculumId}/topics`,
@@ -260,10 +416,52 @@ async function listRecordings(params: { lessonId: string }) {
   return response.data;
 }
 
+/** Resources attached to a module itself, not to one of its lessons. */
+async function listTopicResources(params: { topicId: string }) {
+  const response = await api.get<Envelope<ResourceRecord[]>>(
+    `/instructor/topics/${params.topicId}/resources`,
+  );
+  return response.data;
+}
+
+/** Assignments attached to a module itself, not to one of its lessons. */
+async function listTopicAssignments(params: { topicId: string }) {
+  const response = await api.get<Envelope<AssignmentRecord[]>>(
+    `/instructor/topics/${params.topicId}/assignments`,
+  );
+  return response.data;
+}
+
+async function listNotes(params: { curriculumId: string }) {
+  const response = await api.get<Envelope<NoteRecord[]>>(
+    `/instructor/curriculums/${params.curriculumId}/notes`,
+  );
+  return response.data;
+}
+
+async function listAssignmentSubmissions({
+  assignmentId,
+  ...query
+}: SubmissionFilters & { assignmentId: string }) {
+  const response = await api.get<
+    Envelope<Paginated<AssignmentSubmissionRecord>>
+  >(`/instructor/assignments/${assignmentId}/submissions`, { query });
+  return response.data;
+}
+
+export async function getASubmission(submissionId: string) {
+  const { data } = await api.get<Envelope<AssignmentSubmissionRecord>>(
+    `/instructor/submissions/${submissionId}`
+  );
+  return data;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Track tree                                                                 */
+/* -------------------------------------------------------------------------- */
+
 /** Walks curriculum → topic → lesson once, in position order. */
-async function listTrackLessons(params: {
-  trackId: string;
-}): Promise<LessonContext[]> {
+async function listTrackTree(params: { trackId: string }) {
   const curriculums = await listCurriculum(params);
 
   const nested = await Promise.all(
@@ -272,69 +470,123 @@ async function listTrackLessons(params: {
         ...(await listTopics({ curriculumId: curriculum.id })),
       ].sort((a, b) => a.position - b.position);
 
-      const perTopic = await Promise.all(
+      return Promise.all(
         topics.map(async (topic) => {
           const lessons = [...(await listLessons({ topicId: topic.id }))].sort(
             (a, b) => a.position - b.position
           );
 
-          return lessons.map((lesson) => ({
+          const topicContext: TopicContext = {
             curriculum: { id: curriculum.id, title: curriculum.title },
             topic: { id: topic.id, title: topic.title },
-            lesson: { id: lesson.id, title: lesson.title },
-          }));
+          };
+
+          return {
+            topicContext,
+            lessons: lessons.map(
+              (lesson): LessonContext => ({
+                ...topicContext,
+                lesson: { id: lesson.id, title: lesson.title },
+              })
+            ),
+          };
         })
       );
-
-      return perTopic.flat();
     })
   );
 
   return nested.flat();
 }
 
+async function listTrackLessons(params: {
+  trackId: string;
+}): Promise<LessonContext[]> {
+  const tree = await listTrackTree(params);
+  return tree.flatMap((node) => node.lessons);
+}
+
 /**
  * Every assignment, resource and recording in a track. The API has no single
- * endpoint for this, so the tree is walked once and all three kinds are
- * fetched per lesson in the same pass.
+ * endpoint for this, so the tree is walked once. Lesson-level items come from
+ * each lesson, and module-level items (no lesson) from each module.
  */
 async function listTrackContent(params: {
   trackId: string;
 }): Promise<TrackContent> {
-  const lessons = await listTrackLessons(params);
+  const tree = await listTrackTree(params);
 
-  const perLesson = await Promise.all(
-    lessons.map(async (context) => {
-      const lessonId = context.lesson.id;
-      const [assignments, resources, recordings] = await Promise.all([
-        listAssignments({ lessonId }),
-        listResources({ lessonId }),
-        listRecordings({ lessonId }),
+  const attach = <T>(items: T[], context: TrackContext) =>
+    items.map((item) => ({ ...item, ...context }));
+
+  const perTopic = await Promise.all(
+    tree.map(async ({ topicContext, lessons }) => {
+      const topicId = topicContext.topic.id;
+
+      const [topicAssignments, topicResources, perLesson] = await Promise.all([
+        listTopicAssignments({ topicId }),
+        listTopicResources({ topicId }),
+        Promise.all(
+          lessons.map(async (context) => {
+            const lessonId = context.lesson.id;
+            const [assignments, resources, recordings] = await Promise.all([
+              listAssignments({ lessonId }),
+              listResources({ lessonId }),
+              listRecordings({ lessonId }),
+            ]);
+
+            return {
+              assignments: attach(assignments, context),
+              resources: attach(resources, context),
+              recordings: attach(recordings, context),
+            };
+          })
+        ),
       ]);
 
-      const attach = <T>(items: T[]) =>
-        items.map((item) => ({ ...item, ...context }));
+      // Only items with no lesson are module-level. Lesson-level ones were
+      // already fetched above, so this avoids listing them twice.
+      const moduleLevel: TrackContext = { ...topicContext, lesson: null };
 
       return {
-        assignments: attach(assignments),
-        resources: attach(resources),
-        recordings: attach(recordings),
+        assignments: [
+          ...attach(
+            topicAssignments.filter((assignment) => !assignment.lessonId),
+            moduleLevel
+          ),
+          ...perLesson.flatMap((l) => l.assignments),
+        ],
+        resources: [
+          ...attach(
+            topicResources.filter((resource) => !resource.lessonId),
+            moduleLevel
+          ),
+          ...perLesson.flatMap((l) => l.resources),
+        ],
+        recordings: perLesson.flatMap((l) => l.recordings),
       };
     })
   );
 
   return {
-    assignments: perLesson.flatMap((l) => l.assignments),
-    resources: perLesson.flatMap((l) => l.resources),
-    recordings: perLesson.flatMap((l) => l.recordings),
+    assignments: perTopic.flatMap((t) => t.assignments),
+    resources: perTopic.flatMap((t) => t.resources),
+    recordings: perTopic.flatMap((t) => t.recordings),
   };
 }
 
+/* -------------------------------------------------------------------------- */
+/* Write requests                                                             */
+/* -------------------------------------------------------------------------- */
 
-export async function createTopic(
-  curriculumId: string,
-  input: { title: string; description: string; position: number }
-) {
+type TopicInput = {
+  title: string;
+  description: string;
+  position: number;
+  publishStatus: PublishStatus;
+  outcomes: string[];
+};
+
+export async function createTopic(curriculumId: string, input: TopicInput) {
   const { data } = await api.post<Envelope<TopicRecord>>(
     `/instructor/curriculums/${curriculumId}/topics`,
     input
@@ -342,10 +594,7 @@ export async function createTopic(
   return data;
 }
 
-export async function updateTopic(
-  topicId: string,
-  input: { title?: string; description?: string; position?: number }
-) {
+export async function updateTopic(topicId: string, input: Partial<TopicInput>) {
   const { data } = await api.patch<Envelope<TopicRecord>>(
     `/instructor/topics/${topicId}`,
     input
@@ -383,10 +632,18 @@ export async function deleteLesson(lessonId: string) {
   await api.delete(`/instructor/lessons/${lessonId}`);
 }
 
-export async function createResource(
-  lessonId: string,
-  input: { title: string; url: string; description?: string }
-) {
+export type ResourceInput = {
+  title: string;
+  url: string;
+  description?: string;
+  type?: ResourceType;
+  fileName?: string;
+  sizeBytes?: number;
+  mimeType?: string;
+  publishStatus?: PublishStatus;
+};
+
+export async function createResource(lessonId: string, input: ResourceInput) {
   const { data } = await api.post<Envelope<ResourceRecord>>(
     `/instructor/lessons/${lessonId}/resources`,
     input
@@ -394,9 +651,26 @@ export async function createResource(
   return data;
 }
 
+/** A resource on the module itself, not on a lesson. */
+export async function createTopicResource(
+  topicId: string,
+  input: ResourceInput
+) {
+  const { data } = await api.post<Envelope<ResourceRecord>>(
+    `/instructor/topics/${topicId}/resources`,
+    input
+  );
+  return data;
+}
+
 export async function updateResource(
   resourceId: string,
-  input: { title?: string; url?: string; description?: string | null }
+  input: Partial<Omit<ResourceInput, "description" | "fileName" | "sizeBytes" | "mimeType">> & {
+    description?: string | null;
+    fileName?: string | null;
+    sizeBytes?: number | null;
+    mimeType?: string | null;
+  }
 ) {
   const { data } = await api.patch<Envelope<ResourceRecord>>(
     `/instructor/resources/${resourceId}`,
@@ -409,9 +683,19 @@ export async function deleteResource(resourceId: string) {
   await api.delete(`/instructor/resources/${resourceId}`);
 }
 
+export type AssignmentInput = {
+  title: string;
+  description?: string;
+  instructions?: string;
+  dueAt?: string;
+  submissionType?: SubmissionType;
+  publishStatus?: PublishStatus;
+  attachments?: string[];
+};
+
 export async function createAssignment(
   lessonId: string,
-  input: { title: string; description?: string }
+  input: AssignmentInput
 ) {
   const { data } = await api.post<Envelope<AssignmentRecord>>(
     `/instructor/lessons/${lessonId}/assignments`,
@@ -420,9 +704,29 @@ export async function createAssignment(
   return data;
 }
 
+/** An assignment on the module itself, not on a lesson. */
+export async function createTopicAssignment(
+  topicId: string,
+  input: AssignmentInput
+) {
+  const { data } = await api.post<Envelope<AssignmentRecord>>(
+    `/instructor/topics/${topicId}/assignments`,
+    input
+  );
+  return data;
+}
+
 export async function updateAssignment(
   assignmentId: string,
-  input: { title?: string; description?: string | null }
+  input: Partial<
+    Omit<AssignmentInput, "description" | "instructions" | "dueAt">
+  > & {
+    description?: string | null;
+    instructions?: string | null;
+    dueAt?: string | null;
+    /** Moves the assignment to another lesson, or null for module level. */
+    lessonId?: string | null;
+  }
 ) {
   const { data } = await api.patch<Envelope<AssignmentRecord>>(
     `/instructor/assignments/${assignmentId}`,
@@ -461,6 +765,68 @@ export async function deleteRecording(recordingId: string) {
   await api.delete(`/instructor/recordings/${recordingId}`);
 }
 
+export async function reviewSubmission(
+  submissionId: string,
+  input: ReviewSubmissionInput
+) {
+  const { data } = await api.post<Envelope<AssignmentSubmissionRecord>>(
+    `/instructor/submissions/${submissionId}/review`,
+    input
+  );
+  return data;
+}
+
+export async function createNote(
+  curriculumId: string,
+  input: { title: string; body: string; topicId?: string; isPinned?: boolean }
+) {
+  const { data } = await api.post<Envelope<NoteRecord>>(
+    `/instructor/curriculums/${curriculumId}/notes`,
+    input
+  );
+  return data;
+}
+
+export async function updateNote(
+  curriculumId: string,
+  noteId: string,
+  input: {
+    title?: string;
+    body?: string;
+    topicId?: string | null;
+    isPinned?: boolean;
+  }
+) {
+  const { data } = await api.patch<Envelope<NoteRecord>>(
+    `/instructor/curriculums/${curriculumId}/notes/${noteId}`,
+    input
+  );
+  return data;
+}
+
+export async function pinNote(
+  curriculumId: string,
+  noteId: string,
+  isPinned: boolean
+) {
+  const { data } = await api.patch<Envelope<NoteRecord>>(
+    `/instructor/curriculums/${curriculumId}/notes/${noteId}/pin`,
+    { isPinned }
+  );
+  return data;
+}
+
+export async function deleteNote(
+  curriculumId: string,
+  noteId: string
+) {
+  await api.delete(`/instructor/curriculums/${curriculumId}/notes/${noteId}`);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Single-item reads                                                          */
+/* -------------------------------------------------------------------------- */
+
 export async function getALesson(lessonId: string) {
   const { data } = await api.get<Envelope<LessonRecord>>(
     `/instructor/lessons/${lessonId}`
@@ -482,6 +848,10 @@ export async function getAnAssignment(assignmentId: string) {
   return data;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Query keys                                                                 */
+/* -------------------------------------------------------------------------- */
+
 export const instructorKeys = {
   myTracks: () => ["instructor", "tracks"] as const,
   students: (params: { cohortId?: string; trackId?: string }) =>
@@ -491,6 +861,14 @@ export const instructorKeys = {
   weeklyTaskCount: (filters: WeeklyTaskFilters = {}) =>
     ["instructor", "weekly-tasks", "count", filters] as const,
   curriculums: (params: { trackId?: string; }) =>
+    ["instructor", "curriculum", params] as const,
+  allCurriculums: (filters: {
+    trackId?: string;
+    cohortId?: string;
+    publishStatus?: PublishStatus;
+    status?: "ONGOING" | "COMPLETED";
+  }) => ["instructor", "all-curriculums", filters] as const,
+  curriculumById: (params: { curriculumId?: string; }) =>
     ["instructor", "curriculum", params] as const,
   topics: (params: { curriculumId?: string; }) =>
     ["instructor", "topics", params] as const,
@@ -502,6 +880,16 @@ export const instructorKeys = {
     ["instructor", "assignment", params] as const,
   recordings: (params: { lessonId?: string }) =>
     ["instructor", "recordings", params] as const,
+  topicResources: (params: { topicId?: string }) =>
+    ["instructor", "topic-resources", params] as const,
+  topicAssignments: (params: { topicId?: string }) =>
+    ["instructor", "topic-assignments", params] as const,
+  notes: (params: { curriculumId?: string }) =>
+    ["instructor", "notes", params] as const,
+  submissions: (params: SubmissionFilters) =>
+    ["instructor", "submissions", params] as const,
+  submission: (params: { submissionId?: string }) =>
+    ["instructor", "submission", params] as const,
   // One key for assignments, resources and recordings. Invalidate
   // ["instructor", "track-content"] after creating any of them.
   trackContent: (params: { trackId?: string }) =>
@@ -561,6 +949,29 @@ export const instructorQueries = {
       enabled: Boolean(params.trackId),
     }),
 
+  allCurriculums: (
+    filters: {
+      trackId?: string;
+      cohortId?: string;
+      publishStatus?: PublishStatus;
+      status?: "ONGOING" | "COMPLETED";
+    } = {}
+  ) =>
+    queryOptions({
+      queryKey: instructorKeys.allCurriculums(filters),
+      queryFn: () => listAllCurriculums(filters),
+    }),
+
+  curriculumById: (params: { curriculumId?: string }) =>
+    queryOptions({
+      queryKey: instructorKeys.curriculumById(params),
+      queryFn: () => {
+        if (!params.curriculumId) throw new Error("Curriculum ID is required");
+        return getACurriculum({ curriculumId: params.curriculumId });
+      },
+      enabled: Boolean(params.curriculumId),
+    }),
+
   topics: (params: { curriculumId?: string }) =>
     queryOptions({
       queryKey: instructorKeys.topics(params),
@@ -594,6 +1005,42 @@ export const instructorQueries = {
       queryKey: instructorKeys.recordings(params),
       queryFn: () => listRecordings(params as { lessonId: string }),
       enabled: Boolean(params.lessonId),
+    }),
+
+  topicResources: (params: { topicId?: string }) =>
+    queryOptions({
+      queryKey: instructorKeys.topicResources(params),
+      queryFn: () => listTopicResources(params as { topicId: string }),
+      enabled: Boolean(params.topicId),
+    }),
+
+  topicAssignments: (params: { topicId?: string }) =>
+    queryOptions({
+      queryKey: instructorKeys.topicAssignments(params),
+      queryFn: () => listTopicAssignments(params as { topicId: string }),
+      enabled: Boolean(params.topicId),
+    }),
+
+  notes: (params: { curriculumId?: string }) =>
+    queryOptions({
+      queryKey: instructorKeys.notes(params),
+      queryFn: () => listNotes(params as { curriculumId: string }),
+      enabled: Boolean(params.curriculumId),
+    }),
+
+  submissions: (params: SubmissionFilters) =>
+    queryOptions({
+      queryKey: instructorKeys.submissions(params),
+      queryFn: () =>
+        listAssignmentSubmissions(params as SubmissionFilters & { assignmentId: string }),
+      enabled: Boolean(params.assignmentId),
+    }),
+
+  submission: (params: { submissionId?: string }) =>
+    queryOptions({
+      queryKey: instructorKeys.submission(params),
+      queryFn: () => getASubmission(params.submissionId as string),
+      enabled: Boolean(params.submissionId),
     }),
 
   trackContent: trackContentOptions,
