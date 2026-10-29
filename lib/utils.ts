@@ -7,3 +7,10 @@ export function formatFileSize(bytes: number | null) {
   if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`
   return `${Math.max(1, Math.round(bytes / 1e3))} KB`
 }
+
+export function greeting(date = new Date()) {
+  const hour = date.getHours()
+  if (hour < 12) return "Good Morning"
+  if (hour < 17) return "Good Afternoon"
+  return "Good Evening"
+}

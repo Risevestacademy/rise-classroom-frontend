@@ -29,10 +29,10 @@ const itemClass =
   "flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-sm font-medium text-neutral-800 outline-none transition-colors data-[highlighted]:bg-neutral-100";
 
 /**
- * The signed-in admin in the top nav. Clicking opens the account menu, which
- * holds the only sign-out action in the admin area.
+ * The signed-in user in the top nav. Clicking opens the account menu, which
+ * holds the only sign-out action in the area.
  */
-export function AdminProfileMenu() {
+export function ProfileMenu({ basePath }: { basePath: string }) {
   const { data: session, isPending } = useQuery(sessionQuery());
   const signOut = useSignOut();
   const user = session?.user;
@@ -89,10 +89,10 @@ export function AdminProfileMenu() {
               {avatar}
             </div>
 
-            <MenuLink href="/admin/profile" icon={User}>
+            <MenuLink href={`${basePath}/profile`} icon={User}>
               Profile
             </MenuLink>
-            <MenuLink href="/admin/settings" icon={Settings01}>
+            <MenuLink href={`${basePath}/settings`} icon={Settings01}>
               Settings
             </MenuLink>
 
