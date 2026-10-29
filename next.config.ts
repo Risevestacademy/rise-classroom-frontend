@@ -1,11 +1,9 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
-const isDev = process.env.NODE_ENV === "development";
+import { BACKEND_API_URL } from "./lib/backend-url";
 
-const backendApiUrl =
-  process.env.BACKEND_API_URL ??
-  "https://rise-classroom-backend-0r0f.onrender.com/api/v1";
+const isDev = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   /**
@@ -21,7 +19,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/backend/:path*",
-        destination: `${backendApiUrl}/:path*`,
+        destination: `${BACKEND_API_URL}/:path*`,
       },
     ];
   },

@@ -48,14 +48,14 @@ const feedbackItems: {
   { kind: "experience", label: "Share your experience", icon: Happy },
 ];
 
-/**
- * The signed-in admin in the top nav. Clicking opens the account menu, which
- * holds the only sign-out action in the admin area and the feedback forms.
+/*
+ * The signed-in user in the top nav. Clicking opens the account menu, which
+ * holds the only sign-out action in the area and the feedback forms.
  */
-export function AdminProfileMenu() {
+export function ProfileMenu({ basePath }: { basePath: string }) {
   const { data: session, isPending } = useQuery(sessionQuery());
   const signOut = useSignOut();
-  // The dialog lives outside the menu, which unmounts when it closes.
+  /* The dialog lives outside the menu, which unmounts when it closes. */
   const [feedbackKind, setFeedbackKind] = useState<FeedbackKind | null>(null);
   const [showThanks, setShowThanks] = useState(false);
   const user = session?.user;
@@ -115,7 +115,7 @@ export function AdminProfileMenu() {
                 {avatar}
               </div>
 
-              <MenuLink href="/admin/profile" icon={User}>
+              <MenuLink href={`${basePath}/profile`} icon={User}>
                 Profile
               </MenuLink>
               <Menu.SubmenuRoot>
@@ -134,7 +134,7 @@ export function AdminProfileMenu() {
                     className="z-50"
                   >
                     <Menu.Popup className={cn("w-64", popupClass)}>
-              
+                      {/* No help page exists yet. */}
                       <MenuLink href="#" icon={CustomerService01}>
                         Help center
                       </MenuLink>
@@ -152,7 +152,7 @@ export function AdminProfileMenu() {
                   </Menu.Positioner>
                 </Menu.Portal>
               </Menu.SubmenuRoot>
-              <MenuLink href="/admin/settings" icon={Settings01}>
+              <MenuLink href={`${basePath}/settings`} icon={Settings01}>
                 Settings
               </MenuLink>
 

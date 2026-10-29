@@ -8,9 +8,10 @@ import { landingPathFor, type Role } from "@/lib/auth";
 import { sessionQuery } from "@/lib/session-query";
 
 /**
- * Keeps an area to one role. Renders straight away (the proxy has already seen
- * a session cookie, and the page shows its own skeletons), then sends the user
- * elsewhere once the session comes back missing or for a different role.
+ * Browser half of <RoleGate>. The server has usually checked the role already
+ * and seeded the session, so this mostly catches sessions that expire or are
+ * signed out mid-visit — and covers for the server when the backend was too
+ * slow to answer.
  *
  * This is about where people land, not security — the API refuses the data to
  * anyone without the right session either way.

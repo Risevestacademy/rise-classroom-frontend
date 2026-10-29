@@ -33,3 +33,16 @@ export const BagPack = createIcon(
   },
   "solid",
 );
+
+export const Progress = createIcon(
+  "Progress",
+  {
+    stroke: (
+      <>
+        <path d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M12 6C13.053 6 14.088 6.277 15 6.804C15.912 7.33 16.67 8.088 17.196 9C17.723 9.912 18 10.947 18 12C18 13.053 17.723 14.088 17.196 15C16.67 15.912 15.912 16.67 15 17.196C14.088 17.723 13.053 18 12 18C10.947 18 9.912 17.723 9 17.196C8.088 16.67 7.331 15.912 6.804 15L12 12V6Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+  },
+  "stroke",
+);

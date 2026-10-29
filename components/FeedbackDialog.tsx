@@ -69,7 +69,7 @@ export function FeedbackDialog({
   onOpenChange,
   onSubmitted,
 }: {
-  /** The form to show, or null when closed. */
+  /* The form to show, or null when closed. */
   kind: FeedbackKind | null;
   onOpenChange: (open: boolean) => void;
   onSubmitted: () => void;
@@ -140,7 +140,7 @@ function FeedbackForm({
             size="sm"
             pill
             aria-pressed={active}
-            // Picking the selected chip again clears it.
+            /* Picking the selected chip again clears it. */
             onClick={() => setTopic(active ? null : option)}
           >
             {option}

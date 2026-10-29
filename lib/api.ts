@@ -1,3 +1,5 @@
+import { BACKEND_API_URL } from "@/lib/backend-url";
+
 /**
  * In the browser this is the same-origin proxy path (`/api/backend`) so the
  * backend's SameSite=Lax session cookie counts as first-party. On the server
@@ -6,7 +8,7 @@
 function getApiUrl() {
   const url =
     typeof window === "undefined"
-      ? (process.env.BACKEND_API_URL ?? process.env.NEXT_PUBLIC_API_URL)
+      ? BACKEND_API_URL
       : process.env.NEXT_PUBLIC_API_URL;
 
   if (!url) {
