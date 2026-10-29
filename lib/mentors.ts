@@ -1,7 +1,11 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { assignmentsFor, type AdminUser } from "@/lib/admin";
-import { api, type Envelope, type Paginated } from "@/lib/api";
+import {
+  assignmentsFor,
+  getAdminAccessErrorMessage,
+  type AdminUser,
+} from "@/lib/admin";
+import { api, ApiError, type Envelope, type Paginated } from "@/lib/api";
 import { formatJoined } from "@/app/admin/students/student-display";
 
 export type MentorStatus = "active" | "pending" | "inactive";
@@ -72,3 +76,34 @@ export const mentorQueries = {
       queryFn: () => listMentors(cohortId),
     }),
 };
+
+export type MentorshipRecord = {
+  id: string;
+  mentorId: string;
+  studentId: string;
+  active: boolean;
+  assignedAt: string;
+  endedAt?: string | null;
+};
+
+/**
+ * Gives a student this mentor, replacing any mentor they had, so it both
+ * assigns and reassigns. A mentor can have at most 4 active mentees.
+ */
+export function assignMentor(input: { mentorId: string; studentUserId: string }) {
+  return api.post<Envelope<MentorshipRecord>>("/mentors/assign", input);
+}
+
+export function getAssignMentorErrorMessage(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return "We couldn't reach the server. Check your connection and try again.";
+  }
+  const accessMessage = getAdminAccessErrorMessage(error);
+  if (accessMessage) return accessMessage;
+  // The API explains capacity and cohort/track mismatches in its message.
+  if (error.status === 400 && error.message) return error.message;
+  if (error.status === 404) {
+    return "We couldn't find this student. Refresh the page and try again.";
+  }
+  return "We couldn't assign the mentor. Please try again.";
+}

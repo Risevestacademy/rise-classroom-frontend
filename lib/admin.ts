@@ -271,7 +271,7 @@ export function userChanges(user: AdminUser, draft: UserDraft) {
   return changes;
 }
 
-function getAdminAccessErrorMessage(error: ApiError) {
+export function getAdminAccessErrorMessage(error: ApiError) {
   if (error.status === 401) {
     return "Your session has expired. Please sign in again.";
   }

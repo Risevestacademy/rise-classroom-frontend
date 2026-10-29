@@ -292,16 +292,19 @@ export function Select<T extends string>({
   onChange,
   options,
   disabledOptions,
+  placeholder,
   leadingIcon,
   size = "medium",
   children,
 }: {
   label?: string;
   required?: boolean;
-  value: T;
+  /** An empty string shows the placeholder. */
+  value: T | "";
   onChange: (value: T) => void;
   options: SelectOptions<T>;
   disabledOptions?: readonly T[];
+  placeholder?: string;
   leadingIcon?: React.ReactNode;
   size?: keyof typeof sizes;
   children?: React.ReactNode;
@@ -321,6 +324,7 @@ export function Select<T extends string>({
         onChange={onChange}
         options={options}
         disabledOptions={disabledOptions}
+        placeholder={placeholder}
         leadingIcon={leadingIcon}
         className={cn(styles.select, leadingIcon && "gap-2.5")}
         chevronClassName={styles.chevron}
