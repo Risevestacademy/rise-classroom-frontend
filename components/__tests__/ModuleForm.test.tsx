@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 
-import { ModuleForm } from "@/components/curriculum/ModuleForm";
-import type { Curriculum } from "@/lib/curriculum.types";
+import { ModuleForm } from "@/features/curriculum/components/ModuleForm";
+import type { Curriculum } from "@/features/curriculum/types";
 import { renderWithClient } from "@/test/utils";
 
 const curriculum = {

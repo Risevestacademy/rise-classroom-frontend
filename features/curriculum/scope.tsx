@@ -2,7 +2,8 @@
 
 import * as React from "react";
 
-import { AdminTopNav, type Crumb } from "@/components/AdminTopNav";
+import { AdminTopNav } from "@/components/AdminTopNav";
+import type { Crumb } from "@/components/AppTopNav";
 import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
 import { curriculumApis, type CurriculumApi } from "@/features/curriculum/api";
 import type { CurriculumRole } from "@/features/curriculum/types";
