@@ -2,6 +2,7 @@
 
 import { MoreHorizontal, Search, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { submissionsData } from "@/components/instructor-dashboard/data";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { AssignmentRecord } from "@/lib/instructor";
+import {
+  updateAssignment,
+  type AssignmentRecord,
+} from "@/lib/instructor";
 
 import {
   DropdownMenu,
@@ -48,6 +52,22 @@ import {
 } from "@/components/ui/card";
 import { useDeleteItem } from "@/lib/use-instructor-forms";
 
+const BADGE_BASE = "rounded-full px-2.5 py-0.5 text-xs font-medium border-0";
+
+const GREEN = "bg-emerald-100/80 text-emerald-700 hover:bg-emerald-100";
+const NEUTRAL = "bg-surface-default-badge text-text-default-badge";
+const AMBER = "bg-surface-warning-badge text-text-warning";
+
+const PUBLISH_BADGE: Record<string, { label: string; className: string }> = {
+  PUBLISHED: { label: "Published", className: GREEN },
+  DRAFT: { label: "Draft", className: AMBER },
+};
+
+const badgeFor = (
+  map: Record<string, { label: string; className: string }>,
+  value: string
+) => map[value] ?? { label: value, className: NEUTRAL };
+
 export type AssignmentRow = AssignmentRecord & {
   moduleNumber: string;
   moduleTitle: string;
@@ -78,7 +98,20 @@ export function AssignmentsList({
   const [viewing, setViewing] = useState<AssignmentRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AssignmentRow | null>(null);
   const [submissionSelectedIds, setSubmissionSelectedIds] = useState<string[]>([]);
+  const queryClient = useQueryClient();
   const deleteMutation = useDeleteItem("assignment");
+  const statusMutation = useMutation({
+    mutationFn: (assignment: AssignmentRow) =>
+      updateAssignment(assignment.id, {
+        publishStatus:
+          assignment.publishStatus === "PUBLISHED" ? "DRAFT" : "PUBLISHED",
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["instructor"] }),
+  });
+  const viewingPublishBadge = viewing
+    ? badgeFor(PUBLISH_BADGE, viewing.publishStatus)
+    : null;
 
   const mockSubmissions = submissionsData;
 
@@ -169,6 +202,7 @@ export function AssignmentsList({
           <TableBody>
             {assignments.map((assignment) => {
               const isSelected = selectedIds.includes(assignment.id);
+              const publishBadge = badgeFor(PUBLISH_BADGE, assignment.publishStatus);
 
               return (
                 <TableRow
@@ -219,11 +253,11 @@ export function AssignmentsList({
 
                   <TableCell className="py-4">
                     <Badge
-                      variant="light"
-                      className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0"
-                    >
-                      Published
-                    </Badge>
+                    variant="light"
+                    className={`${BADGE_BASE} ${publishBadge.className}`}
+                  >
+                    {publishBadge.label}
+                  </Badge>
                   </TableCell>
 
                   <TableCell className="w-16 py-4 pr-6">
@@ -242,6 +276,15 @@ export function AssignmentsList({
                               className="cursor-pointer"
                             >
                               View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => statusMutation.mutate(assignment)}
+                              className="cursor-pointer"
+                              disabled={statusMutation.isPending}
+                            >
+                              {assignment.publishStatus === "PUBLISHED"
+                                ? "Unpublish"
+                                : "Publish"}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => setDeleteTarget(assignment)}
@@ -355,13 +398,14 @@ export function AssignmentsList({
 
                     <div className="flex items-center justify-between text-xs pt-1">
                       <span className="text-neutral-500 font-medium">Status:</span>
-                      <Badge
-                        variant="light"
-                        status="success"
-                        className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
-                      >
-                        Published
-                      </Badge>
+                      {viewingPublishBadge && (
+                        <Badge
+                          variant="light"
+                          className={`${BADGE_BASE} ${viewingPublishBadge.className}`}
+                        >
+                          {viewingPublishBadge.label}
+                        </Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
