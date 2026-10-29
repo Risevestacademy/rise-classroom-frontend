@@ -1,715 +1,238 @@
 "use client";
 
 import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import {
-  BookOpen,
-  ChevronDown,
-  FileEdit,
-  GraduationCap,
-  Info,
-  Pencil,
-  Plus,
-} from "lucide-react";
+import { BookOpen, FileEdit, GraduationCap } from "lucide-react";
+import { Search } from "@/assets/icons";
 
-
-import {
-  formatDate,
-  instructorQueries,
-} from "@/lib/instructor";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { instructorQueries } from "@/lib/instructor";
+import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
-import { Error } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
-import { Field } from "@base-ui/react/field";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog";
+const BADGE_BASE = "rounded-full px-2.5 py-0.5 text-xs font-medium border-0";
 
-import { AssignmentsList } from "@/components/instructor-dashboard/AssignmentsList";
-import { notesData } from "@/components/instructor-dashboard/data";
-import { ModulesList } from "@/components/instructor-dashboard/ModulesList";
-import { NotesList } from "@/components/instructor-dashboard/NotesList";
-import { ResourcesList } from "@/components/instructor-dashboard/ResourcesList";
-import { UserAvatar } from "@/components/UserAvatar";
+const GREEN = "bg-emerald-100/80 text-emerald-700 hover:bg-emerald-100";
+const NEUTRAL = "bg-surface-default-badge text-text-default-badge";
+const AMBER = "bg-surface-warning-badge text-text-warning";
 
-import { sessionQuery } from "@/lib/session-query";
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  ONGOING: { label: "Active", className: GREEN },
+  COMPLETED: { label: "Completed", className: NEUTRAL },
+};
 
-export default function Curriculum() {
+const PUBLISH_BADGE: Record<string, { label: string; className: string }> = {
+  PUBLISHED: { label: "Published", className: GREEN },
+  DRAFT: { label: "Draft", className: AMBER },
+};
+
+const badgeFor = (
+  map: Record<string, { label: string; className: string }>,
+  value: string
+) => map[value] ?? { label: value, className: NEUTRAL };
+
+export default function ListCurriculums() {
   const router = useRouter();
-  const { data: session, isPending } = useQuery(sessionQuery());
-  const user = session?.user;
+
+  const [searchQuery, setSearchQuery] = useState("");
 
   const myTracks = useQuery(instructorQueries.myTracks());
   const tracks = myTracks.data ?? [];
-  const selectedTrack = tracks[0];
-  const selectedCohort = selectedTrack?.cohort;
 
-  const students = useQuery(
-    instructorQueries.students({
-      trackId: selectedTrack?.trackId,
-      cohortId: selectedTrack?.cohortId,
-    })
+  const curriculumsQuery = useQuery(instructorQueries.allCurriculums());
+  const curriculumsData = curriculumsQuery.data ?? [];
+
+  const filteredCurriculums = curriculumsData.filter((curr) =>
+    curr.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const studentCount = students.data?.length ?? 0;
-
-  const curriculums = useQuery(
-    instructorQueries.curriculums({ trackId: selectedTrack?.trackId })
-  );
-  const currentCurriculum = curriculums.data?.[0];
-
-  const topics = useQuery(
-    instructorQueries.topics({ curriculumId: currentCurriculum?.id })
-  );
-
-  const topicsData = [...(topics.data ?? [])].sort(
-    (a, b) => a.position - b.position
-  );
-
-  const lessonQueries = useQueries({
-    queries: topicsData.map((topic) =>
-      instructorQueries.lessons({ topicId: topic.id })
-    ),
-  });
-
-  const lessonsData = topicsData.flatMap((topic, topicIndex) =>
-    [...(lessonQueries[topicIndex]?.data ?? [])]
-      .sort((a, b) => a.position - b.position)
-      .map((lesson, lessonIndex) => ({
-        ...lesson,
-        moduleTitle: topic.title,
-        moduleNumber: `Module ${topicIndex + 1}`,
-        lessonNumber: lessonIndex + 1,
-      }))
-  );
-
-  const resourceQueries = useQueries({
-    queries: lessonsData.map((lesson) =>
-      instructorQueries.resources({ lessonId: lesson.id })
-    ),
-  });
-  const resourcesData = lessonsData.flatMap((lesson, i) =>
-    (resourceQueries[i]?.data ?? []).map((resource) => ({
-      ...resource,
-      name: resource.title,
-      lessonTitle: lesson.title,
-      lessonNumber: lesson.lessonNumber,
-      moduleTitle: lesson.moduleTitle,
-      moduleNumber: lesson.moduleNumber,
-      uploaded: formatDate(resource.createdAt),
-    }))
-  );
-
-  const assignmentQueries = useQueries({
-    queries: lessonsData.map((lesson) =>
-      instructorQueries.assignments({ lessonId: lesson.id })
-    ),
-  });
-  const assignmentsData = lessonsData.flatMap((lesson, i) =>
-    (assignmentQueries[i]?.data ?? []).map((assignment) => ({
-      ...assignment,
-      lessonTitle: lesson.title,
-      lessonNumber: lesson.lessonNumber,
-      moduleTitle: lesson.moduleTitle,
-      moduleNumber: lesson.moduleNumber,
-      afterLesson: `After lesson ${lesson.lessonNumber}`,
-      dueDateLabel: formatDate(assignment.dueDate),
-    }))
-  );
-
-  const recordingQueries = useQueries({
-    queries: lessonsData.map((lesson) =>
-      instructorQueries.recordings({ lessonId: lesson.id })
-    ),
-  });
-
-  const totalsByTopic = lessonsData.reduce<
-    Record<string, { recordings: number; assignments: number; resources: number }>
-  >((acc, lesson, i) => {
-    const entry = acc[lesson.topicId] ?? {
-      recordings: 0,
-      assignments: 0,
-      resources: 0,
-    };
-    entry.recordings += recordingQueries[i]?.data?.length ?? 0;
-    entry.assignments += assignmentQueries[i]?.data?.length ?? 0;
-    entry.resources += resourceQueries[i]?.data?.length ?? 0;
-    acc[lesson.topicId] = entry;
-    return acc;
-  }, {});
-
-  const modulesData = topicsData.map((topic) => ({
-    ...topic,
-    included: {
-      lessons: topic._count.lessons,
-      recordings: totalsByTopic[topic.id]?.recordings ?? 0,
-      assignments: totalsByTopic[topic.id]?.assignments ?? 0,
-      resources: totalsByTopic[topic.id]?.resources ?? 0,
-    },
-  }));
-
-  const [activeTab, setActiveTab] = useState("overview");
-  const [isAddNoteOpen, setIsAddNoteOpen] = useState(false);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
-  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
-  const curriculumId = currentCurriculum?.id;
-
-  const filteredAssignments = assignmentsData.filter((item) =>
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.moduleTitle.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const filteredResources = resourcesData.filter((item) =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.moduleTitle.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const toggleAssignmentRow = (id: string) => {
-    setSelectedAssignmentIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const toggleAllAssignments = () => {
-    if (selectedAssignmentIds.length === filteredAssignments.length) {
-      setSelectedAssignmentIds([]);
-    } else {
-      setSelectedAssignmentIds(filteredAssignments.map((item) => item.id));
-    }
-  };
-
-  const toggleResourceRow = (id: string) => {
-    setSelectedResourceIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const toggleAllResources = () => {
-    if (selectedResourceIds.length === filteredResources.length) {
-      setSelectedResourceIds([]);
-    } else {
-      setSelectedResourceIds(filteredResources.map((item) => item.id));
-    }
-  };
-
-  const getTabButtonConfig = () => {
-    switch (activeTab) {
-      case "modules":
-        return topicsData.length > 0 && curriculumId
-          ? { label: "Add Module", onClick: () => router.push(`/instructor/curriculum/${curriculumId}/modules/create`) }
-          : null;
-      case "assignments":
-        return assignmentsData.length > 0 && curriculumId
-          ? { label: "Add Assignment", onClick: () => router.push(`/instructor/curriculum/${curriculumId}/assignments/create`) }
-          : null;
-      case "resources":
-        return resourcesData.length > 0 && curriculumId
-          ? { label: "Add Resource", onClick: () => router.push(`/instructor/curriculum/${curriculumId}/resources/create`) }
-          : null;
-      case "notes":
-        return { label: "Add Note", onClick: () => setIsAddNoteOpen(true) };
-      default:
-        return null;
-    }
-  };
-
-  const buttonConfig = getTabButtonConfig();
 
   return (
     <>
       <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }]} />
       <main className="flex flex-col min-h-screen bg-neutral-100 p-6 space-y-6">
-        <div className="img-header relative w-full h-16 md:h-20 overflow-hidden rounded-xl">
-          <Image
-            src="/curriculum-header.png"
-            alt="Curriculum Header"
-            fill
-            className="object-cover"
-            priority
-          />
+
+        {/* Header Section */}
+        <div className="flex justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-neutral-900 tracking-tight">
+              Curriculum
+            </h1>
+            <p className="text-sm font-normal text-neutral-500 mt-0.5">
+              Manage learning content, modules, lessons and assignments across your assigned tracks and cohorts
+            </p>
+          </div>
         </div>
 
-        <div className="header flex flex-col md:flex-row justify-between">
-          <div className="left">
-            <div className="title flex flex-row space-x-6">
-              <h1 className="text-2xl font-semibold text-neutral-800 tracking-tight">
-                {currentCurriculum?.title}
-              </h1>
-              <Badge
-                variant="light"
-                className="bg-emerald-100/70 text-emerald-700 hover:bg-emerald-100 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
-              >
-                {currentCurriculum?.status}
-              </Badge>
-            </div>
-            <div className="subtitle text-xs font-medium text-neutral-500 mt-1">
-              <p className="tracking-wide">{selectedTrack?.track.name} · {selectedCohort?.name}</p>
-            </div>
-
-            <div className="flex items-center gap-8 mt-3">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-900">
-                  <BookOpen size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-neutral-500">Total modules</p>
-                  <p className="text-sm font-bold text-neutral-800">{topicsData.length}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-900">
-                  <GraduationCap size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-neutral-500">Total Lessons</p>
-                  <p className="text-sm font-bold text-neutral-800">{lessonsData.length}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-900">
-                  <FileEdit size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-neutral-500">Total Assignments</p>
-                  <p className="text-sm font-bold text-neutral-900">{assignmentsData.length}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="right text-xs font-regular flex flex-col items-end text-right">
-            <UserAvatar
-              user={{
-                name: user?.name ?? "Account",
-                avatar: user?.image ?? "/default-avatar.png",
-              }}
-              isLoading={isPending}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+            <Input
+              placeholder="Search curriculum"
+              leadingIcon={null}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none px-5"
             />
-            <p>Instructor: {user?.name}</p>
-            <p>{user?.email}</p>
           </div>
         </div>
 
-        <div className="pt-2">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-            <div className="flex items-center justify-between w-full">
-              <TabsList className="bg-neutral-200 px-2 py-1 !h-auto rounded-lg gap-1 inline-flex shadow-[0px_1px_3px_0px_rgba(0,0,0,0.15)]">
-                <TabsTrigger
-                  value="overview"
-                  className="rounded-lg px-2 py-1.5 text-[14px] font-medium text-neutral-600 data-active:bg-white data-[state=active]:text-neutral-900"
-                >
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger
-                  value="modules"
-                  className="rounded-lg px-2 py-1.5 text-[14px] font-medium text-neutral-600 data-active:bg-white data-[state=active]:text-neutral-900"
-                >
-                  Modules
-                </TabsTrigger>
-                <TabsTrigger
-                  value="assignments"
-                  className="rounded-lg px-2 py-1.5 text-[14px] font-medium text-neutral-600 data-active:bg-white data-[state=active]:text-neutral-900"
-                >
-                  Assignments
-                </TabsTrigger>
-                <TabsTrigger
-                  value="resources"
-                  className="rounded-lg px-2 py-1.5 text-[14px] font-medium text-neutral-600 data-active:bg-white data-[state=active]:text-neutral-900"
-                >
-                  Resources
-                </TabsTrigger>
-                <TabsTrigger
-                  value="notes"
-                  className="rounded-lg px-2 py-1.5 text-[14px] font-medium text-neutral-600 data-active:bg-white data-[state=active]:text-neutral-900"
-                >
-                  Notes
-                </TabsTrigger>
-                <TabsTrigger
-                  value="settings"
-                  className="rounded-lg px-2 py-1.5 text-[14px] font-medium text-neutral-600 data-active:bg-white data-[state=active]:text-neutral-900 data-[state=active]:shadow-sm"
-                >
-                  Settings
-                </TabsTrigger>
-              </TabsList>
-              {buttonConfig && (
-                <button
-                  onClick={buttonConfig.onClick}
-                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium text-white bg-brand-primary hover:bg-brand-primary-hover cursor-pointer shadow-xs"
-                >
-                  <Plus className="h-3.5 w-3.5 text-white" />
-                  <span>{buttonConfig.label}</span>
-                </button>
-              )}
-            </div>
-
-            <TabsContent value="overview" className="w-[500px] space-y-8 outline-none">
-              <div className="space-y-2 max-w-2xl">
-                <h2 className="text-lg font-bold text-neutral-900">
-                  About this curriculum
-                </h2>
-                <p className="text-sm text-neutral-500 leading-relaxed tracking-wider">
-                  {currentCurriculum?.description}
-                </p>
-              </div>
-
-              <Card className="max-w-[270px] bg-neutral-200 border-none ring-0 shadow-none rounded-2xl p-4">
-                <CardHeader className="p-0">
-                  <CardTitle className="text-base font-bold text-neutral-900">
-                    Usage
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-neutral-100 text-indigo-950">
-                      <Pencil size={18} />
+        {/* Curriculums List Cards */}
+        <div className="space-y-4">
+          {curriculumsQuery.isPending ? (
+            Array.from({ length: 3 }).map((_, index) => (
+              <Card key={index} className="bg-white border-none ring-0 shadow-xs rounded-2xl p-5 animate-pulse">
+                <CardContent className="p-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="space-y-3 w-full md:w-auto">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-neutral-200 shrink-0" />
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-40 h-5 bg-neutral-200 rounded-md" />
+                          <div className="w-16 h-5 bg-neutral-200 rounded-full" />
+                          <div className="w-14 h-5 bg-neutral-200 rounded-full" />
+                        </div>
+                        <div className="w-28 h-3.5 bg-neutral-200 rounded" />
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-neutral-900">
-                        {selectedTrack?.track.name} · {selectedCohort?.name}
-                      </p>
-                      <p className="text-xs font-medium text-neutral-500">
-                        {studentCount} Students
-                      </p>
+
+                    <div className="flex items-center gap-6 pt-1 pl-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-neutral-200" />
+                        <div className="space-y-1">
+                          <div className="w-16 h-2.5 bg-neutral-200 rounded" />
+                          <div className="w-6 h-3 bg-neutral-200 rounded" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-neutral-200" />
+                        <div className="space-y-1">
+                          <div className="w-16 h-2.5 bg-neutral-200 rounded" />
+                          <div className="w-6 h-3 bg-neutral-200 rounded" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-neutral-200" />
+                        <div className="space-y-1">
+                          <div className="w-16 h-2.5 bg-neutral-200 rounded" />
+                          <div className="w-6 h-3 bg-neutral-200 rounded" />
+                        </div>
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-end w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-neutral-100">
+                    <div className="w-28 h-9 bg-neutral-200 rounded-xl" />
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            ))
+          ) : filteredCurriculums.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-xs text-center">
+              <BookOpen className="h-10 w-10 text-neutral-300 mb-3" />
+              <h3 className="text-base font-semibold text-neutral-800">No curriculums found</h3>
+              <p className="text-xs text-neutral-500 mt-1">There are no curriculums available matching your search criteria.</p>
+            </div>
+          ) : (
+            filteredCurriculums.map((curr) => {
+              const status = badgeFor(STATUS_BADGE, curr.status);
+              const publish = badgeFor(PUBLISH_BADGE, curr.publishStatus);
+              const trackName = tracks.find(
+                (assignment) => assignment.trackId === curr.trackId
+              )?.track.name;
 
-            <TabsContent value="modules" className="space-y-4 max-w-4xl outline-none">
-              {topicsData.length === 0 ? (
-                <EmptyState
-                  icon={BookOpen}
-                  title="No module yet"
-                  description="Modules group your lessons and assignments. Start by creating your first module."
-                  button={curriculumId ? {
-                    label: "Add Module",
-                    onClick: () => router.push(`/instructor/curriculum/${curriculumId}/modules/create`),
-                  } : undefined}
-                />
-              ) : (
-                <ModulesList modules={modulesData} />
-              )}
-            </TabsContent>
+              return (
+                <Card key={curr.id} className="bg-white border-none ring-0 shadow-xs rounded-2xl p-5 hover:border-neutral-300 transition-all">
+                  <CardContent className="p-0 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
 
-            <TabsContent value="assignments" className="space-y-4 outline-none mt-0">
-              {assignmentsData.length === 0 ? (
-                <EmptyState
-                  icon={BookOpen}
-                  title="No Assignment yet"
-                  description="Add your first and attach to a lesson in a module for students."
-                  button={curriculumId ? {
-                    label: "Add Assignment",
-                    onClick: () => router.push(`/instructor/curriculum/${curriculumId}/assignments/create`),
-                  } : undefined}
-                />
-              ) : (
-                <AssignmentsList
-                  assignments={filteredAssignments}
-                  searchQuery={searchQuery}
-                  onSearchQueryChange={setSearchQuery}
-                  selectedIds={selectedAssignmentIds}
-                  onToggleSelectRow={toggleAssignmentRow}
-                  onToggleSelectAll={toggleAllAssignments}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="resources">
-              {resourcesData.length === 0 ? (
-                <EmptyState
-                  icon={BookOpen}
-                  title="No resource yet"
-                  description="Add your first resource and attach to a lesson in a module for students."
-                  button={curriculumId ? {
-                    label: "Add Resource",
-                    onClick: () => router.push(`/instructor/curriculum/${curriculumId}/resources/create`),
-                  } : undefined}
-                />
-              ) : (
-                <ResourcesList
-                  resources={filteredResources}
-                  searchQuery={searchQuery}
-                  onSearchQueryChange={setSearchQuery}
-                  selectedIds={selectedResourceIds}
-                  onToggleSelectRow={toggleResourceRow}
-                  onToggleSelectAll={toggleAllResources}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="notes">
-              {notesData.length === 0 ? (
-                <EmptyState
-                  icon={BookOpen}
-                  title="No notes yet"
-                  description="Add your first note. All notes are visible only to admins and assigned instructors"
-                  button={{
-                    label: "Add Note",
-                    onClick: () => {
-                      setIsAddNoteOpen(true);
-                    },
-                  }}
-                />
-              ) : (
-                <NotesList
-                  notes={notesData}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="settings" className="w-full flex flex-col space-y-6">
-              <div className="mb-2">
-                <h1 className="text-[24px] font-semibold mb-[4px]">
-                  Settings
-                </h1>
-                <p className="text-[14px] font-regular text-neutral-500">
-                  Manage how this curriculum is configured and delivered
-                </p>
-              </div>
-
-              <div className="flex flex-row gap-6 w-full items-start">
-                <div className="w-full md:w-[70%] space-y-4">
-                  <Card className="bg-white border-none ring-0 shadow-xs rounded-2xl p-4">
-                    <CardHeader className="p-0 mb-4">
-                      <CardTitle className="text-[18px] font-semibold">
-                        General
-                      </CardTitle>
-                      <CardDescription className="text-[14px] font-regular tracking-wide text-neutral-500">
-                        Basic information about the curriculum
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <form className="space-y-4">
-                        <Field.Root className="flex flex-col space-y-1.5">
-                          <Field.Label className="text-xs font-medium text-text-primary">
-                            Curriculum name <span className="text-red-500">*</span>
-                          </Field.Label>
-                          <Input placeholder="Type curriculum name..." />
-                          <Error className="text-xs text-error-text"></Error>
-                        </Field.Root>
-
-                        <Field.Root className="flex flex-col space-y-1.5">
-                          <Field.Label className="text-xs font-medium text-text-primary">
-                            Description <span className="text-neutral-400 font-normal">(Optional)</span>
-                          </Field.Label>
-                          <textarea
-                            className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-neutral-800"
-                          />
-                          <Error className="text-xs text-error-text"></Error>
-                        </Field.Root>
-
-                        <div className="flex justify-end pt-2">
-                          <Button type="button" className="bg-brand-primary text-brand-on-primary hover:bg-brand-primary-hover rounded-xl px-4 py-2 text-xs font-medium">
-                            Save changes
-                          </Button>
+                    {/* Left Info */}
+                    <div className="space-y-3 w-full md:w-auto">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-50 text-purple-700">
+                          <BookOpen size={20} />
                         </div>
-                      </form>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-white border-none ring-0 shadow-xs rounded-2xl p-4">
-                    <CardHeader className="p-0 mb-4">
-                      <CardTitle className="text-[18px] font-semibold">
-                        Delivery settings
-                      </CardTitle>
-                      <CardDescription className="text-[14px] font-regular tracking-wide text-neutral-500">
-                        Control how students access and progress
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0 space-y-4">
-                      <div className="bg-neutral-50 rounded-xl p-4 space-y-3 border border-neutral-100">
-                        <p className="text-xs font-semibold text-neutral-800">Curriculum status</p>
-
-                        <label className="flex items-start space-x-3 cursor-pointer">
-                          <input type="radio" name="status" defaultChecked className="mt-0.5 accent-brand-primary" />
-                          <div>
-                            <p className="text-xs font-semibold text-neutral-800">Published</p>
-                            <p className="text-[11px] text-neutral-500">Student can access this Curriculum</p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-bold text-neutral-900">
+                              {curr.title}
+                            </h3>
+                            <Badge
+                              variant="light"
+                              className={`${BADGE_BASE} ${status.className}`}
+                            >
+                              {status.label}
+                            </Badge>
+                            <Badge
+                              variant="light"
+                              className={`${BADGE_BASE} ${publish.className}`}
+                            >
+                              {publish.label}
+                            </Badge>
                           </div>
-                        </label>
-
-                        <label className="flex items-start space-x-3 cursor-pointer">
-                          <input type="radio" name="status" className="mt-0.5 accent-brand-primary" />
-                          <div>
-                            <p className="text-xs font-semibold text-neutral-800">Draft</p>
-                            <p className="text-[11px] text-neutral-500">Only admin and instructors can view this curriculum</p>
-                          </div>
-                        </label>
+                          <p className="text-xs font-medium text-neutral-500 mt-0.5">
+                            {trackName ?? "Track"} {curr.cohort ? `· ${curr.cohort.name}` : "· Track-wide"}
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="bg-neutral-50 rounded-xl p-4 space-y-3 border border-neutral-100">
-                        <p className="text-xs font-semibold text-neutral-800">Progress mode</p>
-
-                        <label className="flex items-start space-x-3 cursor-pointer">
-                          <input type="radio" name="progress" defaultChecked className="mt-0.5 accent-brand-primary" />
-                          <div>
-                            <p className="text-xs font-semibold text-neutral-800">Sequential</p>
-                            <p className="text-[11px] text-neutral-500">Student complete modules in order</p>
+                      {/* Metrics Row */}
+                      <div className="flex items-center gap-6 pt-1 pl-1">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-50 text-indigo-900">
+                            <BookOpen size={14} />
                           </div>
-                        </label>
-
-                        <label className="flex items-start space-x-3 cursor-pointer">
-                          <input type="radio" name="progress" className="mt-0.5 accent-brand-primary" />
                           <div>
-                            <p className="text-xs font-semibold text-neutral-800">Flexible</p>
-                            <p className="text-[11px] text-neutral-500">Students can access available modules freely</p>
+                            <p className="text-[11px] font-medium text-neutral-400">Total modules</p>
+                            <p className="text-xs font-bold text-neutral-800">{curr.totalModules ?? 0}</p>
                           </div>
-                        </label>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-50 text-blue-900">
+                            <GraduationCap size={14} />
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-medium text-neutral-400">Total Lessons</p>
+                            <p className="text-xs font-bold text-neutral-800">{curr.totalLessons ?? 0}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-50 text-emerald-900">
+                            <FileEdit size={14} />
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-medium text-neutral-400">Total Assignments</p>
+                            <p className="text-xs font-bold text-neutral-900">{curr.totalAssignments ?? 0}</p>
+                          </div>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                    </div>
 
-                <div className="w-[30%] hidden md:block">
-                  <Card className="max-w-[270px] bg-[#F5F6FF] border-none ring-0 shadow-none rounded-2xl p-4">
-                    <CardHeader className="p-0 mb-2">
-                      <CardTitle className="text-xs font-semibold text-neutral-800 flex items-center gap-1.5">
-                        <Info size={16} className="text-neutral-700" />
-                        <span>Version history</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0 space-y-2">
-                      <p className="text-xs text-neutral-500 leading-snug">
-                        Aishat Lawal changed module access to Sequential
-                      </p>
-                      <p className="text-[11px] text-neutral-400 font-medium">
-                        Oct 8, 2026
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+                    {/* Right Actions */}
+                    <div className="flex items-center justify-end w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-neutral-100">
+                      <Button
+                        onClick={() => router.push(`/instructor/curriculum/${curr.id}`)}
+                        variant="outline"
+                        className="border-neutral-200 text-neutral-800 hover:bg-neutral-50 rounded-xl px-4 py-2 text-xs font-medium shadow-xs"
+                      >
+                        View curriculum
+                      </Button>
+                    </div>
+
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
         </div>
 
-        <Dialog open={isAddNoteOpen} onOpenChange={setIsAddNoteOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add Note</DialogTitle>
-              <DialogDescription>
-                Add an internal note about this curriculum
-              </DialogDescription>
-            </DialogHeader>
-            <form action="" className="space-y-4 mt-6">
-              <Field.Root className="flex flex-col space-y-1.5">
-                <Field.Label className="text-xs font-medium text-text-primary">
-                  Title <span className="text-red-500">*</span>
-                </Field.Label>
-                <Input placeholder="Type curriculum note title..." leadingIcon={null} />
-                <Error className="text-xs text-error-text"></Error>
-              </Field.Root>
-
-              <Field.Root className="flex flex-col space-y-1.5">
-                <Field.Label className="text-xs font-medium text-text-primary">
-                  Note <span className="text-red-500">*</span>
-                </Field.Label>
-                <textarea
-                  className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-neutral-800"
-                />
-                <Error className="text-xs text-error-text"></Error>
-              </Field.Root>
-
-              <Field.Root className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-neutral-800">
-                  Attach to <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <select
-                    className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
-                  >
-                    {topicsData.length === 0 ? (
-                      <option value="">No modules yet</option>
-                    ) : (
-                      topicsData.map((topic, i) => (
-                        <option key={topic.id} value={topic.id}>
-                          Module {i + 1} - {topic.title}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
-                </div>
-              </Field.Root>
-
-              <div className="flex justify-end gap-2">
-                <Button variant="secondary" onClick={() => setIsAddNoteOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => setIsAddNoteOpen(false)}>
-                  Save Note
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </main>
     </>
-  );
-}
-
-interface EmptyStateProps {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  button?: {
-    label: string;
-    onClick?: () => void;
-    icon?: React.ComponentType<{ className?: string }>;
-  };
-}
-
-export function EmptyState({
-  icon: Icon,
-  title,
-  description,
-  button,
-}: EmptyStateProps) {
-  return (
-    <div className="flex flex-col items-center justify-center text-center w-full">
-      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-neutral-100 mb-[16px]">
-        <Icon className="h-[80px] w-[80px] text-brand-primary" />
-      </div>
-      <h3 className="text-[24px] font-semibold text-neutral-800">{title}</h3>
-      <p className="text-[14px] font-regular text-neutral-500 max-w-sm tracking-wider">{description}</p>
-
-      {button && (
-        <button
-          onClick={button.onClick}
-          className="mt-[24px] inline-flex items-center gap-2 rounded-lg px-[16px] py-[10px] text-xs font-medium text-white bg-brand-primary cursor-pointer"
-        >
-          <Plus className="h-3.5 w-3.5 text-white" />
-          <span>{button.label}</span>
-        </button>
-      )}
-    </div>
   );
 }
