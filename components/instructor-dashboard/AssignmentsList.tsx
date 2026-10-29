@@ -223,7 +223,7 @@ export function AssignmentsList({
                       {assignment.title}
                     </p>
                     <p className="text-[11px] text-neutral-500 mt-0.5">
-                      {assignment.type ?? "—"}
+                      {assignment.submissionType.replace("_", " ").toLowerCase()}
                     </p>
                   </TableCell>
 
@@ -238,7 +238,7 @@ export function AssignmentsList({
 
                   <TableCell className="py-4">
                     <p className="text-xs font-medium text-neutral-700">
-                      {assignment.dueDate ? assignment.dueDateLabel : "No due date"}
+                      {assignment.dueAt ? assignment.dueDateLabel : "No due date"}
                     </p>
                     <p className="text-[11px] text-neutral-500 mt-0.5">
                       After Lesson {assignment.lessonNumber}
@@ -246,9 +246,7 @@ export function AssignmentsList({
                   </TableCell>
 
                   <TableCell className="py-4 text-xs font-medium text-neutral-700">
-                    {assignment.submissions
-                      ? `${assignment.submissions.completed}/${assignment.submissions.total}`
-                      : "—"}
+                    —
                   </TableCell>
 
                   <TableCell className="py-4">
@@ -364,16 +362,9 @@ export function AssignmentsList({
                   </CardHeader>
                   <CardContent className="p-0 space-y-6">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-neutral-500 font-medium">Type:</span>
-                      <span className="text-neutral-900 font-semibold">
-                        {viewing?.type ?? "—"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs">
                       <span className="text-neutral-500 font-medium">Submission type:</span>
                       <span className="text-neutral-900 font-semibold">
-                        {viewing?.submissionType ?? "—"}
+                        {viewing?.submissionType.replace("_", " ").toLowerCase() ?? "—"}
                       </span>
                     </div>
 

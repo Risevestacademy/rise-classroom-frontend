@@ -218,7 +218,7 @@ export default function ListCurriculums() {
                     <div className="flex items-center justify-end w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-neutral-100">
                       <Button
                         onClick={() => router.push(`/instructor/curriculum/${curr.id}`)}
-                        variant="outline"
+                        variant="secondary"
                         className="border-neutral-200 text-neutral-800 hover:bg-neutral-50 rounded-xl px-4 py-2 text-xs font-medium shadow-xs"
                       >
                         View curriculum

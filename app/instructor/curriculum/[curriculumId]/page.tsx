@@ -209,7 +209,7 @@ export default function Curriculum() {
       moduleTitle: lesson.moduleTitle,
       moduleNumber: lesson.moduleNumber,
       afterLesson: `After lesson ${lesson.lessonNumber}`,
-      dueDateLabel: formatDate(assignment.dueDate),
+      dueDateLabel: formatDate(assignment.dueAt),
     }))
   );
 
@@ -257,7 +257,7 @@ export default function Curriculum() {
   const modulesData = topicsData.map((topic) => ({
     ...topic,
     included: {
-      lessons: topic._count.lessons,
+      lessons: topic._count?.lessons ?? 0,
       recordings: totalsByTopic[topic.id]?.recordings ?? 0,
       assignments: totalsByTopic[topic.id]?.assignments ?? 0,
       resources: totalsByTopic[topic.id]?.resources ?? 0,
