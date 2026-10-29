@@ -48,14 +48,14 @@ const feedbackItems: {
   { kind: "experience", label: "Share your experience", icon: Happy },
 ];
 
-/**
+/*
  * The signed-in user in the top nav. Clicking opens the account menu, which
  * holds the only sign-out action in the area and the feedback forms.
  */
 export function ProfileMenu({ basePath }: { basePath: string }) {
   const { data: session, isPending } = useQuery(sessionQuery());
   const signOut = useSignOut();
-  // The dialog lives outside the menu, which unmounts when it closes.
+  /* The dialog lives outside the menu, which unmounts when it closes. */
   const [feedbackKind, setFeedbackKind] = useState<FeedbackKind | null>(null);
   const [showThanks, setShowThanks] = useState(false);
   const user = session?.user;
