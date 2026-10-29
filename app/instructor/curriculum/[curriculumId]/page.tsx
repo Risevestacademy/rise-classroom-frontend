@@ -3,7 +3,7 @@
 import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
 import Image from "next/image";
 import { useRouter, useParams, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   BookOpen,
@@ -112,23 +112,20 @@ export default function Curriculum() {
     ? badgeFor(STATUS_BADGE, currentCurriculum.status)
     : null;
 
-  const [settings, setSettings] = useState<CurriculumUpdateInput>({
-    title: "",
-    description: "",
-    publishStatus: "DRAFT",
-    progressMode: "SEQUENTIAL",
-  });
-
-  useEffect(() => {
-    if (!currentCurriculum) return;
-
-    setSettings({
-      title: currentCurriculum.title,
-      description: currentCurriculum.description ?? "",
-      publishStatus: currentCurriculum.publishStatus,
-      progressMode: currentCurriculum.progressMode,
-    });
-  }, [currentCurriculum]);
+  const defaultSettings: CurriculumUpdateInput = {
+    title: currentCurriculum?.title ?? "",
+    description: currentCurriculum?.description ?? "",
+    publishStatus: currentCurriculum?.publishStatus ?? "DRAFT",
+    progressMode: currentCurriculum?.progressMode ?? "SEQUENTIAL",
+  };
+  const [settingsState, setSettingsState] = useState<{
+    curriculumId: string;
+    value: CurriculumUpdateInput;
+  } | null>(null);
+  const settings =
+    settingsState?.curriculumId === curriculumId
+      ? settingsState.value
+      : defaultSettings;
 
   const updateCurriculumMutation = useMutation({
     mutationFn: (input: CurriculumUpdateInput) =>
@@ -138,6 +135,7 @@ export default function Curriculum() {
         instructorKeys.curriculumById({ curriculumId }),
         updatedCurriculum
       );
+      setSettingsState(null);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["instructor", "curriculum"],
@@ -150,7 +148,15 @@ export default function Curriculum() {
   });
 
   const updateSettings = (updates: Partial<CurriculumUpdateInput>) => {
-    setSettings((current) => ({ ...current, ...updates }));
+    setSettingsState((current) => ({
+      curriculumId,
+      value: {
+        ...(current?.curriculumId === curriculumId
+          ? current.value
+          : defaultSettings),
+        ...updates,
+      },
+    }));
     updateCurriculumMutation.reset();
   };
 
