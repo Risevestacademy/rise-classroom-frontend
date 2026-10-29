@@ -3,8 +3,10 @@
 import * as React from "react";
 import { notFound, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { Menu } from "@base-ui/react/menu";
 
 import {
+  Add01,
   Calendar03,
   Call02,
   Filter,
@@ -25,7 +27,15 @@ import {
   type PeopleFilterValues,
 } from "@/components/cohorts/PeopleFilterDialog";
 import { PersonAvatar } from "@/components/PersonAvatar";
-import { MentorActionsMenu } from "@/components/MentorActionsMenu";
+import {
+  actionsMenuItemClass,
+  actionsMenuPopupClass,
+  MentorActionsMenu,
+} from "@/components/MentorActionsMenu";
+import {
+  AssignStudentsDialog,
+  ReassignStudentDialog,
+} from "@/components/MentorAssignmentDialogs";
 import {
   needsAttention,
   progressTone,
@@ -45,6 +55,7 @@ import {
   ProgressBar,
 } from "@/components/student-profile/shared";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
@@ -103,6 +114,7 @@ export default function MentorProfilePage({
   const tab: Tab = isTab(tabParam) ? tabParam : "overview";
   const router = useRouter();
   const mentorQuery = useQuery(adminQueries.user(id));
+  const [assignOpen, setAssignOpen] = React.useState(false);
 
   // A missing user, or a user who isn't a mentor, gets the normal 404 page.
   const isNotFound =
@@ -133,17 +145,25 @@ export default function MentorProfilePage({
           this summary. */}
         {mentor && tab !== "overview" && <MentorSummary mentor={mentor} />}
 
-        <CohortTabs
-          label="Mentor profile sections"
-          tabs={tabs}
-          value={tab}
-          onChange={(next) =>
-            router.replace(`/admin/mentors/${id}?tab=${next}`, {
-              scroll: false,
-            })
-          }
-          className="mt-6 shadow-[0_1px_3px_rgb(0_0_0/0.15)]"
-        />
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <CohortTabs
+            label="Mentor profile sections"
+            tabs={tabs}
+            value={tab}
+            onChange={(next) =>
+              router.replace(`/admin/mentors/${id}?tab=${next}`, {
+                scroll: false,
+              })
+            }
+            className="shadow-[0_1px_3px_rgb(0_0_0/0.15)]"
+          />
+          {mentor && tab === "students" && (
+            <Button variant="primary" size="medium" onClick={() => setAssignOpen(true)}>
+              <Add01 className="size-5" />
+              Assign student
+            </Button>
+          )}
+        </div>
 
         <div className="mt-6">
           {mentorQuery.isPending && <OverviewSkeleton />}
@@ -157,7 +177,7 @@ export default function MentorProfilePage({
           )}
 
           {mentor && tab === "overview" && <OverviewTab mentor={mentor} />}
-          {mentor && tab === "students" && <StudentsTab />}
+          {mentor && tab === "students" && <StudentsTab mentor={mentor} />}
           {mentor && tab === "activity" && (
             <ActivityCard
               subtitle={`Recent activity and mentoring history for ${mentor.name}.`}
@@ -168,6 +188,14 @@ export default function MentorProfilePage({
           )}
         </div>
       </main>
+
+      {mentor && (
+        <AssignStudentsDialog
+          mentor={mentor.user}
+          open={assignOpen}
+          onOpenChange={setAssignOpen}
+        />
+      )}
     </>
   );
 }
@@ -304,8 +332,11 @@ const studentFilters: PeopleFilter<AssignedStudent>[] = [
 const headerCell =
   "border-r border-border-default px-2.5 font-work text-sm font-medium tracking-[-0.01em]";
 
-function StudentsTab() {
+function StudentsTab({ mentor }: { mentor: Mentor }) {
   const [search, setSearch] = React.useState("");
+  const [reassigning, setReassigning] = React.useState<AssignedStudent | null>(
+    null,
+  );
   const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
     {},
   );
@@ -461,14 +492,26 @@ function StudentsTab() {
                       </div>
                     </td>
                     <td className="px-2.5">
-                      {/* The design has no menu for this button yet. */}
-                      <button
-                        type="button"
-                        aria-label={`${student.name} actions`}
-                        className="flex size-8 items-center justify-center text-text-primary"
-                      >
-                        <MoreHorizontal className="size-6" />
-                      </button>
+                      <Menu.Root>
+                        <Menu.Trigger
+                          aria-label={`${student.name} actions`}
+                          className="flex size-8 items-center justify-center text-text-primary"
+                        >
+                          <MoreHorizontal className="size-6" />
+                        </Menu.Trigger>
+                        <Menu.Portal>
+                          <Menu.Positioner align="end" sideOffset={4} className="z-50">
+                            <Menu.Popup className={actionsMenuPopupClass}>
+                              <Menu.Item
+                                onClick={() => setReassigning(student)}
+                                className={actionsMenuItemClass}
+                              >
+                                Reassign student
+                              </Menu.Item>
+                            </Menu.Popup>
+                          </Menu.Positioner>
+                        </Menu.Portal>
+                      </Menu.Root>
                     </td>
                   </tr>
                 );
@@ -489,6 +532,18 @@ function StudentsTab() {
           value={filterValues}
           onApply={setFilterValues}
         />
+
+        {reassigning && (
+          <ReassignStudentDialog
+            student={reassigning}
+            currentMentor={{ id: mentor.id, name: mentor.name }}
+            open
+            onOpenChange={(open) => !open && setReassigning(null)}
+            // PENDING-BACKEND: these are sample students without real IDs, so
+            // reassigning can't call the API until the list is real.
+            onReassign={async () => {}}
+          />
+        )}
       </section>
     </>
   );
