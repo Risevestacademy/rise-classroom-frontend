@@ -1,6 +1,11 @@
 "use client";
 
-import { useQueries, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   BookOpen,
   Calendar,
@@ -19,11 +24,21 @@ import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNa
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatFileSize, instructorQueries } from "@/lib/instructor";
+import {
+  formatFileSize,
+  instructorQueries,
+  updateTopic,
+} from "@/lib/instructor";
 import { sessionQuery } from "@/lib/session-query";
 
 const plural = (count: number, singular: string, pluralForm = `${singular}s`) =>
   `${count} ${count === 1 ? singular : pluralForm}`;
+
+const SUBMISSION_LABEL: Record<string, string> = {
+  FILE_UPLOAD: "File upload",
+  LINK: "Link",
+  TEXT: "Text",
+};
 
 function CardMenu() {
   return (
@@ -39,23 +54,25 @@ function CardMenu() {
 
 export default function ModuleDetailPage() {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const { curriculumId, moduleId } = useParams<{
     curriculumId: string;
     moduleId: string;
   }>();
 
+  const curriculum = useQuery(
+    instructorQueries.curriculumById({ curriculumId: curriculumId })
+  );
+  const currentCurriculum = curriculum.data;
+
   const { data: session, isPending } = useQuery(sessionQuery());
   const user = session?.user;
 
   const myTracks = useQuery(instructorQueries.myTracks());
-  const selectedTrack = myTracks.data?.[0];
+  const trackName = myTracks.data?.find(
+    (assignment) => assignment.trackId === currentCurriculum?.trackId
+  )?.track.name;
 
-  const curriculums = useQuery(
-    instructorQueries.curriculums({ trackId: selectedTrack?.trackId })
-  );
-  const curriculum = curriculums.data?.find((c) => c.id === curriculumId);
-
-  // The API has no "get one topic" endpoint, so find it in the curriculum's list.
   const topics = useQuery(instructorQueries.topics({ curriculumId }));
   const sortedTopics = [...(topics.data ?? [])].sort(
     (a, b) => a.position - b.position
@@ -63,12 +80,28 @@ export default function ModuleDetailPage() {
   const topic = sortedTopics.find((t) => t.id === moduleId);
   const moduleIndex = sortedTopics.findIndex((t) => t.id === moduleId);
 
+  const toggleStatus = useMutation({
+    mutationFn: () =>
+      updateTopic(moduleId, {
+        publishStatus:
+          topic?.publishStatus === "PUBLISHED" ? "DRAFT" : "PUBLISHED",
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["instructor"] }),
+  });
+
   const lessons = useQuery(instructorQueries.lessons({ topicId: moduleId }));
   const lessonsData = [...(lessons.data ?? [])].sort(
     (a, b) => a.position - b.position
   );
 
-  // Each query array lines up with lessonsData by index.
+  const topicAssignments = useQuery(
+    instructorQueries.topicAssignments({ topicId: moduleId })
+  );
+  const topicResources = useQuery(
+    instructorQueries.topicResources({ topicId: moduleId })
+  );
+
   const resourceQueries = useQueries({
     queries: lessonsData.map((lesson) =>
       instructorQueries.resources({ lessonId: lesson.id })
@@ -90,29 +123,45 @@ export default function ModuleDetailPage() {
     resources: resourceQueries[i]?.data ?? [],
   }));
 
-  const resourcesData = lessonsData.flatMap((_, i) =>
-    resourceQueries[i]?.data ?? []
-  );
+  // Module-level items first, then each lesson's. Only items with no lesson
+  // are taken from the module lists, so nothing is shown twice.
+  const resourcesData = [
+    ...(topicResources.data ?? []).filter((resource) => !resource.lessonId),
+    ...lessonsData.flatMap((_, i) => resourceQueries[i]?.data ?? []),
+  ];
 
-  const assignmentsData = lessonsData.flatMap((_, i) =>
-    assignmentQueries[i]?.data ?? []
-  );
+  const assignmentsData = [
+    ...(topicAssignments.data ?? []).filter(
+      (assignment) => !assignment.lessonId
+    ),
+    ...lessonsData.flatMap((_, i) => assignmentQueries[i]?.data ?? []),
+  ];
 
   const recordingsData = lessonsData.flatMap((_, i) =>
     recordingQueries[i]?.data ?? []
   );
 
-  const curriculumActive = curriculum?.status !== "COMPLETED";
+  const curriculumActive = currentCurriculum?.status !== "COMPLETED";
+
+  const assignedInstructor = currentCurriculum?.assignedInstructors?.[0];
+  const instructorName = assignedInstructor?.name ?? user?.name;
+  const instructorEmail = assignedInstructor?.email ?? user?.email;
+  // Only the signed-in user has a photo available here.
+  const instructorImage =
+    assignedInstructor && assignedInstructor.email !== user?.email
+      ? undefined
+      : user?.image;
 
   return (
     <>
-      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: `${topic?.title}`, href: pathname }]} />
+      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: currentCurriculum?.title ?? ".....", href: `/instructor/curriculum/${curriculumId}`}, { label: topic?.title ?? "....", href: pathname }]} />
       <main className="w-full min-h-screen bg-neutral-50 p-6 space-y-6 tracking-wide">
       {/* Top actions */}
         <div className="flex justify-end gap-3">
-          {/* No status field on topics yet, so this button has no action. */}
           <Button
             variant="secondary"
+            onClick={() => toggleStatus.mutate()}
+            disabled={!topic || toggleStatus.isPending}
             className="h-10 px-4 text-sm font-medium rounded-xl cursor-pointer"
           >
             Change Status
@@ -134,12 +183,15 @@ export default function ModuleDetailPage() {
                 <h1 className="text-2xl font-semibold text-neutral-800 tracking-tight">
                   {topic?.title ?? "Module"}
                 </h1>
-                {/* Topics have no status in the API yet, so this is fixed. */}
                 <Badge
                   variant="light"
-                  className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
+                  className={
+                    topic?.publishStatus === "DRAFT"
+                      ? "bg-surface-warning-badge text-text-warning rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
+                      : "bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
+                  }
                 >
-                  Published
+                  {topic?.publishStatus === "DRAFT" ? "Draft" : "Published"}
                 </Badge>
               </div>
               {topic?.description && (
@@ -196,7 +248,7 @@ export default function ModuleDetailPage() {
                             {resource.title}
                           </span>
                           <span className="text-neutral-500">
-                            {formatFileSize(resource.fileSize)}
+                            {formatFileSize(resource.sizeBytes)}
                           </span>
                         </a>
                       ))}
@@ -232,8 +284,8 @@ export default function ModuleDetailPage() {
                     <p className="text-[11px] font-medium text-neutral-500">
                       {[
                         `Assignment ${i + 1}`,
-                        assignment.type,
-                        assignment.submissionType,
+                        SUBMISSION_LABEL[assignment.submissionType] ??
+                          assignment.submissionType,
                       ]
                         .filter(Boolean)
                         .join(" · ")}
@@ -256,7 +308,7 @@ export default function ModuleDetailPage() {
                 <h2 className="text-lg font-semibold text-neutral-800">
                   Module content
                 </h2>
-                <Link href="/instructor/curriculum">
+                <Link href={`/instructor/curriculum/${curriculumId}`}>
                   <Button
                     variant="secondary"
                     className="h-9 px-3 text-xs font-medium rounded-lg cursor-pointer"
@@ -298,16 +350,16 @@ export default function ModuleDetailPage() {
                     No resources added yet.
                   </p>
                 ) : (
-                  resourcesData.map((recording) => (
+                  resourcesData.map((resource) => (
                     <a
-                      key={recording.id}
-                      href={recording.url}
+                      key={resource.id}
+                      href={resource.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 rounded-lg bg-neutral-100 px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-200 transition-colors"
                     >
                       <Link2 className="h-4 w-4 text-neutral-500 shrink-0" />
-                      <span className="truncate">{recording.url}</span>
+                      <span className="truncate">{resource.url}</span>
                     </a>
                   ))
                 )}
@@ -342,10 +394,10 @@ export default function ModuleDetailPage() {
 
                 <div>
                   <h2 className="text-lg font-semibold text-neutral-800">
-                    {curriculum?.title}
+                    {currentCurriculum?.title}
                   </h2>
                   <p className="text-sm text-neutral-500">
-                    {selectedTrack?.track.name} · {selectedTrack?.cohort?.name}
+                    {trackName} · {currentCurriculum?.cohort?.name}
                   </p>
                 </div>
 
@@ -356,8 +408,9 @@ export default function ModuleDetailPage() {
                       Module {moduleIndex >= 0 ? moduleIndex + 1 : "—"}
                     </p>
                     <p className="text-xs text-neutral-500">
-                      {moduleIndex + 1} of {plural(sortedTopics.length, "module")}{" "}
-                      in this curriculum.
+                      {moduleIndex >= 0
+                        ? `${moduleIndex + 1} of ${plural(sortedTopics.length, "module")} in this curriculum.`
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -365,17 +418,17 @@ export default function ModuleDetailPage() {
                 <div className="flex items-center gap-3 border-t border-neutral-200 pt-4">
                   <UserAvatar
                     user={{
-                      name: user?.name ?? "Account",
-                      avatar: user?.image ?? "/default-avatar.png",
+                      name: instructorName ?? "Account",
+                      avatar: instructorImage ?? "/default-avatar.png",
                     }}
                     isLoading={isPending}
                   />
                   <div>
                     <p className="text-[11px] text-neutral-500">Instructor</p>
                     <p className="text-sm font-semibold text-neutral-800">
-                      {user?.name}
+                      {instructorName}
                     </p>
-                    <p className="text-xs text-neutral-500">{user?.email}</p>
+                    <p className="text-xs text-neutral-500">{instructorEmail}</p>
                   </div>
                 </div>
               </CardContent>

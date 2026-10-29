@@ -7,12 +7,22 @@ import { useModuleInitialValues } from "@/lib/use-instructor-forms";
 
 import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
 
+import {
+  instructorQueries,
+} from "@/lib/instructor";
+import { useQuery } from "@tanstack/react-query";
+
 export default function EditModulePage() {
   const pathname = usePathname();
   const { curriculumId, moduleId } = useParams<{
     curriculumId: string;
     moduleId: string;
   }>();
+
+  const curriculum = useQuery(
+    instructorQueries.curriculumById({ curriculumId: curriculumId})
+  );
+  const currentCurriculum = curriculum.data;
 
   const { initialValues, isReady } = useModuleInitialValues(curriculumId, moduleId);
 
@@ -22,7 +32,7 @@ export default function EditModulePage() {
 
   return (
     <>
-      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: "Edit Module", href: pathname }]} />
+      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: currentCurriculum?.title ?? ".....", href: `/instructor/curriculum/${curriculumId}`}, { label: "Edit Module", href: pathname }]} />
       <ModuleForm
         key={moduleId}
         mode="edit"

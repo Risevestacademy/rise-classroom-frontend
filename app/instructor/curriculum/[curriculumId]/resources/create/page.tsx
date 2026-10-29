@@ -43,6 +43,11 @@ export default function CreateResourcePage({ }) {
   const pathname = usePathname();
   const { curriculumId } = useParams<{ curriculumId: string }>();
 
+  const curriculum = useQuery(
+    instructorQueries.curriculumById({ curriculumId: curriculumId})
+  );
+  const currentCurriculum = curriculum.data;
+
   const {
     register,
     handleSubmit,
@@ -77,16 +82,10 @@ export default function CreateResourcePage({ }) {
   );
 
   const onSubmit = handleSubmit(async (values) => {
-    const lessonId = values.lessonId || lessonsData[lessonsData.length - 1]?.id;
-    if (!lessonId) {
-      setError("moduleId", {
-        message: "This module has no lessons yet. Add a lesson first.",
-      });
-      return;
-    }
     try {
-      await save.mutateAsync({ ...values, lessonId });
-      router.push("/instructor/curriculum");
+      // An empty lesson saves a resource on the module itself.
+      await save.mutateAsync(values);
+      router.push(`/instructor/curriculum/${curriculumId}`);
     } catch (error) {
       setError("root", {
         message:
@@ -99,7 +98,7 @@ export default function CreateResourcePage({ }) {
 
   return (
     <>
-      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: "Add Resource", href: pathname }]} />
+      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: currentCurriculum?.title ?? ".....", href: `/instructor/curriculum/${curriculumId}`},  { label: "Add Resource", href: pathname }]} />
       <main className="w-full flex flex-col p-6 space-y-6 tracking-wide">
         <div className="mb-2">
           <p onClick={() => (router.back())} className="cursor-pointer text-sm mb-2">
@@ -109,7 +108,7 @@ export default function CreateResourcePage({ }) {
             Add Resource
           </h1>
           <p className="text-[14px] font-regular text-neutral-500">
-            Upload a new resource for this Curriculum
+            Add a link to a new resource for this Curriculum
           </p>
         </div>
 
@@ -143,9 +142,11 @@ export default function CreateResourcePage({ }) {
                         {...register("type")}
                         className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
                       >
-                        <option value="pdf">PDF</option>
-                        <option value="docx">DOCX</option>
-                        <option value="docx">PPT</option>
+                        <option value="PDF">PDF</option>
+                        <option value="DOCUMENT">Document (Word, slides, sheets)</option>
+                        <option value="VIDEO">Video</option>
+                        <option value="IMAGE">Image</option>
+                        <option value="LINK">Link</option>
                       </select>
                       <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
                       <FieldError message={errors.type?.message} />
@@ -161,7 +162,7 @@ export default function CreateResourcePage({ }) {
                     </Field.Label>
                     <Input
                       {...register("title")}
-                      placeholder="Type assignment title..."
+                      placeholder="Type resource title..."
                       leadingIcon={null}
                     />
                     <FieldError message={errors.title?.message} />
@@ -186,17 +187,20 @@ export default function CreateResourcePage({ }) {
 
                     invalid={Boolean(errors.url)}>
                     <Field.Label className="text-[14px] font-medium text-text-primary">
-                      Resources <span className="text-neutral-400 font-normal">(Optional)</span>
+                      Resource link <span className="text-red-500">*</span>
                     </Field.Label>
                     <Input
                       {...register("url")}
-                      placeholder="Type module title..."
+                      placeholder="https://..."
                       leadingIcon={null}
                     />
                     <FieldError message={errors.url?.message} />
                   </Field.Root>
 
-                  <Field.Root className="flex flex-col gap-1.5">
+                  <Field.Root
+                    className="flex flex-col gap-1.5"
+                    invalid={Boolean(errors.moduleId)}
+                  >
                     <label className="text-sm font-medium text-neutral-800">
                       Attach to <span className="text-red-500">*</span>
                     </label>
@@ -221,16 +225,17 @@ export default function CreateResourcePage({ }) {
 
                   <Field.Root className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium text-neutral-800">
-                      Lesson
+                      Lesson <span className="text-neutral-400 font-normal">(Optional)</span>
                     </label>
                     <div className="relative">
                       <select
                         {...register("lessonId")}
                         className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
                       >
+                        <option value="">Whole module (no lesson)</option>
                         {lessonsData.map((lesson, i) => (
                           <option key={lesson.id} value={lesson.id}>
-                            After lesson {i + 1}
+                            Lesson {i + 1} - {lesson.title}
                           </option>
                         ))}
                       </select>
@@ -241,11 +246,21 @@ export default function CreateResourcePage({ }) {
               </CardContent>
             </Card>
             <div className="flex justify-end gap-3 w-full sm:w-auto mt-4">
-              <Button type="button" variant="secondary" className="flex-1 sm:flex-none border-neutral-300 rounded-lg px-5 py-4 text-sm font-medium">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isSubmitting}
+                onClick={() => router.back()}
+                className="flex-1 sm:flex-none border-neutral-300 rounded-lg px-5 py-4 text-sm font-medium"
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1 sm:flex-none bg-brand-primary text-white rounded-lg px-6 py-4 text-sm font-medium">
-                Create Resource
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 sm:flex-none bg-brand-primary text-white rounded-lg px-6 py-4 text-sm font-medium"
+              >
+                {isSubmitting ? "Creating..." : "Create Resource"}
               </Button>
             </div>
           </form>

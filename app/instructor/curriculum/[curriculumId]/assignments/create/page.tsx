@@ -43,6 +43,10 @@ export default function CreateAssignmentPage({ }) {
   const router = useRouter();
   const pathname = usePathname();
   const { curriculumId } = useParams<{ curriculumId: string }>();
+  const curriculum = useQuery(
+    instructorQueries.curriculumById({ curriculumId: curriculumId})
+  );
+  const currentCurriculum = curriculum.data;
 
   const {
     register,
@@ -60,7 +64,7 @@ export default function CreateAssignmentPage({ }) {
       description: "",
       instruction: "",
       resources: "",
-      type: "type-1",
+      type: "FILE_UPLOAD",
       dueDate: "",
     },
   });
@@ -80,16 +84,10 @@ export default function CreateAssignmentPage({ }) {
   );
 
   const onSubmit = handleSubmit(async (values) => {
-    const lessonId = values.lessonId || lessonsData[lessonsData.length - 1]?.id;
-    if (!lessonId) {
-      setError("moduleId", {
-        message: "This module has no lessons yet. Add a lesson first.",
-      });
-      return;
-    }
     try {
-      await save.mutateAsync({ ...values, lessonId });
-      router.push("/instructor/curriculum");
+      // An empty lesson saves an assignment on the module itself.
+      await save.mutateAsync(values);
+      router.push(`/instructor/curriculum/${curriculumId}`);
     } catch (error) {
       setError("root", {
         message:
@@ -102,11 +100,11 @@ export default function CreateAssignmentPage({ }) {
 
   return (
     <>
-      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: "Add Assignment", href: pathname }]} />
+      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: currentCurriculum?.title ?? ".....", href: `/instructor/curriculum/${curriculumId}`}, { label: "Add Assignment", href: pathname }]} />
       <main className="w-full flex flex-col p-6 space-y-6 tracking-wide">
         <div className="mb-2">
           <p onClick={() => (router.back())} className="cursor-pointer text-sm mb-2">
-            &lt; Back to Module
+            &lt; Back to Curriculum
           </p>
           <h1 className="text-[24px] font-semibold mb-[4px]">
             Add Assignment
@@ -217,7 +215,7 @@ export default function CreateAssignmentPage({ }) {
                   Assignment Settings
                 </CardTitle>
                 <CardDescription className="text-[14px] font-regular text-neutral-500">
-                  Design Cohort 2026
+                  {currentCurriculum?.cohort?.name ?? "Track-wide"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0 space-y-4">
@@ -282,6 +280,7 @@ export default function CreateAssignmentPage({ }) {
                       {...register("lessonId")}
                       className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
                     >
+                      <option value="">Not tied to a lesson</option>
                       {lessonsData.map((lesson, i) => (
                         <option key={lesson.id} value={lesson.id}>
                           After lesson {i + 1}
@@ -301,7 +300,9 @@ export default function CreateAssignmentPage({ }) {
                       {...register("type")}
                       className="w-full appearance-none rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-teal-700"
                     >
-                      <option value="type-1">File Upload</option>
+                      <option value="FILE_UPLOAD">File Upload</option>
+                      <option value="LINK">Link</option>
+                      <option value="TEXT">Text</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-neutral-400 pointer-events-none" />
                   </div>
