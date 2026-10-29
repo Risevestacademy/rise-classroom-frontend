@@ -80,13 +80,13 @@ export function signOut() {
 export function landingPathFor(user: AuthUser) {
   if (user.role === "SUPERADMIN") return "/admin/dashboard";
 
-  const isInstructor = user.role === "INSTRUCTOR";
-
   // Onboarding needs the token from the invite email, so this lands on a page
   // telling them to use that link.
   if (user.onboardingStatus === "INVITED") return "/onboarding";
 
-  return isInstructor ? "/instructor/dashboard" : "/student/dashboard";
+  if (user.role === "INSTRUCTOR") return "/instructor/dashboard";
+  if (user.role === "MENTOR") return "/mentor/dashboard";
+  return "/student/dashboard";
 }
 
 /**

@@ -1,7 +1,7 @@
 import { StudentSidebar } from "@/components/StudentSidebar";
 import { StudentTopBar } from "@/components/StudentTopBar";
 import { StudentNavProvider } from "@/components/StudentNavContext";
-import { AuthGuard } from "@/components/AuthGuard";
+import { RoleGate } from "@/components/RoleGate";
 
 export default function StudentLayout({
   children,
@@ -9,7 +9,7 @@ export default function StudentLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGuard role="STUDENT">
+    <RoleGate role="STUDENT">
       <StudentNavProvider>
         <div className="flex min-h-screen w-full">
           <StudentSidebar />
@@ -19,6 +19,6 @@ export default function StudentLayout({
           </div>
         </div>
       </StudentNavProvider>
-    </AuthGuard>
+    </RoleGate>
   );
 }

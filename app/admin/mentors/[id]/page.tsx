@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { notFound, useRouter } from "next/navigation";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -27,6 +26,14 @@ import {
 } from "@/components/cohorts/PeopleFilterDialog";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { MentorActionsMenu } from "@/components/MentorActionsMenu";
+import {
+  needsAttention,
+  progressTone,
+  StudentName,
+  StudentsProgressCard,
+  studentStatusPill,
+  UpcomingSessionsCard,
+} from "@/components/MentorOverviewCards";
 import { StatCard } from "@/components/StatCard";
 import { ActivityCard } from "@/components/student-profile/ActivityTab";
 import {
@@ -38,7 +45,6 @@ import {
   ProgressBar,
 } from "@/components/student-profile/shared";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
@@ -47,7 +53,6 @@ import { toMentor, type Mentor, type MentorStatus } from "@/lib/mentors";
 import { cn } from "@/lib/utils";
 import {
   assignedStudents,
-  attentionThreshold,
   mentorActivity,
   mentorActivityFilters,
   upcomingSessions,
@@ -75,18 +80,8 @@ const statusBadge: Record<
   inactive: { label: "Inactive", status: "neutral" },
 };
 
-const studentStatusPill = {
-  active: { label: "Active", status: "success" },
-  pending: { label: "Pending", status: "warning" },
-  inactive: { label: "Inactive", status: "error" },
-} as const;
-
 // The design's neutral badge is the default badge surface and text.
 const neutralBadge = "bg-surface-default-badge text-text-default-badge";
-
-function needsAttention(student: AssignedStudent) {
-  return student.progress < attentionThreshold;
-}
 
 function formatLongDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
@@ -226,10 +221,14 @@ function OverviewTab({ mentor }: { mentor: Mentor }) {
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,657fr)_minmax(0,463fr)]">
       <div className="flex min-w-0 flex-col gap-4">
         <ProfileCard mentor={mentor} />
-        <AssignedStudentsCard />
+        <StudentsProgressCard
+          title="Assigned students"
+          students={assignedStudents}
+          studentHref={(student) => `/admin/students/${student.id}`}
+        />
       </div>
       <div className="flex min-w-0 flex-col gap-4">
-        <UpcomingSessionsCard />
+        <UpcomingSessionsCard sessions={upcomingSessions} />
         <Card className="gap-4">
           <CardHeader title="Recent Activities" />
           {/* The Overview shows the two most recent days. */}
@@ -284,130 +283,6 @@ function ProfileCard({ mentor }: { mentor: Mentor }) {
           </DetailItem>
         ))}
       </div>
-    </Card>
-  );
-}
-
-/** A student's name, starred in red when they need attention. */
-function StudentName({ student }: { student: AssignedStudent }) {
-  return (
-    <Link href={`/admin/students/${student.id}`} className="truncate text-base font-medium text-text-primary">
-      {student.name}
-      {needsAttention(student) && (
-        <>
-          {" "}
-          <span aria-hidden className="text-text-error">
-            *
-          </span>
-          <span className="sr-only">(needs attention)</span>
-        </>
-      )}
-    </Link>
-  );
-}
-
-function progressTone(student: AssignedStudent) {
-  return needsAttention(student)
-    ? { text: "text-text-error", bar: "bg-icon-error" }
-    : { text: "text-text-primary", bar: "bg-interactive-primary-default" };
-}
-
-function AssignedStudentsCard() {
-  return (
-    <Card>
-      <CardHeader
-        title="Assigned students"
-        action={
-          <Button variant="tertiary" size="sm">
-            View all
-          </Button>
-        }
-      />
-      <ul className="flex flex-col gap-3">
-        {assignedStudents.map((student) => {
-          const tone = progressTone(student);
-          return (
-            <li
-              key={student.email}
-              className="flex min-h-[68px] items-center justify-between gap-4 pl-3"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <PersonAvatar
-                  name={student.name}
-                  colorKey={student.id}
-                  size={40}
-                />
-                <div className="min-w-0">
-                  <StudentName student={student} />
-                  <p className="truncate font-work text-sm text-text-secondary">
-                    {student.email}
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-6 sm:gap-20">
-                <StatusPill status={studentStatusPill[student.status].status}>
-                  {studentStatusPill[student.status].label}
-                </StatusPill>
-                <div className="flex w-[152px] flex-col gap-2">
-                  <div>
-                    <p className={cn("text-lg/6 font-semibold", tone.text)}>
-                      {student.progress}%
-                    </p>
-                    <p className="font-work text-[13px]/[18px] text-text-muted">
-                      Overall progress
-                    </p>
-                  </div>
-                  <ProgressBar
-                    value={student.progress}
-                    fillClassName={tone.bar}
-                  />
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </Card>
-  );
-}
-
-function UpcomingSessionsCard() {
-  return (
-    <Card className="gap-3">
-      <CardHeader
-        size="h4"
-        title="Upcoming sessions"
-        action={
-          <Button variant="tertiary" size="sm">
-            View all
-          </Button>
-        }
-      />
-      <ul className="flex flex-col gap-3">
-        {upcomingSessions.map((session) => (
-          <li
-            key={session.date}
-            className="flex items-center justify-between gap-3 border-b border-border-default py-3 last:border-b-0"
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-info-badge text-icon-info">
-                <Calendar03 className="size-5" />
-              </span>
-              <div className="flex min-w-0 flex-col gap-1">
-                <p className="truncate font-work text-sm font-medium tracking-[-0.01em] text-text-primary">
-                  {session.date}
-                </p>
-                <p className="font-work text-xs text-text-secondary">
-                  {session.time}
-                </p>
-              </div>
-            </div>
-            <span className="shrink-0 font-work text-[13px]/[18px] text-text-secondary">
-              {session.until}
-            </span>
-          </li>
-        ))}
-      </ul>
     </Card>
   );
 }
@@ -555,7 +430,10 @@ function StudentsTab() {
                           size={40}
                         />
                         <div className="min-w-0">
-                          <StudentName student={student} />
+                          <StudentName
+                            student={student}
+                            href={`/admin/students/${student.id}`}
+                          />
                           <p className="truncate font-work text-sm text-text-secondary">
                             {student.email}
                           </p>
