@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 
-import { AuthGuard } from "@/components/AuthGuard";
+import { RoleGate } from "@/components/RoleGate";
 import { MentorSidebar } from "@/components/MentorSidebar";
 import { SidebarNavProvider } from "@/components/SidebarNavContext";
 
@@ -15,7 +15,7 @@ export default function MentorLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGuard role="MENTOR">
+    <RoleGate role="MENTOR">
       <SidebarNavProvider>
         <div className="flex min-h-screen w-full">
           <MentorSidebar />
@@ -24,6 +24,6 @@ export default function MentorLayout({
           </div>
         </div>
       </SidebarNavProvider>
-    </AuthGuard>
+    </RoleGate>
   );
 }
