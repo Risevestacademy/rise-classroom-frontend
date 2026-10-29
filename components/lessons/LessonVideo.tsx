@@ -12,7 +12,13 @@ import {
 
 const frame = "aspect-[16/9] w-full overflow-hidden rounded-2xl bg-neutral-800";
 
-export function LessonVideo({ recordings }: { recordings: LessonRecording[] }) {
+export function LessonVideo({
+  recordings,
+  emptyMessage = "No recording for this lesson yet",
+}: {
+  recordings: LessonRecording[];
+  emptyMessage?: string;
+}) {
   const [selected, setSelected] = useState(0);
   const recording = recordings[selected] ?? recordings[0];
 
@@ -21,7 +27,7 @@ export function LessonVideo({ recordings }: { recordings: LessonRecording[] }) {
       <div className={cn(frame, "flex items-center justify-center")}>
         <div className="flex flex-col items-center gap-2 text-neutral-350">
           <Video className="h-8 w-8" />
-          <p className="text-sm">No recording for this lesson yet</p>
+          <p className="text-sm">{emptyMessage}</p>
         </div>
       </div>
     );
