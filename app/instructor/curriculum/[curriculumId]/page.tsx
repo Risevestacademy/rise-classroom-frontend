@@ -70,7 +70,6 @@ const BADGE_BASE = "rounded-full px-2.5 py-0.5 text-xs font-medium border-0";
 
 const GREEN = "bg-emerald-100/80 text-emerald-700 hover:bg-emerald-100";
 const NEUTRAL = "bg-surface-default-badge text-text-default-badge";
-const AMBER = "bg-surface-warning-badge text-text-warning";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   ONGOING: { label: "Active", className: GREEN },

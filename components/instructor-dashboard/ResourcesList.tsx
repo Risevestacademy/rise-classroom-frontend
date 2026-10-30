@@ -106,9 +106,6 @@ export function ResourcesList({
       );
     },
   });
-  const viewingPublishBadge = viewing
-    ? badgeFor(PUBLISH_BADGE, viewing.publishStatus)
-    : null;
 
   return (
     <div className="space-y-6 max-full">

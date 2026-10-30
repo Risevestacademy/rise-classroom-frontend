@@ -498,12 +498,12 @@ async function listTrackTree(params: { trackId: string }) {
   return nested.flat();
 }
 
-async function listTrackLessons(params: {
-  trackId: string;
-}): Promise<LessonContext[]> {
-  const tree = await listTrackTree(params);
-  return tree.flatMap((node) => node.lessons);
-}
+// async function listTrackLessons(params: {
+//   trackId: string;
+// }): Promise<LessonContext[]> {
+//   const tree = await listTrackTree(params);
+//   return tree.flatMap((node) => node.lessons);
+// }
 
 /**
  * Every assignment, resource and recording in a track. The API has no single
@@ -607,7 +607,7 @@ export async function unlockTopic(topicId: string, input: { unlocked: boolean })
     `/instructor/topics/${topicId}/unlock-all`,
     input
   );
-  return response.data;
+  return response;
 }
 
 export async function createLesson(
