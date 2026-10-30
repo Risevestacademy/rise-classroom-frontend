@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, NotebookPen, Plus } from "lucide-react";
+import { NotebookPen, Plus } from "lucide-react";
 
 import { PersonAvatar } from "@/components/PersonAvatar";
 import {
@@ -16,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -29,6 +30,7 @@ import {
   type CurriculumAssignment,
   type ModuleAssignment,
   type ModuleStatus,
+  type SubmissionStatus,
 } from "@/features/curriculum/types";
 
 export function AddAssignmentButton({
@@ -58,9 +60,10 @@ export function AssignmentsTab({
   studentCount: number;
   onOpenAssignment: (assignmentId: string) => void;
 }) {
-  const { api } = useCurriculumScope();
+  const { api, permissions } = useCurriculumScope();
   const queryClient = useQueryClient();
   const assignmentsQuery = useQuery(api.queries.assignments(curriculumId));
+  const columnCount = permissions.canViewSubmissions ? 7 : 6;
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("ALL");
   const [deleteTarget, setDeleteTarget] =
@@ -134,7 +137,9 @@ export function AssignmentsTab({
               <th className="px-4 py-4 font-medium">Assignment</th>
               <th className="px-4 py-4 font-medium">Module</th>
               <th className="px-4 py-4 font-medium">Due</th>
-              <th className="px-4 py-4 font-medium">Submissions</th>
+              {permissions.canViewSubmissions && (
+                <th className="px-4 py-4 font-medium">Submissions</th>
+              )}
               <th className="px-4 py-4 font-medium">Status</th>
               <th className="w-20 rounded-r-lg px-4 py-4 font-medium">
                 Action
@@ -145,7 +150,7 @@ export function AssignmentsTab({
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={columnCount}
                   className="px-4 py-10 text-center text-neutral-400"
                 >
                   No assignments match your search.
@@ -154,9 +159,6 @@ export function AssignmentsTab({
             ) : (
               filtered.map((item) => {
                 const { assignment, module: owner, modulePosition } = item;
-                const submitted = assignment.submissions.filter(
-                  (s) => s.submittedAt,
-                ).length;
                 return (
                   <tr
                     key={assignment.id}
@@ -197,9 +199,14 @@ export function AssignmentsTab({
                         </p>
                       )}
                     </td>
-                    <td className="px-4 py-5 text-neutral-600">
-                      {submitted}/{studentCount}
-                    </td>
+                    {permissions.canViewSubmissions && (
+                      <td className="px-4 py-5 text-neutral-600">
+                        <SubmittedCount
+                          assignmentId={assignment.id}
+                          studentCount={studentCount}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-5">
                       <StatusBadge status={assignment.status} />
                     </td>
@@ -241,6 +248,30 @@ export function AssignmentsTab({
   );
 }
 
+/* How many students have handed the assignment in, out of everyone on the track. */
+function SubmittedCount({
+  assignmentId,
+  studentCount,
+}: {
+  assignmentId: string;
+  studentCount: number;
+}) {
+  const { api } = useCurriculumScope();
+  const submissionsQuery = useQuery(api.queries.submissions(assignmentId));
+
+  if (submissionsQuery.isPending) return <Skeleton className="h-4 w-10" />;
+  if (submissionsQuery.isError) return <>--</>;
+  /* A draft is still being worked on, so it doesn't count as handed in. */
+  const submitted = submissionsQuery.data.filter(
+    (submission) => submission.status !== "DRAFT",
+  ).length;
+  return (
+    <>
+      {submitted}/{studentCount}
+    </>
+  );
+}
+
 const sheetTabs = [
   { value: "overview", label: "Overview" },
   { value: "submissions", label: "Submissions" },
@@ -255,9 +286,12 @@ export function AssignmentSheet({
   assignmentId: string;
   onClose: () => void;
 }) {
-  const { api } = useCurriculumScope();
+  const { api, permissions } = useCurriculumScope();
   const assignmentQuery = useQuery(
     api.queries.assignment(curriculumId, assignmentId),
+  );
+  const tabs = sheetTabs.filter(
+    (tab) => tab.value !== "submissions" || permissions.canViewSubmissions,
   );
   const assignment = assignmentQuery.data?.assignment;
 
@@ -272,7 +306,7 @@ export function AssignmentSheet({
       {assignment && (
         <Tabs defaultValue="overview" className="gap-8">
           <TabsList variant="pill">
-            {sheetTabs.map((tab) => (
+            {tabs.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value}>
                 {tab.label}
               </TabsTrigger>
@@ -281,12 +315,14 @@ export function AssignmentSheet({
           <TabsContent value="overview">
             <OverviewPanel assignment={assignment} />
           </TabsContent>
-          <TabsContent value="submissions">
-            <DialogTitle className="sr-only">
-              {assignment.title} submissions
-            </DialogTitle>
-            <SubmissionsPanel assignment={assignment} />
-          </TabsContent>
+          {permissions.canViewSubmissions && (
+            <TabsContent value="submissions">
+              <DialogTitle className="sr-only">
+                {assignment.title} submissions
+              </DialogTitle>
+              <SubmissionsPanel assignment={assignment} />
+            </TabsContent>
+          )}
         </Tabs>
       )}
     </DetailSheet>
@@ -381,9 +417,23 @@ function BriefItem({ label, value }: { label: string; value: string }) {
   );
 }
 
+const submissionBadges: Record<
+  SubmissionStatus,
+  { label: string; status: "neutral" | "info" | "warning" | "error" | "success" }
+> = {
+  DRAFT: { label: "Draft", status: "neutral" },
+  SUBMITTED: { label: "Submitted", status: "info" },
+  UNDER_REVIEW: { label: "Under review", status: "warning" },
+  CHANGES_REQUESTED: { label: "Changes requested", status: "error" },
+  GRADED: { label: "Graded", status: "success" },
+};
+
+/* Students' submissions, loaded from the API. Reviewing them isn't built yet. */
 function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
+  const { api } = useCurriculumScope();
+  const submissionsQuery = useQuery(api.queries.submissions(assignment.id));
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
-  const submissions = assignment.submissions;
+  const submissions = submissionsQuery.data ?? [];
   const allSelected =
     submissions.length > 0 && submissions.every((s) => selectedIds.has(s.id));
 
@@ -394,10 +444,37 @@ function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
     setSelectedIds(next);
   }
 
+  if (submissionsQuery.isPending) {
+    return (
+      <p className="py-10 text-center text-sm text-neutral-400">
+        Loading submissions…
+      </p>
+    );
+  }
+
+  if (submissionsQuery.isError) {
+    return (
+      <div
+        role="alert"
+        className="flex flex-col items-center gap-3 py-10 text-center text-sm text-text-error"
+      >
+        <p>Couldn&apos;t load submissions. {submissionsQuery.error.message}</p>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => submissionsQuery.refetch()}
+          className="border-neutral-200 text-neutral-800"
+        >
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
   if (submissions.length === 0) {
     return (
       <p className="py-10 text-center text-sm text-neutral-400">
-        No students have been assigned this yet.
+        No submissions yet.
       </p>
     );
   }
@@ -424,8 +501,7 @@ function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
             <th className="px-4 py-4 font-medium normal-case">Student</th>
             <th className="px-4 py-4 font-medium">Date submitted</th>
             <th className="px-4 py-4 font-medium">Status</th>
-            <th className="px-4 py-4 font-medium">Grade</th>
-            <th className="w-20 rounded-r-lg px-4 py-4 font-medium">Action</th>
+            <th className="rounded-r-lg px-4 py-4 font-medium">Grade</th>
           </tr>
         </thead>
         <tbody>
@@ -462,24 +538,22 @@ function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
                 )}
               </td>
               <td className="px-4 py-5">
-                <Badge
-                  variant="light"
-                  status={submission.submittedAt ? "success" : "error"}
-                >
-                  {submission.submittedAt ? "Submitted" : "Not submitted"}
-                </Badge>
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <Badge
+                    variant="light"
+                    status={submissionBadges[submission.status].status}
+                  >
+                    {submissionBadges[submission.status].label}
+                  </Badge>
+                  {submission.isLate && (
+                    <Badge variant="light" status="warning">
+                      Late
+                    </Badge>
+                  )}
+                </span>
               </td>
               <td className="px-4 py-5 text-neutral-600">
                 {submission.grade ?? "--"}
-              </td>
-              <td className="px-4 py-5">
-                <button
-                  type="button"
-                  aria-label={`${submission.studentName} actions`}
-                  className="rounded-md p-1 text-neutral-800 hover:bg-neutral-100"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
               </td>
             </tr>
           ))}

@@ -12,6 +12,8 @@ import {
   resourceKinds,
   type AssignmentExtras,
   type AssignmentRecord,
+  type AssignmentSubmission,
+  type AssignmentSubmissionRecord,
   type Curriculum,
   type CurriculumAssignment,
   type CurriculumHistoryEntry,
@@ -131,7 +133,6 @@ export function emptyAssignment(id: string = crypto.randomUUID()): ModuleAssignm
     dueAt: null,
     afterLesson: null,
     status: "DRAFT",
-    submissions: [],
   };
 }
 
@@ -189,6 +190,19 @@ export function toResourceFile(record: ResourceRecord): ResourceFile {
     uploadedBy: "--",
     status: record.publishStatus,
     url: record.url,
+  };
+}
+
+/* A submission as the Submissions tab shows it. */
+export function toSubmission(record: AssignmentSubmissionRecord): AssignmentSubmission {
+  return {
+    id: record.id,
+    studentName: record.studentProfile?.user.name ?? "Unknown student",
+    studentEmail: record.studentProfile?.user.email ?? "",
+    submittedAt: record.submittedAt ?? null,
+    status: record.status,
+    isLate: record.isLate,
+    grade: record.grade ?? null,
   };
 }
 

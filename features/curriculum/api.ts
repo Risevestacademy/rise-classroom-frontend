@@ -17,10 +17,12 @@ import {
   toNote,
   toResourceFile,
   toResources,
+  toSubmission,
 } from "@/features/curriculum/mappers";
 import {
   noCurriculumFilters,
   type AssignmentRecord,
+  type AssignmentSubmissionRecord,
   type CreateAssignmentInput,
   type CreateCurriculumInput,
   type CreateResourceInput,
@@ -588,12 +590,11 @@ function createCurriculumApi(role: CurriculumRole) {
     id: string,
     changes: Partial<ModuleAssignment>,
   ) {
-    const { type, mode, submissions, resources } = changes;
+    const { type, mode, resources } = changes;
     local.assignments.set(id, {
       ...local.assignments.get(id),
       ...(type && { type }),
       ...(mode && { mode }),
-      ...(submissions && { submissions }),
       ...(resources && { files: resources.filter((r) => !r.url) }),
     });
   }
@@ -739,6 +740,17 @@ function createCurriculumApi(role: CurriculumRole) {
     if (!isLocal) await api.delete(`${base}/resources/${resourceId}`);
   }
 
+  // ---- Submissions -------------------------------------------------------------
+
+  /* Students' submissions for one assignment. The API only has this for instructors. */
+  async function listSubmissions(assignmentId: string) {
+    const page = await getData<Paginated<AssignmentSubmissionRecord>>(
+      `${base}/assignments/${assignmentId}/submissions`,
+      { limit: 100 },
+    );
+    return page.items.map(toSubmission);
+  }
+
   // ---- Student access ----------------------------------------------------------
 
   /*
@@ -805,6 +817,8 @@ function createCurriculumApi(role: CurriculumRole) {
     module: (id: string) => ["curriculum", role, "module", id] as const,
     notes: (curriculumId: string) =>
       ["curriculum", role, "notes", curriculumId] as const,
+    submissions: (assignmentId: string) =>
+      ["curriculum", role, "submissions", assignmentId] as const,
     /* Filled from the last unlock or lock, since the API can't be asked for it. */
     moduleAccess: (moduleId: string) =>
       ["curriculum", role, "module-access", moduleId] as const,
@@ -832,6 +846,12 @@ function createCurriculumApi(role: CurriculumRole) {
       }),
 
     modules: (curriculumId: string) => queryOptions(modulesQuery(curriculumId)),
+
+    submissions: (assignmentId: string) =>
+      queryOptions({
+        queryKey: keys.submissions(assignmentId),
+        queryFn: () => listSubmissions(assignmentId),
+      }),
 
     module: (id: string) =>
       queryOptions({

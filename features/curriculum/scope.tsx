@@ -30,6 +30,8 @@ export type CurriculumPermissions = {
   canDeleteCurriculum: boolean;
   /* Unlocking modules for students. The API only has this for instructors. */
   canUnlockModules: boolean;
+  /* Seeing students' submissions. The API only has this for instructors. */
+  canViewSubmissions: boolean;
 };
 
 export type CurriculumScope = {
@@ -47,7 +49,11 @@ const scopes: Record<CurriculumRole, CurriculumScope> = {
     role: "admin",
     api: curriculumApis.admin,
     paths: curriculumPaths("/admin/curriculum"),
-    permissions: { canDeleteCurriculum: true, canUnlockModules: false },
+    permissions: {
+      canDeleteCurriculum: true,
+      canUnlockModules: false,
+      canViewSubmissions: false,
+    },
     TopNav: AdminTopNav,
     breadcrumbRoot: [
       "Academy",
@@ -58,7 +64,11 @@ const scopes: Record<CurriculumRole, CurriculumScope> = {
     role: "instructor",
     api: curriculumApis.instructor,
     paths: curriculumPaths("/instructor/curriculum"),
-    permissions: { canDeleteCurriculum: false, canUnlockModules: true },
+    permissions: {
+      canDeleteCurriculum: false,
+      canUnlockModules: true,
+      canViewSubmissions: true,
+    },
     TopNav: InstructorNavbar,
     breadcrumbRoot: [
       "Teaching",

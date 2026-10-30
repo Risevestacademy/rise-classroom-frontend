@@ -73,12 +73,22 @@ export const submissionTypes = {
 
 export type SubmissionType = keyof typeof submissionTypes;
 
+export type SubmissionStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "UNDER_REVIEW"
+  | "CHANGES_REQUESTED"
+  | "GRADED";
+
+/* A student's submission as the Submissions tab shows it. */
 export type AssignmentSubmission = {
   id: string;
   studentName: string;
   studentEmail: string;
   submittedAt: string | null;
-  grade: string | null;
+  status: SubmissionStatus;
+  isLate: boolean;
+  grade: number | null;
 };
 
 export type ModuleAssignment = {
@@ -94,7 +104,6 @@ export type ModuleAssignment = {
   /** The lesson the assignment is attached to in the API (1-based). */
   afterLesson: number | null;
   status: ModuleStatus;
-  submissions: AssignmentSubmission[];
 };
 
 export type CreateAssignmentInput = Pick<
@@ -283,6 +292,20 @@ export type NoteRecord = Timestamps & {
   author?: { firstName: string; lastName: string } | null;
 };
 
+/* A row from GET /instructor/assignments/{id}/submissions; only the fields the UI reads. */
+export type AssignmentSubmissionRecord = Timestamps & {
+  id: string;
+  assignmentId: string;
+  status: SubmissionStatus;
+  submittedAt?: string | null;
+  isLate: boolean;
+  grade?: number | null;
+  studentProfile?: {
+    id: string;
+    user: { id: string; name: string; email: string };
+  };
+};
+
 /* One student's access to a module. `unlocked` also needs earlier prerequisites done. */
 export type TopicLockStatus = {
   enrollmentId: string;
@@ -331,11 +354,11 @@ export type TopicTree = TopicRecord & {
 // ---- Session-only fields the API doesn't have ----------------------------------
 
 /**
- * PENDING-BACKEND: the API has no assignment type, group mode or submissions
- * list for admins, and no file upload, so picked files stay in the session.
+ * PENDING-BACKEND: the API has no assignment type or group mode, and no file
+ * upload, so picked files stay in the session.
  */
 export type AssignmentExtras = Partial<
-  Pick<ModuleAssignment, "type" | "mode" | "submissions"> & { files: ResourceFile[] }
+  Pick<ModuleAssignment, "type" | "mode"> & { files: ResourceFile[] }
 >;
 
 /** The in-memory store in `api.ts`; it resets on a full page reload. */
