@@ -27,6 +27,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   formatFileSize,
   instructorQueries,
+  unlockTopic,
   updateTopic,
 } from "@/lib/instructor";
 import { sessionQuery } from "@/lib/session-query";
@@ -86,6 +87,12 @@ export default function ModuleDetailPage() {
         publishStatus:
           topic?.publishStatus === "PUBLISHED" ? "DRAFT" : "PUBLISHED",
       }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["instructor"] }),
+  });
+
+  const unlockAll = useMutation({
+    mutationFn: (topicId: string) => unlockTopic(topicId, { unlocked: true }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["instructor"] }),
   });
@@ -154,9 +161,9 @@ export default function ModuleDetailPage() {
 
   return (
     <>
-      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: currentCurriculum?.title ?? ".....", href: `/instructor/curriculum/${curriculumId}`}, { label: topic?.title ?? "....", href: pathname }]} />
+      <InstructorNavbar breadcrumb={["Teaching", { label: "Curriculum", href: "/instructor/curriculum" }, { label: currentCurriculum?.title ?? ".....", href: `/instructor/curriculum/${curriculumId}` }, { label: topic?.title ?? "....", href: pathname }]} />
       <main className="w-full min-h-screen bg-neutral-50 p-6 space-y-6 tracking-wide">
-      {/* Top actions */}
+        {/* Top actions */}
         <div className="flex justify-end gap-3">
           <Button
             variant="secondary"
@@ -165,6 +172,14 @@ export default function ModuleDetailPage() {
             className="h-10 px-4 text-sm font-medium rounded-xl cursor-pointer"
           >
             Change Status
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => topic && unlockAll.mutate(topic.id)}
+            disabled={!topic || unlockAll.isPending}
+            className="h-10 px-4 text-sm font-medium rounded-xl cursor-pointer"
+          >
+            {unlockAll.isPending ? "Unlocking..." : "Unlock all"}
           </Button>
           <Link
             href={`/instructor/curriculum/${curriculumId}/modules/${moduleId}/edit`}
@@ -198,6 +213,30 @@ export default function ModuleDetailPage() {
                 <p className="text-sm text-neutral-600 leading-relaxed">
                   {topic.description}
                 </p>
+              )}
+
+              {topic?.outcomes && topic.outcomes.length > 0 && (
+                <div className="space-y-2 pt-3">
+                  <h2 className="text-sm font-semibold text-neutral-800">
+                    What students will learn
+                  </h2>
+                  <p className="text-xs text-neutral-500">
+                    By the end of this module, students will be able to:
+                  </p>
+                  <ol className="space-y-1.5">
+                    {topic.outcomes.map((outcome, i) => (
+                      <li
+                        key={i}
+                        className="flex items-start gap-3 text-sm text-neutral-600"
+                      >
+                        <span className="w-5 shrink-0 text-xs font-semibold text-neutral-500">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <span>{outcome}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
               )}
             </section>
 
@@ -285,7 +324,7 @@ export default function ModuleDetailPage() {
                       {[
                         `Assignment ${i + 1}`,
                         SUBMISSION_LABEL[assignment.submissionType] ??
-                          assignment.submissionType,
+                        assignment.submissionType,
                       ]
                         .filter(Boolean)
                         .join(" · ")}

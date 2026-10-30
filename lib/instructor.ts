@@ -602,6 +602,14 @@ export async function updateTopic(topicId: string, input: Partial<TopicInput>) {
   return data;
 }
 
+export async function unlockTopic(topicId: string, input: { unlocked: boolean }) {
+  const response = await api.post<{ unlocked: boolean }>(
+    `/instructor/topics/${topicId}/unlock-all`,
+    input
+  );
+  return response.data;
+}
+
 export async function createLesson(
   topicId: string,
   input: { title: string; description?: string; position?: number }
