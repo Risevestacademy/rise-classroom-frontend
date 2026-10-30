@@ -27,6 +27,22 @@ export type ModuleRow = TopicRecord & {
 const plural = (count: number, singular: string, pluralForm = `${singular}s`) =>
   `${count} ${count === 1 ? singular : pluralForm}`;
 
+const BADGE_BASE = "rounded-full px-2.5 py-0.5 text-xs font-medium border-0";
+
+const GREEN = "bg-emerald-100/80 text-emerald-700 hover:bg-emerald-100";
+const NEUTRAL = "bg-surface-default-badge text-text-default-badge";
+const AMBER = "bg-surface-warning-badge text-text-warning";
+
+const PUBLISH_BADGE: Record<string, { label: string; className: string }> = {
+  PUBLISHED: { label: "Published", className: GREEN },
+  DRAFT: { label: "Draft", className: AMBER },
+};
+
+const badgeFor = (
+  map: Record<string, { label: string; className: string }>,
+  value: string
+) => map[value] ?? { label: value, className: NEUTRAL };
+
 export function ModulesList({ modules }: { modules: ModuleRow[] }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -43,9 +59,10 @@ export function ModulesList({ modules }: { modules: ModuleRow[] }) {
     <>
       {modules.map((mod) => {
         const isOpen = expandedId === mod.id;
+        const publishBadge = badgeFor(PUBLISH_BADGE, mod.publishStatus);
 
         return (
-          <div key={mod.id} className="flex items-center gap-3">
+          <div key={mod.id} className="flex items-center gap-3 max-w-4xl">
             <GripVertical
               className="text-neutral-400 cursor-grab shrink-0 self-start mt-6"
               size={18}
@@ -54,7 +71,7 @@ export function ModulesList({ modules }: { modules: ModuleRow[] }) {
               <div
                 className="flex items-center justify-between cursor-pointer"
                 onClick={() =>
-                  router.push(`${pathname}/${mod.curriculumId}/modules/${mod.id}`)
+                  router.push(`${pathname}/modules/${mod.id}`)
                 }
               >
                 <div className="flex items-center gap-3">
@@ -63,9 +80,9 @@ export function ModulesList({ modules }: { modules: ModuleRow[] }) {
                   </h3>
                   <Badge
                     variant="light"
-                    className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-xs font-medium border-0"
+                    className={`${BADGE_BASE} ${publishBadge.className}`}
                   >
-                    Published
+                    {publishBadge.label}
                   </Badge>
                 </div>
                 <button
@@ -84,7 +101,7 @@ export function ModulesList({ modules }: { modules: ModuleRow[] }) {
                   {hasIncluded(mod) && (
                     <div>
                       <p className="text-xs font-semibold text-neutral-800 mb-2">
-                        What&rsquor;s Included
+                        What&apos;s Included
                       </p>
                       <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-600">
                         {mod.included.recordings > 0 && (

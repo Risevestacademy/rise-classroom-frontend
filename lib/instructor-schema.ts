@@ -38,12 +38,15 @@ export const moduleFormSchema = z
     recordingUrl: z.union([z.literal(""), httpsUrl]),
     lessons: z.array(lessonFormSchema),
     assignments: z.array(assignmentFormSchema),
+    publishStatus: z.enum(["DRAFT", "PUBLISHED"]),
   })
   .superRefine((values, ctx) => {
     const lessonKeys = new Set(values.lessons.map((lesson) => lesson.key));
 
     values.assignments.forEach((assignment, index) => {
-      if (!assignment.lessonKey || !lessonKeys.has(assignment.lessonKey)) {
+      if (!assignment.lessonKey) return;
+
+      if (!lessonKeys.has(assignment.lessonKey)) {
         ctx.addIssue({
           code: "custom",
           path: ["assignments", index, "lessonKey"],
@@ -76,6 +79,7 @@ export const emptyModuleValues = (): ModuleFormValues => ({
     { key: "new-lesson-0", title: "", description: "", resources: [] },
   ],
   assignments: [],
+  publishStatus: "DRAFT",
 });
 
 export const lessonItemSchema = z.object({
@@ -107,10 +111,11 @@ const todayString = () => {
 
 export const assignmentPageSchema = assignmentItemSchema.extend({
   moduleId: z.string().min(1, "Choose a module"),
+  lessonId: z.string(),
   description: z.string().trim().min(1, "Description is required"),
   instruction: z.string().optional(),
   resources: z.string().optional(),
-  type: z.string(),
+  type: z.enum(["FILE_UPLOAD", "LINK", "TEXT"]),
   dueDate: z
     .string()
     .optional()
@@ -120,6 +125,7 @@ export type AssignmentPageValues = z.infer<typeof assignmentPageSchema>;
 
 export const resourcePageSchema = resourceItemSchema.extend({
   moduleId: z.string().min(1, "Choose a module"),
-  type: z.string(),
+  lessonId: z.string(),
+  type: z.enum(["PDF", "VIDEO", "DOCUMENT", "IMAGE", "LINK"]),
 });
 export type ResourcePageValues = z.infer<typeof resourcePageSchema>;

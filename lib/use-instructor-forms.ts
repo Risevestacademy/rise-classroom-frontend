@@ -13,16 +13,21 @@ import {
   createRecording,
   createResource,
   createTopic,
+  createTopicAssignment,
+  createTopicResource,
   deleteAssignment,
   deleteLesson,
   deleteRecording,
   deleteResource,
   instructorQueries,
+  resourceTypeFromUrl,
   updateAssignment,
   updateLesson,
   updateRecording,
   updateResource,
   updateTopic,
+  type AssignmentInput,
+  type ResourceInput,
 } from "@/lib/instructor";
 
 import type {
@@ -33,6 +38,9 @@ import type {
 
 const text = (value?: string | null) => (value ?? "").trim();
 
+const outcomesOf = (values: ModuleFormValues) =>
+  values.objectives.map((o) => text(o.value)).filter(Boolean);
+
 export function useModuleInitialValues(curriculumId: string, moduleId: string) {
   const topics = useQuery(instructorQueries.topics({ curriculumId }));
   const topic = topics.data?.find((t) => t.id === moduleId);
@@ -40,6 +48,11 @@ export function useModuleInitialValues(curriculumId: string, moduleId: string) {
   const lessons = useQuery(instructorQueries.lessons({ topicId: moduleId }));
   const lessonsData = [...(lessons.data ?? [])].sort(
     (a, b) => a.position - b.position
+  );
+
+  // Assignments attached to the module itself rather than to a lesson.
+  const topicAssignments = useQuery(
+    instructorQueries.topicAssignments({ topicId: moduleId })
   );
 
   const resourceQueries = useQueries({
@@ -61,6 +74,7 @@ export function useModuleInitialValues(curriculumId: string, moduleId: string) {
   const isReady =
     Boolean(topic) &&
     lessons.isSuccess &&
+    topicAssignments.isSuccess &&
     resourceQueries.every((q) => q.isSuccess) &&
     assignmentQueries.every((q) => q.isSuccess) &&
     recordingQueries.every((q) => q.isSuccess);
@@ -81,7 +95,9 @@ export function useModuleInitialValues(curriculumId: string, moduleId: string) {
   const initialValues: ModuleFormValues = {
     title: topic.title,
     description: topic.description ?? "",
-    objectives: [{ value: "" }],
+    objectives: topic.outcomes?.length
+      ? topic.outcomes.map((value) => ({ value }))
+      : [{ value: "" }],
     recordingId: recording?.id,
     recordingLessonId: recording?.lessonId,
     recordingUrl: recording?.url ?? "",
@@ -96,14 +112,26 @@ export function useModuleInitialValues(curriculumId: string, moduleId: string) {
         url: resource.url,
       })),
     })),
-    assignments: lessonsData.flatMap((lesson, i) =>
-      (assignmentQueries[i]?.data ?? []).map((assignment) => ({
-        serverId: assignment.id,
-        title: assignment.title,
-        description: assignment.description ?? "",
-        lessonKey: lesson.id,
-      }))
-    ),
+    assignments: [
+      // Module-level first, then each lesson's.
+      ...(topicAssignments.data ?? [])
+        .filter((assignment) => !assignment.lessonId)
+        .map((assignment) => ({
+          serverId: assignment.id,
+          title: assignment.title,
+          description: assignment.description ?? "",
+          lessonKey: "",
+        })),
+      ...lessonsData.flatMap((lesson, i) =>
+        (assignmentQueries[i]?.data ?? []).map((assignment) => ({
+          serverId: assignment.id,
+          title: assignment.title,
+          description: assignment.description ?? "",
+          lessonKey: lesson.id,
+        }))
+      ),
+    ],
+    publishStatus: topic.publishStatus ?? "PUBLISHED",
   };
 
   return { initialValues, isReady: true };
@@ -128,22 +156,32 @@ async function saveModule({
 }: SaveArgs): Promise<string> {
   const title = text(values.title);
   const description = text(values.description);
+  const outcomes = outcomesOf(values);
 
   let topicId = moduleId ?? "";
   if (mode === "create") {
-    const created = await createTopic(curriculumId, {
-      title,
-      description,
-      position: nextPosition,
-    });
+   const created = await createTopic(curriculumId, {
+  title,
+  description,
+  position: nextPosition,
+  outcomes,
+  publishStatus: values.publishStatus,
+});
     topicId = created.id;
-  } else if (
-    !baseline ||
-    baseline.title !== title ||
-    text(baseline.description) !== description
-  ) {
-    await updateTopic(topicId, { title, description });
-  }
+ } else if (
+  !baseline ||
+  baseline.title !== title ||
+  text(baseline.description) !== description ||
+  JSON.stringify(outcomesOf(baseline)) !== JSON.stringify(outcomes) ||
+  baseline.publishStatus !== values.publishStatus
+) {
+  await updateTopic(topicId, {
+    title,
+    description,
+    outcomes,
+    publishStatus: values.publishStatus,
+  });
+}
 
   const baseLessons = baseline?.lessons ?? [];
   const baseAssignments = baseline?.assignments ?? [];
@@ -231,20 +269,21 @@ async function saveModule({
         const oldResource = oldResources.find(
           (r) => r.serverId === resource.serverId
         );
-        if (
-          !oldResource ||
-          oldResource.title !== resourceTitle ||
-          oldResource.url !== resourceUrl
-        ) {
+        const urlChanged = oldResource?.url !== resourceUrl;
+
+        if (!oldResource || oldResource.title !== resourceTitle || urlChanged) {
           await updateResource(resource.serverId, {
             title: resourceTitle,
             url: resourceUrl,
+            // Keep the type in step with the link, but only when it changed.
+            ...(urlChanged ? { type: resourceTypeFromUrl(resourceUrl) } : {}),
           });
         }
       } else {
         await createResource(lessonId, {
           title: resourceTitle,
           url: resourceUrl,
+          type: resourceTypeFromUrl(resourceUrl),
         });
       }
     }
@@ -269,12 +308,17 @@ async function saveModule({
         });
       }
     } else {
-      const lessonId = lessonIdByKey.get(assignment.lessonKey);
-      if (lessonId) {
-        await createAssignment(lessonId, {
-          title: assignmentTitle,
-          description: assignmentDescription || undefined,
-        });
+      const input: AssignmentInput = {
+        title: assignmentTitle,
+        description: assignmentDescription || undefined,
+      };
+
+      if (assignment.lessonKey) {
+        const lessonId = lessonIdByKey.get(assignment.lessonKey);
+        if (lessonId) await createAssignment(lessonId, input);
+      } else {
+        // No lesson chosen: the assignment belongs to the module.
+        await createTopicAssignment(topicId, input);
       }
     }
   }
@@ -325,17 +369,25 @@ export function useSaveModule(args: {
 const refreshInstructorData = (queryClient: ReturnType<typeof useQueryClient>) =>
   queryClient.invalidateQueries({ queryKey: ["instructor"] });
 
+/** The date picker gives yyyy-mm-dd. Due dates are always 11:59 PM local. */
+const toDueAt = (date?: string) =>
+  date ? new Date(`${date}T23:59:00`).toISOString() : undefined;
+
 export function useSaveAssignment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (values: AssignmentPageValues) => {
-      const title = text(values.title);
-      const description = text(values.description);
+      const input: AssignmentInput = {
+        title: text(values.title),
+        description: text(values.description) || undefined,
+        instructions: text(values.instruction) || undefined,
+        dueAt: toDueAt(values.dueDate),
+        submissionType: values.type,
+      };
 
-      return createAssignment(values.lessonId, {
-        title,
-        description: description || undefined,
-      });
+      return values.lessonId
+        ? createAssignment(values.lessonId, input)
+        : createTopicAssignment(values.moduleId, input);
     },
     onSuccess: () => refreshInstructorData(queryClient),
   });
@@ -345,15 +397,16 @@ export function useSaveResource() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (values: ResourcePageValues) => {
-      const title = text(values.title);
-      const url = text(values.url);
-      const description = text(values.description);
+      const input: ResourceInput = {
+        title: text(values.title),
+        url: text(values.url),
+        description: text(values.description) || undefined,
+        type: values.type,
+      };
 
-      return createResource(values.lessonId, {
-        title,
-        url,
-        description: description || undefined,
-      });
+      return values.lessonId
+        ? createResource(values.lessonId, input)
+        : createTopicResource(values.moduleId, input);
     },
     onSuccess: () => refreshInstructorData(queryClient),
   });

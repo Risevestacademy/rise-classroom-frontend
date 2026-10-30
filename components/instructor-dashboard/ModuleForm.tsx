@@ -203,6 +203,7 @@ export default function ModuleForm({
   const objectives = useFieldArray({ control, name: "objectives" });
   const lessons = useFieldArray({ control, name: "lessons" });
   const assignments = useFieldArray({ control, name: "assignments" });
+  const publishStatus = useWatch({ control, name: "publishStatus" });
 
   const watchedLessons = useWatch({ control, name: "lessons" });
   const watchedAssignments = useWatch({ control, name: "assignments" });
@@ -496,36 +497,38 @@ export default function ModuleForm({
                       </Field.Root>
 
                       {isExisting ? (
-                        <p className="text-xs text-neutral-500">
-                          Attached to{" "}
-                          {lessonIndex >= 0
-                            ? `Lesson ${lessonIndex + 1}`
-                            : "a removed lesson"}
-                        </p>
-                      ) : (
+  <p className="text-xs text-neutral-500">
+    Attached to{" "}
+    {lessonIndex >= 0
+      ? `Lesson ${lessonIndex + 1}`
+      : current?.lessonKey
+        ? "a removed lesson"
+        : "the whole module"}
+  </p>
+) : (
                         <Field.Root
                           className="flex flex-col space-y-1.5"
                           invalid={Boolean(assignmentErrors?.lessonKey)}
                         >
                           <Field.Label className="text-sm font-medium text-neutral-700">
-                            Attach to lesson{" "}
-                            <span className="text-text-error">*</span>
-                          </Field.Label>
-                          <select
-                            {...register(`assignments.${index}.lessonKey`)}
-                            className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-ring"
-                          >
-                            <option value="">Choose a lesson</option>
-                            {(watchedLessons ?? []).map((lesson, i) => (
-                              <option key={lesson.key} value={lesson.key}>
-                                Lesson {i + 1}
-                                {lesson.title ? ` · ${lesson.title}` : ""}
-                              </option>
-                            ))}
-                          </select>
+  Attach to lesson{" "}
+  <span className="text-neutral-400 font-normal">(Optional)</span>
+</Field.Label>
+<select
+  {...register(`assignments.${index}.lessonKey`)}
+  className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-1 focus:ring-ring"
+>
+  <option value="">Whole module (no lesson)</option>
+  {(watchedLessons ?? []).map((lesson, i) => (
+    <option key={lesson.key} value={lesson.key}>
+      Lesson {i + 1}
+      {lesson.title ? ` · ${lesson.title}` : ""}
+    </option>
+  ))}
+</select>
+                          <FieldError message={assignmentErrors?.lessonKey?.message} />
                         </Field.Root>
                       )}
-                      <FieldError message={assignmentErrors?.lessonKey?.message} />
                     </div>
                   );
                 })}
@@ -554,9 +557,15 @@ export default function ModuleForm({
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
               <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
                 <input
-                  type="checkbox"
-                  className="rounded border-neutral-300 text-brand-primary focus:ring-0 h-4 w-4"
-                />
+  type="checkbox"
+  checked={publishStatus === "DRAFT"}
+  onChange={(e) =>
+    setValue("publishStatus", e.target.checked ? "DRAFT" : "PUBLISHED", {
+      shouldDirty: true,
+    })
+  }
+  className="rounded border-neutral-300 text-brand-primary focus:ring-0 h-4 w-4"
+/>
                 <span>Keep as draft until the module is ready for students</span>
               </label>
 

@@ -2,6 +2,7 @@
 
 import { MoreHorizontal, Search, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ResourceRecord } from "@/lib/instructor";
+import { updateResource, type ResourceRecord } from "@/lib/instructor";
 
 import {
   DropdownMenu,
@@ -41,6 +42,22 @@ import {
 } from "@/components/ui/card";
 
 import { useDeleteItem } from "@/lib/use-instructor-forms";
+
+const BADGE_BASE = "rounded-full px-2.5 py-0.5 text-xs font-medium border-0";
+
+const GREEN = "bg-emerald-100/80 text-emerald-700 hover:bg-emerald-100";
+const NEUTRAL = "bg-surface-default-badge text-text-default-badge";
+const AMBER = "bg-surface-warning-badge text-text-warning";
+
+const PUBLISH_BADGE: Record<string, { label: string; className: string }> = {
+  PUBLISHED: { label: "Published", className: GREEN },
+  DRAFT: { label: "Draft", className: AMBER },
+};
+
+const badgeFor = (
+  map: Record<string, { label: string; className: string }>,
+  value: string
+) => map[value] ?? { label: value, className: NEUTRAL };
 
 export type ResourceRow = ResourceRecord & {
   name: string;
@@ -72,7 +89,23 @@ export function ResourcesList({
 }: ResourcesListProps) {
   const [viewing, setViewing] = useState<ResourceRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ResourceRow | null>(null);
+  const queryClient = useQueryClient();
   const deleteMutation = useDeleteItem("resource");
+  const statusMutation = useMutation({
+    mutationFn: (resource: ResourceRow) =>
+      updateResource(resource.id, {
+        publishStatus:
+          resource.publishStatus === "PUBLISHED" ? "DRAFT" : "PUBLISHED",
+      }),
+    onSuccess: async (updatedResource) => {
+      await queryClient.invalidateQueries({ queryKey: ["instructor"] });
+      setViewing((current) =>
+        current?.id === updatedResource.id
+          ? { ...current, ...updatedResource }
+          : current
+      );
+    },
+  });
 
   return (
     <div className="space-y-6 max-full">
@@ -143,6 +176,10 @@ export function ResourcesList({
           <TableBody>
             {resources.map((resource) => {
               const isSelected = selectedIds.includes(resource.id);
+              const publishBadge = badgeFor(
+                PUBLISH_BADGE,
+                resource.publishStatus
+              );
 
               return (
                 <TableRow
@@ -191,9 +228,9 @@ export function ResourcesList({
                   <TableCell className="py-4">
                     <Badge
                       variant="light"
-                      className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0"
+                      className={`${BADGE_BASE} ${publishBadge.className}`}
                     >
-                      Published
+                      {publishBadge.label}
                     </Badge>
                   </TableCell>
 
@@ -213,6 +250,15 @@ export function ResourcesList({
                               className="cursor-pointer"
                             >
                               View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => statusMutation.mutate(resource)}
+                              disabled={statusMutation.isPending}
+                              className="cursor-pointer"
+                            >
+                              {resource.publishStatus === "PUBLISHED"
+                                ? "Unpublish"
+                                : "Publish"}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => setDeleteTarget(resource)}
