@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 import { SettingsTab } from "@/features/curriculum/components/SettingsTab";
 import { CurriculumScopeProvider } from "@/features/curriculum/scope";
@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/components/AdminTopNav", () => ({ AdminTopNav: () => null }));
 
 const { NewResourceScreen } = await import("@/features/curriculum/screens/NewResourceScreen");
-const { NewAssignmentScreen } = await import(
+const { EditAssignmentScreen, NewAssignmentScreen } = await import(
   "@/features/curriculum/screens/NewAssignmentScreen"
 );
 
@@ -259,6 +259,104 @@ describe("NewAssignmentScreen", () => {
     await renderScreen();
     expect(screen.getByRole("button", { name: "Add link" })).toBeInTheDocument();
     expect(screen.queryByText(/Drag|drop|Browse/i)).not.toBeInTheDocument();
+  });
+
+  it("sends the picked due date and time", async () => {
+    const { user, api } = await renderScreen();
+    const time = screen.getByLabelText("Due time");
+
+    /* The time only matters once there's a date, and defaults to 11:59 PM. */
+    expect(time).toBeDisabled();
+    expect(time).toHaveValue("23:59");
+
+    await user.type(screen.getByRole("textbox", { name: /Assignment title/ }), "Grid study");
+    await user.type(description(), "Lay out a page on a grid");
+    fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "2026-11-20" } });
+    fireEvent.change(time, { target: { value: "14:30" } });
+    await user.click(screen.getByRole("button", { name: "Create Assignment" }));
+
+    await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
+    expect(api.bodies("POST /admin/topics/t1/assignments")).toMatchObject([
+      { dueAt: new Date("2026-11-20T14:30:00").toISOString() },
+    ]);
+  });
+});
+
+describe("EditAssignmentScreen", () => {
+  const dueAt = new Date("2026-11-20T17:00:00").toISOString();
+  const saved = {
+    ...timestamps,
+    id: "a1",
+    topicId: "t1",
+    lessonId: null,
+    title: "Grid study",
+    description: "Lay out a page on a grid",
+    instructions: "Use 12 columns",
+    dueAt,
+    submissionType: "LINK",
+    publishStatus: "PUBLISHED",
+    attachments: [],
+  };
+
+  async function renderScreen() {
+    const api = mockApi(
+      curriculumRoutes({
+        "GET /admin/topics/t1/assignments": envelope([saved]),
+        "PATCH /admin/assignments/a1": envelope(saved),
+      }),
+    );
+    const view = renderAsAdmin(<EditAssignmentScreen id="c1" assignmentId="a1" />);
+    await screen.findByDisplayValue("Grid study");
+    return { ...view, api };
+  }
+
+  it("fills the form with the saved assignment, due time included", async () => {
+    await renderScreen();
+
+    expect(screen.getByRole("heading", { name: "Edit Assignment" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Lay out a page on a grid")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Use 12 columns")).toBeInTheDocument();
+    expect(screen.getByLabelText("Due date")).toHaveValue("2026-11-20");
+    expect(screen.getByLabelText("Due time")).toHaveValue("17:00");
+  });
+
+  it("saves a new due date and returns to the assignments tab", async () => {
+    const { user, api } = await renderScreen();
+
+    fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "2026-11-27" } });
+    fireEvent.change(screen.getByLabelText("Due time"), { target: { value: "09:00" } });
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
+    expect(api.bodies("PATCH /admin/assignments/a1")).toMatchObject([
+      {
+        title: "Grid study",
+        dueAt: new Date("2026-11-27T09:00:00").toISOString(),
+        lessonId: null,
+        submissionType: "LINK",
+      },
+    ]);
+    expect(push.mock.calls[0][0]).toBe("/admin/curriculum/c1?tab=assignments");
+  });
+
+  it("can remove the due date", async () => {
+    const { user, api } = await renderScreen();
+
+    await user.click(screen.getByRole("button", { name: "Remove due date" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
+    expect(api.bodies("PATCH /admin/assignments/a1")).toMatchObject([{ dueAt: null }]);
+  });
+
+  it("moves it onto a lesson in the same module", async () => {
+    const { user, api } = await renderScreen();
+
+    await choose(user, /Due relative to lesson/, "After lesson 1");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
+    expect(api.bodies("PATCH /admin/assignments/a1")).toMatchObject([{ lessonId: "l1" }]);
   });
 });
 

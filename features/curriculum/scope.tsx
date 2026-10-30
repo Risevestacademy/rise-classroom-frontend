@@ -20,6 +20,8 @@ function curriculumPaths(base: string) {
       `${base}/${id}/modules/${moduleId}/edit`,
     newModule: (id: string) => `${base}/${id}/modules/new`,
     newAssignment: (id: string) => `${base}/${id}/assignments/new`,
+    editAssignment: (id: string, assignmentId: string) =>
+      `${base}/${id}/assignments/${assignmentId}/edit`,
     newResource: (id: string) => `${base}/${id}/resources/new`,
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Menu } from "@base-ui/react/menu";
 import { Filter, MoreHorizontal } from "lucide-react";
 import { cn } from "cn";
@@ -103,12 +104,15 @@ export function RowActionsMenu({
   label,
   status,
   onView,
+  editHref,
   onToggleStatus,
   onDelete,
 }: {
   label: string;
   status: ModuleStatus;
   onView: () => void;
+  /* Adds an Edit item that opens this page. */
+  editHref?: string;
   onToggleStatus: () => void;
   onDelete: () => void;
 }) {
@@ -126,6 +130,11 @@ export function RowActionsMenu({
             <Menu.Item onClick={onView} className={menuItemClass}>
               View details
             </Menu.Item>
+            {editHref && (
+              <Menu.Item render={<Link href={editHref} />} className={menuItemClass}>
+                Edit
+              </Menu.Item>
+            )}
             <Menu.Item onClick={onToggleStatus} className={menuItemClass}>
               {status === "PUBLISHED" ? "Move to draft" : "Publish"}
             </Menu.Item>

@@ -8,12 +8,8 @@ import {
   ArrowLeft,
   Check,
   ChevronRight,
-  Download,
-  ExternalLink,
   FileText,
-  Link2,
   Lock,
-  Video,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -21,60 +17,70 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LessonVideo } from "@/components/lessons/LessonVideo";
 import { Notice } from "@/components/lessons/Notice";
+import { ResourceRow } from "@/components/lessons/ResourceRow";
+import { submissionBadges, type SubmissionStatus } from "@/features/curriculum/types";
 import { studentQueries } from "@/lib/student";
+import {
+  assignmentHref,
+  studentAssignmentQueries,
+} from "@/lib/student-assignments";
 import {
   LESSONS_BASE,
   countWatched,
-  describeResource,
   findLesson,
   flattenTopics,
   lessonHref,
   lessonQueries,
-  toHttpUrl,
   type CurriculumTopic,
+  type LessonAssignment,
   type LessonDetail,
-  type LessonResource,
 } from "@/lib/student-lessons";
 
-type Tab = "overview" | "resources";
+/* What the assignment button offers, depending on how far the student has got. */
+const assignmentActions: Record<SubmissionStatus | "NONE", string> = {
+  NONE: "Start assignment",
+  DRAFT: "Continue assignment",
+  CHANGES_REQUESTED: "Make changes",
+  SUBMITTED: "View submission",
+  UNDER_REVIEW: "View submission",
+  GRADED: "View feedback",
+};
 
-function ResourceRow({ resource }: { resource: LessonResource }) {
-  const href = toHttpUrl(resource.url);
-  const info = describeResource(resource.url);
-  const Icon = info.isFile ? FileText : info.kind === "Video" ? Video : Link2;
-  const Action = info.isFile ? Download : ExternalLink;
-
-  const content = (
-    <>
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-neutral-500">
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-neutral-800">
-          {resource.title}
-        </p>
-        <p className="mt-0.5 truncate text-xs text-neutral-400">
-          {[info.kind, info.host].filter(Boolean).join(" · ")}
-        </p>
-      </div>
-      {href && <Action className="h-4 w-4 shrink-0 text-neutral-400" />}
-    </>
+function AssignmentCard({ assignment }: { assignment: LessonAssignment }) {
+  const submissionQuery = useQuery(
+    studentAssignmentQueries.submission(assignment.id),
   );
+  const submission = submissionQuery.data;
+  const badge = submission ? submissionBadges[submission.status] : null;
 
-  const className = "flex items-center gap-3 rounded-xl px-3 py-3";
-  return href ? (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn(className, "hover:bg-white")}
-    >
-      {content}
-    </a>
-  ) : (
-    <div className={className}>{content}</div>
+  return (
+    <div className="rounded-2xl bg-neutral-100 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-medium text-neutral-800">{assignment.title}</p>
+        {badge && (
+          <Badge variant="light" status={badge.status} className="shrink-0">
+            {badge.label}
+          </Badge>
+        )}
+      </div>
+      {assignment.description && (
+        <p className="mt-1 line-clamp-3 text-xs text-neutral-500">
+          {assignment.description}
+        </p>
+      )}
+      <Link
+        href={assignmentHref(assignment.id)}
+        className="mt-4 flex h-10 w-full items-center justify-center rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-brand-primary-hover"
+      >
+        {submissionQuery.isPending
+          ? "View assignment"
+          : assignmentActions[submission?.status ?? "NONE"]}
+      </Link>
+    </div>
   );
 }
+
+type Tab = "overview" | "resources";
 
 function WeekLessons({
   topic,
@@ -274,27 +280,7 @@ function LessonView({
               <h2 className="text-sm font-medium text-neutral-800">Assignment</h2>
               <div className="mt-3 flex flex-col gap-3">
                 {assignments.map((assignment) => (
-                  <div
-                    key={assignment.id}
-                    className="rounded-2xl bg-neutral-100 p-4"
-                  >
-                    <p className="text-sm font-medium text-neutral-800">
-                      {assignment.title}
-                    </p>
-                    {assignment.description && (
-                      <p className="mt-1 line-clamp-3 text-xs text-neutral-500">
-                        {assignment.description}
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      disabled
-                      title="The assignment page is coming soon"
-                      className="mt-4 h-10 w-full rounded-lg bg-brand-primary px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      View assignment
-                    </button>
-                  </div>
+                  <AssignmentCard key={assignment.id} assignment={assignment} />
                 ))}
               </div>
             </section>

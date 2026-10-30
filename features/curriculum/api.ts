@@ -23,6 +23,8 @@ import {
   noCurriculumFilters,
   type AssignmentRecord,
   type AssignmentSubmissionRecord,
+  type SubmissionDetail,
+  type SubmissionReview,
   type CreateAssignmentInput,
   type CreateCurriculumInput,
   type CreateResourceInput,
@@ -642,9 +644,10 @@ function createCurriculumApi(role: CurriculumRole) {
     return { ...draft, id: record.id };
   }
 
+  /* `lessonId` moves the assignment to another lesson in its module, or off any lesson with null. */
   async function updateAssignment(
     assignmentId: string,
-    changes: Partial<ModuleAssignment>,
+    changes: Partial<ModuleAssignment> & { lessonId?: string | null },
   ) {
     const {
       title,
@@ -654,6 +657,7 @@ function createCurriculumApi(role: CurriculumRole) {
       dueAt,
       status,
       resources,
+      lessonId,
     } = changes;
     await api.patch(`${base}/assignments/${assignmentId}`, {
       title,
@@ -661,6 +665,7 @@ function createCurriculumApi(role: CurriculumRole) {
       instructions,
       submissionType,
       ...(dueAt !== undefined && { dueAt: toIsoDate(dueAt) }),
+      ...(lessonId !== undefined && { lessonId }),
       publishStatus: status,
       ...(resources && { attachments: attachmentLinks(resources) }),
     });
@@ -751,6 +756,20 @@ function createCurriculumApi(role: CurriculumRole) {
     return page.items.map(toSubmission);
   }
 
+  /* One submission with the student's work. The API only has this for instructors. */
+  function getSubmission(submissionId: string) {
+    return getData<SubmissionDetail>(`${base}/submissions/${submissionId}`);
+  }
+
+  /* Starts a review, returns the work for changes, or grades it (0-100). Grading also
+     updates the student's performance score when a standard is set for the assignment. */
+  function reviewSubmission(submissionId: string, review: SubmissionReview) {
+    return postData<SubmissionDetail>(
+      `${base}/submissions/${submissionId}/review`,
+      review,
+    );
+  }
+
   // ---- Student access ----------------------------------------------------------
 
   /*
@@ -819,6 +838,8 @@ function createCurriculumApi(role: CurriculumRole) {
       ["curriculum", role, "notes", curriculumId] as const,
     submissions: (assignmentId: string) =>
       ["curriculum", role, "submissions", assignmentId] as const,
+    submission: (submissionId: string) =>
+      ["curriculum", role, "submission", submissionId] as const,
     /* Filled from the last unlock or lock, since the API can't be asked for it. */
     moduleAccess: (moduleId: string) =>
       ["curriculum", role, "module-access", moduleId] as const,
@@ -851,6 +872,12 @@ function createCurriculumApi(role: CurriculumRole) {
       queryOptions({
         queryKey: keys.submissions(assignmentId),
         queryFn: () => listSubmissions(assignmentId),
+      }),
+
+    submission: (submissionId: string) =>
+      queryOptions({
+        queryKey: keys.submission(submissionId),
+        queryFn: () => getSubmission(submissionId),
       }),
 
     module: (id: string) =>
@@ -908,6 +935,7 @@ function createCurriculumApi(role: CurriculumRole) {
     updateResource,
     deleteResource,
     setModuleAccess,
+    reviewSubmission,
   };
 }
 
