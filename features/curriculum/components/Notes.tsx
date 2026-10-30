@@ -22,6 +22,7 @@ import { FormField } from "@/components/ui/field";
 import { InfoNote } from "@/components/ui/info-note";
 import { Label } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurriculumScope } from "@/features/curriculum/scope";
 import { formatDate } from "@/features/curriculum/mappers";
@@ -109,6 +110,18 @@ export function NotesTab({
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-4">
+          {notesQuery.isPending &&
+            Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="rounded-xl bg-white p-5 shadow-sm">
+                <Skeleton className="h-6 w-56" />
+                <Skeleton className="mt-3 h-4 w-full max-w-3xl" />
+                <Skeleton className="mt-1.5 h-4 w-2/3" />
+                <div className="mt-4 flex items-center gap-2">
+                  <Skeleton className="h-6 w-6 rounded-full" />
+                  <Skeleton className="h-4 w-48" />
+                </div>
+              </div>
+            ))}
           {notes.map((note) => {
             const modulePosition =
               modules.findIndex((m) => m.id === note.moduleId) + 1;

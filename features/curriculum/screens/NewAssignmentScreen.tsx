@@ -10,6 +10,7 @@ import { ChevronLeft } from "lucide-react";
 import { Calendar } from "@/assets/icons";
 import { InfoNote } from "@/components/ui/info-note";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
 import { Hint, InputWrapper, Label } from "@/components/ui/input";
@@ -191,20 +192,27 @@ export function NewAssignmentScreen({ id }: { id: string }) {
               )}
 
               <div className="mt-5 flex flex-col gap-5">
-                <Select
-                  size="large"
-                  label="Module"
-                  required
-                  value={selectedModuleId}
-                  onChange={(value) => {
-                    setModuleId(value);
-                    setAfterLesson(noLesson);
-                  }}
-                  options={modules.map((m, index) => ({
-                    value: m.id,
-                    label: `Module ${index + 1} - ${m.title}`,
-                  }))}
-                />
+                {modulesQuery.isPending ? (
+                  <div className="flex flex-col gap-1.5">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-12 w-full rounded-lg" />
+                  </div>
+                ) : (
+                  <Select
+                    size="large"
+                    label="Module"
+                    required
+                    value={selectedModuleId}
+                    onChange={(value) => {
+                      setModuleId(value);
+                      setAfterLesson(noLesson);
+                    }}
+                    options={modules.map((m, index) => ({
+                      value: m.id,
+                      label: `Module ${index + 1} - ${m.title}`,
+                    }))}
+                  />
+                )}
 
                 <Field.Root className="flex flex-col">
                   <Label icon={<></>}>Date</Label>
@@ -227,19 +235,26 @@ export function NewAssignmentScreen({ id }: { id: string }) {
                   <Hint>Students will see due date in their dashboard</Hint>
                 </Field.Root>
 
-                <Select
-                  size="large"
-                  label="Due relative to lesson"
-                  value={afterLesson}
-                  onChange={setAfterLesson}
-                  options={[
-                    { value: noLesson, label: "Not tied to a lesson" },
-                    ...(selectedModule?.lessons ?? []).map((_, index) => ({
-                      value: String(index + 1),
-                      label: `After lesson ${index + 1}`,
-                    })),
-                  ]}
-                />
+                {modulesQuery.isPending ? (
+                  <div className="flex flex-col gap-1.5">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-12 w-full rounded-lg" />
+                  </div>
+                ) : (
+                  <Select
+                    size="large"
+                    label="Due relative to lesson"
+                    value={afterLesson}
+                    onChange={setAfterLesson}
+                    options={[
+                      { value: noLesson, label: "Not tied to a lesson" },
+                      ...(selectedModule?.lessons ?? []).map((_, index) => ({
+                        value: String(index + 1),
+                        label: `After lesson ${index + 1}`,
+                      })),
+                    ]}
+                  />
+                )}
 
                 <Select
                   size="large"

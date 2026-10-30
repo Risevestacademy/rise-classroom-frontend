@@ -5,7 +5,10 @@ import { notFound, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 
-import { ModuleForm } from "@/features/curriculum/components/ModuleForm";
+import {
+  ModuleForm,
+  ModuleFormSkeleton,
+} from "@/features/curriculum/components/ModuleForm";
 import { ApiError } from "@/lib/api";
 import { useCurriculumScope } from "@/features/curriculum/scope";
 import type { SaveModuleInput } from "@/features/curriculum/types";
@@ -65,7 +68,7 @@ export function EditModuleScreen({
           Back to Modules
         </Link>
 
-        {curriculum && curriculumModule && modulesQuery.data && (
+        {curriculum && curriculumModule && modulesQuery.data ? (
           <ModuleForm
             heading="Edit Module"
             curriculum={curriculum}
@@ -79,6 +82,8 @@ export function EditModuleScreen({
             cancelHref={detailHref}
             onSubmit={(input) => updateMutation.mutate(input)}
           />
+        ) : (
+          <ModuleFormSkeleton />
         )}
       </main>
     </>

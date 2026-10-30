@@ -11,6 +11,7 @@ import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { InfoNote } from "@/components/ui/info-note";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { FormField } from "@/components/ui/field";
 import { Hint, Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -305,6 +306,38 @@ export function ModuleForm({
               them.
             </p>
           </InfoNote>
+        </aside>
+      </div>
+    </>
+  );
+}
+
+/* Stands in for the form while the curriculum and its modules load. */
+export function ModuleFormSkeleton() {
+  return (
+    <>
+      <Skeleton className="mt-4 h-8 w-48" />
+      <Skeleton className="mt-2 h-4 w-80 max-w-full" />
+
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="flex min-w-0 flex-col gap-5">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <section
+              key={index}
+              className="rounded-xl border border-neutral-200 bg-white p-5"
+            >
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="mt-2 h-4 w-72 max-w-full" />
+              <div className="mt-5 flex flex-col gap-4">
+                <Skeleton className="h-11 w-full rounded-lg" />
+                <Skeleton className="h-28 w-full rounded-lg" />
+              </div>
+            </section>
+          ))}
+        </div>
+        <aside className="flex flex-col gap-4">
+          <Skeleton className="h-40 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
         </aside>
       </div>
     </>
