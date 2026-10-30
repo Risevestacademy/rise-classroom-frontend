@@ -2,9 +2,8 @@
 
 import { MoreHorizontal, Search, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { submissionsData } from "@/components/instructor-dashboard/data";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
@@ -17,9 +16,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  instructorQueries,
   updateAssignment,
   type AssignmentRecord,
+  type SubmissionStatus,
 } from "@/lib/instructor";
+import { formatDate, formatTime } from "@/lib/curriculum.mappers";
 
 import {
   DropdownMenu,
@@ -61,6 +63,20 @@ const AMBER = "bg-surface-warning-badge text-text-warning";
 const PUBLISH_BADGE: Record<string, { label: string; className: string }> = {
   PUBLISHED: { label: "Published", className: GREEN },
   DRAFT: { label: "Draft", className: AMBER },
+};
+
+const SUBMISSION_BADGE: Record<
+  SubmissionStatus,
+  { label: string; className: string }
+> = {
+  DRAFT: { label: "Draft", className: "bg-neutral-100 text-neutral-600" },
+  SUBMITTED: { label: "Submitted", className: GREEN },
+  UNDER_REVIEW: { label: "Under review", className: "bg-blue-100 text-blue-700" },
+  CHANGES_REQUESTED: {
+    label: "Changes requested",
+    className: "bg-rose-100 text-rose-600",
+  },
+  GRADED: { label: "Graded", className: "bg-indigo-100 text-indigo-700" },
 };
 
 const badgeFor = (
@@ -109,21 +125,26 @@ export function AssignmentsList({
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["instructor"] }),
   });
+  const submissionsQuery = useQuery(
+    instructorQueries.submissions({ assignmentId: viewing?.id })
+  );
   const viewingPublishBadge = viewing
     ? badgeFor(PUBLISH_BADGE, viewing.publishStatus)
     : null;
 
-  const mockSubmissions = submissionsData;
+  const submissions = submissionsQuery.data?.items ?? [];
 
   const isAllSubmissionsSelected =
-    mockSubmissions.length > 0 &&
-    submissionSelectedIds.length === mockSubmissions.length;
+    submissions.length > 0 &&
+    submissions.every((submission) =>
+      submissionSelectedIds.includes(submission.id)
+    );
 
   const handleSelectAllSubmissions = () => {
     if (isAllSubmissionsSelected) {
       setSubmissionSelectedIds([]);
     } else {
-      setSubmissionSelectedIds(mockSubmissions.map((item) => item.id));
+      setSubmissionSelectedIds(submissions.map((item) => item.id));
     }
   };
 
@@ -270,7 +291,10 @@ export function AssignmentsList({
                         >
                           <DropdownMenuGroup>
                             <DropdownMenuItem
-                              onClick={() => setViewing(assignment)}
+                              onClick={() => {
+                                setSubmissionSelectedIds([]);
+                                setViewing(assignment);
+                              }}
                               className="cursor-pointer"
                             >
                               View
@@ -435,8 +459,43 @@ export function AssignmentsList({
                   </TableHeader>
 
                   <TableBody>
-                    {mockSubmissions.map((submission) => {
+                    {submissionsQuery.isPending ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="py-10 text-center text-xs text-neutral-500"
+                        >
+                          Loading submissions…
+                        </TableCell>
+                      </TableRow>
+                    ) : submissionsQuery.isError ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="py-10 text-center text-xs text-rose-600"
+                        >
+                          Could not load submissions.{" "}
+                          <button
+                            type="button"
+                            onClick={() => void submissionsQuery.refetch()}
+                            className="font-semibold underline"
+                          >
+                            Try again
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ) : submissions.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="py-10 text-center text-xs text-neutral-500"
+                        >
+                          No submissions yet.
+                        </TableCell>
+                      </TableRow>
+                    ) : submissions.map((submission) => {
                       const isSelected = submissionSelectedIds.includes(submission.id);
+                      const statusBadge = SUBMISSION_BADGE[submission.status];
 
                       return (
                         <TableRow
@@ -447,7 +506,7 @@ export function AssignmentsList({
                             <Checkbox
                               checked={isSelected}
                               onCheckedChange={() => handleSelectSubmissionRow(submission.id)}
-                              aria-label={`Select ${submission.name}`}
+                              aria-label={`Select ${submission.studentProfile?.user.name ?? "student"}'s submission`}
                               className="rounded border-neutral-300"
                             />
                           </TableCell>
@@ -456,10 +515,10 @@ export function AssignmentsList({
                             <div className="flex items-center gap-3">
                               <div className="flex flex-col">
                                 <span className="text-xs font-bold text-neutral-900">
-                                  {submission.name}
+                                  {submission.studentProfile?.user.name ?? "Unknown student"}
                                 </span>
                                 <span className="text-[11px] text-neutral-500">
-                                  {submission.email}
+                                  {submission.studentProfile?.user.email ?? "—"}
                                 </span>
                               </div>
                             </div>
@@ -468,36 +527,29 @@ export function AssignmentsList({
                           <TableCell className="py-3.5">
                             <div className="flex flex-col">
                               <span className="text-xs font-medium text-neutral-800">
-                                {submission.dateSubmitted}
+                                {submission.submittedAt
+                                  ? formatDate(submission.submittedAt)
+                                  : "—"}
                               </span>
                               <span className="text-[11px] text-neutral-400">
-                                {submission.timeSubmitted}
+                                {submission.submittedAt
+                                  ? formatTime(submission.submittedAt)
+                                  : ""}
                               </span>
                             </div>
                           </TableCell>
 
                           <TableCell className="py-3.5">
-                            {submission.status === "Submitted" ? (
-                              <Badge
-                                variant="light"
-                                status="success"
-                                className="bg-emerald-100/80 text-emerald-700 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0 shadow-none"
-                              >
-                                Submitted
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="light"
-                                status="error"
-                                className="bg-rose-100/80 text-rose-600 rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0 shadow-none"
-                              >
-                                Not submitted
-                              </Badge>
-                            )}
+                            <Badge
+                              variant="light"
+                              className={`${statusBadge.className} rounded-full px-2.5 py-0.5 text-[11px] font-medium border-0 shadow-none`}
+                            >
+                              {statusBadge.label}
+                            </Badge>
                           </TableCell>
 
                           <TableCell className="py-3.5 text-xs font-medium text-neutral-600">
-                            {submission.grade}
+                            {submission.grade ?? "—"}
                           </TableCell>
                           <TableCell className="w-16 py-4 pr-6">
                             <div className="flex w-full justify-end">
