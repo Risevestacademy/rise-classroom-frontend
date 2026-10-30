@@ -14,6 +14,7 @@ import {
 } from "@/features/curriculum/components/ContentTable";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -144,7 +145,35 @@ export function ResourcesTab({
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {resourcesQuery.isPending ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <tr key={index} className="border-b border-neutral-200">
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-4" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-40" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="mt-1.5 h-4 w-28" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-24" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="mt-1.5 h-4 w-28" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-4" />
+                  </td>
+                </tr>
+              ))
+            ) : filtered.length === 0 ? (
               <tr>
                 <td
                   colSpan={7}

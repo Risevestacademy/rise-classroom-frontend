@@ -147,7 +147,38 @@ export function AssignmentsTab({
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {assignmentsQuery.isPending ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <tr key={index} className="border-b border-neutral-200">
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-4" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="mt-1.5 h-4 w-24" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="mt-1.5 h-4 w-28" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="mt-1.5 h-4 w-28" />
+                  </td>
+                  {permissions.canViewSubmissions && (
+                    <td className="px-4 py-5">
+                      <Skeleton className="h-4 w-10" />
+                    </td>
+                  )}
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-4" />
+                  </td>
+                </tr>
+              ))
+            ) : filtered.length === 0 ? (
               <tr>
                 <td
                   colSpan={columnCount}
@@ -446,9 +477,24 @@ function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
 
   if (submissionsQuery.isPending) {
     return (
-      <p className="py-10 text-center text-sm text-neutral-400">
-        Loading submissions…
-      </p>
+      <div className="flex flex-col">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-4 border-b border-neutral-200 px-4 py-5"
+          >
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-6 w-24 rounded-full" />
+            <Skeleton className="h-4 w-8" />
+          </div>
+        ))}
+      </div>
     );
   }
 

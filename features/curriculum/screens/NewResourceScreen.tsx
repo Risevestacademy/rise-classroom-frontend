@@ -10,6 +10,7 @@ import { ChevronLeft, FileText, Link2 } from "lucide-react";
 
 import { InfoNote } from "@/components/ui/info-note";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
 import { Label } from "@/components/ui/input";
@@ -183,37 +184,48 @@ export function NewResourceScreen({ id }: { id: string }) {
                     leadingIcon: <Link2 className="text-text-info" />,
                   }}
                 />
-                <Select
-                  size="large"
-                  label="Attach to"
-                  required
-                  value={selectedModuleId}
-                  onChange={(value) => {
-                    setModuleId(value);
-                    setLessonId("");
-                  }}
-                  options={modules.map((m, index) => ({
-                    value: m.id,
-                    label: `Module ${index + 1} - ${m.title}`,
-                  }))}
-                />
-                <Select
-                  size="large"
-                  label="Lesson"
-                  required
-                  value={selectedLessonId}
-                  onChange={setLessonId}
-                  options={[
-                    ...lessons.map((lesson, index) => ({
-                      value: lesson.id,
-                      label: `Lesson ${index + 1}`,
-                    })),
-                    {
-                      value: wholeModule,
-                      label: "Whole module (no specific lesson)",
-                    },
-                  ]}
-                />
+                {modulesQuery.isPending ? (
+                  Array.from({ length: 2 }).map((_, index) => (
+                    <div key={index} className="flex flex-col gap-1.5">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-12 w-full rounded-lg" />
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <Select
+                      size="large"
+                      label="Attach to"
+                      required
+                      value={selectedModuleId}
+                      onChange={(value) => {
+                        setModuleId(value);
+                        setLessonId("");
+                      }}
+                      options={modules.map((m, index) => ({
+                        value: m.id,
+                        label: `Module ${index + 1} - ${m.title}`,
+                      }))}
+                    />
+                    <Select
+                      size="large"
+                      label="Lesson"
+                      required
+                      value={selectedLessonId}
+                      onChange={setLessonId}
+                      options={[
+                        ...lessons.map((lesson, index) => ({
+                          value: lesson.id,
+                          label: `Lesson ${index + 1}`,
+                        })),
+                        {
+                          value: wholeModule,
+                          label: "Whole module (no specific lesson)",
+                        },
+                      ]}
+                    />
+                  </>
+                )}
               </div>
             </section>
 
