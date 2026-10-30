@@ -4,7 +4,6 @@ import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
 import { Bell, ChevronRight, Menu } from "lucide-react";
-import { usePathname } from "next/navigation";
 
 import { Calendar, Search } from "@/assets/icons";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -20,7 +19,6 @@ export function InstructorNavbar({
   /** The first crumb is a section name, so it never links. */
   breadcrumb?: Crumb[];
 }) {
-  const pathname = usePathname();
   const { setOpen } = useInstructorNav();
 
   const { data: session, isPending } = useQuery(sessionQuery());

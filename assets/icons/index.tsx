@@ -46,3 +46,16 @@ export const Progress = createIcon(
   },
   "stroke",
 );
+
+export const Time04 = createIcon(
+  "Time04",
+  {
+    stroke: (
+      <>
+        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M9.5 9.5L13 13M16 8L11 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+  },
+  "stroke",
+);
