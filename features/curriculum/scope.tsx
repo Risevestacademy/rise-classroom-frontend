@@ -28,6 +28,8 @@ function curriculumPaths(base: string) {
 export type CurriculumPermissions = {
   /* Deleting a whole curriculum. Admins create curricula, so only they remove them. */
   canDeleteCurriculum: boolean;
+  /* Unlocking modules for students. The API only has this for instructors. */
+  canUnlockModules: boolean;
 };
 
 export type CurriculumScope = {
@@ -45,7 +47,7 @@ const scopes: Record<CurriculumRole, CurriculumScope> = {
     role: "admin",
     api: curriculumApis.admin,
     paths: curriculumPaths("/admin/curriculum"),
-    permissions: { canDeleteCurriculum: true },
+    permissions: { canDeleteCurriculum: true, canUnlockModules: false },
     TopNav: AdminTopNav,
     breadcrumbRoot: [
       "Academy",
@@ -56,7 +58,7 @@ const scopes: Record<CurriculumRole, CurriculumScope> = {
     role: "instructor",
     api: curriculumApis.instructor,
     paths: curriculumPaths("/instructor/curriculum"),
-    permissions: { canDeleteCurriculum: false },
+    permissions: { canDeleteCurriculum: false, canUnlockModules: true },
     TopNav: InstructorNavbar,
     breadcrumbRoot: [
       "Teaching",

@@ -31,11 +31,14 @@ import {
   type CurriculumRole,
   type LessonRecord,
   type LessonTree,
+  type ModuleAccess,
+  type ModuleAccessRecord,
   type ModuleAssignment,
   type ModuleLesson,
   type NoteRecord,
   type RecordingRecord,
   type ResourceFile,
+  type ResourceKind,
   type ResourceRecord,
   type SaveModuleInput,
   type SaveNoteInput,
@@ -83,6 +86,22 @@ async function postData<T>(path: string, body: unknown) {
 /** Leaves optional text out of create payloads when it's blank. */
 function optionalText(key: string, value: string) {
   return value ? { [key]: value } : {};
+}
+
+/* The API's name for each resource type. */
+const apiResourceTypes: Record<ResourceKind, string> = {
+  PDF: "PDF",
+  Video: "VIDEO",
+  Document: "DOCUMENT",
+  Image: "IMAGE",
+  Link: "LINK",
+};
+
+/* Runs the tasks a few at a time, so a large class doesn't flood the API proxy with requests. */
+async function runInBatches(tasks: (() => Promise<unknown>)[], size = 6) {
+  for (let start = 0; start < tasks.length; start += size) {
+    await Promise.all(tasks.slice(start, start + size).map((task) => task()));
+  }
 }
 
 function assertHttpsLink(url: string, label: string) {
@@ -382,6 +401,11 @@ function createCurriculumApi(role: CurriculumRole) {
 
     if (input.resources) {
       await deleteRemovedResources(tree.resources, input.resources);
+      await createNewLinks(
+        `${base}/topics/${id}/resources`,
+        tree.resources,
+        input.resources,
+      );
       local.moduleFiles.set(
         id,
         input.resources.filter((r) => !r.url),
@@ -410,6 +434,25 @@ function createCurriculumApi(role: CurriculumRole) {
         .filter((r) => !keptIds.has(r.id))
         .map((r) => api.delete(`${base}/resources/${r.id}`)),
     );
+  }
+
+  /* Saves links added in the form that the API doesn't have yet. */
+  async function createNewLinks(
+    path: string,
+    saved: ResourceRecord[],
+    resources: ResourceFile[],
+  ) {
+    const savedIds = new Set(saved.map((r) => r.id));
+    for (const resource of resources) {
+      if (!resource.url || savedIds.has(resource.id)) continue;
+      assertHttpsLink(resource.url, "Each resource link");
+      await postData(path, {
+        title: resource.title || resource.name,
+        url: resource.url,
+        type: "LINK",
+        publishStatus: "PUBLISHED",
+      });
+    }
   }
 
   async function syncLessons(
@@ -451,6 +494,11 @@ function createCurriculumApi(role: CurriculumRole) {
         }
         await deleteRemovedResources(lesson.resources, draft.resources);
       }
+      await createNewLinks(
+        `${base}/lessons/${lesson.id}/resources`,
+        lesson.resources,
+        draft.resources,
+      );
 
       // PENDING-BACKEND: topic labels and uploaded files have no API field.
       local.lessons.set(lesson.id, {
@@ -644,7 +692,7 @@ function createCurriculumApi(role: CurriculumRole) {
           title: input.title,
           ...optionalText("description", input.description),
           url: input.url,
-          type: "LINK",
+          type: apiResourceTypes[input.kind ?? "Link"],
           publishStatus: "PUBLISHED",
         },
       );
@@ -691,6 +739,46 @@ function createCurriculumApi(role: CurriculumRole) {
     if (!isLocal) await api.delete(`${base}/resources/${resourceId}`);
   }
 
+  // ---- Student access ----------------------------------------------------------
+
+  /*
+   * Unlocks or locks a module for every student on its track. The API only has this for instructors.
+   * A student can open a lesson only once the module and that lesson are both unlocked for them,
+   * and lessons can only be unlocked one student at a time. The module reply lists every student's
+   * enrollment, so unlocking goes on to open each lesson for each of them. Locking the module alone
+   * is enough to close its lessons.
+   */
+  async function setModuleAccess(
+    moduleId: string,
+    unlocked: boolean,
+  ): Promise<ModuleAccess> {
+    const record = await postData<ModuleAccessRecord>(
+      `${base}/topics/${moduleId}/unlock-all`,
+      { unlocked },
+    );
+    if (unlocked) {
+      const lessons = await getData<LessonRecord[]>(
+        `${base}/topics/${moduleId}/lessons`,
+      );
+      await runInBatches(
+        record.statuses.flatMap((status) =>
+          lessons.map(
+            (lesson) => () =>
+              api.patch(
+                `${base}/enrollments/${status.enrollmentId}/lessons/${lesson.id}/unlock`,
+                { unlocked: true },
+              ),
+          ),
+        ),
+      );
+    }
+    return {
+      unlocked,
+      studentCount: record.enrollmentCount,
+      openCount: record.statuses.filter((status) => status.unlocked).length,
+    };
+  }
+
   // ---- Query keys + options ----------------------------------------------------
 
   // Every key starts with the role, so admin and instructor caches never mix.
@@ -717,6 +805,9 @@ function createCurriculumApi(role: CurriculumRole) {
     module: (id: string) => ["curriculum", role, "module", id] as const,
     notes: (curriculumId: string) =>
       ["curriculum", role, "notes", curriculumId] as const,
+    /* Filled from the last unlock or lock, since the API can't be asked for it. */
+    moduleAccess: (moduleId: string) =>
+      ["curriculum", role, "module-access", moduleId] as const,
   };
 
   const modulesQuery = (curriculumId: string) => ({
@@ -796,6 +887,7 @@ function createCurriculumApi(role: CurriculumRole) {
     createResource,
     updateResource,
     deleteResource,
+    setModuleAccess,
   };
 }
 

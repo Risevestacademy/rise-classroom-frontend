@@ -3,19 +3,18 @@
 import * as React from "react";
 import Link from "next/link";
 import { Field } from "@base-ui/react/field";
-import { CirclePlay, NotebookPen, Plus, Trash2, Upload, X } from "lucide-react";
-import { cn } from "cn";
+import { CirclePlay, NotebookPen, Plus, Trash2, X } from "lucide-react";
 
 import { CurriculumSummaryCard } from "@/features/curriculum/components/CurriculumSummaryCard";
+import { LinkListField } from "@/features/curriculum/components/LinkListField";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { InfoNote } from "@/components/ui/info-note";
-import { UploadedFileRow, acceptFiles } from "@/components/ui/file-upload";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/field";
 import { Hint, Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { emptyAssignment, resourceFromUpload } from "@/features/curriculum/mappers";
+import { emptyAssignment } from "@/features/curriculum/mappers";
 import type {
   Curriculum,
   CurriculumModule,
@@ -24,9 +23,6 @@ import type {
   ResourceFile,
   SaveModuleInput,
 } from "@/features/curriculum/types";
-
-const acceptedExtensions = [".pdf", ".pptx", ".docx"];
-const maxFileBytes = 20e6;
 
 const placeholderOutcomes = [
   "Understand the basics of visual hierarchy, contrast, and composition",
@@ -214,7 +210,7 @@ export function ModuleForm({
 
           <FormSection
             title="Module content"
-            description="Add a class recording and supporting material. You can add more later."
+            description="Add a class recording and links to supporting material. You can add more later."
           >
             <FormField
               label="Class recording link"
@@ -231,7 +227,7 @@ export function ModuleForm({
                 ),
               }}
             />
-            <FileUploadField files={resources} onChange={setResources} />
+            <LinkListField links={resources} onChange={setResources} />
           </FormSection>
 
           <FormSection
@@ -434,8 +430,8 @@ function DraftList<T extends DraftItem>({
                 leadingIcon: null,
               }}
             />
-            <FileUploadField
-              files={draft.resources}
+            <LinkListField
+              links={draft.resources}
               onChange={(resources) => update(draft.id, { resources })}
             />
           </div>
@@ -456,78 +452,6 @@ function DraftList<T extends DraftItem>({
         }}
       />
     </>
-  );
-}
-
-function FileUploadField({
-  files,
-  onChange,
-}: {
-  files: ResourceFile[];
-  onChange: (files: ResourceFile[]) => void;
-}) {
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const [error, setError] = React.useState("");
-
-  function handleFiles(fileList: FileList | null) {
-    const { accepted, rejected } = acceptFiles(fileList, {
-      extensions: acceptedExtensions,
-      maxBytes: maxFileBytes,
-    });
-    setError(
-      rejected.length
-        ? `${rejected.join(", ")} couldn't be added. Use PDF, PPTX or DOCX files up to 20 MB.`
-        : "",
-    );
-    onChange([...files, ...accepted.map(resourceFromUpload)]);
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-1 text-sm font-medium text-neutral-700">
-          Supporting resources
-          <span className="text-xs text-neutral-300">(Optional)</span>
-        </span>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => inputRef.current?.click()}
-          className="border-neutral-200 text-neutral-800"
-        >
-          <Upload className="h-3.5 w-3.5" />
-          Upload file
-        </Button>
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept={acceptedExtensions.join(",")}
-          className="hidden"
-          onChange={(event) => {
-            handleFiles(event.target.files);
-            event.target.value = "";
-          }}
-        />
-      </div>
-
-      {files.map((file) => (
-        <UploadedFileRow
-          key={file.id}
-          file={file}
-          onRemove={() => onChange(files.filter((f) => f.id !== file.id))}
-        />
-      ))}
-
-      <p
-        className={cn(
-          "text-xs",
-          error ? "text-text-error" : "text-neutral-400",
-        )}
-      >
-        {error || "PDF, PPTX or DOCX · Up to 20 MB per file"}
-      </p>
-    </div>
   );
 }
 

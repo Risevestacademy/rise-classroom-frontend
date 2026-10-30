@@ -1,25 +1,24 @@
 "use client";
 
 import * as React from "react";
+/* PENDING-BACKEND: used by the commented-out cover image and recording thumbnails.
 import Image from "next/image";
+*/
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu } from "@base-ui/react/menu";
-import {
-  Calendar,
-  CirclePlay,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Video,
-} from "lucide-react";
+import { CirclePlay, MoreHorizontal, Pencil } from "lucide-react";
+/* PENDING-BACKEND: used by the commented-out live classes card.
+import { Calendar, Plus, Video } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+*/
 
 import { CurriculumSummaryCard } from "@/features/curriculum/components/CurriculumSummaryCard";
+import { ModuleAccessCard } from "@/features/curriculum/components/ModuleAccessCard";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { InfoNote } from "@/components/ui/info-note";
 import { FileChip } from "@/components/ui/file-upload";
-import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/features/curriculum/components/ContentTable";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api";
@@ -35,6 +34,7 @@ const statusLabels: Record<ModuleStatus, string> = {
   DRAFT: "Draft",
 };
 
+/* PENDING-BACKEND: used by the commented-out live classes card.
 function formatClassDate(value: string) {
   return new Date(value)
     .toLocaleDateString("en-US", {
@@ -45,6 +45,7 @@ function formatClassDate(value: string) {
     })
     .replace(/,(?= \d{4})/, "");
 }
+*/
 
 export function ModuleDetailScreen({
   id,
@@ -53,7 +54,8 @@ export function ModuleDetailScreen({
   id: string;
   moduleId: string;
 }) {
-  const { api, paths, TopNav, breadcrumbRoot } = useCurriculumScope();
+  const { api, paths, permissions, TopNav, breadcrumbRoot } =
+    useCurriculumScope();
   const queryClient = useQueryClient();
   const curriculumQuery = useQuery(api.queries.detail(id));
   const modulesQuery = useQuery(api.queries.modules(id));
@@ -146,6 +148,7 @@ export function ModuleDetailScreen({
 
         <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-w-0 flex-col gap-5">
+            {/* PENDING-BACKEND: the API has no cover images or recording thumbnails.
             {curriculumModule.coverImage && (
               <div className="relative aspect-2/1 w-full overflow-hidden rounded-2xl">
                 <Image
@@ -177,6 +180,7 @@ export function ModuleDetailScreen({
                 ))}
               </div>
             )}
+            */}
 
             <div>
               <div className="flex flex-wrap items-center gap-3">
@@ -254,7 +258,9 @@ export function ModuleDetailScreen({
                 curriculumModule.assignments.map((assignment, index) => (
                   <ItemCard
                     key={assignment.id}
-                    eyebrow={`Assignment ${index + 1} · ${assignment.type} · ${assignment.mode}`}
+                    /* PENDING-BACKEND: the API has no assignment type or mode; restore
+                       `· ${assignment.type} · ${assignment.mode}` once it does. */
+                    eyebrow={`Assignment ${index + 1}`}
                     item={assignment}
                     editHref={editHref}
                     onRemove={() =>
@@ -335,6 +341,14 @@ export function ModuleDetailScreen({
               moduleCaption={`${position} of ${modules.length} modules in this curriculum.`}
             />
 
+            {permissions.canUnlockModules && (
+              <ModuleAccessCard
+                moduleId={moduleId}
+                moduleStatus={curriculumModule.status}
+              />
+            )}
+
+            {/* PENDING-BACKEND: the API has no live classes.
             <section className="rounded-xl border border-neutral-200 bg-white p-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="flex items-center gap-2 text-sm font-medium text-neutral-800">
@@ -388,6 +402,7 @@ export function ModuleDetailScreen({
                 Add live class
               </Button>
             </section>
+            */}
 
             {curriculumModule.status === "DRAFT" && (
               <InfoNote title="Not visible to students yet">
@@ -396,6 +411,7 @@ export function ModuleDetailScreen({
                   publish them. Review your lessons and resources before
                   publishing.
                 </p>
+                {/* PENDING-DESIGN: there's no student preview yet.
                 <Button
                   variant="secondary"
                   size="sm"
@@ -403,6 +419,7 @@ export function ModuleDetailScreen({
                 >
                   Preview as student
                 </Button>
+                */}
               </InfoNote>
             )}
           </aside>

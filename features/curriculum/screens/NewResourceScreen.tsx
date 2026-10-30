@@ -8,7 +8,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { File01, Video, Link01, Camera02 } from "@/assets/icons";
 import { ChevronLeft, FileText, Link2 } from "lucide-react";
 
-import { FileDropzone } from "@/components/ui/file-upload";
 import { InfoNote } from "@/components/ui/info-note";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -16,16 +15,19 @@ import { FormField } from "@/components/ui/field";
 import { Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
-import { resourceFromUpload } from "@/features/curriculum/mappers";
 import { useCurriculumScope } from "@/features/curriculum/scope";
-import {
-  resourceKinds,
-  type ResourceFile,
-  type ResourceKind,
-} from "@/features/curriculum/types";
+import { resourceKinds, type ResourceKind } from "@/features/curriculum/types";
 
-const maxFileBytes = 50e6;
 const wholeModule = "module";
+
+/* The API stores resources as links, so each type asks for a link to where the file is hosted. */
+const linkPlaceholders: Record<ResourceKind, string> = {
+  PDF: "https://drive.google.com/file/d/…",
+  Video: "https://www.youtube.com/watch?v=…",
+  Document: "https://docs.google.com/document/d/…",
+  Image: "https://drive.google.com/file/d/…",
+  Link: "https://www.figma.com/file/…",
+};
 
 export function NewResourceScreen({ id }: { id: string }) {
   const { api, paths, TopNav, breadcrumbRoot } = useCurriculumScope();
@@ -37,7 +39,6 @@ export function NewResourceScreen({ id }: { id: string }) {
   const [kind, setKind] = React.useState<ResourceKind>("PDF");
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [files, setFiles] = React.useState<ResourceFile[]>([]);
   const [url, setUrl] = React.useState("");
   const [moduleId, setModuleId] = React.useState("");
   const [lessonId, setLessonId] = React.useState("");
@@ -47,8 +48,6 @@ export function NewResourceScreen({ id }: { id: string }) {
   const selectedModule = modules.find((m) => m.id === selectedModuleId);
   const lessons = selectedModule?.lessons ?? [];
   const selectedLessonId = lessonId || lessons[0]?.id || wholeModule;
-  const file = files[0];
-  const isLink = kind === "Link";
   const backHref = paths.detail(id, { tab: "resources" });
 
   const Icons: Record<ResourceKind, React.ReactNode> = {
@@ -64,20 +63,14 @@ export function NewResourceScreen({ id }: { id: string }) {
       api.createResource(
         selectedModuleId,
         selectedLessonId === wholeModule ? null : selectedLessonId,
-        isLink
-          ? {
-              name: url.trim(),
-              sizeBytes: null,
-              title: title.trim(),
-              description: description.trim(),
-              url: url.trim(),
-            }
-          : {
-              name: file.name,
-              sizeBytes: file.sizeBytes,
-              title: title.trim(),
-              description: description.trim(),
-            },
+        {
+          name: url.trim(),
+          sizeBytes: null,
+          title: title.trim(),
+          description: description.trim(),
+          url: url.trim(),
+          kind,
+        },
       ),
     onSuccess: (resource) => {
       queryClient.invalidateQueries({ queryKey: api.keys.modules(id) });
@@ -102,7 +95,7 @@ export function NewResourceScreen({ id }: { id: string }) {
   const curriculum = curriculumQuery.data;
   const canSubmit =
     title.trim().length > 0 &&
-    (isLink ? url.trim().length > 0 : file !== undefined) &&
+    url.trim().length > 0 &&
     selectedModuleId !== "" &&
     !createMutation.isPending;
 
@@ -128,7 +121,7 @@ export function NewResourceScreen({ id }: { id: string }) {
           Add Resource
         </h1>
         <p className="mt-1 text-sm text-neutral-500">
-          Upload a new resource for this curriculum.
+          Add a link to a new resource for this curriculum.
         </p>
 
         <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -141,10 +134,7 @@ export function NewResourceScreen({ id }: { id: string }) {
                   size="large"
                   label="Resource type"
                   value={kind}
-                  onChange={(value) => {
-                    setKind(value as ResourceKind);
-                    setFiles([]);
-                  }}
+                  onChange={(value) => setKind(value as ResourceKind)}
                   options={(Object.keys(resourceKinds) as ResourceKind[]).map(
                     (k) => ({
                       value: k,
@@ -176,32 +166,23 @@ export function NewResourceScreen({ id }: { id: string }) {
                     />
                   </div>
                 </Field.Root>
-                {isLink ? (
-                  <FormField
-                    label="Link"
-                    required
-                    hint="Paste a full link starting with https://"
-                    inputProps={{
-                      type: "basic",
-                      size: "medium",
-                      value: url,
-                      onChange: (event) => setUrl(event.target.value),
-                      placeholder: "https://www.figma.com/file/…",
-                      leadingIcon: <Link2 className="text-text-info" />,
-                    }}
-                  />
-                ) : (
-                  <FileDropzone
-                    label="Resource"
-                    files={files}
-                    onChange={setFiles}
-                    createFile={resourceFromUpload}
-                    extensions={resourceKinds[kind].extensions}
-                    maxBytes={maxFileBytes}
-                    formatsLabel={resourceKinds[kind].formats}
-                    multiple={false}
-                  />
-                )}
+                <FormField
+                  label="Link"
+                  required
+                  hint={
+                    kind === "Link"
+                      ? "Paste a full link starting with https://"
+                      : `Paste a link to the ${resourceKinds[kind].formats} file, e.g. on Google Drive. Make sure anyone with the link can view it.`
+                  }
+                  inputProps={{
+                    type: "basic",
+                    size: "medium",
+                    value: url,
+                    onChange: (event) => setUrl(event.target.value),
+                    placeholder: linkPlaceholders[kind],
+                    leadingIcon: <Link2 className="text-text-info" />,
+                  }}
+                />
                 <Select
                   size="large"
                   label="Attach to"

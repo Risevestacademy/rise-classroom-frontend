@@ -26,6 +26,9 @@ vi.mock("@/components/instructor-dashboard/InstructorNavbar", () => ({
 const { CurriculumDetailScreen } = await import(
   "@/features/curriculum/screens/CurriculumDetailScreen"
 );
+const { ModuleDetailScreen } = await import(
+  "@/features/curriculum/screens/ModuleDetailScreen"
+);
 
 const timestamps = {
   createdAt: "2026-09-01T00:00:00.000Z",
@@ -191,5 +194,21 @@ describe("curriculum detail permissions", () => {
 
     expect((await screen.findAllByText("Product Design")).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Curriculum actions" })).not.toBeInTheDocument();
+  });
+
+  /* The API only lets instructors unlock modules. */
+  it.each([
+    ["instructor", true],
+    ["admin", false],
+  ] as const)("shows student access on the module page to %s: %s", async (role, shown) => {
+    mockApi({
+      ...curriculumRoutes[role],
+      ...moduleRoutes(role),
+      [`GET /${role}/topics/topic-1`]: envelope(topic),
+    });
+    renderAs(role, <ModuleDetailScreen id="c1" moduleId="topic-1" />);
+
+    expect(await screen.findByRole("heading", { name: "Visual design" })).toBeInTheDocument();
+    expect(screen.queryByText("Student access") !== null).toBe(shown);
   });
 });

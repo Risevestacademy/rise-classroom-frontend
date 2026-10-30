@@ -52,7 +52,10 @@ export type CurriculumResource = {
 export type CreateResourceInput = Pick<
   ResourceFile,
   "name" | "sizeBytes" | "title" | "description" | "url"
->;
+> & {
+  /* What the link points to. Defaults to a plain link. */
+  kind?: ResourceKind;
+};
 
 export type ModuleLesson = {
   id: string;
@@ -278,6 +281,30 @@ export type NoteRecord = Timestamps & {
   isPinned?: boolean;
   pinned?: boolean;
   author?: { firstName: string; lastName: string } | null;
+};
+
+/* One student's access to a module. `unlocked` also needs earlier prerequisites done. */
+export type TopicLockStatus = {
+  enrollmentId: string;
+  topicId: string;
+  instructorUnlocked: boolean;
+  unlocked: boolean;
+};
+
+/* The reply to unlocking or locking a module for every student on its track. */
+export type ModuleAccessRecord = {
+  topicId: string;
+  trackId: string;
+  enrollmentCount: number;
+  statuses: TopicLockStatus[];
+};
+
+/* What the last unlock or lock did. The API only reports this when access changes. */
+export type ModuleAccess = {
+  unlocked: boolean;
+  studentCount: number;
+  /* Students who can open the module now, after prerequisites. */
+  openCount: number;
 };
 
 export type RecordingRecord = Timestamps & {

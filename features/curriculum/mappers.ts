@@ -103,6 +103,21 @@ export function resourceFromUpload(file: File) {
   return newResourceFile({ name: file.name, sizeBytes: file.size });
 }
 
+/* Builds a resource for a pasted link. It's sent to the API when the form is saved. */
+export function resourceFromLink(url: string) {
+  return newResourceFile({ name: fileNameFromUrl(url), sizeBytes: null }, { url });
+}
+
+/* True for a full https:// link, the only kind the API accepts. */
+export function isHttpsLink(value: string) {
+  if (!/^https:\/\/\S+$/.test(value)) return false;
+  try {
+    return Boolean(new URL(value).hostname);
+  } catch {
+    return false;
+  }
+}
+
 export function emptyAssignment(id: string = crypto.randomUUID()): ModuleAssignment {
   return {
     id,

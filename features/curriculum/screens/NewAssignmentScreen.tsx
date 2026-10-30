@@ -9,17 +9,14 @@ import { ChevronLeft } from "lucide-react";
 
 import { Calendar } from "@/assets/icons";
 import { InfoNote } from "@/components/ui/info-note";
-import { FileDropzone } from "@/components/ui/file-upload";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
 import { Hint, InputWrapper, Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
-import {
-  trackDetails,
-  resourceFromUpload,
-} from "@/features/curriculum/mappers";
+import { LinkListField } from "@/features/curriculum/components/LinkListField";
+import { trackDetails } from "@/features/curriculum/mappers";
 import { useCurriculumScope } from "@/features/curriculum/scope";
 import {
   submissionTypes,
@@ -27,8 +24,6 @@ import {
   type SubmissionType,
 } from "@/features/curriculum/types";
 
-const acceptedExtensions = [".jpeg", ".jpg", ".png", ".pdf", ".mp4"];
-const maxFileBytes = 50e6;
 const noLesson = "none";
 
 export function NewAssignmentScreen({ id }: { id: string }) {
@@ -155,15 +150,10 @@ export function NewAssignmentScreen({ id }: { id: string }) {
                     />
                   </div>
                 </Field.Root>
-                <FileDropzone
+                <LinkListField
                   label="Resources"
-                  optional
-                  files={resources}
+                  links={resources}
                   onChange={setResources}
-                  createFile={resourceFromUpload}
-                  extensions={acceptedExtensions}
-                  maxBytes={maxFileBytes}
-                  formatsLabel="JPEG, PNG, PDF, and MP4"
                 />
               </div>
             </section>
