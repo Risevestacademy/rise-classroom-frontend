@@ -1,0 +1,262 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { notFound, useRouter } from "next/navigation";
+import { Field } from "@base-ui/react/field";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { File01, Video, Link01, Camera02 } from "@/assets/icons";
+import { ChevronLeft, FileText, Link2 } from "lucide-react";
+
+import { InfoNote } from "@/components/ui/info-note";
+import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/field";
+import { Label } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { ApiError } from "@/lib/api";
+import { useCurriculumScope } from "@/features/curriculum/scope";
+import { resourceKinds, type ResourceKind } from "@/features/curriculum/types";
+
+const wholeModule = "module";
+
+/* The API stores resources as links, so each type asks for a link to where the file is hosted. */
+const linkPlaceholders: Record<ResourceKind, string> = {
+  PDF: "https://drive.google.com/file/d/…",
+  Video: "https://www.youtube.com/watch?v=…",
+  Document: "https://docs.google.com/document/d/…",
+  Image: "https://drive.google.com/file/d/…",
+  Link: "https://www.figma.com/file/…",
+};
+
+export function NewResourceScreen({ id }: { id: string }) {
+  const { api, paths, TopNav, breadcrumbRoot } = useCurriculumScope();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const curriculumQuery = useQuery(api.queries.detail(id));
+  const modulesQuery = useQuery(api.queries.modules(id));
+
+  const [kind, setKind] = React.useState<ResourceKind>("PDF");
+  const [title, setTitle] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [url, setUrl] = React.useState("");
+  const [moduleId, setModuleId] = React.useState("");
+  const [lessonId, setLessonId] = React.useState("");
+
+  const modules = modulesQuery.data ?? [];
+  const selectedModuleId = moduleId || modules[0]?.id || "";
+  const selectedModule = modules.find((m) => m.id === selectedModuleId);
+  const lessons = selectedModule?.lessons ?? [];
+  const selectedLessonId = lessonId || lessons[0]?.id || wholeModule;
+  const backHref = paths.detail(id, { tab: "resources" });
+
+  const Icons: Record<ResourceKind, React.ReactNode> = {
+    PDF: <File01 className="text-text-info" />,
+    Video: <Video className="text-text-info" />,
+    Link: <Link01 className="text-text-info" />,
+    Image: <Camera02 className="text-text-info" />,
+    Document: <FileText className="text-text-info" />,
+  };
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      api.createResource(
+        selectedModuleId,
+        selectedLessonId === wholeModule ? null : selectedLessonId,
+        {
+          name: url.trim(),
+          sizeBytes: null,
+          title: title.trim(),
+          description: description.trim(),
+          url: url.trim(),
+          kind,
+        },
+      ),
+    onSuccess: (resource) => {
+      queryClient.invalidateQueries({ queryKey: api.keys.modules(id) });
+      const position = modules.findIndex((m) => m.id === selectedModuleId) + 1;
+      router.push(
+        paths.detail(id, {
+          tab: "resources",
+          created: resource.title,
+          module: String(position),
+        }),
+      );
+    },
+  });
+
+  if (
+    curriculumQuery.error instanceof ApiError &&
+    curriculumQuery.error.status === 404
+  ) {
+    notFound();
+  }
+
+  const curriculum = curriculumQuery.data;
+  const canSubmit =
+    title.trim().length > 0 &&
+    url.trim().length > 0 &&
+    selectedModuleId !== "" &&
+    !createMutation.isPending;
+
+  return (
+    <>
+      <TopNav
+        breadcrumb={[
+          ...breadcrumbRoot,
+          { label: curriculum?.title ?? "…", href: paths.detail(id) },
+          { label: "Add Resource", href: paths.newResource(id) },
+        ]}
+      />
+      <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+        <Link
+          href={backHref}
+          className="inline-flex items-center gap-1 text-sm font-medium text-brand-primary"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Resources
+        </Link>
+
+        <h1 className="mt-4 text-2xl font-bold text-neutral-800">
+          Add Resource
+        </h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          Add a link to a new resource for this curriculum.
+        </p>
+
+        <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="flex min-w-0 flex-col gap-5">
+            <section className="rounded-xl border border-neutral-200 bg-white p-5">
+              <h2 className="font-bold text-neutral-800">Basic Information</h2>
+
+              <div className="mt-5 flex flex-col gap-4">
+                <Select
+                  size="large"
+                  label="Resource type"
+                  value={kind}
+                  onChange={(value) => setKind(value as ResourceKind)}
+                  options={(Object.keys(resourceKinds) as ResourceKind[]).map(
+                    (k) => ({
+                      value: k,
+                      label: k,
+                    }),
+                  )}
+                  leadingIcon={Icons[kind]}
+                />
+                <FormField
+                  label="Title"
+                  required
+                  inputProps={{
+                    type: "basic",
+                    size: "medium",
+                    value: title,
+                    onChange: (event) => setTitle(event.target.value),
+                    placeholder: "Visual Hierarchy",
+                    leadingIcon: null,
+                  }}
+                />
+                <Field.Root className="flex flex-col">
+                  <Label icon={<></>}>Description</Label>
+                  <div className="mt-1.5">
+                    <Textarea
+                      value={description}
+                      onChange={(event) => setDescription(event.target.value)}
+                      placeholder="Redesign a simple landing page using hierarchy and contrast"
+                      className="min-h-28"
+                    />
+                  </div>
+                </Field.Root>
+                <FormField
+                  label="Link"
+                  required
+                  hint={
+                    kind === "Link"
+                      ? "Paste a full link starting with https://"
+                      : `Paste a link to the ${resourceKinds[kind].formats} file, e.g. on Google Drive. Make sure anyone with the link can view it.`
+                  }
+                  inputProps={{
+                    type: "basic",
+                    size: "medium",
+                    value: url,
+                    onChange: (event) => setUrl(event.target.value),
+                    placeholder: linkPlaceholders[kind],
+                    leadingIcon: <Link2 className="text-text-info" />,
+                  }}
+                />
+                <Select
+                  size="large"
+                  label="Attach to"
+                  required
+                  value={selectedModuleId}
+                  onChange={(value) => {
+                    setModuleId(value);
+                    setLessonId("");
+                  }}
+                  options={modules.map((m, index) => ({
+                    value: m.id,
+                    label: `Module ${index + 1} - ${m.title}`,
+                  }))}
+                />
+                <Select
+                  size="large"
+                  label="Lesson"
+                  required
+                  value={selectedLessonId}
+                  onChange={setLessonId}
+                  options={[
+                    ...lessons.map((lesson, index) => ({
+                      value: lesson.id,
+                      label: `Lesson ${index + 1}`,
+                    })),
+                    {
+                      value: wholeModule,
+                      label: "Whole module (no specific lesson)",
+                    },
+                  ]}
+                />
+              </div>
+            </section>
+
+            {createMutation.isError && (
+              <p className="text-sm text-text-error">
+                {createMutation.error.message}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                size="lg"
+                nativeButton={false}
+                render={<Link href={backHref} />}
+                className="border-neutral-200 text-neutral-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="lg"
+                disabled={!canSubmit}
+                onClick={() => createMutation.mutate()}
+              >
+                {createMutation.isPending ? "Creating…" : "Create resource"}
+              </Button>
+            </div>
+          </div>
+
+          <aside>
+            <InfoNote title="Create now, build next">
+              <p>
+                After creating your module, add lessons, quizzes and assignments
+                from its detail page.
+              </p>
+              <p>
+                Draft modules aren&apos;t visible to students until you publish
+                them.
+              </p>
+            </InfoNote>
+          </aside>
+        </div>
+      </main>
+    </>
+  );
+}

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { CurriculumScopeProvider } from "@/features/curriculum/scope";
+
 export const metadata: Metadata = {
   title: "Curriculum",
 };
@@ -9,5 +11,7 @@ export default function CurriculumLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <CurriculumScopeProvider role="admin">{children}</CurriculumScopeProvider>
+  );
 }

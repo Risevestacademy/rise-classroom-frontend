@@ -7,9 +7,9 @@ import {
   PeopleFilterDialog,
   type PeopleFilter,
 } from "@/components/cohorts/PeopleFilterDialog";
-import { CurriculumFilterDialog } from "@/components/curriculum/CurriculumFilterDialog";
+import { CurriculumFilterDialog } from "@/features/curriculum/components/CurriculumFilterDialog";
 import { noFilters } from "@/lib/calendar";
-import { noCurriculumFilters } from "@/lib/curriculum.types";
+import { noCurriculumFilters } from "@/features/curriculum/types";
 import { tracks } from "@/test/fixtures";
 import { envelope, mockApi, renderWithClient } from "@/test/utils";
 

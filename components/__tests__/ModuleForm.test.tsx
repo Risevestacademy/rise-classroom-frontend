@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 
-import { ModuleForm } from "@/components/curriculum/ModuleForm";
-import type { Curriculum } from "@/lib/curriculum.types";
+import { ModuleForm } from "@/features/curriculum/components/ModuleForm";
+import type { Curriculum } from "@/features/curriculum/types";
 import { renderWithClient } from "@/test/utils";
 
 const curriculum = {
@@ -111,6 +111,69 @@ describe("ModuleForm", () => {
     renderForm({ isPending: true });
 
     expect(screen.getByRole("button", { name: "Creating…" })).toBeDisabled();
+  });
+
+  /* The API has no file uploads, so resources are added as links. */
+  describe("resource links", () => {
+    const moduleLinkInput = () =>
+      screen.getAllByPlaceholderText("https://drive.google.com/…")[0];
+    const addLink = () => screen.getAllByRole("button", { name: "Add link" })[0];
+
+    it("adds a link and sends it with the module", async () => {
+      const { user, onSubmit } = renderForm();
+
+      await fillRequired(user);
+      await user.type(moduleLinkInput(), "https://drive.google.com/file/d/slides.pdf");
+      await user.click(addLink());
+      expect(screen.getByText("slides")).toBeInTheDocument();
+      expect(moduleLinkInput()).toHaveValue("");
+
+      await user.click(screen.getByRole("button", { name: "Create Module" }));
+      expect(onSubmit.mock.calls[0][0].resources).toMatchObject([
+        { name: "slides.pdf", url: "https://drive.google.com/file/d/slides.pdf" },
+      ]);
+    });
+
+    it("adds a link with Enter", async () => {
+      const { user } = renderForm();
+
+      await user.type(moduleLinkInput(), "https://youtu.be/abc{Enter}");
+      expect(screen.getByRole("link", { name: "https://youtu.be/abc" })).toBeInTheDocument();
+    });
+
+    it("rejects links that aren't https", async () => {
+      const { user } = renderForm();
+
+      await user.type(moduleLinkInput(), "drive.google.com/slides");
+      await user.click(addLink());
+
+      expect(screen.getByText("Paste a full link starting with https://")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^Remove slides/ })).not.toBeInTheDocument();
+    });
+
+    it("rejects the same link twice", async () => {
+      const { user } = renderForm();
+
+      await user.type(moduleLinkInput(), "https://youtu.be/abc{Enter}");
+      await user.type(moduleLinkInput(), "https://youtu.be/abc{Enter}");
+
+      expect(screen.getByText("That link is already added.")).toBeInTheDocument();
+      expect(screen.getAllByRole("link", { name: "https://youtu.be/abc" })).toHaveLength(1);
+    });
+
+    it("removes a link", async () => {
+      const { user } = renderForm();
+
+      await user.type(moduleLinkInput(), "https://youtu.be/abc{Enter}");
+      await user.click(screen.getByRole("button", { name: "Remove abc" }));
+
+      expect(screen.queryByRole("link", { name: "https://youtu.be/abc" })).not.toBeInTheDocument();
+    });
+
+    it("has no file upload", () => {
+      renderForm();
+      expect(screen.queryByRole("button", { name: /Upload file/ })).not.toBeInTheDocument();
+    });
   });
 
   it("shows the save error", () => {

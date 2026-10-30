@@ -10,25 +10,24 @@ import { cn } from "cn";
 
 import { Search } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
-import { CurriculumFilterDialog } from "@/components/curriculum/CurriculumFilterDialog";
-import { CurriculumStats } from "@/components/curriculum/CurriculumStats";
+import { CurriculumFilterDialog } from "@/features/curriculum/components/CurriculumFilterDialog";
+import { CurriculumStats } from "@/features/curriculum/components/CurriculumStats";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { SuccessToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  curriculumKeys,
-  curriculumQueries,
-  deleteCurriculum,
-} from "@/lib/curriculum.api";
-import { trackDetails } from "@/lib/curriculum.mappers";
+import { curriculumApis } from "@/features/curriculum/api";
+import { trackDetails } from "@/features/curriculum/mappers";
 import {
   noCurriculumFilters,
   type Curriculum,
   type CurriculumFilters,
-} from "@/lib/curriculum.types";
+} from "@/features/curriculum/types";
 import { useSelectedCohort } from "@/lib/selected-cohort";
+
+// Only admins list and create curricula; instructors go straight to theirs.
+const api = curriculumApis.admin;
 
 export default function CurriculumPage({
   searchParams,
@@ -43,7 +42,7 @@ export default function CurriculumPage({
   const [filterOpen, setFilterOpen] = React.useState(false);
   const { cohortId, isReady } = useSelectedCohort();
   const curriculaQuery = useQuery({
-    ...curriculumQueries.list(filters, cohortId),
+    ...api.queries.list(filters, cohortId),
     enabled: isReady,
   });
   const [search, setSearch] = React.useState("");
@@ -52,9 +51,9 @@ export default function CurriculumPage({
   );
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteCurriculum(id),
+    mutationFn: (id: string) => api.deleteCurriculum(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: curriculumKeys.list() });
+      queryClient.invalidateQueries({ queryKey: api.keys.list() });
       setDeleteTarget(null);
     },
   });
@@ -78,7 +77,12 @@ export default function CurriculumPage({
 
   return (
     <>
-      <AdminTopNav breadcrumb={["Academy", { label: "Curriculum", href: "/admin/curriculum" }]} />
+      <AdminTopNav
+        breadcrumb={[
+          "Academy",
+          { label: "Curriculum", href: "/admin/curriculum" },
+        ]}
+      />
       <main className="flex min-w-0 flex-1 flex-col p-4 sm:p-6 bg-neutral-50 lg:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
