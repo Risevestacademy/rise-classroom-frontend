@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { adminDashboardQueries } from "@/lib/admin-dashboard";
 import { mentorQueries, type Mentor, type MentorStatus } from "@/lib/mentors";
 import { useSelectedCohort } from "@/lib/selected-cohort";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,11 @@ export default function MentorsPage() {
     enabled: isReady,
   });
   const mentors = mentorsQuery.data ?? [];
+  // Only platform-wide: the control tower doesn't count mentorships per cohort.
+  const controlTower = useQuery({
+    ...adminDashboardQueries.controlTower(),
+    enabled: isReady && !cohortId,
+  });
   const filters = mentorFilters(mentors);
   const isLoading = mentorsQuery.isPending;
   const [search, setSearch] = React.useState("");
@@ -86,10 +92,14 @@ export default function MentorsPage() {
       title: "Active mentors",
       value: mentors.filter((mentor) => mentor.status === "active").length,
     },
-    // PENDING-BACKEND: admins can't list mentorships yet, so these two
-    // can't be counted.
+    // PENDING-BACKEND: admins can't list mentorships yet, so mentors without
+    // students can't be counted.
     { title: "Unassigned mentors", value: "--" },
-    { title: "Students assigned", value: "--" },
+    {
+      title: "Students assigned",
+      value:
+        controlTower.data?.metricsOverview.totalActiveMentorships ?? "--",
+    },
   ];
 
   const allSelected =

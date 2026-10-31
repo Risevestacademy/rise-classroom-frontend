@@ -270,10 +270,9 @@ function OverviewTab({ mentor }: { mentor: Mentor }) {
 function ProfileCard({ mentor }: { mentor: Mentor }) {
   const user: AdminUser = mentor.user;
 
-  // PENDING-BACKEND: the API has no job title, phone number or location for
-  // a mentor.
+  // PENDING-BACKEND: the API has no job title for a mentor.
   const details = [
-    { icon: Call02, value: "--" },
+    { icon: Call02, value: user.phoneNumber || "--" },
     {
       icon: Calendar03,
       value: user.onboardedAt
@@ -281,7 +280,7 @@ function ProfileCard({ mentor }: { mentor: Mentor }) {
         : `Invited ${formatLongDate(user.createdAt)}`,
     },
     { icon: Mail02, value: user.email },
-    { icon: Location01, value: "--" },
+    { icon: Location01, value: user.location || "--" },
   ];
 
   return (

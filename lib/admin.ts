@@ -27,6 +27,8 @@ export type AdminUser = {
   firstName: string;
   lastName: string;
   displayName?: string | null;
+  phoneNumber?: string | null;
+  location?: string | null;
   email: string;
   role: Role;
   status: UserStatus;
