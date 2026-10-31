@@ -1,6 +1,6 @@
-import { AuthGuard } from "@/components/AuthGuard";
+import { RoleGate } from "@/components/RoleGate";
+import { InstructorNavProvider } from "@/components/instructor-dashboard/InstructorNavContext";
 import { InstructorSidebar } from "@/components/instructor-dashboard/InstructorSidebar";
-import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
 
 export default function DashboardLayout({
   children,
@@ -8,16 +8,15 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGuard role="INSTRUCTOR">
-      <div className="flex h-screen w-full overflow-hidden">
+    <RoleGate role="INSTRUCTOR">
+      <InstructorNavProvider>
+      <div className="flex min-h-screen w-full">
         <InstructorSidebar />
-        <main className="flex flex-1 flex-col h-full bg-neutral-50 min-w-0">
-          <InstructorNavbar />
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col bg-neutral-50">
             {children}
-          </div>
-        </main>
+        </div>
       </div>
-    </AuthGuard>
+      </InstructorNavProvider>
+    </RoleGate>
   );
 }

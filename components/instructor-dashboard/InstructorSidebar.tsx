@@ -1,28 +1,30 @@
 "use client";
 
-import * as React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  FolderKanban,
-  Users,
-  FileCheck,
-  Video,
+  BarChart3,
+  Bell,
+  Blocks,
   BookOpen,
   CalendarDays,
-  TrendingUp,
-  BarChart3,
+  FileCheck,
+  FolderKanban,
+  LayoutDashboard,
   Megaphone,
   MessageSquare,
-  Bell,
   Settings,
-  Blocks,
+  TrendingUp,
+  Users,
+  Video,
+  X
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import * as React from "react";
 
 import { Logo } from "@/assets/logo";
-import { cn } from "@/lib/utils";
 import { UserMenu } from "@/components/UserMenu";
+import { cn } from "@/lib/utils";
+import { useInstructorNav } from "./InstructorNavContext";
 
 interface NavItem {
   title: string;
@@ -64,46 +66,74 @@ const accountNavItems: NavItem[] = [
 
 export function InstructorSidebar() {
   const pathname = usePathname();
+  const { open, setOpen } = useInstructorNav();
+
+  React.useEffect(() => {
+    setOpen(false);
+  }, [pathname, setOpen]);
 
   return (
-    <aside className="sticky top-0 flex h-screen w-56 shrink-0 self-start flex-col border-r-2 border-neutral-200">
-      <div className="flex h-16 items-center">
-        <Link
-          href="/instructor/dashboard"
-          className="flex items-center gap-3 overflow-hidden"
-        >
-          <div className="flex items-center pl-10 pt-6 pb-4">
-            <Logo variant="teal" size="sm" />
-          </div>
-        </Link>
-      </div>
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-neutral-800/50 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
 
-      <hr className="text-neutral-200 mx-4" />
-
-            <div className="flex-1 min-h-0 px-3 py-4 space-y-6 overflow-y-auto">
-        <NavSection label="Overview" items={overviewNavItems} pathname={pathname} />
-        <NavSection label="Program" items={programNavItems} pathname={pathname} />
-        <NavSection label="Teaching" items={teachingNavItems} pathname={pathname} />
-        <NavSection label="Insights" items={insightsNavItems} pathname={pathname} />
-        <NavSection label="Communication" items={communicationNavItems} pathname={pathname} />
-      </div>
-
-      <div className="px-3.5 mb-3">
-        <div className="space-y-1">
-          {accountNavItems.map((item) => (
-            <SidebarNavItem
-              key={item.href}
-              item={item}
-              isActive={pathname === item.href}
-            />
-          ))}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex h-screen w-72 -translate-x-full flex-col border-r-2 border-neutral-200 bg-white transition-transform duration-200 ease-in-out",
+          "lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-60 lg:shrink-0 lg:self-start lg:translate-x-0 lg:bg-transparent",
+          open && "translate-x-0",
+        )}
+      >
+        <div className="flex h-16 items-center justify-between">
+          <Link
+            href="/instructor/dashboard"
+            className="flex items-center gap-3 overflow-hidden"
+          >
+            <div className="flex items-center pl-10 pt-6 pb-4">
+              <Logo variant="teal" size="sm" />
+            </div>
+          </Link>
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+            className="mr-4 text-neutral-400 hover:text-neutral-600 lg:hidden"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
+
         <hr className="text-neutral-200 mx-4" />
-        <div className="mt-auto p-4 bg-neutral-50">
-          <UserMenu variant="card" />
+
+        <div className="flex-1 min-h-0 px-3 py-4 space-y-6 overflow-y-auto">
+          <NavSection label="Overview" items={overviewNavItems} pathname={pathname} />
+          <NavSection label="Program" items={programNavItems} pathname={pathname} />
+          <NavSection label="Teaching" items={teachingNavItems} pathname={pathname} />
+          <NavSection label="Insights" items={insightsNavItems} pathname={pathname} />
+          <NavSection label="Communication" items={communicationNavItems} pathname={pathname} />
         </div>
-      </div>
-    </aside>
+
+        <div className="px-3.5 mb-3">
+          <div className="space-y-1">
+            {accountNavItems.map((item) => (
+              <SidebarNavItem
+                key={item.href}
+                item={item}
+                isActive={pathname === item.href}
+              />
+            ))}
+          </div>
+          <hr className="text-neutral-200 mx-4" />
+          <div className="mt-auto p-4 bg-neutral-50">
+            <UserMenu variant="card" />
+          </div>
+        </div>
+      </aside>
+    </>
   );
 }
 

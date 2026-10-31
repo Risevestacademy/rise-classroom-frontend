@@ -33,9 +33,10 @@ import { cohortQueries, trackKeyFor } from "@/lib/cohorts";
 import { daysLeftIn, weekRangeFor } from "@/lib/control-tower";
 import { useSelectedCohort } from "@/lib/selected-cohort";
 import { sessionQuery } from "@/lib/session-query";
-import { cn } from "@/lib/utils";
+import { cn, greeting } from "@/lib/utils";
 import type { TrackKey } from "@/app/admin/cohorts/cohort-data";
 import { Button } from "@/components/ui/button";
+import { MetricCard } from "@/components/MetricCard";
 
 const cardClass =
   "rounded-xl bg-surface-default shadow-[0_1px_3px_0_rgb(0_0_0/0.15)]";
@@ -68,13 +69,6 @@ const dateTones = [
   "bg-surface-brand text-text-info",
   "bg-[#fdeafc] text-[#960b93]",
 ];
-
-function greeting(date = new Date()) {
-  const hour = date.getHours();
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  return "Good Evening";
-}
 
 /** "Due today" on the last day of the week, counting down before that. */
 function checkInDue(now = new Date()) {
@@ -438,61 +432,6 @@ export default function AdminDashboardPage() {
         </div>
       </main>
     </>
-  );
-}
-
-function MetricCard({
-  title,
-  value,
-  isPending = false,
-  isError = false,
-  description,
-  footer,
-  icon: Icon,
-  iconClassName,
-}: {
-  title: string;
-  value?: number | string;
-  isPending?: boolean;
-  isError?: boolean;
-  description: string;
-  footer?: React.ReactNode;
-  icon: React.ComponentType<{ className?: string }>;
-  iconClassName: string;
-}) {
-  return (
-    <div className={cn(cardClass, "flex min-h-40 gap-3 p-5")}>
-      <span
-        className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-lg",
-          iconClassName,
-        )}
-      >
-        <Icon className="size-5" />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium text-text-primary">{title}</p>
-          {isPending ? (
-            <Skeleton className="h-8 w-16" />
-          ) : (
-            <p className="text-2xl leading-8 font-semibold text-text-primary">
-              {isError ? "—" : (value ?? 0)}
-            </p>
-          )}
-        </div>
-        <div>
-          {isPending ? (
-            <Skeleton className="h-4 w-full" />
-          ) : (
-            <p className="font-work text-[13px] leading-[18px] text-text-secondary">
-              {isError ? "Couldn't load this figure." : description}
-            </p>
-          )}
-          {footer}
-        </div>
-      </div>
-    </div>
   );
 }
 

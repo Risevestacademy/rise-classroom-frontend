@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
@@ -10,6 +11,7 @@ import {
   FileText,
   Link2,
   MessageSquareText,
+  PenLine,
   Upload,
   type LucideIcon,
 } from "lucide-react";
@@ -19,19 +21,47 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  submissionTypes,
+  type SubmissionStatus,
+  type SubmissionType,
+} from "@/features/curriculum/types";
 import type { WeeklyTask, WeeklyTaskStatus } from "@/lib/instructor";
 import { studentQueries } from "@/lib/student";
+import {
+  assignmentHref,
+  studentAssignmentQueries,
+  type StudentSubmission,
+} from "@/lib/student-assignments";
 
 type TabKey = "todo" | "submitted" | "reviewed" | "missed";
+
+/* One line in the table: a weekly task, or a curriculum assignment the student has started. */
+type Row = {
+  key: string;
+  title: string;
+  context: string | null;
+  submitAs: SubmissionType;
+  dueAt: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  isLate: boolean;
+  grade: number | null;
+  /* Set for curriculum assignments, which have a page; weekly tasks don't yet. */
+  href: string | null;
+  submissionStatus: SubmissionStatus | null;
+};
 
 type TabSetup = {
   label: string;
   statuses: WeeklyTaskStatus[];
+  /* Curriculum submission statuses that belong in this tab. */
+  submissionStatuses: SubmissionStatus[];
   /** Ends the "4 assignments …" line above the table. */
   countLabel: string;
   /** Heading of the third column; its cell is rendered by `renderTabCell`. */
   column: string;
-  sort: (a: WeeklyTask, b: WeeklyTask) => number;
+  sort: (a: Row, b: Row) => number;
   empty: {
     icon: LucideIcon;
     tone: "brand" | "success";
@@ -40,10 +70,10 @@ type TabSetup = {
   };
 };
 
-const byDueDate = (a: WeeklyTask, b: WeeklyTask) =>
-  a.dueDate.localeCompare(b.dueDate);
-const newest = (key: "dueDate" | "submittedAt" | "reviewedAt") =>
-  (a: WeeklyTask, b: WeeklyTask) =>
+const byDueDate = (a: Row, b: Row) =>
+  (a.dueAt ?? "￿").localeCompare(b.dueAt ?? "￿");
+const newest = (key: "dueAt" | "submittedAt" | "reviewedAt") =>
+  (a: Row, b: Row) =>
     (b[key] ?? "").localeCompare(a[key] ?? "");
 
 // The API's statuses grouped into the design's four tabs.
@@ -51,6 +81,7 @@ const tabConfig: Record<TabKey, TabSetup> = {
   todo: {
     label: "To do",
     statuses: ["PENDING", "IN_PROGRESS"],
+    submissionStatuses: ["DRAFT", "CHANGES_REQUESTED"],
     countLabel: "to do",
     column: "Deadline",
     sort: byDueDate,
@@ -65,6 +96,7 @@ const tabConfig: Record<TabKey, TabSetup> = {
   submitted: {
     label: "Submitted",
     statuses: ["SUBMITTED"],
+    submissionStatuses: ["SUBMITTED", "UNDER_REVIEW"],
     countLabel: "submitted",
     column: "Submitted",
     sort: newest("submittedAt"),
@@ -79,6 +111,7 @@ const tabConfig: Record<TabKey, TabSetup> = {
   reviewed: {
     label: "Reviewed",
     statuses: ["REVIEWED"],
+    submissionStatuses: ["GRADED"],
     countLabel: "reviewed",
     column: "Result",
     sort: newest("reviewedAt"),
@@ -93,9 +126,10 @@ const tabConfig: Record<TabKey, TabSetup> = {
   missed: {
     label: "Missed",
     statuses: ["OVERDUE"],
+    submissionStatuses: [],
     countLabel: "missed",
     column: "Closed",
-    sort: newest("dueDate"),
+    sort: newest("dueAt"),
     empty: {
       icon: CircleCheck,
       tone: "success",
@@ -134,15 +168,55 @@ function daysUntil(value: string) {
   );
 }
 
-function dueBadge(task: WeeklyTask) {
-  if (new Date(task.dueDate).getTime() < Date.now()) {
+function dueBadge(dueAt: string | null) {
+  if (!dueAt) return { label: "No deadline", status: "neutral" as const };
+  if (new Date(dueAt).getTime() < Date.now()) {
     return { label: "Overdue", status: "error" as const };
   }
-  const days = daysUntil(task.dueDate);
+  const days = daysUntil(dueAt);
   if (days <= 0) return { label: "Due today", status: "warning" as const };
   if (days === 1) return { label: "Due tomorrow", status: "warning" as const };
   return { label: `${days} days left`, status: "warning" as const };
 }
+
+function taskRow(task: WeeklyTask): Row {
+  return {
+    key: `task-${task.id}`,
+    title: task.title,
+    context: task.topic?.title ?? null,
+    /* The weekly task API only accepts a link as a submission. */
+    submitAs: "LINK",
+    dueAt: task.dueDate,
+    submittedAt: task.submittedAt ?? null,
+    reviewedAt: task.reviewedAt ?? null,
+    isLate: task.isLate,
+    grade: null,
+    href: null,
+    submissionStatus: null,
+  };
+}
+
+function submissionRow(submission: StudentSubmission): Row {
+  return {
+    key: `submission-${submission.id}`,
+    title: submission.assignment?.title ?? "Assignment",
+    context: "Lesson assignment",
+    submitAs: submission.assignment?.submissionType ?? submission.submissionType,
+    dueAt: submission.assignment?.dueAt ?? null,
+    submittedAt: submission.submittedAt ?? null,
+    reviewedAt: submission.reviewedAt ?? null,
+    isLate: submission.isLate,
+    grade: submission.grade ?? null,
+    href: assignmentHref(submission.assignmentId),
+    submissionStatus: submission.status,
+  };
+}
+
+const submitAsIcons: Record<SubmissionType, LucideIcon> = {
+  LINK: Link2,
+  FILE_UPLOAD: Upload,
+  TEXT: PenLine,
+};
 
 export default function StudentAssignmentsPage({
   searchParams,
@@ -163,14 +237,39 @@ export default function StudentAssignmentsPage({
   // Only `total` is read, to tell "no tasks ever" apart from "none left to do".
   const anyTasksQuery = useQuery(studentQueries.weeklyTasks({ limit: 1 }));
 
-  const isPending = statusQueries.some((q) => q.isPending);
-  const error = statusQueries.find((q) => q.error)?.error;
-  const tasks = statusQueries
-    .flatMap((q) => q.data?.items ?? [])
-    .sort(setup.sort);
-  const total = statusQueries.reduce((sum, q) => sum + (q.data?.total ?? 0), 0);
+  /* Curriculum assignments the student has started, from every track they're on. */
+  const progressQuery = useQuery(studentQueries.progress());
+  const submissionQueries = useQueries({
+    queries: (progressQuery.data ?? []).map((enrollment) =>
+      studentAssignmentQueries.enrollmentSubmissions(enrollment.enrollmentId),
+    ),
+  });
+  const submissions = submissionQueries.flatMap((q) => q.data?.items ?? []);
+
+  const isPending =
+    statusQueries.some((q) => q.isPending) ||
+    progressQuery.isPending ||
+    submissionQueries.some((q) => q.isPending);
+  const error =
+    statusQueries.find((q) => q.error)?.error ??
+    submissionQueries.find((q) => q.error)?.error;
+  const tabSubmissions = submissions.filter((submission) =>
+    setup.submissionStatuses.includes(submission.status),
+  );
+  const rows = [
+    ...statusQueries.flatMap((q) => (q.data?.items ?? []).map(taskRow)),
+    ...tabSubmissions.map(submissionRow),
+  ].sort(setup.sort);
+  const taskTotal = statusQueries.reduce(
+    (sum, q) => sum + (q.data?.total ?? 0),
+    0,
+  );
+  const total = taskTotal + tabSubmissions.length;
+  const loadedTasks = rows.length - tabSubmissions.length;
   const hasNoTasksAtAll =
-    activeTab === "todo" && anyTasksQuery.data?.total === 0;
+    activeTab === "todo" &&
+    anyTasksQuery.data?.total === 0 &&
+    submissions.length === 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -204,7 +303,7 @@ export default function StudentAssignmentsPage({
         <div className="rounded-2xl bg-neutral-100 px-6 py-16 text-center text-sm text-neutral-500">
           We couldn&apos;t load your assignments. {error.message}
         </div>
-      ) : !isPending && tasks.length === 0 ? (
+      ) : !isPending && rows.length === 0 ? (
         <div className="rounded-2xl bg-neutral-100 px-6">
           {hasNoTasksAtAll ? (
             <EmptyState
@@ -273,43 +372,58 @@ export default function StudentAssignmentsPage({
                         <td />
                       </tr>
                     ))
-                  : tasks.map((task) => (
-                      <tr key={task.id} className="border-b border-neutral-200">
-                        <td className="px-6 py-4">
-                          <p className="font-medium text-neutral-800">
-                            {task.title}
-                          </p>
-                          {task.topic?.title && (
-                            <p className="mt-0.5 text-xs text-neutral-500">
-                              {task.topic.title}
-                            </p>
-                          )}
-                        </td>
-                        <td className="px-4 py-4">
-                          {/* The API only accepts a link as a submission. */}
-                          <span className="flex items-center gap-1.5 text-neutral-600">
-                            <Link2 className="h-4 w-4" />
-                            Link
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-neutral-600">
-                          {renderTabCell(activeTab, task)}
-                        </td>
-                        <td className="px-4 py-4">
-                          <StatusBadges tab={activeTab} task={task} />
-                        </td>
-                        <td className="px-4 py-4 text-neutral-500">
-                          <ChevronRight aria-hidden className="h-4 w-4" />
-                        </td>
-                      </tr>
-                    ))}
+                  : rows.map((row) => {
+                      const SubmitIcon = submitAsIcons[row.submitAs];
+                      return (
+                        <tr
+                          key={row.key}
+                          className="relative border-b border-neutral-200 has-[a:hover]:bg-neutral-50"
+                        >
+                          <td className="px-6 py-4">
+                            {row.href ? (
+                              /* The link stretches over the whole row, so any cell opens it. */
+                              <Link
+                                href={row.href}
+                                className="font-medium text-neutral-800 after:absolute after:inset-0"
+                              >
+                                {row.title}
+                              </Link>
+                            ) : (
+                              <p className="font-medium text-neutral-800">
+                                {row.title}
+                              </p>
+                            )}
+                            {row.context && (
+                              <p className="mt-0.5 text-xs text-neutral-500">
+                                {row.context}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="flex items-center gap-1.5 text-neutral-600">
+                              <SubmitIcon className="h-4 w-4" />
+                              {submissionTypes[row.submitAs]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-neutral-600">
+                            {renderTabCell(activeTab, row)}
+                          </td>
+                          <td className="px-4 py-4">
+                            <StatusBadges tab={activeTab} row={row} />
+                          </td>
+                          <td className="px-4 py-4 text-neutral-500">
+                            <ChevronRight aria-hidden className="h-4 w-4" />
+                          </td>
+                        </tr>
+                      );
+                    })}
               </tbody>
             </table>
           </div>
 
-          {total > tasks.length && !isPending && (
+          {taskTotal > loadedTasks && !isPending && (
             <p className="text-xs text-neutral-500">
-              Showing the first {tasks.length} of {total}.
+              Showing the first {loadedTasks} of {taskTotal} weekly tasks.
             </p>
           )}
         </div>
@@ -318,17 +432,19 @@ export default function StudentAssignmentsPage({
   );
 }
 
-function renderTabCell(tab: TabKey, task: WeeklyTask) {
+function renderTabCell(tab: TabKey, row: Row) {
   switch (tab) {
     case "todo":
     case "missed":
-      return formatDateTime(task.dueDate);
+      return formatDateTime(row.dueAt);
     case "submitted":
-      return formatDateTime(task.submittedAt);
+      return formatDateTime(row.submittedAt);
     case "reviewed":
-      return (
+      return row.grade !== null ? (
+        <span className="font-medium text-neutral-800">{row.grade}/100</span>
+      ) : (
         <span
-          title="Grades aren't available from the API yet"
+          title="Weekly task results aren't available from the API yet"
           className="text-neutral-400"
         >
           —
@@ -346,8 +462,18 @@ const tabBadges: Record<
   missed: { label: "Missed", status: "error" },
 };
 
-function StatusBadges({ tab, task }: { tab: TabKey; task: WeeklyTask }) {
-  const badge = tab === "todo" ? dueBadge(task) : tabBadges[tab];
+function rowBadge(tab: TabKey, row: Row) {
+  if (row.submissionStatus === "CHANGES_REQUESTED") {
+    return { label: "Changes requested", status: "error" as const };
+  }
+  if (row.submissionStatus === "UNDER_REVIEW") {
+    return { label: "Under review", status: "warning" as const };
+  }
+  return tab === "todo" ? dueBadge(row.dueAt) : tabBadges[tab];
+}
+
+function StatusBadges({ tab, row }: { tab: TabKey; row: Row }) {
+  const badge = rowBadge(tab, row);
 
   return (
     <span className="flex flex-wrap items-center gap-1.5">
@@ -355,7 +481,7 @@ function StatusBadges({ tab, task }: { tab: TabKey; task: WeeklyTask }) {
         <FileText />
         {badge.label}
       </Badge>
-      {tab === "submitted" && task.isLate && (
+      {(tab === "submitted" || tab === "reviewed") && row.isLate && (
         <Badge variant="light" status="warning">
           Late
         </Badge>

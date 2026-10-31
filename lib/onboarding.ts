@@ -76,6 +76,8 @@ export type OnboardingDetails = {
 export type CompleteOnboardingInput = {
   token: string;
   displayName: string;
+  phoneNumber: string;
+  location: string;
   password: string;
   confirmPassword: string;
   /** Optional profile photo. */
@@ -113,9 +115,9 @@ async function getOnboardingDetails(token: string) {
 }
 
 /**
- * Sets the password, display name and optional profile photo, and uses up the
- * invite link. It does not sign the user in — that is a separate call
- * afterwards. Sent as multipart so the photo can go in the same request.
+ * Sets the password, display name, phone number, location and optional profile
+ * photo, and uses up the invite link. It does not sign the user in — that is a
+ * separate call afterwards. Sent as multipart so the photo can go in the same request.
  */
 export function completeOnboarding({
   image,

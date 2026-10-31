@@ -160,6 +160,9 @@ describe("landingPathFor", () => {
     expect(landingPathFor(makeUser({ role: "INSTRUCTOR" }))).toBe(
       "/instructor/dashboard"
     );
+    expect(landingPathFor(makeUser({ role: "MENTOR" }))).toBe(
+      "/mentor/dashboard"
+    );
     expect(landingPathFor(makeUser({ role: "STUDENT" }))).toBe(
       "/student/dashboard"
     );

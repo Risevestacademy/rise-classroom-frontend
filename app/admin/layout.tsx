@@ -1,6 +1,6 @@
 import { AdminSidebar } from "@/components/AdminSidebar";
-import { AdminNavProvider } from "@/components/AdminNavContext";
-import { AuthGuard } from "@/components/AuthGuard";
+import { SidebarNavProvider } from "@/components/SidebarNavContext";
+import { RoleGate } from "@/components/RoleGate";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -14,15 +14,15 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGuard role="SUPERADMIN">
-      <AdminNavProvider>
+    <RoleGate role="SUPERADMIN">
+      <SidebarNavProvider>
         <div className="flex min-h-screen w-full">
           <AdminSidebar />
           <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col bg-neutral-50">
             {children}
           </div>
         </div>
-      </AdminNavProvider>
-    </AuthGuard>
+      </SidebarNavProvider>
+    </RoleGate>
   );
 }

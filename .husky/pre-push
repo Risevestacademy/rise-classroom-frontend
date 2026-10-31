@@ -1,0 +1,8 @@
+while read local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/dev)
+      echo "Blocked: direct push to ${remote_ref#refs/heads/}. Open a PR instead."
+      exit 1
+      ;;
+  esac
+done

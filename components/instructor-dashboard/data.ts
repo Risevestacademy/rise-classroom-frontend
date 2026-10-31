@@ -1,341 +1,483 @@
-export interface ModuleItem {
-  id: string;
-  number: string;
-  title: string;
-  status: "Published" | "Draft";
-  description: string;
-  included: {
-    recordings: number;
-    lessons: number;
-    assignments: number;
-    resources: number;
-  };
-}
-
-export const modulesData: ModuleItem[] = [
+export const DUMMY_STUDENTS = [
   {
     id: "1",
-    number: "01",
-    title: "Introduction to Design",
-    status: "Published",
-    description:
-      "Discover how product design turns user needs into useful, intuitive and meaningful experiences. Explore the core principles of colour, typography and layout, and learn how designers move from understanding a problem to developing a solution. Through real-world examples, see how thoughtful design improves everyday products and helps people achieve their goals.",
-    included: {
-      recordings: 1,
-      lessons: 3,
-      assignments: 1,
-      resources: 1,
-    },
+    name: "Aishat Lawal",
+    email: "aishatlawal21@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-neutral-100 text-neutral-600",
+    initials: "AL",
+    progress: 85,
+    averageGrade: 84,
+    status: "Active",
+    overdueCount: 0,
+    attendanceRate: "90%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "2 hours ago",
+    recentActivity: [
+      { title: "Submitted Research plan", detail: "Module 2 • Lesson 1", date: "Sep 19" },
+      { title: "Watched Planning research", detail: "12 of 32 min", date: "Sep 19" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 70 },
+      { name: "Design Thinking", progress: 10 },
+      { name: "Prototyping", progress: 0 },
+    ],
+    assignmentsList: [
+      { title: "Research plan", module: "Module 2", status: "Graded", grade: "84%" },
+    ],
+    attendanceList: [
+      { title: "User Research Q&A", date: "Sep 19 • Campus by Rise", status: "Attended", duration: "1hr 23m" },
+    ],
   },
   {
     id: "2",
-    number: "02",
-    title: "User Research and Analysis",
-    status: "Draft",
-    description:
-      "Learn methods for conducting qualitative and quantitative user research, synthesizing data, and building actionable user personas and journey maps.",
-    included: {
-      recordings: 2,
-      lessons: 4,
-      assignments: 2,
-      resources: 3,
-    },
+    name: "Seyi Wakil",
+    email: "seyiwawa543@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-amber-100 text-amber-800",
+    initials: "SW",
+    progress: 60,
+    averageGrade: 72,
+    status: "Active",
+    overdueCount: 1,
+    attendanceRate: "80%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "Yesterday",
+    recentActivity: [
+      { title: "Submitted UX audit", detail: "Module 1 • Lesson 4", date: "Sep 18" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 50 },
+      { name: "Design Thinking", progress: 0 },
+      { name: "Prototyping", progress: 0 },
+    ],
+    assignmentsList: [
+      { title: "UX audit", module: "Module 1", status: "Graded", grade: "72%" },
+    ],
+    attendanceList: [
+      { title: "Ideation Workshop", date: "Sep 27 • Zoom", status: "Attended", duration: "58 min" },
+    ],
   },
   {
     id: "3",
-    number: "03",
-    title: "Design Layout",
-    status: "Draft",
-    description:
-      "Master grid systems, alignment, visual hierarchy, and whitespace to build harmonious and responsive screen layouts.",
-    included: {
-      recordings: 1,
-      lessons: 3,
-      assignments: 1,
-      resources: 2,
-    },
+    name: "Chinedu Okafor",
+    email: "chinedu.okafor@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-blue-100 text-blue-800",
+    initials: "CO",
+    progress: 92,
+    averageGrade: 95,
+    status: "Active",
+    overdueCount: 0,
+    attendanceRate: "98%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "Just now",
+    recentActivity: [
+      { title: "Completed Final Prototyping", detail: "Module 4 • Lesson 3", date: "Sep 20" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 100 },
+      { name: "Design Thinking", progress: 90 },
+      { name: "Prototyping", progress: 80 },
+    ],
+    assignmentsList: [
+      { title: "Prototype submission", module: "Module 4", status: "Graded", grade: "95%" },
+    ],
+    attendanceList: [
+      { title: "Design Systems Review", date: "Sep 24 • Zoom", status: "Attended", duration: "58 min" },
+    ],
   },
   {
     id: "4",
-    number: "04",
-    title: "Figma Fundamentals",
-    status: "Draft",
-    description:
-      "Get hands-on experience with Figma frames, auto layout, components, and variables to build professional digital wireframes.",
-    included: {
-      recordings: 3,
-      lessons: 5,
-      assignments: 2,
-      resources: 4,
-    },
+    name: "Zainab Bello",
+    email: "zainab.bello@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-purple-100 text-purple-800",
+    initials: "ZB",
+    progress: 40,
+    averageGrade: 58,
+    status: "Behind",
+    overdueCount: 2,
+    attendanceRate: "65%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "5 days ago",
+    recentActivity: [
+      { title: "Missed Live session", detail: "Design Systems Review", date: "Sep 15" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 80 },
+      { name: "User Research", progress: 20 },
+      { name: "Design Thinking", progress: 0 },
+      { name: "Prototyping", progress: 0 },
+    ],
+    assignmentsList: [
+      { title: "Interview write-up", module: "Module 2", status: "Overdue", grade: "---" },
+    ],
+    attendanceList: [
+      { title: "Welcome session", date: "Sep 29 • Google Meet", status: "Missed", duration: "Replay watched" },
+    ],
   },
   {
     id: "5",
-    number: "05",
-    title: "Grid in Design",
-    status: "Draft",
-    description:
-      "Explore structural column grids, modular layouts, and breakpoint management for complex web and mobile interfaces.",
-    included: {
-      recordings: 1,
-      lessons: 2,
-      assignments: 1,
-      resources: 1,
-    },
+    name: "Oluwaseun Adebayo",
+    email: "oluwaseun@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-emerald-100 text-emerald-800",
+    initials: "OA",
+    progress: 78,
+    averageGrade: 80,
+    status: "Active",
+    overdueCount: 0,
+    attendanceRate: "85%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "3 hours ago",
+    recentActivity: [
+      { title: "Submitted Wireframes", detail: "Module 2 • Lesson 3", date: "Sep 19" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 80 },
+      { name: "Design Thinking", progress: 40 },
+      { name: "Prototyping", progress: 0 },
+    ],
+    assignmentsList: [
+      { title: "Wireframes report", module: "Module 2", status: "Graded", grade: "80%" },
+    ],
+    attendanceList: [
+      { title: "Intro to Research Methods", date: "Sep 28 • Google Meet", status: "Attended", duration: "58 min" },
+    ],
   },
   {
     id: "6",
-    number: "06",
-    title: "User journey Mapping",
-    status: "Draft",
-    description:
-      "Map user actions, pain points, and emotional arcs across touchpoints to uncover product enhancement opportunities.",
-    included: {
-      recordings: 2,
-      lessons: 3,
-      assignments: 2,
-      resources: 2,
-    },
+    name: "Blessing Nwachukwu",
+    email: "blessing.n@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-rose-100 text-rose-800",
+    initials: "BN",
+    progress: 25,
+    averageGrade: 45,
+    status: "At risk",
+    overdueCount: 3,
+    attendanceRate: "50%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "8 days ago",
+    recentActivity: [
+      { title: "Overdue assignment alert", detail: "Module 1", date: "Sep 10" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 50 },
+      { name: "User Research", progress: 0 },
+      { name: "Design Thinking", progress: 0 },
+      { name: "Prototyping", progress: 0 },
+    ],
+    assignmentsList: [
+      { title: "User Persona Report", module: "Module 1", status: "Overdue", grade: "---" },
+    ],
+    attendanceList: [
+      { title: "Design Systems Review", date: "Sep 17 • Campus by Rise", status: "Missed", duration: "Replay watched" },
+    ],
+  },
+  {
+    id: "7",
+    name: "Tunde Adeyemi",
+    email: "tundeadeyemi@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-teal-100 text-teal-800",
+    initials: "TA",
+    progress: 46,
+    averageGrade: 72,
+    status: "At risk",
+    overdueCount: 2,
+    attendanceRate: "60%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "9 days ago",
+    recentActivity: [
+      { title: "Submitted Research plan", detail: "Module 2 • Lesson 1", date: "Sep 19" },
+      { title: "Watched Planning research", detail: "12 of 32 min", date: "Sep 19" },
+      { title: "Missed Design Systems Review", detail: "Live session", date: "Sep 19" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 70 },
+      { name: "Design Thinking", progress: 10 },
+      { name: "Prototyping", progress: 0 },
+    ],
+    assignmentsList: [
+      { title: "Discussion guide", module: "Module 2", status: "Submitted", grade: "---" },
+      { title: "User Persona Report", module: "Module 2", status: "Due in 3 days", grade: "---" },
+      { title: "Interview write-up", module: "Module 2", status: "Overdue", grade: "---" },
+      { title: "Research plan", module: "Module 2", status: "Graded", grade: "78%" },
+    ],
+    attendanceList: [
+      { title: "Design Systems Review", date: "Sep 17 • Campus by Rise", status: "Missed", duration: "Replay watched" },
+      { title: "User Research Q&A", date: "Sep 19 • Campus by Rise", status: "Attended", duration: "1hr 23m" },
+    ],
+  },
+  {
+    id: "8",
+    name: "Fatima Bello",
+    email: "fatimabello@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-orange-100 text-orange-800",
+    initials: "FB",
+    progress: 55,
+    averageGrade: 65,
+    status: "Behind",
+    overdueCount: 1,
+    attendanceRate: "75%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "1 day ago",
+    recentActivity: [
+      { title: "Submitted Persona report", detail: "Module 2", date: "Sep 17" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 40 },
+      { name: "Design Thinking", progress: 0 },
+      { name: "Prototyping", progress: 0 },
+    ],
+    assignmentsList: [
+      { title: "Persona report", module: "Module 2", status: "Graded", grade: "65%" },
+    ],
+    attendanceList: [
+      { title: "Ideation Workshop", date: "Sep 27 • Zoom", status: "Attended", duration: "58 min" },
+    ],
+  },
+  {
+    id: "9",
+    name: "Emeka Eze",
+    email: "emeka.eze@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-indigo-100 text-indigo-800",
+    initials: "EE",
+    progress: 70,
+    averageGrade: 88,
+    status: "Active",
+    overdueCount: 0,
+    attendanceRate: "92%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "5 hours ago",
+    recentActivity: [
+      { title: "Submitted Journey map", detail: "Module 3 • Lesson 2", date: "Sep 20" },
+      { title: "Watched Ideation techniques", detail: "28 of 30 min", date: "Sep 19" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 90 },
+      { name: "Design Thinking", progress: 60 },
+      { name: "Prototyping", progress: 30 },
+    ],
+    assignmentsList: [
+      { title: "Journey map", module: "Module 3", status: "Submitted", grade: "---" },
+      { title: "Research plan", module: "Module 2", status: "Graded", grade: "90%" },
+      { title: "UX audit", module: "Module 1", status: "Graded", grade: "86%" },
+    ],
+    attendanceList: [
+      { title: "User Research Q&A", date: "Sep 19 • Zoom", status: "Attended", duration: "1hr 10m" },
+      { title: "Ideation Workshop", date: "Sep 12 • Zoom", status: "Attended", duration: "58 min" },
+    ],
+  },
+  {
+    id: "10",
+    name: "Hauwa Musa",
+    email: "hauwa.musa@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-sky-100 text-sky-800",
+    initials: "HM",
+    progress: 65,
+    averageGrade: 76,
+    status: "Active",
+    overdueCount: 0,
+    attendanceRate: "88%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "1 hour ago",
+    recentActivity: [
+      { title: "Submitted Affinity diagram", detail: "Module 2 • Lesson 4", date: "Sep 20" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 100 },
+      { name: "Design Thinking", progress: 50 },
+      { name: "Prototyping", progress: 10 },
+    ],
+    assignmentsList: [
+      { title: "Affinity diagram", module: "Module 2", status: "Graded", grade: "76%" },
+      { title: "Interview write-up", module: "Module 2", status: "Graded", grade: "74%" },
+    ],
+    attendanceList: [
+      { title: "Design Systems Review", date: "Sep 17 • Google Meet", status: "Attended", duration: "1hr 02m" },
+    ],
+  },
+  {
+    id: "11",
+    name: "Ifeanyi Obi",
+    email: "ifeanyi.obi@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-lime-100 text-lime-800",
+    initials: "IO",
+    progress: 35,
+    averageGrade: 61,
+    status: "Behind",
+    overdueCount: 1,
+    attendanceRate: "70%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "3 days ago",
+    recentActivity: [
+      { title: "Watched Planning research", detail: "20 of 32 min", date: "Sep 17" },
+      { title: "Submitted UX audit", detail: "Module 1 • Lesson 4", date: "Sep 14" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 90 },
+      { name: "User Research", progress: 40 },
+      { name: "Design Thinking", progress: 10 },
+      { name: "Prototyping", progress: 0 },
+    ],
+    assignmentsList: [
+      { title: "Research plan", module: "Module 2", status: "Overdue", grade: "---" },
+      { title: "UX audit", module: "Module 1", status: "Graded", grade: "61%" },
+    ],
+    attendanceList: [
+      { title: "User Research Q&A", date: "Sep 19 • Zoom", status: "Missed", duration: "Replay watched" },
+      { title: "Welcome session", date: "Sep 05 • Zoom", status: "Attended", duration: "45 min" },
+    ],
+  },
+  {
+    id: "12",
+    name: "Amina Yusuf",
+    email: "amina.yusuf@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-fuchsia-100 text-fuchsia-800",
+    initials: "AY",
+    progress: 80,
+    averageGrade: 91,
+    status: "Active",
+    overdueCount: 0,
+    attendanceRate: "95%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "30 minutes ago",
+    recentActivity: [
+      { title: "Submitted Low-fidelity prototype", detail: "Module 4 • Lesson 1", date: "Sep 20" },
+      { title: "Completed Design Thinking quiz", detail: "Module 3 • Quiz", date: "Sep 19" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 100 },
+      { name: "Design Thinking", progress: 80 },
+      { name: "Prototyping", progress: 40 },
+    ],
+    assignmentsList: [
+      { title: "Low-fidelity prototype", module: "Module 4", status: "Submitted", grade: "---" },
+      { title: "Journey map", module: "Module 3", status: "Graded", grade: "93%" },
+      { title: "Research plan", module: "Module 2", status: "Graded", grade: "89%" },
+    ],
+    attendanceList: [
+      { title: "Design Systems Review", date: "Sep 17 • Zoom", status: "Attended", duration: "1hr 05m" },
+      { title: "User Research Q&A", date: "Sep 19 • Zoom", status: "Attended", duration: "1hr 23m" },
+    ],
+  },
+  {
+    id: "13",
+    name: "Kelechi Nnamdi",
+    email: "kelechi.nnamdi@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-cyan-100 text-cyan-800",
+    initials: "KN",
+    progress: 15,
+    averageGrade: 40,
+    status: "At risk",
+    overdueCount: 3,
+    attendanceRate: "40%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "12 days ago",
+    recentActivity: [
+      { title: "Overdue assignment alert", detail: "Module 1", date: "Sep 08" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 50 },
+      { name: "User Research", progress: 10 },
+      { name: "Design Thinking", progress: 0 },
+      { name: "Prototyping", progress: 0 },
+    ],
+    assignmentsList: [
+      { title: "UX audit", module: "Module 1", status: "Overdue", grade: "---" },
+      { title: "User Persona Report", module: "Module 1", status: "Overdue", grade: "---" },
+      { title: "Research plan", module: "Module 2", status: "Overdue", grade: "---" },
+    ],
+    attendanceList: [
+      { title: "Welcome session", date: "Sep 05 • Google Meet", status: "Attended", duration: "20 min" },
+      { title: "Design Systems Review", date: "Sep 17 • Google Meet", status: "Missed", duration: "Not watched" },
+    ],
+  },
+  {
+    id: "14",
+    name: "Damilola Ogunleye",
+    email: "damilola.ogunleye@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-yellow-100 text-yellow-800",
+    initials: "DO",
+    progress: 45,
+    averageGrade: 68,
+    status: "Behind",
+    overdueCount: 1,
+    attendanceRate: "72%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "2 days ago",
+    recentActivity: [
+      { title: "Submitted Persona report", detail: "Module 2", date: "Sep 18" },
+      { title: "Missed Design Systems Review", detail: "Live session", date: "Sep 17" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 60 },
+      { name: "Design Thinking", progress: 20 },
+      { name: "Prototyping", progress: 0 },
+    ],
+    assignmentsList: [
+      { title: "Interview write-up", module: "Module 2", status: "Overdue", grade: "---" },
+      { title: "Persona report", module: "Module 2", status: "Graded", grade: "68%" },
+    ],
+    attendanceList: [
+      { title: "Design Systems Review", date: "Sep 17 • Campus by Rise", status: "Missed", duration: "Replay watched" },
+      { title: "Ideation Workshop", date: "Sep 12 • Zoom", status: "Attended", duration: "52 min" },
+    ],
+  },
+  {
+    id: "15",
+    name: "Rukayat Salami",
+    email: "rukayat.salami@gmail.com",
+    joinedDate: "Jan 13th, 2026",
+    avatarBg: "bg-pink-100 text-pink-800",
+    initials: "RS",
+    progress: 75,
+    averageGrade: 83,
+    status: "Active",
+    overdueCount: 0,
+    attendanceRate: "87%",
+    cohort: "Cohort 3 • Jan 2026",
+    lastActive: "Yesterday",
+    recentActivity: [
+      { title: "Submitted Wireframes", detail: "Module 3 • Lesson 3", date: "Sep 19" },
+      { title: "Watched Rapid prototyping", detail: "18 of 25 min", date: "Sep 19" },
+    ],
+    modules: [
+      { name: "Introduction", progress: 100 },
+      { name: "User Research", progress: 80 },
+      { name: "Design Thinking", progress: 70 },
+      { name: "Prototyping", progress: 50 },
+    ],
+    assignmentsList: [
+      { title: "Wireframes", module: "Module 3", status: "Graded", grade: "85%" },
+      { title: "Research plan", module: "Module 2", status: "Graded", grade: "81%" },
+      { title: "Clickable prototype", module: "Module 4", status: "Due in 3 days", grade: "---" },
+    ],
+    attendanceList: [
+      { title: "Intro to Research Methods", date: "Sep 10 • Google Meet", status: "Attended", duration: "58 min" },
+      { title: "User Research Q&A", date: "Sep 19 • Campus by Rise", status: "Attended", duration: "1hr 15m" },
+    ],
   },
 ];
 
-export interface AssignmentItem {
-  id: string;
-  title: string;
-  type: string;
-  moduleNumber: string;
-  moduleTitle: string;
-  dueDate: string;
-  dueRelative: string;
-  submissions: {
-    completed: number;
-    total: number;
-  };
-  status: "Published" | "Draft";
-}
-
-export const assignmentsData: AssignmentItem[] = [
-  {
-    id: "1",
-    title: "Visual Hierarchy",
-    type: "Project · Individual",
-    moduleNumber: "Module 1",
-    moduleTitle: "Introduction to Design",
-    dueDate: "Oct 12, 2026",
-    dueRelative: "After lesson 3",
-    submissions: {
-      completed: 12,
-      total: 16,
-    },
-    status: "Published",
-  },
-  {
-    id: "2",
-    title: "User Research Report",
-    type: "Report · Individual",
-    moduleNumber: "Module 2",
-    moduleTitle: "User Research",
-    dueDate: "Oct 21, 2026",
-    dueRelative: "After lesson 4",
-    submissions: {
-      completed: 0,
-      total: 16,
-    },
-    status: "Draft",
-  },
-  {
-    id: "3",
-    title: "Visual Hierarchy",
-    type: "Project · Individual",
-    moduleNumber: "Module 1",
-    moduleTitle: "Introduction to Design",
-    dueDate: "Oct 12, 2026",
-    dueRelative: "After lesson 3",
-    submissions: {
-      completed: 0,
-      total: 16,
-    },
-    status: "Draft",
-  },
-  {
-    id: "4",
-    title: "Visual Hierarchy",
-    type: "Project · Individual",
-    moduleNumber: "Module 1",
-    moduleTitle: "Introduction to Design",
-    dueDate: "Oct 12, 2026",
-    dueRelative: "After lesson 3",
-    submissions: {
-      completed: 0,
-      total: 16,
-    },
-    status: "Draft",
-  },
-];
-
-export interface ResourceItem {
-  id: string;
-  name: string;
-  moduleNumber: string;
-  moduleTitle: string;
-  uploaded: string;
-  fileType: string;
-  fileSize: string;
-  status: "Published" | "Draft";
-}
-
-export const resourcesData: ResourceItem[] = [
-  {
-    id: "1",
-    name: "Visual Hierarchy",
-    moduleNumber: "Module 1",
-    moduleTitle: "Introduction to Design",
-    uploaded: "Oct 1, 2026",
-    fileType: "PDF",
-    fileSize: "1.2 MB",
-    status: "Published",
-  },
-  {
-    id: "2",
-    name: "Lesson 1 Live class recording",
-    moduleNumber: "Module 1",
-    moduleTitle: "Introduction to Design",
-    uploaded: "Oct 1, 2026",
-    fileType: "Video",
-    fileSize: "1.2 GB",
-    status: "Published",
-  },
-  {
-    id: "3",
-    name: "Lesson 2 Live class recording",
-    moduleNumber: "Module 1",
-    moduleTitle: "Introduction to Design",
-    uploaded: "Oct 5, 2026",
-    fileType: "Video",
-    fileSize: "1.2 GB",
-    status: "Draft",
-  },
-  {
-    id: "4",
-    name: "Lesson 2 Live class recording",
-    moduleNumber: "Module 1",
-    moduleTitle: "Introduction to Design",
-    uploaded: "Oct 5, 2026",
-    fileType: "Document",
-    fileSize: "880 KB",
-    status: "Draft",
-  },
-];
-
-export interface NoteItem {
-  id: string;
-  title: string;
-  owner: string;
-  description: string;
-  moduleNumber: string;
-  date: string;
-}
-
-export const notesData: NoteItem[] = [
-  {
-    id: "1",
-    title: "Visual Hierarchy",
-    owner: "Aishat Lawal",
-    moduleNumber: "Module 1",
-    description: "Introduction to Design",
-    date: "Oct 1, 2026",
-  },
-  {
-    id: "2",
-    title: "Lesson 1 Live class recording",
-    owner: "Aishat Lawal",
-    moduleNumber: "Module 1",
-    description: "Introduction to Design",
-    date: "Oct 1, 2026",
-  },
-  {
-    id: "3",
-    title: "Lesson 2 Live class recording",
-    owner: "Aishat Lawal",
-    moduleNumber: "Module 1",
-    description: "Introduction to Design",
-    date: "Oct 5, 2026",
-  },
-  {
-    id: "4",
-    title: "Lesson 2 Live class recording",
-    owner: "Aishat Lawal",
-    moduleNumber: "Module 1",
-    description: "Introduction to Design",
-    date: "Oct 5, 2026",
-  },
-];
-
-interface StudentSubmission {
-  id: string;
-  name: string;
-  email: string;
-  avatarUrl?: string;
-  dateSubmitted: string;
-  timeSubmitted: string;
-  status: "Submitted" | "Not submitted";
-  grade: string;
-}
-
-
-export const submissionsData: StudentSubmission[] = [
-  {
-    id: "1",
-    name: "Aishat Lawal",
-    email: "aishatalawal21@gmail.com",
-    dateSubmitted: "Oct 12, 2026",
-    timeSubmitted: "4:00 PM",
-    status: "Submitted",
-    grade: "--",
-  },
-  {
-    id: "2",
-    name: "Aishat Lawal",
-    email: "aishatalawal21@gmail.com",
-    dateSubmitted: "Oct 12, 2026",
-    timeSubmitted: "4:00 PM",
-    status: "Submitted",
-    grade: "--",
-  },
-  {
-    id: "3",
-    name: "Aishat Lawal",
-    email: "aishatalawal21@gmail.com",
-    dateSubmitted: "Oct 12, 2026",
-    timeSubmitted: "4:00 PM",
-    status: "Submitted",
-    grade: "--",
-  },
-  {
-    id: "4",
-    name: "Aishat Lawal",
-    email: "aishatalawal21@gmail.com",
-    dateSubmitted: "Oct 12, 2026",
-    timeSubmitted: "4:00 PM",
-    status: "Submitted",
-    grade: "--",
-  },
-  {
-    id: "5",
-    name: "Aishat Lawal",
-    email: "aishatalawal21@gmail.com",
-    dateSubmitted: "Oct 12, 2026",
-    timeSubmitted: "4:00 PM",
-    status: "Submitted",
-    grade: "--",
-  },
-  {
-    id: "6",
-    name: "Aishat Lawal",
-    email: "aishatalawal21@gmail.com",
-    dateSubmitted: "Oct 12, 2026",
-    timeSubmitted: "4:00 PM",
-    status: "Not submitted",
-    grade: "--",
-  },
-];
+export type Student = (typeof DUMMY_STUDENTS)[number];

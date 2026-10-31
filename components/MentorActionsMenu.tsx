@@ -7,20 +7,23 @@ import { Menu } from "@base-ui/react/menu";
 
 import { MoreHorizontal, MoreVertical } from "@/assets/icons";
 import { EditUserDialog } from "@/components/EditUserDialog";
+import { AssignStudentsDialog } from "@/components/MentorAssignmentDialogs";
 import { buttonVariants } from "@/components/ui/button";
 import { getUpdateUserErrorMessage, updateUser } from "@/lib/admin";
 import type { Mentor } from "@/lib/mentors";
 import { sessionQuery } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
 
-const itemClass =
+export const actionsMenuPopupClass =
+  "flex flex-col gap-3 bg-surface-subtle p-2.5 font-work text-sm shadow-[0_1px_3px_rgb(0_0_0/0.15)] outline-none";
+
+export const actionsMenuItemClass =
   "flex cursor-pointer p-2 text-text-primary outline-none data-highlighted:bg-neutral-200 data-[disabled]:cursor-not-allowed data-[disabled]:text-text-muted";
 
 /**
  * The mentor actions menu: the "…" on a mentors list row, or the "⋮" button
  * on the mentor profile, which leaves out View profile. PENDING-BACKEND:
- * assigning students has no picker design and there's no delete endpoint,
- * so those items don't do anything yet.
+ * there's no delete endpoint, so Delete mentor doesn't do anything yet.
  */
 export function MentorActionsMenu({
   mentor,
@@ -32,6 +35,7 @@ export function MentorActionsMenu({
   const queryClient = useQueryClient();
   const { data: session } = useQuery(sessionQuery());
   const [editOpen, setEditOpen] = React.useState(false);
+  const [assignOpen, setAssignOpen] = React.useState(false);
   const canManage = session?.user.role === "SUPERADMIN";
 
   // Suspending the account is how a mentor is deactivated; Edit mentor can
@@ -64,10 +68,10 @@ export function MentorActionsMenu({
         </Menu.Trigger>
         <Menu.Portal>
           <Menu.Positioner align="end" sideOffset={4} className="z-50">
-            <Menu.Popup className="flex flex-col gap-3 bg-surface-subtle p-2.5 font-work text-sm shadow-[0_1px_3px_rgb(0_0_0/0.15)] outline-none">
+            <Menu.Popup className={actionsMenuPopupClass}>
               {placement === "row" && (
                 <Menu.LinkItem
-                  className={itemClass}
+                  className={actionsMenuItemClass}
                   render={<Link href={`/admin/mentors/${mentor.id}`} />}
                 >
                   View profile
@@ -76,11 +80,17 @@ export function MentorActionsMenu({
               <Menu.Item
                 disabled={!canManage}
                 onClick={() => setEditOpen(true)}
-                className={itemClass}
+                className={actionsMenuItemClass}
               >
                 Edit mentor
               </Menu.Item>
-              <Menu.Item className={itemClass}>Assign students</Menu.Item>
+              <Menu.Item
+                disabled={!canManage}
+                onClick={() => setAssignOpen(true)}
+                className={actionsMenuItemClass}
+              >
+                Assign students
+              </Menu.Item>
               <Menu.Item
                 disabled={
                   !canManage ||
@@ -89,7 +99,7 @@ export function MentorActionsMenu({
                 }
                 closeOnClick={false}
                 onClick={() => deactivate.mutate()}
-                className={cn(itemClass, deactivate.isError && "text-text-error")}
+                className={cn(actionsMenuItemClass, deactivate.isError && "text-text-error")}
               >
                 {deactivate.isPending
                   ? "Deactivating…"
@@ -110,6 +120,11 @@ export function MentorActionsMenu({
         open={editOpen}
         onOpenChange={setEditOpen}
         isSelf={session?.user.id === mentor.id}
+      />
+      <AssignStudentsDialog
+        mentor={mentor.user}
+        open={assignOpen}
+        onOpenChange={setAssignOpen}
       />
     </>
   );

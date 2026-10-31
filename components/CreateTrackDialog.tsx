@@ -52,7 +52,7 @@ export function CreateTrackDialog() {
   const createTrackMutation = useMutation({
     mutationFn: (input: CreateTrackInput) => createTrack(input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.tracks() });
+      queryClient.invalidateQueries({ queryKey: adminKeys.allTracks() });
       setStep("success");
     },
   });

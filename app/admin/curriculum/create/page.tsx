@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Pencil } from "lucide-react";
 
 import { AdminTopNav } from "@/components/AdminTopNav";
-import { CurriculumStats } from "@/components/curriculum/CurriculumStats";
+import { CurriculumStats } from "@/features/curriculum/components/CurriculumStats";
 import { LockedField } from "@/components/ui/locked-field";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -19,11 +19,13 @@ import { Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { adminQueries } from "@/lib/admin";
 import { useSelectedCohort } from "@/lib/selected-cohort";
-import { createCurriculum, curriculumKeys } from "@/lib/curriculum";
+import { curriculumApis } from "@/features/curriculum/api";
 
 const placeholderTitle = "Design Track Curriculum";
 const placeholderDescription =
   "This curriculum is designed to help students build a strong foundation in product and ux design. It covers the full design process from research and ideation to prototyping and design systems.";
+
+const api = curriculumApis.admin;
 
 export default function CreateCurriculumPage() {
   const router = useRouter();
@@ -39,14 +41,14 @@ export default function CreateCurriculumPage() {
 
   const createMutation = useMutation({
     mutationFn: () =>
-      createCurriculum({
+      api.createCurriculum({
         title: title.trim(),
         description: description.trim(),
         trackId: track.id,
         cohortId: cohort?.id ?? "",
       }),
     onSuccess: (curriculum) => {
-      queryClient.invalidateQueries({ queryKey: curriculumKeys.list() });
+      queryClient.invalidateQueries({ queryKey: api.keys.list() });
       router.push(
         `/admin/curriculum?created=${encodeURIComponent(curriculum.title)}`,
       );
@@ -58,11 +60,13 @@ export default function CreateCurriculumPage() {
 
   return (
     <>
-      <AdminTopNav breadcrumb={[
+      <AdminTopNav
+        breadcrumb={[
           "Academy",
           { label: "Curriculum", href: "/admin/curriculum" },
           { label: "Add Curriculum", href: "/admin/curriculum/create" },
-        ]} />
+        ]}
+      />
       <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
         <Link
           href="/admin/curriculum"

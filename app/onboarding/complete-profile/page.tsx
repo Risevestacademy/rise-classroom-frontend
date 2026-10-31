@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, MapPin } from "lucide-react"
+import { isValidPhoneNumber } from "libphonenumber-js"
 
 import { User } from "@/assets/icons"
 import { FormField } from "@/components/ui/field"
@@ -24,12 +25,20 @@ import {
   type OnboardingDetails,
   type OnboardingRole,
 } from "@/lib/onboarding"
+import { defaultCountry, type CountryCode } from "@/lib/countries"
 
 type StepId = 1 | 2 | 3
 
 type OnboardingCopy = (typeof onboardingCopy)[OnboardingRole]
 
 const DISPLAY_NAME_MAX = 100
+const locationMax = 100
+
+type PhoneValue = { country: CountryCode; national: string; e164: string }
+
+function isPhoneValid(phone: PhoneValue) {
+  return phone.e164 !== "" && isValidPhoneNumber(phone.e164)
+}
 
 function stepContent(step: StepId, copy: OnboardingCopy) {
   switch (step) {
@@ -141,6 +150,10 @@ function ProfileStep({
   fullName,
   displayName,
   onDisplayNameChange,
+  phone,
+  onPhoneChange,
+  location,
+  onLocationChange,
   photo,
   photoError,
   onPhotoChange,
@@ -149,11 +162,17 @@ function ProfileStep({
   fullName: string
   displayName: string
   onDisplayNameChange: (value: string) => void
+  phone: PhoneValue
+  onPhoneChange: (value: PhoneValue) => void
+  location: string
+  onLocationChange: (value: string) => void
   photo: ProfilePhoto | null
   photoError: string | null
   onPhotoChange: (file: File | null) => void
   onPhotoError: (message: string) => void
 }) {
+  const phoneInvalid = phone.national.trim() !== "" && !isPhoneValid(phone)
+
   return (
     <div className="flex flex-col gap-5">
       <ProfilePhotoPicker
@@ -186,6 +205,36 @@ function ProfileStep({
             onDisplayNameChange(event.target.value),
           leadingIcon: <User />,
           placeholder: "How should we call you?",
+        }}
+      />
+      <FormField
+        label="Phone number"
+        required
+        error={
+          phoneInvalid ? "Enter a valid phone number for that country" : undefined
+        }
+        invalid={phoneInvalid}
+        inputProps={{
+          type: "phone-number",
+          name: "phoneNumber",
+          autoComplete: "tel-national",
+          defaultCountry: phone.country,
+          value: phone.national,
+          onValueChange: onPhoneChange,
+        }}
+      />
+      <FormField
+        label="Location"
+        required
+        inputProps={{
+          type: "basic",
+          name: "location",
+          value: location,
+          maxLength: locationMax,
+          onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+            onLocationChange(event.target.value),
+          leadingIcon: <MapPin />,
+          placeholder: "e.g. Lagos, Nigeria",
         }}
       />
     </div>
@@ -247,6 +296,12 @@ export default function CompleteProfilePage() {
   const [displayName, setDisplayName] = useState(
     `${details.firstName} ${details.lastName.charAt(0)}.`.trim()
   )
+  const [phone, setPhone] = useState<PhoneValue>({
+    country: defaultCountry,
+    national: "",
+    e164: "",
+  })
+  const [location, setLocation] = useState("")
   const [photo, setPhoto] = useState<ProfilePhoto | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
 
@@ -283,6 +338,8 @@ export default function CompleteProfilePage() {
       await completeOnboarding({
         token,
         displayName: displayName.trim(),
+        phoneNumber: phone.e164,
+        location: location.trim(),
         password,
         confirmPassword: password,
         image: photo?.file,
@@ -306,7 +363,11 @@ export default function CompleteProfilePage() {
 
   const { title, subtitle } = stepContent(step, copy)
   const canContinue =
-    !finish.isPending && (step !== 1 || displayName.trim().length > 0)
+    !finish.isPending &&
+    (step !== 1 ||
+      (displayName.trim().length > 0 &&
+        isPhoneValid(phone) &&
+        location.trim().length > 0))
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -351,6 +412,10 @@ export default function CompleteProfilePage() {
             fullName={`${details.firstName} ${details.lastName}`}
             displayName={displayName}
             onDisplayNameChange={setDisplayName}
+            phone={phone}
+            onPhoneChange={setPhone}
+            location={location}
+            onLocationChange={setLocation}
             photo={photo}
             photoError={photoError}
             onPhotoChange={handlePhotoChange}
