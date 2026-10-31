@@ -479,3 +479,5 @@ export const DUMMY_STUDENTS = [
     ],
   },
 ];
+
+export type Student = (typeof DUMMY_STUDENTS)[number];

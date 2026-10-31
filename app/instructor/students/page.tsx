@@ -2,7 +2,6 @@
 
 import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Search, Download, Filter, MoreVertical } from "lucide-react";
 import jsPDF from "jspdf";
 
@@ -24,11 +23,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { DUMMY_STUDENTS } from "@/components/instructor-dashboard/data"
+import { DUMMY_STUDENTS, type Student } from "@/components/instructor-dashboard/data";
 
 export default function StudentsPage() {
-  const router = useRouter();
-
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -44,7 +41,7 @@ export default function StudentsPage() {
   const [sortBy, setSortBy] = useState<"name" | "progress" | "grade">("name");
 
   // Student Profile Dialog State
-  const [viewingStudent, setViewingStudent] = useState<any | null>(null);
+  const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [studentModalTab, setStudentModalTab] = useState<"overview" | "progress" | "assignments" | "attendance" | "details">("overview");
 
   // Filtering & Sorting Logic
@@ -67,7 +64,7 @@ export default function StudentsPage() {
     if (sortBy === "name") return a.name.localeCompare(b.name);
     if (sortBy === "progress") return b.progress - a.progress;
     if (sortBy === "grade") {
-      return Number.parseFloat(b.averageGrade) - Number.parseFloat(a.averageGrade);
+      return b.averageGrade - a.averageGrade;
     }
     return 0;
   });
@@ -149,7 +146,7 @@ export default function StudentsPage() {
       yPos += 8;
       doc.setFont("helvetica", "normal");
 
-      dataToExport.forEach((student, index) => {
+      dataToExport.forEach((student) => {
         if (yPos > 280) {
           doc.addPage();
           yPos = 20;
@@ -187,7 +184,7 @@ export default function StudentsPage() {
           </div>
 
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={() => setIsExportOpen(true)}
             className="bg-brand-primary text-white border-none rounded-xl px-4 py-2 text-xs font-medium flex items-center gap-2 shadow-xs cursor-pointer"
           >
@@ -253,7 +250,7 @@ export default function StudentsPage() {
             </div>
             <Button
               onClick={() => setIsFilterOpen(true)}
-              variant="outline"
+              variant="secondary"
               className={`bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 rounded-xl px-4 py-2 h-10 text-xs font-medium flex items-center gap-2 shrink-0 shadow-xs cursor-pointer ${statusFilter !== "All" ? "border-brand-primary text-brand-primary font-semibold" : ""
                 }`}
             >
@@ -288,11 +285,11 @@ export default function StudentsPage() {
             {filteredStudents.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
                 <p className="text-sm text-neutral-600 mb-3">
-                  No students match "{searchQuery || "your filters"}".
+                  No students match &quot;{searchQuery || "your filters"}&quot;.
                 </p>
                 {searchQuery && (
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => setSearchQuery("")}
                     className="bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 rounded-xl px-4 py-2 h-10 text-xs font-medium shadow-xs cursor-pointer"
                   >
@@ -365,7 +362,7 @@ export default function StudentsPage() {
                     <div className="col-span-1 flex justify-end">
                       <DropdownMenu>
                         <DropdownMenuTrigger>
-                          <MoreVertical className="h-4 w-4" />
+                          <MoreVertical className="h-4 w-4 cursor-pointer" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           className="min-w-18! border-none ring-0 bg-white! cursor-pointer shadow-lg rounded-xl p-1"
@@ -426,7 +423,7 @@ export default function StudentsPage() {
                       No activity for {viewingStudent.lastActive} and {viewingStudent.overdueCount} overdue assignments
                     </p>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       onClick={() => console.log("Reminder sent to:", viewingStudent.email)}
                       className="rounded-xl text-xs h-8 px-3 border-neutral-300 shadow-xs cursor-pointer hover:bg-neutral-100 text-neutral-700 bg-white"
                     >
@@ -476,7 +473,7 @@ export default function StudentsPage() {
                     <div className="space-y-3">
                       <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">Progress by module</h3>
                       <div className="space-y-2">
-                        {viewingStudent.modules.map((mod: any, i: number) => (
+                        {viewingStudent.modules.map((mod, i) => (
                           <div key={i} className="flex items-center justify-between text-xs">
                             <span className="text-neutral-700 w-20 truncate">{mod.name}</span>
                             <div className="w-full flex-1 mx-4 bg-neutral-200/70 h-2 rounded-full overflow-hidden">
@@ -491,7 +488,7 @@ export default function StudentsPage() {
                     <div className="space-y-3">
                       <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">Recent Activity</h3>
                       <div className="divide-y divide-neutral-100 border border-neutral-200 rounded-2xl overflow-hidden">
-                        {viewingStudent.recentActivity.map((act: any, i: number) => (
+                        {viewingStudent.recentActivity.map((act, i) => (
                           <div key={i} className="p-3.5 flex items-center justify-between bg-white text-xs">
                             <div>
                               <p className="font-semibold text-neutral-900">{act.title}</p>
@@ -510,7 +507,7 @@ export default function StudentsPage() {
                   <div className="space-y-4">
                     <p className="text-xs font-medium text-neutral-700">Detailed Module Breakdown</p>
                     <div className="space-y-3">
-                      {viewingStudent.modules.map((mod: any, i: number) => (
+                      {viewingStudent.modules.map((mod, i) => (
                         <div key={i} className="p-4 border border-neutral-200 rounded-2xl bg-white space-y-2">
                           <div className="flex justify-between items-center text-xs">
                             <span className="font-bold text-neutral-900">{mod.name}</span>
@@ -530,7 +527,7 @@ export default function StudentsPage() {
                   <div className="space-y-3">
                     <p className="text-xs font-medium text-neutral-700">Assignment Submissions & Grades</p>
                     <div className="space-y-2">
-                      {viewingStudent.assignmentsList.map((assign: any, i: number) => (
+                      {viewingStudent.assignmentsList.map((assign, i) => (
                         <div key={i} className="p-4 border border-neutral-200 rounded-2xl bg-white flex justify-between items-center text-xs">
                           <div>
                             <p className="font-bold text-neutral-900">{assign.title}</p>
@@ -555,7 +552,7 @@ export default function StudentsPage() {
                   <div className="space-y-3">
                     <p className="text-xs font-medium text-neutral-700">Live Session Attendance Record</p>
                     <div className="space-y-2">
-                      {viewingStudent.attendanceList.map((att: any, i: number) => (
+                      {viewingStudent.attendanceList.map((att, i) => (
                         <div key={i} className="p-4 border border-neutral-200 rounded-2xl bg-white flex justify-between items-center text-xs">
                           <div>
                             <p className="font-bold text-neutral-900">{att.title}</p>
@@ -599,7 +596,7 @@ export default function StudentsPage() {
                 {/* Modal Footer Actions */}
                 <div className="flex items-center justify-between pt-4 border-t border-neutral-100">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => console.log("Export report for:", viewingStudent.name)}
                     className="rounded-xl text-xs h-10 px-4 border-neutral-200 text-neutral-700 hover:bg-neutral-50 shadow-xs cursor-pointer bg-white"
                   >
@@ -607,7 +604,7 @@ export default function StudentsPage() {
                   </Button>
                   <Button
                     onClick={() => console.log("Open message dialog for:", viewingStudent.email)}
-                    className="rounded-xl text-xs h-10 px-6 bg-neutral-950 text-white hover:bg-neutral-800 shadow-xs cursor-pointer"
+                    className="rounded-xl text-xs h-10 px-6 bg-brand-primary text-white hover:bg-neutral-800 shadow-xs cursor-pointer"
                   >
                     Message
                   </Button>
@@ -654,14 +651,14 @@ export default function StudentsPage() {
                   Sort by
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {[
+                  {([
                     { id: "name", label: "Name" },
                     { id: "progress", label: "Progress" },
                     { id: "grade", label: "Grade" },
-                  ].map((sort) => (
+                  ] as const).map((sort) => (
                     <button
                       key={sort.id}
-                      onClick={() => setSortBy(sort.id as any)}
+                      onClick={() => setSortBy(sort.id)}
                       className={`py-2 text-xs font-medium rounded-xl border transition-all cursor-pointer ${sortBy === sort.id
                           ? "bg-brand-primary text-white border-neutral-900"
                           : "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50"
@@ -776,7 +773,7 @@ export default function StudentsPage() {
               {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-2">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => setIsExportOpen(false)}
                   className="rounded-xl px-5 py-2.5 text-xs font-medium border-neutral-200 text-neutral-700 hover:bg-neutral-50 shadow-xs cursor-pointer"
                 >
