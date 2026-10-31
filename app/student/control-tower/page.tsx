@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Field } from "@base-ui/react/field";
+import { GoalsAndKpis } from "@/components/control-tower/GoalsAndKpis";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,35 +29,30 @@ import {
   saveWeeklyMetric,
   weekRangeFor,
   type ControlTowerMentor,
+  type Goal,
+  type StudentControlTower,
   type WeeklyMetric,
   type WeeklyMetricStatus,
 } from "@/lib/control-tower";
 
 /*
- * PENDING-BACKEND: "Weekly KPIs" (kpis), "What went well?" (wentWell) and
- * "What will you do differently?" (doDifferently) are hidden because the
- * weekly-metrics API has no field to store them yet. To bring them back,
- * search the project for PENDING-BACKEND and uncomment every match — this page
- * and lib/control-tower.ts. Check the field names with the backend first.
+ * The API's weekly reflection has two parts, "what went well" and "what I'll do
+ * differently". Its older progress and challenges fields are kept in sync with
+ * them, so they're only read as a fallback for weeks saved before the change.
+ * KPIs aren't a prompt: they're tracked in the Goals & KPIs card.
  */
 type Answers = {
   focus: string;
   achieve: string;
-  progress: string;
-  // kpis: string; // PENDING-BACKEND(kpis)
-  // wentWell: string; // PENDING-BACKEND(wentWell)
-  didntGoWell: string;
-  // doDifferently: string; // PENDING-BACKEND(doDifferently)
+  wentWell: string;
+  doDifferently: string;
 };
 
 const EMPTY_ANSWERS: Answers = {
   focus: "",
   achieve: "",
-  progress: "",
-  // kpis: "", // PENDING-BACKEND(kpis)
-  // wentWell: "", // PENDING-BACKEND(wentWell)
-  didntGoWell: "",
-  // doDifferently: "", // PENDING-BACKEND(doDifferently)
+  wentWell: "",
+  doDifferently: "",
 };
 
 const PROMPT_COUNT = Object.keys(EMPTY_ANSWERS).length;
@@ -66,11 +62,8 @@ function toAnswers(metric?: WeeklyMetric): Answers {
   return {
     focus: metric?.priorities ?? "",
     achieve: metric?.goalSummary ?? "",
-    progress: metric?.progress ?? "",
-    // kpis: metric?.kpis ?? "", // PENDING-BACKEND(kpis)
-    // wentWell: metric?.wentWell ?? "", // PENDING-BACKEND(wentWell)
-    didntGoWell: metric?.challenges ?? "",
-    // doDifferently: metric?.doDifferently ?? "", // PENDING-BACKEND(doDifferently)
+    wentWell: metric?.whatWentWell ?? metric?.progress ?? "",
+    doDifferently: metric?.whatIWillDoDifferently ?? metric?.challenges ?? "",
   };
 }
 
@@ -78,11 +71,8 @@ function toPayload(answers: Answers) {
   return {
     priorities: answers.focus,
     goalSummary: answers.achieve,
-    progress: answers.progress,
-    // kpis: answers.kpis, // PENDING-BACKEND(kpis)
-    // wentWell: answers.wentWell, // PENDING-BACKEND(wentWell)
-    challenges: answers.didntGoWell,
-    // doDifferently: answers.doDifferently, // PENDING-BACKEND(doDifferently)
+    whatWentWell: answers.wentWell,
+    whatIWillDoDifferently: answers.doDifferently,
   };
 }
 
@@ -133,6 +123,8 @@ export default function ControlTowerPage() {
       profileId={profileId}
       mentor={tower.data?.mentor ?? null}
       metrics={metrics.data ?? []}
+      goals={tower.data?.goals ?? []}
+      kpis={tower.data?.kpis}
     />
   );
 }
@@ -142,11 +134,15 @@ function ControlTower({
   profileId,
   mentor,
   metrics,
+  goals,
+  kpis,
 }: {
   week: { weekStart: string; weekEnd: string };
   profileId: string;
   mentor: ControlTowerMentor | null;
   metrics: WeeklyMetric[];
+  goals: Goal[];
+  kpis: StudentControlTower["kpis"];
 }) {
   const queryClient = useQueryClient();
 
@@ -229,9 +225,10 @@ function ControlTower({
           )}
         </div>
 
-        {/* Right-hand column is desktop only; mobile shows the status inline in FormView. */}
-        <div className="hidden flex-col gap-6 xl:flex">
-          <div className="rounded-xl border border-neutral-200 bg-white p-5">
+        {/* On mobile this column sits under the form. The week status card is
+            desktop only, since FormView shows the status inline on mobile. */}
+        <div className="flex flex-col gap-6">
+          <div className="hidden rounded-xl border border-neutral-200 bg-white p-5 xl:block">
             <p className="text-sm font-semibold text-neutral-800">
               This week · {weekLabel}
             </p>
@@ -254,6 +251,15 @@ function ControlTower({
           </div>
 
           <MentorCard mentor={mentor} />
+
+          <GoalsAndKpis
+            studentProfileId={profileId}
+            goals={goals}
+            kpis={kpis?.items ?? goals.flatMap((goal) => goal.kpis ?? [])}
+            summary={kpis?.summary}
+            editable
+            queryKey={controlTowerKeys.student()}
+          />
         </div>
       </div>
     </div>
@@ -432,28 +438,9 @@ function FormView({
 
       <Section label="Mentor Check-in">
         <MentorNotes metric={current} />
-
-        <ReflectionField
-          label="How are you progressing?"
-          placeholder="Share how this week has gone so far..."
-          value={answers.progress}
-          onChange={(value) => update("progress", value)}
-          disabled={locked}
-        />
-
-        {/* PENDING-BACKEND(kpis): uncomment once weekly metrics store it.
-        <ReflectionField
-          label="Weekly KPIs"
-          placeholder="Example: Ship 3 components to the design library"
-          value={answers.kpis}
-          onChange={(value) => update("kpis", value)}
-          disabled={locked}
-        />
-        */}
       </Section>
 
       <Section label="Weekly Reflection">
-        {/* PENDING-BACKEND(wentWell): uncomment once weekly metrics store it.
         <ReflectionField
           label="What went well?"
           placeholder="Example: I finally understood how variants work in the design system"
@@ -461,17 +448,7 @@ function FormView({
           onChange={(value) => update("wentWell", value)}
           disabled={locked}
         />
-        */}
 
-        <ReflectionField
-          label="What didn't go well?"
-          placeholder="Example: I spent too long on a problem I could have asked for help with sooner"
-          value={answers.didntGoWell}
-          onChange={(value) => update("didntGoWell", value)}
-          disabled={locked}
-        />
-
-        {/* PENDING-BACKEND(doDifferently): uncomment once weekly metrics store it.
         <ReflectionField
           label="What will you do differently?"
           placeholder="Example: Ask my mentor for feedback earlier in the week"
@@ -479,7 +456,6 @@ function FormView({
           onChange={(value) => update("doDifferently", value)}
           disabled={locked}
         />
-        */}
       </Section>
 
       {!locked && (
@@ -728,26 +704,9 @@ function HistoryDetailView({
 
       <Section label="Mentor Check-in">
         <MentorNotes metric={entry} />
-        <ReflectionField
-          label="How are you progressing?"
-          placeholder=""
-          value={answers.progress}
-          onChange={() => {}}
-          disabled
-        />
-        {/* PENDING-BACKEND(kpis): uncomment once weekly metrics store it.
-        <ReflectionField
-          label="Weekly KPIs"
-          placeholder=""
-          value={answers.kpis}
-          onChange={() => {}}
-          disabled
-        />
-        */}
       </Section>
 
       <Section label="Weekly Reflection">
-        {/* PENDING-BACKEND(wentWell): uncomment once weekly metrics store it.
         <ReflectionField
           label="What went well?"
           placeholder=""
@@ -755,15 +714,6 @@ function HistoryDetailView({
           onChange={() => {}}
           disabled
         />
-        */}
-        <ReflectionField
-          label="What didn't go well?"
-          placeholder=""
-          value={answers.didntGoWell}
-          onChange={() => {}}
-          disabled
-        />
-        {/* PENDING-BACKEND(doDifferently): uncomment once weekly metrics store it.
         <ReflectionField
           label="What will you do differently?"
           placeholder=""
@@ -771,7 +721,6 @@ function HistoryDetailView({
           onChange={() => {}}
           disabled
         />
-        */}
       </Section>
     </div>
   );

@@ -1,143 +1,85 @@
 "use client";
 
-import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { cn } from "@/lib/utils";
-import {
-  checkInQuestions,
-  checkIns,
-  type CheckInStatus,
-} from "@/app/admin/students/[id]/profile-data";
-import { BrandBadge, Card, CardHeader } from "./shared";
+import { CheckInsView } from "@/components/control-tower/CheckIns";
+import { GoalsAndKpis } from "@/components/control-tower/GoalsAndKpis";
+import { Skeleton } from "@/components/ui/skeleton";
+import { controlTowerKeys, controlTowerQueries } from "@/lib/control-tower";
+import { Card } from "./shared";
 
-const checkInStatus: Record<
-  CheckInStatus,
-  { label: string; text: string }
-> = {
-  ongoing: { label: "Ongoing", text: "text-text-info" },
-  pending: { label: "Pending", text: "text-text-warning" },
-  overdue: { label: "Overdue", text: "text-text-error" },
-  submitted: { label: "Submitted", text: "text-text-success" },
-};
-
-function answeredCount(answers: Record<string, string | undefined>) {
-  return Object.values(answers).filter(Boolean).length;
-}
-
+/* A student's Control Tower as a super admin sees it: their weekly check-ins,
+   and their goals and KPIs. Needs the student's profile id, not their user id. */
 export function ControlTowerTab({
+  studentProfileId,
   firstName,
   cohort,
 }: {
+  studentProfileId: string | undefined;
   firstName: string;
   cohort?: string;
 }) {
-  const [weekId, setWeekId] = React.useState(checkIns[0].id);
-  const current = checkIns.find((item) => item.id === weekId) ?? checkIns[0];
-  const answered = answeredCount(current.answers);
+  const profileId = studentProfileId ?? "";
+  const towerQuery = useQuery(controlTowerQueries.forStudent(profileId));
+  const metricsQuery = useQuery(controlTowerQueries.weeklyMetrics(profileId));
+
+  if (!studentProfileId) {
+    return (
+      <Card>
+        <p className="font-work text-sm text-text-secondary">
+          {firstName} isn&apos;t in a cohort yet, so there&apos;s no Control Tower
+          to show.
+        </p>
+      </Card>
+    );
+  }
+
+  if (towerQuery.isPending || metricsQuery.isPending) {
+    return (
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,391fr)_minmax(0,721fr)]">
+        <Skeleton className="h-80 w-full rounded-xl" />
+        <Skeleton className="h-[480px] w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  const error = towerQuery.error ?? metricsQuery.error;
+  if (error) {
+    return (
+      <Card>
+        <p role="alert" className="font-work text-sm text-text-error">
+          Couldn&apos;t load {firstName}&apos;s Control Tower. {error.message}
+        </p>
+      </Card>
+    );
+  }
+
+  const tower = towerQuery.data;
+  /* Week numbers come from the cohort timeline, matched on the saved week. */
+  const weekNumbers = new Map(
+    (tower?.timeline ?? [])
+      .filter((week) => week.metricId)
+      .map((week) => [week.metricId!, week.weekNumber]),
+  );
 
   return (
-    <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,391fr)_minmax(0,721fr)]">
-      <Card className="gap-3">
-        <CardHeader
-          size="h4"
-          title="Weekly check-ins"
-          subtitle={cohort}
-          subtitleClassName="text-[13px]/[18px]"
+    <CheckInsView
+      firstName={firstName}
+      cohort={cohort}
+      weeks={metricsQuery.data ?? []}
+      weekNumbers={weekNumbers}
+      side={
+        <GoalsAndKpis
+          studentProfileId={profileId}
+          goals={tower?.goals ?? []}
+          kpis={
+            tower?.kpis?.items ?? (tower?.goals ?? []).flatMap((goal) => goal.kpis ?? [])
+          }
+          summary={tower?.kpis?.summary}
+          editable={false}
+          queryKey={controlTowerKeys.forStudent(profileId)}
         />
-        {/* The design leaves an empty 8px row under the header. */}
-        <div aria-hidden className="h-2" />
-        <ul className="flex flex-col">
-          {checkIns.map((item) => {
-            const active = item.id === current.id;
-            const status = checkInStatus[item.status];
-            const count = answeredCount(item.answers);
-            return (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setWeekId(item.id)}
-                  className={cn(
-                    "flex w-full items-center justify-between gap-3 rounded-lg p-2 text-left",
-                    active ? "bg-brand-100" : "hover:bg-surface-background",
-                  )}
-                >
-                  <span className="flex min-w-0 flex-col gap-1">
-                    <span className="text-base font-medium text-text-primary">
-                      Week {item.week}
-                    </span>
-                    <span className="truncate font-work text-sm text-text-primary">
-                      {item.range}
-                    </span>
-                  </span>
-                  <span className="flex w-[85px] shrink-0 flex-col items-end gap-1">
-                    <BrandBadge className={status.text}>{status.label}</BrandBadge>
-                    <span className="font-work text-sm text-text-secondary">
-                      {count === 0 ? "--" : `${count} answered`}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
-
-      <div className="flex min-w-0 flex-col gap-4">
-        <Card className="flex-row items-center justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="text-xl font-semibold text-text-primary">
-              Week {current.week} check-in
-            </h2>
-            <p className="font-work text-sm text-text-primary">
-              {current.range}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-start gap-1">
-            <p className="text-base font-medium text-text-primary">
-              {current.status === "ongoing"
-                ? "Week in progress"
-                : `Week ${checkInStatus[current.status].label.toLowerCase()}`}
-            </p>
-            {current.daysLeft !== undefined && (
-              <BrandBadge size="lg" className="text-text-warning">
-                {current.daysLeft} days left
-              </BrandBadge>
-            )}
-          </div>
-        </Card>
-
-        <Card className="gap-3">
-          <div className="flex items-start justify-between gap-4 border-b border-border-default pb-3">
-            <CardHeader
-              size="h4"
-              title="Student responses"
-              subtitle={`Here are ${firstName}’s answers for this week’s check-in.`}
-            />
-            <p className="shrink-0 font-work text-sm font-medium tracking-[-0.01em] text-text-primary">
-              {answered}/{checkInQuestions.length} Answered
-            </p>
-          </div>
-
-          {checkInQuestions.map((question) => (
-            <React.Fragment key={question.key}>
-              {"section" in question && (
-                <BrandBadge className="w-fit text-text-info">
-                  {question.section}
-                </BrandBadge>
-              )}
-              <div className="flex flex-col gap-1">
-                <p className="py-0.5 text-sm font-medium text-text-primary">
-                  {question.label}
-                </p>
-                <p className="h-[100px] overflow-y-auto rounded-xl bg-surface-subtle p-3 font-work text-[13px]/[18px] whitespace-pre-line text-text-primary">
-                  {current.answers[question.key] || "--"}
-                </p>
-              </div>
-            </React.Fragment>
-          ))}
-        </Card>
-      </div>
-    </div>
+      }
+    />
   );
 }

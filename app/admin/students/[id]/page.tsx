@@ -221,7 +221,11 @@ export default function StudentDetailsPage({
             <ProgressTab track={assignments?.tracks[0]} cohort={cohort} />
           )}
           {student && tab === "control-tower" && (
-            <ControlTowerTab firstName={firstName} cohort={cohort} />
+            <ControlTowerTab
+              studentProfileId={student.studentProfile?.[0]?.id}
+              firstName={firstName}
+              cohort={cohort}
+            />
           )}
           {student && tab === "activity" && (
             <ActivityTab firstName={firstName} />

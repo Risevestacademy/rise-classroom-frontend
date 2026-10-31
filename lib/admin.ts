@@ -17,6 +17,9 @@ export type InstructorAssignment = {
 
 /** A student's cohort membership and the tracks they're enrolled on. */
 export type StudentMembership = {
+  /* The student profile id, which per-student endpoints like the Control Tower use.
+     Not in the API docs, so it may be missing. */
+  id?: string;
   cohort?: NamedRef & { year?: string };
   enrollment?: { status: string; track?: NamedRef }[];
 };
