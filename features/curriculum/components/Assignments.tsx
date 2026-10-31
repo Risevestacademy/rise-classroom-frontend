@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { NotebookPen, Plus } from "lucide-react";
+import { NotebookPen, Pencil, Plus } from "lucide-react";
 
 import { PersonAvatar } from "@/components/PersonAvatar";
 import {
@@ -25,12 +25,13 @@ import { DetailRows, DetailSheet } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurriculumScope } from "@/features/curriculum/scope";
 import { formatDate, formatTime } from "@/features/curriculum/mappers";
+import { SubmissionReviewPanel } from "@/features/curriculum/components/SubmissionReview";
 import {
+  submissionBadges,
   submissionTypes,
   type CurriculumAssignment,
   type ModuleAssignment,
   type ModuleStatus,
-  type SubmissionStatus,
 } from "@/features/curriculum/types";
 
 export function AddAssignmentButton({
@@ -60,7 +61,7 @@ export function AssignmentsTab({
   studentCount: number;
   onOpenAssignment: (assignmentId: string) => void;
 }) {
-  const { api, permissions } = useCurriculumScope();
+  const { api, paths, permissions } = useCurriculumScope();
   const queryClient = useQueryClient();
   const assignmentsQuery = useQuery(api.queries.assignments(curriculumId));
   const columnCount = permissions.canViewSubmissions ? 7 : 6;
@@ -147,7 +148,38 @@ export function AssignmentsTab({
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {assignmentsQuery.isPending ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <tr key={index} className="border-b border-neutral-200">
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-4" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="mt-1.5 h-4 w-24" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="mt-1.5 h-4 w-28" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="mt-1.5 h-4 w-28" />
+                  </td>
+                  {permissions.canViewSubmissions && (
+                    <td className="px-4 py-5">
+                      <Skeleton className="h-4 w-10" />
+                    </td>
+                  )}
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </td>
+                  <td className="px-4 py-5">
+                    <Skeleton className="h-4 w-4" />
+                  </td>
+                </tr>
+              ))
+            ) : filtered.length === 0 ? (
               <tr>
                 <td
                   colSpan={columnCount}
@@ -215,6 +247,7 @@ export function AssignmentsTab({
                         label={assignment.title}
                         status={assignment.status}
                         onView={() => onOpenAssignment(assignment.id)}
+                        editHref={paths.editAssignment(curriculumId, assignment.id)}
                         onToggleStatus={() =>
                           statusMutation.mutate({
                             id: assignment.id,
@@ -286,7 +319,7 @@ export function AssignmentSheet({
   assignmentId: string;
   onClose: () => void;
 }) {
-  const { api, permissions } = useCurriculumScope();
+  const { api, paths, permissions } = useCurriculumScope();
   const assignmentQuery = useQuery(
     api.queries.assignment(curriculumId, assignmentId),
   );
@@ -313,7 +346,10 @@ export function AssignmentSheet({
             ))}
           </TabsList>
           <TabsContent value="overview">
-            <OverviewPanel assignment={assignment} />
+            <OverviewPanel
+              assignment={assignment}
+              editHref={paths.editAssignment(curriculumId, assignment.id)}
+            />
           </TabsContent>
           {permissions.canViewSubmissions && (
             <TabsContent value="submissions">
@@ -329,7 +365,13 @@ export function AssignmentSheet({
   );
 }
 
-function OverviewPanel({ assignment }: { assignment: ModuleAssignment }) {
+function OverviewPanel({
+  assignment,
+  editHref,
+}: {
+  assignment: ModuleAssignment;
+  editHref: string;
+}) {
   const details: { label: string; value: React.ReactNode }[] = [
     { label: "Type", value: assignment.type },
     {
@@ -363,10 +405,23 @@ function OverviewPanel({ assignment }: { assignment: ModuleAssignment }) {
 
   return (
     <>
-      <DialogTitle className="text-2xl">{assignment.title}</DialogTitle>
-      <p className="mt-1 text-sm text-neutral-500">
-        {assignment.type} · {assignment.mode}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <DialogTitle className="text-2xl">{assignment.title}</DialogTitle>
+          <p className="mt-1 text-sm text-neutral-500">
+            {assignment.type} · {assignment.mode}
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          nativeButton={false}
+          render={<Link href={editHref} />}
+          className="border-neutral-200 text-neutral-800"
+        >
+          <Pencil className="h-4 w-4" />
+          Edit assignment
+        </Button>
+      </div>
 
       <div className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="rounded-xl border border-neutral-100 p-5 shadow-sm">
@@ -417,22 +472,22 @@ function BriefItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-const submissionBadges: Record<
-  SubmissionStatus,
-  { label: string; status: "neutral" | "info" | "warning" | "error" | "success" }
-> = {
-  DRAFT: { label: "Draft", status: "neutral" },
-  SUBMITTED: { label: "Submitted", status: "info" },
-  UNDER_REVIEW: { label: "Under review", status: "warning" },
-  CHANGES_REQUESTED: { label: "Changes requested", status: "error" },
-  GRADED: { label: "Graded", status: "success" },
-};
-
-/* Students' submissions, loaded from the API. Reviewing them isn't built yet. */
+/* Students' submissions, loaded from the API. Opening one shows the work and the review actions. */
 function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
   const { api } = useCurriculumScope();
   const submissionsQuery = useQuery(api.queries.submissions(assignment.id));
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [openId, setOpenId] = React.useState<string | null>(null);
+
+  if (openId) {
+    return (
+      <SubmissionReviewPanel
+        assignmentId={assignment.id}
+        submissionId={openId}
+        onBack={() => setOpenId(null)}
+      />
+    );
+  }
   const submissions = submissionsQuery.data ?? [];
   const allSelected =
     submissions.length > 0 && submissions.every((s) => selectedIds.has(s.id));
@@ -446,9 +501,24 @@ function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
 
   if (submissionsQuery.isPending) {
     return (
-      <p className="py-10 text-center text-sm text-neutral-400">
-        Loading submissions…
-      </p>
+      <div className="flex flex-col">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-4 border-b border-neutral-200 px-4 py-5"
+          >
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-6 w-24 rounded-full" />
+            <Skeleton className="h-4 w-8" />
+          </div>
+        ))}
+      </div>
     );
   }
 
@@ -501,7 +571,8 @@ function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
             <th className="px-4 py-4 font-medium normal-case">Student</th>
             <th className="px-4 py-4 font-medium">Date submitted</th>
             <th className="px-4 py-4 font-medium">Status</th>
-            <th className="rounded-r-lg px-4 py-4 font-medium">Grade</th>
+            <th className="px-4 py-4 font-medium">Grade</th>
+            <th className="w-24 rounded-r-lg px-4 py-4 font-medium">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -518,9 +589,13 @@ function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
                 <div className="flex items-center gap-3">
                   <PersonAvatar name={submission.studentName} size={40} />
                   <div>
-                    <p className="font-medium text-neutral-800">
+                    <button
+                      type="button"
+                      onClick={() => setOpenId(submission.id)}
+                      className="text-left font-medium text-neutral-800 hover:underline"
+                    >
                       {submission.studentName}
-                    </p>
+                    </button>
                     <p className="text-neutral-500">
                       {submission.studentEmail}
                     </p>
@@ -554,6 +629,19 @@ function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
               </td>
               <td className="px-4 py-5 text-neutral-600">
                 {submission.grade ?? "--"}
+              </td>
+              <td className="px-4 py-5">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setOpenId(submission.id)}
+                  className="border-neutral-200 text-neutral-800"
+                >
+                  {submission.status === "SUBMITTED" ||
+                  submission.status === "UNDER_REVIEW"
+                    ? "Review"
+                    : "View"}
+                </Button>
               </td>
             </tr>
           ))}

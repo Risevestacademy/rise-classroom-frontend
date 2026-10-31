@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { CurriculumSummaryCard } from "@/features/curriculum/components/CurriculumSummaryCard";
 import { ModuleAccessCard } from "@/features/curriculum/components/ModuleAccessCard";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { InfoNote } from "@/components/ui/info-note";
 import { FileChip } from "@/components/ui/file-upload";
 import { StatusBadge } from "@/features/curriculum/components/ContentTable";
@@ -46,6 +47,49 @@ function formatClassDate(value: string) {
     .replace(/,(?= \d{4})/, "");
 }
 */
+
+/*
+ * The page's shape while the module loads. Also the route's loading.tsx, so it
+ * shows straight away instead of a blank page while the server answers.
+ */
+export function ModuleDetailSkeleton() {
+  const { TopNav, breadcrumbRoot } = useCurriculumScope();
+
+  return (
+    <>
+      <TopNav breadcrumb={breadcrumbRoot} />
+      <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+        <div className="flex justify-end gap-3">
+          <Skeleton className="h-11 w-36 rounded-lg" />
+          <Skeleton className="h-11 w-36 rounded-lg" />
+        </div>
+        <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="flex min-w-0 flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-7 w-72" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className="rounded-xl border border-neutral-200 bg-white p-5"
+              >
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="mt-2 h-4 w-64" />
+                <Skeleton className="mt-4 h-16 w-full rounded-xl" />
+              </div>
+            ))}
+          </div>
+          <aside className="flex flex-col gap-4">
+            <Skeleton className="h-48 w-full rounded-xl" />
+            <Skeleton className="h-36 w-full rounded-xl" />
+          </aside>
+        </div>
+      </main>
+    </>
+  );
+}
 
 export function ModuleDetailScreen({
   id,
@@ -87,7 +131,20 @@ export function ModuleDetailScreen({
   const modules = modulesQuery.data ?? [];
   const position = modules.findIndex((m) => m.id === moduleId) + 1;
 
-  if (!curriculum || !curriculumModule) return null;
+  if (!curriculum || !curriculumModule) {
+    const error = curriculumQuery.error ?? moduleQuery.error;
+    if (!error) return <ModuleDetailSkeleton />;
+    return (
+      <>
+        <TopNav breadcrumb={breadcrumbRoot} />
+        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+          <p className="py-10 text-center text-sm text-text-error">
+            {error.message}
+          </p>
+        </main>
+      </>
+    );
+  }
 
   const editHref = paths.editModule(id, moduleId);
 

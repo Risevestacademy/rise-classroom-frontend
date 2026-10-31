@@ -1,36 +1,43 @@
 import Image from "next/image";
 import Link from "next/link";
 
-// TODO: Contact, Help Center and the legal pages don't exist yet; point these at them when they do.
+/* TODO: Help Center and Terms of Service don't exist yet; point these at them
+   when they do. Section links are rooted at "/" so they also work from the
+   privacy policy page. */
+/* Same inbox as the pricing section's "Contact us". */
+const contactEmail = "contact@riseclassroom.com";
+
 const FOOTER_COLUMNS = [
   {
     title: "Platform",
     links: [
-      { label: "Overview", href: "#product" },
-      { label: "Features", href: "#solutions" },
-      { label: "Pricing", href: "#pricing" },
+      { label: "Overview", href: "/#product" },
+      { label: "Features", href: "/#solutions" },
+      { label: "Pricing", href: "/#pricing" },
     ],
   },
   {
     title: "Solutions",
     links: [
-      { label: "For Organizations", href: "#solutions" },
-      { label: "For Instructors", href: "#solutions" },
+      { label: "For Organizations", href: "/#solutions" },
+      { label: "For Instructors", href: "/#solutions" },
     ],
   },
   {
     title: "Resources",
     links: [
-      { label: "FAQs", href: "#faq" },
-      { label: "Contact", href: "#" },
-      { label: "Help Center", href: "#" },
+      { label: "FAQs", href: "/#faq" },
+      { label: "Contact", href: `mailto:${contactEmail}` },
+      /* Hidden until the Help Center page exists. */
+      /* { label: "Help Center", href: "#" }, */
     ],
   },
   {
     title: "Legal",
     links: [
-      { label: "Privacy Policy", href: "#" },
-      { label: "Terms of Service", href: "#" },
+      { label: "Privacy Policy", href: "/privacy-policy" },
+      /* Hidden until the Terms of Service page exists. */
+      /* { label: "Terms of Service", href: "#" }, */
     ],
   },
 ];

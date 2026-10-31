@@ -3,20 +3,23 @@ import Link from "next/link";
 
 import { RollText } from "@/components/landing/RollText";
 
+/* Rooted at "/" so they also work from other pages, like the privacy policy. */
 const NAV_LINKS = [
-  { label: "Product", href: "#product" },
-  { label: "Solutions", href: "#solutions" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Product", href: "/#product" },
+  { label: "Solutions", href: "/#solutions" },
+  { label: "Pricing", href: "/#pricing" },
 ];
 
-export function LandingNav() {
+/* intro={false} leaves out the hero intro hook, which keeps the nav hidden
+   until the home page's intro animation shows it. */
+export function LandingNav({ intro = true }: { intro?: boolean }) {
   return (
     <header
       data-landing-nav
       className="group fixed inset-x-0 top-0 z-50 bg-white transition-[background-color,box-shadow] duration-500 data-[scrolled=true]:bg-white/80 data-[scrolled=true]:shadow-[0_1px_0_rgb(17_24_25/0.06)] data-[scrolled=true]:backdrop-blur-md"
     >
       <nav
-        data-intro="nav"
+        data-intro={intro ? "nav" : undefined}
         className="mx-auto flex h-[72px] w-full max-w-[1200px] items-center px-4 transition-[height] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] lg:h-[100px] lg:group-data-[scrolled=true]:h-[72px] xl:px-0"
       >
         <Link href="/" aria-label="Rise Classroom home" className="shrink-0">

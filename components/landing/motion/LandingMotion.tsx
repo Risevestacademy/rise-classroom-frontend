@@ -28,7 +28,10 @@ import {
  * carry data attributes; all motion lives here so the sections can stay
  * server components.
  */
-export function LandingMotion() {
+/* Pages that reuse the landing nav and footer (like the privacy policy) pass
+   sections={false}: they keep the smooth scrolling, nav and footer motion but
+   skip the hero intro and the home page's section animations. */
+export function LandingMotion({ sections = true }: { sections?: boolean }) {
   useEffect(() => {
     if (window.matchMedia(MEDIA.reduce).matches) return;
 
@@ -79,6 +82,15 @@ export function LandingMotion() {
     navScrolledState();
 
     const mm = gsap.matchMedia();
+
+    if (!sections) {
+      mm.add(MEDIA.motion, () => {
+        navAutoHide();
+        footerReveal();
+      });
+      mm.add(MEDIA.reduce, () => navAutoHide({ followScroll: false }));
+      return;
+    }
 
     mm.add(MEDIA.motion, () => {
       heroIntro();

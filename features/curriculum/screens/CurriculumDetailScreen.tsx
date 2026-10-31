@@ -39,6 +39,7 @@ import { SettingsTab } from "@/features/curriculum/components/SettingsTab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SuccessToast } from "@/components/ui/toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/lib/api";
@@ -72,6 +73,45 @@ export type CurriculumDetailSearchParams = {
   created?: string;
   module?: string;
 };
+
+/*
+ * The page's shape while the curriculum loads. Also the route's loading.tsx, so it
+ * shows straight away instead of a blank page while the server answers.
+ */
+export function CurriculumDetailSkeleton() {
+  const { TopNav, breadcrumbRoot } = useCurriculumScope();
+
+  return (
+    <>
+      <TopNav breadcrumb={breadcrumbRoot} />
+      <main className="relative min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+        <Skeleton className="h-32 w-full rounded-2xl sm:h-40" />
+        <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-40" />
+            <div className="mt-5 flex flex-wrap gap-6">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <Skeleton key={index} className="h-10 w-28" />
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <Skeleton className="h-4 w-44" />
+            <Skeleton className="h-4 w-36" />
+          </div>
+        </div>
+        <Skeleton className="mt-8 h-10 w-full max-w-2xl rounded-full" />
+        <div className="mt-6 flex max-w-2xl flex-col gap-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+        </div>
+      </main>
+    </>
+  );
+}
 
 export function CurriculumDetailScreen({
   id,
@@ -127,7 +167,19 @@ export function CurriculumDetailScreen({
   }
 
   const curriculum = curriculumQuery.data;
-  if (!curriculum) return null;
+  if (!curriculum) {
+    if (!curriculumQuery.isError) return <CurriculumDetailSkeleton />;
+    return (
+      <>
+        <TopNav breadcrumb={breadcrumbRoot} />
+        <main className="relative min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+          <p className="py-10 text-center text-sm text-text-error">
+            {curriculumQuery.error.message}
+          </p>
+        </main>
+      </>
+    );
+  }
 
   const track = trackDetails(curriculum.track.name);
 
@@ -454,6 +506,25 @@ function ModulesTab({ curriculumId }: { curriculumId: string }) {
       <p className="py-10 text-center text-sm text-neutral-400">
         No modules yet. Add a module to start building this curriculum.
       </p>
+    );
+  }
+
+  if (modulesQuery.isPending) {
+    return (
+      <div className="flex max-w-4xl flex-col gap-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="flex items-start gap-3">
+            <Skeleton className="mt-5 h-5 w-5" />
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl bg-white p-5 shadow-sm sm:p-6">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-6 w-56" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+              <Skeleton className="h-9 w-9 rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
     );
   }
 

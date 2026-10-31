@@ -151,6 +151,112 @@ describe("assignment submissions for instructors", () => {
   });
 });
 
+/* Opens Bayo's submission from the Submissions tab, with the detail and review routes mocked. */
+async function openReview(detail: Record<string, unknown>) {
+  const reviews: unknown[] = [];
+  const api = mockApi({
+    ...routes(
+      "instructor",
+      page([
+        submission({
+          id: "s2",
+          studentProfile: { id: "p2", user: { id: "u2", name: "Bayo Ade", email: "bayo@example.com" } },
+        }),
+      ]),
+    ),
+    "GET /instructor/submissions/s2": envelope({
+      ...timestamps,
+      id: "s2",
+      assignmentId: "a1",
+      submissionType: "LINK",
+      linkUrl: "https://figma.com/file/grid",
+      status: "SUBMITTED",
+      submittedAt: "2026-09-10T14:30:00.000Z",
+      isLate: false,
+      studentProfile: { id: "p2", user: { id: "u2", name: "Bayo Ade", email: "bayo@example.com" } },
+      enrollment: { id: "e2", cohort: { id: "co1", name: "Cohort 4" } },
+      ...detail,
+    }),
+    "POST /instructor/submissions/s2/review": (body: unknown) => {
+      reviews.push(body);
+      return envelope({ id: "s2" });
+    },
+  });
+  const view = renderWithClient(
+    <CurriculumScopeProvider role="instructor">{sheet}</CurriculumScopeProvider>,
+  );
+  await openSubmissions(view.user);
+  await view.user.click(await screen.findByRole("button", { name: "Review" }));
+  return { ...view, api, reviews };
+}
+
+describe("reviewing a submission", () => {
+  it("shows the student's work and grades it out of 100 with feedback", async () => {
+    const { user, reviews } = await openReview({});
+
+    expect(await screen.findByText("https://figma.com/file/grid")).toBeInTheDocument();
+    expect(screen.getByText("bayo@example.com · Cohort 4")).toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText("e.g. 85"), "90");
+    await user.type(
+      screen.getByPlaceholderText("What went well, and what to work on next"),
+      "Clear grid, tighten the type scale",
+    );
+    await user.click(screen.getByRole("button", { name: "Save grade" }));
+
+    await vi.waitFor(() =>
+      expect(reviews).toEqual([
+        { status: "GRADED", grade: 90, feedback: "Clear grid, tighten the type scale" },
+      ]),
+    );
+  });
+
+  it("won't save a grade outside 0 to 100", async () => {
+    const { user } = await openReview({});
+
+    await user.type(await screen.findByPlaceholderText("e.g. 85"), "120");
+
+    expect(screen.getByText("Enter a whole number from 0 to 100")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save grade" })).toBeDisabled();
+  });
+
+  it("starts a review", async () => {
+    const { user, reviews } = await openReview({});
+
+    await user.click(await screen.findByRole("button", { name: "Start review" }));
+
+    await vi.waitFor(() => expect(reviews).toEqual([{ status: "UNDER_REVIEW" }]));
+  });
+
+  it("sends the work back with a reason when changes are needed", async () => {
+    const { user, reviews } = await openReview({ status: "UNDER_REVIEW" });
+
+    await user.click(await screen.findByRole("button", { name: "Request changes" }));
+    const send = screen.getByRole("button", { name: "Send to student" });
+    expect(send).toBeDisabled();
+
+    await user.type(
+      screen.getByPlaceholderText("Explain what needs to change before you can grade it"),
+      "Add the mobile layout",
+    );
+    await user.click(send);
+
+    await vi.waitFor(() =>
+      expect(reviews).toEqual([
+        { status: "CHANGES_REQUESTED", changesRequestedReason: "Add the mobile layout" },
+      ]),
+    );
+  });
+
+  it("shows the grade instead of the form once graded", async () => {
+    await openReview({ status: "GRADED", grade: 78, feedback: "Good start" });
+
+    expect(await screen.findByText("78")).toBeInTheDocument();
+    expect(screen.getByText("Good start")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save grade" })).not.toBeInTheDocument();
+  });
+});
+
 describe("assignment submissions for admins", () => {
   /* The API has no admin submissions endpoint, so admins don't get the tab or the column. */
   it("has no Submissions tab", async () => {

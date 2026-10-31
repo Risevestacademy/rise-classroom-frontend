@@ -80,6 +80,28 @@ export type SubmissionStatus =
   | "CHANGES_REQUESTED"
   | "GRADED";
 
+/* How each submission status is labelled and coloured, for students and instructors alike. */
+export const submissionBadges: Record<
+  SubmissionStatus,
+  { label: string; status: "neutral" | "info" | "warning" | "error" | "success" }
+> = {
+  DRAFT: { label: "Draft", status: "neutral" },
+  SUBMITTED: { label: "Submitted", status: "info" },
+  UNDER_REVIEW: { label: "Under review", status: "warning" },
+  CHANGES_REQUESTED: { label: "Changes requested", status: "error" },
+  GRADED: { label: "Graded", status: "success" },
+};
+
+/* The work a student hands in. Which field is filled depends on `submissionType`. */
+export type SubmittedWork = {
+  submissionType: SubmissionType;
+  linkUrl?: string | null;
+  textContent?: string | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileSizeBytes?: number | null;
+};
+
 /* A student's submission as the Submissions tab shows it. */
 export type AssignmentSubmission = {
   id: string;
@@ -291,6 +313,31 @@ export type NoteRecord = Timestamps & {
   pinned?: boolean;
   author?: { firstName: string; lastName: string } | null;
 };
+
+/* GET /instructor/submissions/{id}: one submission with the work and any review. */
+export type SubmissionDetail = SubmittedWork & {
+  id: string;
+  assignmentId: string;
+  status: SubmissionStatus;
+  submittedAt?: string | null;
+  isLate: boolean;
+  grade?: number | null;
+  feedback?: string | null;
+  reviewedAt?: string | null;
+  changesRequestedReason?: string | null;
+  studentProfile?: {
+    id: string;
+    user: { id: string; name: string; email: string; image?: string | null };
+  };
+  enrollment?: { id: string; cohort?: { id: string; name: string } };
+  reviewer?: { name: string } | null;
+};
+
+/* POST /instructor/submissions/{id}/review takes one of these. */
+export type SubmissionReview =
+  | { status: "UNDER_REVIEW" }
+  | { status: "CHANGES_REQUESTED"; changesRequestedReason: string }
+  | { status: "GRADED"; grade: number; feedback?: string };
 
 /* A row from GET /instructor/assignments/{id}/submissions; only the fields the UI reads. */
 export type AssignmentSubmissionRecord = Timestamps & {
