@@ -3,21 +3,31 @@ import { queryOptions } from "@tanstack/react-query";
 import { api, type Envelope } from "@/lib/api";
 import type { TrackKey } from "@/app/admin/cohorts/cohort-data";
 
-/** Platform-wide figures from the admin control tower. */
+/**
+ * Figures from the admin control tower, as the live API returns them (the
+ * API docs describe an older shape). `cohortId` only narrows totalStudents;
+ * the rest are platform-wide and all-time.
+ */
 export type AdminControlTower = {
-  overview: {
+  metricsOverview: {
     totalStudents: number;
-    totalMentors: number;
+    totalActiveMentorships: number;
     totalGoals: number;
+    completedGoals: number;
+    goalCompletionRate: number;
     totalKpis: number;
-    metricsSubmittedThisWeek: number;
+    achievedKpis: number;
+    inProgressKpis: number;
+    kpiAchievementRate: number;
+    totalWeeklyMetrics: number;
+    submittedMetrics: number;
+    reviewedMetrics: number;
   };
   cohorts: {
     id: string;
     name: string;
-    studentCount: number;
-    metricsSubmissionRate?: number;
-    kpiAchievementRate?: number;
+    year: string;
+    _count: { students: number };
   }[];
 };
 
@@ -184,6 +194,7 @@ const mockNotifications: AdminNotification[] = [
 ];
 
 export const adminDashboardKeys = {
+  allControlTowers: () => ["admin", "control-tower"] as const,
   controlTower: (cohortId?: string) =>
     ["admin", "control-tower", cohortId] as const,
   notifications: () => ["admin", "notifications"] as const,

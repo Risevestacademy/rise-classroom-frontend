@@ -25,7 +25,6 @@ import { CircularProgress } from "@/components/ui/circular-progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminQueries } from "@/lib/admin";
 import {
-  adminDashboardQueries,
   dashboardMock,
   type ActivityKind,
 } from "@/lib/admin-dashboard";
@@ -99,20 +98,12 @@ export default function AdminDashboardPage() {
       (Boolean(cohortId) && cohortTracks.isPending),
     isError: allActiveTracks.isError || cohortTracks.isError,
   };
-  const controlTower = useQuery({
-    ...adminDashboardQueries.controlTower(cohortId),
-    enabled: isReady,
-  });
 
   const tracks = (allActiveTracks.data ?? []).filter(
     (track) => !cohortId || (cohortTracks.data ?? []).includes(track.id),
   );
   const adminName = session.data?.user.firstName ?? "Admin";
 
-  const overview = controlTower.data?.overview;
-  const missingCheckIns = overview
-    ? Math.max(0, overview.totalStudents - overview.metricsSubmittedThisWeek)
-    : 0;
 
   return (
     <>
@@ -291,27 +282,15 @@ export default function AdminDashboardPage() {
                     title="Student at risk"
                     subtitle={`${dashboardMock.atRisk.newThisWeek} new this week`}
                   />
-                  {controlTower.isPending ? (
-                    <li className="py-3">
-                      <Skeleton className="h-12 w-full" />
-                    </li>
-                  ) : (
-                    <AttentionRow
-                      href="/admin/students"
-                      icon={Calendar03}
-                      iconClassName="text-text-warning"
-                      title={
-                        controlTower.isError
-                          ? "Couldn't load this week's check ins"
-                          : missingCheckIns === 0
-                            ? "Everyone has completed this week's check in"
-                            : `${missingCheckIns} ${
-                                missingCheckIns === 1 ? "student hasn't" : "students haven't"
-                              } completed this week's check in`
-                      }
-                      subtitle={checkInDue()}
-                    />
-                  )}
+                  {/* PENDING-BACKEND: the control tower only has all-time
+                    check-in totals, not who has checked in this week. */}
+                  <AttentionRow
+                    href="/admin/students"
+                    icon={Calendar03}
+                    iconClassName="text-text-warning"
+                    title="This week's check ins"
+                    subtitle={checkInDue()}
+                  />
                   {/* PENDING-BACKEND: admins can't list submissions awaiting grading. */}
                   <AttentionRow
                     href="/admin/curriculum"

@@ -68,7 +68,8 @@ const staffColumns = [
   {
     header: "Students",
     width: "w-[160px]",
-    cell: (row: CohortStaff) => `${row.students} students`,
+    cell: (row: CohortStaff) =>
+      row.students === null ? "--" : `${row.students} students`,
   },
   {
     header: "Status",
@@ -376,12 +377,22 @@ export default function CohortDetailPage({
           ))}
         {tab === "mentors" &&
           (cohort.mentorList.length === 0 ? (
-            // PENDING-BACKEND: there's no mentor role yet, so there's no
-            // invite action here.
             <CohortEmptyState
               icon={Mentor}
               title="No mentor yet"
-              description="Mentors assigned to this cohort will appear here."
+              description={
+                ended
+                  ? "This cohort ended without any mentors."
+                  : "Mentors assigned to this cohort will appear here."
+              }
+              action={
+                !ended && (
+                  <InviteInstructorDialog
+                    role="MENTOR"
+                    defaultCohortId={cohort.id}
+                  />
+                )
+              }
             />
           ) : (
             <CohortPeopleTable

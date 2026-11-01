@@ -300,9 +300,8 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
   const { tracks, cohorts } = assignmentsFor(student);
   const status = getStudentStatus(student);
 
-  // PENDING-BACKEND: the API has no phone number or location for a student.
   const details = [
-    { icon: Call02, value: "--" },
+    { icon: Call02, value: student.phoneNumber || "--" },
     {
       icon: Calendar03,
       value: student.onboardedAt
@@ -310,7 +309,7 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
         : `Invited ${formatLongDate(student.createdAt)}`,
     },
     { icon: Mail02, value: student.email },
-    { icon: Location01, value: "--" },
+    { icon: Location01, value: student.location || "--" },
   ];
 
   return (

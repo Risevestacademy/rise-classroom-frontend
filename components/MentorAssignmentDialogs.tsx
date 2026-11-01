@@ -22,6 +22,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { adminQueries, type AdminUser } from "@/lib/admin";
+import { adminDashboardKeys } from "@/lib/admin-dashboard";
 import {
   assignMentor,
   getAssignMentorErrorMessage,
@@ -119,6 +120,9 @@ function AssignStudentsForm({
     },
     onSuccess: ({ assigned, error }) => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({
+        queryKey: adminDashboardKeys.allControlTowers(),
+      });
       if (!error) {
         onOpenChange(false);
         return;
