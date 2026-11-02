@@ -232,7 +232,7 @@ function MentorBadges({ mentor }: { mentor: Mentor }) {
 /** The compact profile shown above the tabs on every tab but the Overview. */
 function MentorSummary({ mentor }: { mentor: Mentor }) {
   return (
-    <div className="mt-6 flex w-fit max-w-full items-center gap-3 rounded-lg bg-surface-default px-3 py-6 shadow-[0_1px_3px_rgb(0_0_0/0.25)]">
+    <div className="mt-6 flex w-full sm:w-fit max-w-full items-center gap-3 rounded-lg bg-surface-default px-3 py-6 shadow-[0_1px_3px_rgb(0_0_0/0.25)]">
       <PersonAvatar name={mentor.name} colorKey={mentor.id} size={60} />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="truncate text-lg/6 font-semibold text-text-primary">
