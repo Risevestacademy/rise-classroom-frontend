@@ -29,6 +29,11 @@ import {
 import type { WeeklyTask, WeeklyTaskStatus } from "@/lib/instructor";
 import { studentQueries } from "@/lib/student";
 import {
+  flattenTopics,
+  lessonQueries,
+  type LessonAssignment,
+} from "@/lib/student-lessons";
+import {
   assignmentHref,
   studentAssignmentQueries,
   type StudentSubmission,
@@ -36,7 +41,7 @@ import {
 
 type TabKey = "todo" | "submitted" | "reviewed" | "missed";
 
-/* One line in the table: a weekly task, or a curriculum assignment the student has started. */
+/* One line in the table: a weekly task, or a curriculum assignment, started or not. */
 type Row = {
   key: string;
   title: string;
@@ -57,6 +62,8 @@ type TabSetup = {
   statuses: WeeklyTaskStatus[];
   /* Curriculum submission statuses that belong in this tab. */
   submissionStatuses: SubmissionStatus[];
+  /* Curriculum assignments the student hasn't started: ones still open, or ones past their deadline. */
+  notStarted: "open" | "pastDue" | null;
   /** Ends the "4 assignments …" line above the table. */
   countLabel: string;
   /** Heading of the third column; its cell is rendered by `renderTabCell`. */
@@ -82,6 +89,7 @@ const tabConfig: Record<TabKey, TabSetup> = {
     label: "To do",
     statuses: ["PENDING", "IN_PROGRESS"],
     submissionStatuses: ["DRAFT", "CHANGES_REQUESTED"],
+    notStarted: "open",
     countLabel: "to do",
     column: "Deadline",
     sort: byDueDate,
@@ -97,6 +105,7 @@ const tabConfig: Record<TabKey, TabSetup> = {
     label: "Submitted",
     statuses: ["SUBMITTED"],
     submissionStatuses: ["SUBMITTED", "UNDER_REVIEW"],
+    notStarted: null,
     countLabel: "submitted",
     column: "Submitted",
     sort: newest("submittedAt"),
@@ -112,6 +121,7 @@ const tabConfig: Record<TabKey, TabSetup> = {
     label: "Reviewed",
     statuses: ["REVIEWED"],
     submissionStatuses: ["GRADED"],
+    notStarted: null,
     countLabel: "reviewed",
     column: "Result",
     sort: newest("reviewedAt"),
@@ -127,6 +137,7 @@ const tabConfig: Record<TabKey, TabSetup> = {
     label: "Missed",
     statuses: ["OVERDUE"],
     submissionStatuses: [],
+    notStarted: "pastDue",
     countLabel: "missed",
     column: "Closed",
     sort: newest("dueAt"),
@@ -196,11 +207,37 @@ function taskRow(task: WeeklyTask): Row {
   };
 }
 
-function submissionRow(submission: StudentSubmission): Row {
+/* A published assignment on one of the student's unlocked lessons, and where it sits. */
+type LessonAssignmentItem = { assignment: LessonAssignment; context: string };
+
+function isPastDue(dueAt: string | null | undefined) {
+  return Boolean(dueAt && new Date(dueAt).getTime() < Date.now());
+}
+
+function notStartedRow({ assignment, context }: LessonAssignmentItem): Row {
+  return {
+    key: `assignment-${assignment.id}`,
+    title: assignment.title,
+    context,
+    submitAs: assignment.submissionType ?? "FILE_UPLOAD",
+    dueAt: assignment.dueAt ?? null,
+    submittedAt: null,
+    reviewedAt: null,
+    isLate: false,
+    grade: null,
+    href: assignmentHref(assignment.id),
+    submissionStatus: null,
+  };
+}
+
+function submissionRow(
+  submission: StudentSubmission,
+  context = "Lesson assignment",
+): Row {
   return {
     key: `submission-${submission.id}`,
     title: submission.assignment?.title ?? "Assignment",
-    context: "Lesson assignment",
+    context,
     submitAs: submission.assignment?.submissionType ?? submission.submissionType,
     dueAt: submission.assignment?.dueAt ?? null,
     submittedAt: submission.submittedAt ?? null,
@@ -246,30 +283,90 @@ export default function StudentAssignmentsPage({
   });
   const submissions = submissionQueries.flatMap((q) => q.data?.items ?? []);
 
+  /*
+   * PENDING-BACKEND: there's no endpoint listing a student's assignments, so they're
+   * collected from each unlocked lesson, the same requests My Learning makes. Assignments
+   * on a whole module, not a lesson, aren't returned to students anywhere yet.
+   */
+  const enrollments = progressQuery.data ?? [];
+  const contentQueries = useQueries({
+    queries: enrollments.map((enrollment) =>
+      lessonQueries.content(enrollment.enrollmentId),
+    ),
+  });
+  const unlockedLessons = enrollments.flatMap((enrollment, index) =>
+    flattenTopics(contentQueries[index]?.data).flatMap((topic) =>
+      topic.lessons
+        .filter((lesson) => lesson.lock.unlocked)
+        .map((lesson) => ({
+          enrollmentId: enrollment.enrollmentId,
+          lessonId: lesson.id,
+          context: `${topic.title} · ${lesson.title}`,
+        })),
+    ),
+  );
+  const lessonDetailQueries = useQueries({
+    queries: unlockedLessons.map(({ enrollmentId, lessonId }) =>
+      lessonQueries.lesson(enrollmentId, lessonId),
+    ),
+  });
+  const lessonAssignments = new Map<string, LessonAssignmentItem>();
+  lessonDetailQueries.forEach((query, index) => {
+    for (const assignment of query.data?.assignments ?? []) {
+      if (assignment.publishStatus === "DRAFT") continue;
+      lessonAssignments.set(assignment.id, {
+        assignment,
+        context: unlockedLessons[index].context,
+      });
+    }
+  });
+  const startedIds = new Set(submissions.map((s) => s.assignmentId));
+  const tabNotStarted = setup.notStarted
+    ? [...lessonAssignments.values()].filter(
+        ({ assignment }) =>
+          !startedIds.has(assignment.id) &&
+          isPastDue(assignment.dueAt) === (setup.notStarted === "pastDue"),
+      )
+    : [];
+
   const isPending =
     statusQueries.some((q) => q.isPending) ||
     progressQuery.isPending ||
-    submissionQueries.some((q) => q.isPending);
+    submissionQueries.some((q) => q.isPending) ||
+    contentQueries.some((q) => q.isPending) ||
+    lessonDetailQueries.some((q) => q.isPending);
+  /* A lesson that fails to load is left out rather than hiding every other assignment. */
   const error =
     statusQueries.find((q) => q.error)?.error ??
-    submissionQueries.find((q) => q.error)?.error;
+    submissionQueries.find((q) => q.error)?.error ??
+    contentQueries.find((q) => q.error)?.error;
   const tabSubmissions = submissions.filter((submission) =>
     setup.submissionStatuses.includes(submission.status),
   );
+  const curriculumRows = [
+    ...tabSubmissions.map((submission) =>
+      submissionRow(
+        submission,
+        lessonAssignments.get(submission.assignmentId)?.context,
+      ),
+    ),
+    ...tabNotStarted.map(notStartedRow),
+  ];
   const rows = [
     ...statusQueries.flatMap((q) => (q.data?.items ?? []).map(taskRow)),
-    ...tabSubmissions.map(submissionRow),
+    ...curriculumRows,
   ].sort(setup.sort);
   const taskTotal = statusQueries.reduce(
     (sum, q) => sum + (q.data?.total ?? 0),
     0,
   );
-  const total = taskTotal + tabSubmissions.length;
-  const loadedTasks = rows.length - tabSubmissions.length;
+  const total = taskTotal + curriculumRows.length;
+  const loadedTasks = rows.length - curriculumRows.length;
   const hasNoTasksAtAll =
     activeTab === "todo" &&
     anyTasksQuery.data?.total === 0 &&
-    submissions.length === 0;
+    submissions.length === 0 &&
+    lessonAssignments.size === 0;
 
   return (
     <div className="flex flex-col gap-5">

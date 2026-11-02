@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { SubmissionType } from "@/features/curriculum/types";
 
 /** Base path of the learning pages. Change it here if the route is renamed. */
 export const LESSONS_BASE = "/student/my-learning";
@@ -61,6 +62,9 @@ export type LessonAssignment = {
   lessonId: string;
   title: string;
   description?: string | null;
+  dueAt?: string | null;
+  submissionType?: SubmissionType;
+  publishStatus?: "DRAFT" | "PUBLISHED";
 };
 
 export type LessonRecording = {
