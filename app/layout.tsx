@@ -3,7 +3,7 @@ import './globals.css';
 import { cn } from "@/lib/utils";
 import { ClarityInit } from '@/lib/analytics/ClarityInit';
 import { QueryProvider } from '@/components/QueryProvider';
-import { tomatoGrotesk, workSans } from './fonts';
+import { lato, workSans } from './fonts';
 import { Metadata } from 'next';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn(tomatoGrotesk.variable, workSans.variable, 'font-tomato')}>
+    <html lang="en" className={cn(lato.variable, workSans.variable, 'font-lato')}>
       <body>
         <ClarityInit />
         <QueryProvider>{children}</QueryProvider>

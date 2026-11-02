@@ -128,7 +128,7 @@ function RecurrenceForm({
 
   return (
     <>
-      <Popover.Title className="font-tomato text-lg leading-7 font-semibold">
+      <Popover.Title className="font-lato text-lg leading-7 font-semibold">
         Custom recurrence
       </Popover.Title>
 
@@ -272,14 +272,14 @@ function RecurrenceForm({
           variant="secondary"
           size="medium"
           onClick={onCancel}
-          className="border-neutral-200 px-5 font-tomato text-base font-normal text-text-secondary"
+          className="border-neutral-200 px-5 font-lato text-base font-normal text-text-secondary"
         >
           Cancel
         </Button>
         <Button
           size="medium"
           onClick={done}
-          className="px-5 font-tomato text-base font-normal"
+          className="px-5 font-lato text-base font-normal"
         >
           Done
         </Button>
