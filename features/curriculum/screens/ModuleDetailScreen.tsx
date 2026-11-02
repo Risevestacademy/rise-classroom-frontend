@@ -24,6 +24,7 @@ import { StatusBadge } from "@/features/curriculum/components/ContentTable";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api";
 import { useCurriculumScope } from "@/features/curriculum/scope";
+import { formatDate, formatTime } from "@/features/curriculum/mappers";
 import type {
   CurriculumModule,
   ModuleLesson,
@@ -319,7 +320,13 @@ export function ModuleDetailScreen({
                        `· ${assignment.type} · ${assignment.mode}` once it does. */
                     eyebrow={`Assignment ${index + 1}`}
                     item={assignment}
-                    editHref={editHref}
+                    /* Opens the assignment's own editor, which has the due date and submission type. */
+                    editHref={paths.editAssignment(id, assignment.id)}
+                    detail={
+                      assignment.dueAt
+                        ? `Due ${formatDate(assignment.dueAt)} · ${formatTime(assignment.dueAt)}`
+                        : "No due date"
+                    }
                     onRemove={() =>
                       setRemoveTarget({
                         name: `assignment ${index + 1}`,
@@ -527,11 +534,14 @@ function ItemCard({
   eyebrow,
   item,
   editHref,
+  detail,
   onRemove,
 }: {
   eyebrow: string;
   item: Pick<ModuleLesson, "title" | "description" | "resources">;
   editHref: string;
+  /* A line under the title, like an assignment's due date. */
+  detail?: string;
   onRemove: () => void;
 }) {
   return (
@@ -540,6 +550,7 @@ function ItemCard({
         <div className="min-w-0">
           <p className="text-xs text-neutral-500">{eyebrow}</p>
           <p className="mt-0.5 font-medium text-neutral-800">{item.title}</p>
+          {detail && <p className="mt-0.5 text-xs text-neutral-500">{detail}</p>}
         </div>
 
         <Menu.Root>

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 
 import { SettingsTab } from "@/features/curriculum/components/SettingsTab";
 import { CurriculumScopeProvider } from "@/features/curriculum/scope";
@@ -92,6 +92,16 @@ async function choose(
 ) {
   await user.click(screen.getByRole("combobox", { name: label }));
   await user.click(await screen.findByRole("option", { name: option }));
+}
+
+/* Opens the due date picker, clicks a day in the month it opens on, then Apply. */
+async function pickDueDate(
+  user: ReturnType<typeof renderWithClient>["user"],
+  date: Date,
+) {
+  await user.click(screen.getByRole("button", { name: /^Due date/ }));
+  await user.click(await screen.findByRole("button", { name: date.toDateString() }));
+  await user.click(screen.getByRole("button", { name: "Apply" }));
 }
 
 describe("NewResourceScreen", () => {
@@ -263,21 +273,25 @@ describe("NewAssignmentScreen", () => {
 
   it("sends the picked due date and time", async () => {
     const { user, api } = await renderScreen();
-    const time = screen.getByLabelText("Due time");
+    const time = screen.getByRole("combobox", { name: "Due time" });
+    /* The picker opens on the current month, so pick a day in it. */
+    const today = new Date();
+    const day = new Date(today.getFullYear(), today.getMonth(), 20);
 
     /* The time only matters once there's a date, and defaults to 11:59 PM. */
-    expect(time).toBeDisabled();
-    expect(time).toHaveValue("23:59");
+    expect(time).toHaveAttribute("data-disabled");
+    expect(time).toHaveTextContent("11:59PM");
 
     await user.type(screen.getByRole("textbox", { name: /Assignment title/ }), "Grid study");
     await user.type(description(), "Lay out a page on a grid");
-    fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "2026-11-20" } });
-    fireEvent.change(time, { target: { value: "14:30" } });
+    await pickDueDate(user, day);
+    await choose(user, /Due time/, "2:30PM");
     await user.click(screen.getByRole("button", { name: "Create Assignment" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
+    day.setHours(14, 30);
     expect(api.bodies("POST /admin/topics/t1/assignments")).toMatchObject([
-      { dueAt: new Date("2026-11-20T14:30:00").toISOString() },
+      { dueAt: day.toISOString() },
     ]);
   });
 });
@@ -316,15 +330,15 @@ describe("EditAssignmentScreen", () => {
     expect(screen.getByRole("heading", { name: "Edit Assignment" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("Lay out a page on a grid")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Use 12 columns")).toBeInTheDocument();
-    expect(screen.getByLabelText("Due date")).toHaveValue("2026-11-20");
-    expect(screen.getByLabelText("Due time")).toHaveValue("17:00");
+    expect(screen.getByRole("button", { name: "Due date, Nov 20, 2026" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Due time" })).toHaveTextContent("5:00PM");
   });
 
   it("saves a new due date and returns to the assignments tab", async () => {
     const { user, api } = await renderScreen();
 
-    fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "2026-11-27" } });
-    fireEvent.change(screen.getByLabelText("Due time"), { target: { value: "09:00" } });
+    await pickDueDate(user, new Date(2026, 10, 27));
+    await choose(user, /Due time/, "9:00AM");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());

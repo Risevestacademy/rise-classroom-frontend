@@ -2,7 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useMutationState,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { NotebookPen, Pencil, Plus } from "lucide-react";
 
 import { PersonAvatar } from "@/components/PersonAvatar";
@@ -75,10 +80,18 @@ export function AssignmentsTab({
       queryKey: api.keys.modules(curriculumId),
     });
 
+  const statusMutationKey = ["assignment-status", curriculumId];
   const statusMutation = useMutation({
+    mutationKey: statusMutationKey,
     mutationFn: ({ id, status }: { id: string; status: ModuleStatus }) =>
       api.updateAssignment(id, { status }),
-    onSuccess: invalidate,
+    /* Returning the refetch keeps the change pending until the list shows the new status. */
+    onSuccess: () => invalidate(),
+  });
+  /* Every row with a status change still saving, so several can show a skeleton at once. */
+  const savingStatusIds = useMutationState({
+    filters: { mutationKey: statusMutationKey, status: "pending" },
+    select: (mutation) => (mutation.state.variables as { id: string }).id,
   });
 
   const deleteMutation = useMutation({
@@ -240,7 +253,16 @@ export function AssignmentsTab({
                       </td>
                     )}
                     <td className="px-4 py-5">
-                      <StatusBadge status={assignment.status} />
+                      {savingStatusIds.includes(assignment.id) ? (
+                        <span
+                          role="status"
+                          aria-label={`Updating ${assignment.title} status`}
+                        >
+                          <Skeleton className="h-6 w-14 rounded-full" />
+                        </span>
+                      ) : (
+                        <StatusBadge status={assignment.status} />
+                      )}
                     </td>
                     <td className="px-4 py-5">
                       <RowActionsMenu

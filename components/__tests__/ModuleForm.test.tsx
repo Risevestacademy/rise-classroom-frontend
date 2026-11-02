@@ -176,6 +176,146 @@ describe("ModuleForm", () => {
     });
   });
 
+  describe("assignment due date", () => {
+    type User = ReturnType<typeof renderWithClient>["user"];
+
+    /* The picker opens on the current month, so tests pick a day in it. */
+    const today = new Date();
+    const day = new Date(today.getFullYear(), today.getMonth(), 20);
+    const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-20`;
+
+    async function addAssignment(user: User) {
+      await fillRequired(user);
+      await user.type(screen.getByLabelText(/^Assignment title/), " Grid study ");
+    }
+
+    async function pickDueDate(user: User, date: Date) {
+      await user.click(screen.getByRole("button", { name: /^Due date/ }));
+      await user.click(await screen.findByRole("button", { name: date.toDateString() }));
+      await user.click(screen.getByRole("button", { name: "Apply" }));
+    }
+
+    async function choose(user: User, label: RegExp, option: string) {
+      await user.click(screen.getByRole("combobox", { name: label }));
+      await user.click(await screen.findByRole("option", { name: option }));
+    }
+
+    let onSubmit: ReturnType<typeof renderForm>["onSubmit"];
+
+    /* The first assignment in the saved module. */
+    const submitted = () => onSubmit.mock.calls[0][0].assignments[0];
+
+    function render(props: Partial<React.ComponentProps<typeof ModuleForm>> = {}) {
+      const view = renderForm(props);
+      onSubmit = view.onSubmit;
+      return view;
+    }
+
+    it("sends no due date when none is picked", async () => {
+      const { user } = render();
+
+      await addAssignment(user);
+      await user.click(screen.getByRole("button", { name: "Create Module" }));
+
+      expect(submitted()).toMatchObject({
+        title: "Grid study",
+        dueAt: null,
+        submissionType: "FILE_UPLOAD",
+      });
+    });
+
+    it("defaults the time to 11:59 PM once a date is picked", async () => {
+      const { user } = render();
+      const time = screen.getByRole("combobox", { name: "Due time" });
+
+      expect(time).toHaveAttribute("data-disabled");
+      await addAssignment(user);
+      await pickDueDate(user, day);
+
+      expect(time).not.toHaveAttribute("data-disabled");
+      expect(time).toHaveTextContent("11:59PM");
+      await user.click(screen.getByRole("button", { name: "Create Module" }));
+      expect(submitted().dueAt).toBe(`${dayKey}T23:59:00`);
+    });
+
+    it("sends the picked date, time and submission type", async () => {
+      const { user } = render();
+
+      await addAssignment(user);
+      await pickDueDate(user, day);
+      await choose(user, /Due time/, "2:30PM");
+      await choose(user, /Submission type/, "Link");
+      await user.click(screen.getByRole("button", { name: "Create Module" }));
+
+      expect(submitted()).toMatchObject({
+        dueAt: `${dayKey}T14:30:00`,
+        submissionType: "LINK",
+      });
+    });
+
+    describe("editing a module", () => {
+      const saved = new Date(2026, 10, 20, 17, 0);
+      const initialModule = {
+        id: "m1",
+        curriculumId: "c1",
+        title: "Visual design",
+        description: "The basics of layout",
+        status: "DRAFT",
+        outcomes: ["Use a grid"],
+        recordingLink: "",
+        resources: [],
+        lessons: [{ id: "l1", topic: "", title: "Grids", description: "", resources: [] }],
+        assignments: [
+          {
+            id: "a1",
+            title: "Grid study",
+            description: "",
+            instructions: "",
+            resources: [],
+            type: "Project",
+            mode: "Individual",
+            submissionType: "TEXT",
+            dueAt: saved.toISOString(),
+            afterLesson: null,
+            status: "DRAFT",
+          },
+        ],
+        coverImage: null,
+        liveClassRecordings: [],
+      } as React.ComponentProps<typeof ModuleForm>["initialModule"];
+
+      it("shows the saved due date and time", () => {
+        render({ initialModule, submitLabel: "Save changes" });
+
+        expect(screen.getByRole("button", { name: "Due date, Nov 20, 2026" })).toBeInTheDocument();
+        expect(screen.getByRole("combobox", { name: "Due time" })).toHaveTextContent("5:00PM");
+      });
+
+      it("changes the due date and keeps the saved time", async () => {
+        const { user } = render({ initialModule, submitLabel: "Save changes" });
+
+        await pickDueDate(user, new Date(2026, 10, 27));
+        await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+        expect(submitted()).toMatchObject({
+          id: "a1",
+          dueAt: "2026-11-27T17:00:00",
+          submissionType: "TEXT",
+        });
+      });
+
+      it("removes the due date", async () => {
+        const { user } = render({ initialModule, submitLabel: "Save changes" });
+
+        await user.click(screen.getByRole("button", { name: "Remove due date" }));
+        expect(screen.getByRole("button", { name: "Due date" })).toHaveTextContent("Pick a date");
+        await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+        expect(submitted().dueAt).toBeNull();
+      });
+    });
+  });
+
   it("shows the save error", () => {
     renderForm({ errorMessage: "Module title already used" });
 

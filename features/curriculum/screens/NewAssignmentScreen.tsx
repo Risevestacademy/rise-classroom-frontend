@@ -5,17 +5,18 @@ import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { Field } from "@base-ui/react/field";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Clock } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
-import { AlertCircle, Calendar } from "@/assets/icons";
+import { AlertCircle } from "@/assets/icons";
 import { InfoNote } from "@/components/ui/info-note";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
-import { Hint, InputWrapper, Label } from "@/components/ui/input";
+import { Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api";
+import { DueDateField } from "@/features/curriculum/components/DueDateField";
 import { LinkListField } from "@/features/curriculum/components/LinkListField";
 import { trackDetails } from "@/features/curriculum/mappers";
 import { useCurriculumScope } from "@/features/curriculum/scope";
@@ -29,30 +30,13 @@ import {
 } from "@/features/curriculum/types";
 
 const noLesson = "none";
-/* The time an assignment is due when the instructor only picks a date. */
-const defaultDueTime = "23:59";
-
-const pad = (value: number) => String(value).padStart(2, "0");
-
-/* The date and time inputs work in the viewer's local time, as "YYYY-MM-DD" and "HH:mm". */
-function toDateInput(value: string) {
-  const date = new Date(value);
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function toTimeInput(value: string) {
-  const date = new Date(value);
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
 type FormValues = {
   title: string;
   description: string;
   instructions: string;
   resources: ResourceFile[];
   moduleId: string;
-  dueDate: string;
-  dueTime: string;
+  dueAt: string | null;
   afterLesson: string;
   submissionType: SubmissionType;
 };
@@ -63,8 +47,7 @@ const emptyValues: FormValues = {
   instructions: "",
   resources: [],
   moduleId: "",
-  dueDate: "",
-  dueTime: defaultDueTime,
+  dueAt: null,
   afterLesson: noLesson,
   submissionType: "FILE_UPLOAD",
 };
@@ -76,8 +59,7 @@ function valuesFrom(assignment: ModuleAssignment, moduleId: string): FormValues 
     instructions: assignment.instructions,
     resources: assignment.resources,
     moduleId,
-    dueDate: assignment.dueAt ? toDateInput(assignment.dueAt) : "",
-    dueTime: assignment.dueAt ? toTimeInput(assignment.dueAt) : defaultDueTime,
+    dueAt: assignment.dueAt,
     afterLesson: assignment.afterLesson ? String(assignment.afterLesson) : noLesson,
     submissionType: assignment.submissionType,
   };
@@ -200,8 +182,7 @@ function AssignmentForm({
   const [instructions, setInstructions] = React.useState(initial.instructions);
   const [resources, setResources] = React.useState(initial.resources);
   const [moduleId, setModuleId] = React.useState(initial.moduleId);
-  const [dueDate, setDueDate] = React.useState(initial.dueDate);
-  const [dueTime, setDueTime] = React.useState(initial.dueTime);
+  const [dueAt, setDueAt] = React.useState(initial.dueAt);
   const [afterLesson, setAfterLesson] = React.useState(initial.afterLesson);
   const [submissionType, setSubmissionType] = React.useState(
     initial.submissionType,
@@ -210,7 +191,6 @@ function AssignmentForm({
   const selectedModuleId = moduleId || modules[0]?.id || "";
   const selectedModule = modules.find((m) => m.id === selectedModuleId);
   const backHref = paths.detail(curriculumId, { tab: "assignments" });
-  const dueAt = dueDate ? `${dueDate}T${dueTime || defaultDueTime}:00` : null;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -389,51 +369,7 @@ function AssignmentForm({
                 </div>
               )}
 
-              <Field.Root className="flex flex-col">
-                <Label icon={<></>}>Due date</Label>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <InputWrapper size="medium" className="min-w-0 flex-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center [&>svg]:size-4">
-                      <Calendar />
-                    </span>
-                    <Field.Control
-                      type="date"
-                      aria-label="Due date"
-                      value={dueDate}
-                      onChange={(event) => setDueDate(event.target.value)}
-                      className="w-full bg-transparent text-sm outline-none"
-                    />
-                  </InputWrapper>
-                  <InputWrapper size="medium" className="min-w-0 flex-2">
-                    <Clock className="size-4 shrink-0 text-neutral-500" />
-                    <input
-                      type="time"
-                      aria-label="Due time"
-                      value={dueTime}
-                      disabled={!dueDate}
-                      onChange={(event) => setDueTime(event.target.value)}
-                      className="w-full bg-transparent text-sm outline-none disabled:text-text-disabled"
-                    />
-                  </InputWrapper>
-                </div>
-                <Hint>
-                  {dueDate
-                    ? "Students will see the due date in their dashboard"
-                    : "No due date. Pick a date to set one."}
-                </Hint>
-                {dueDate && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDueDate("");
-                      setDueTime(defaultDueTime);
-                    }}
-                    className="mt-1 w-fit text-xs font-medium text-brand-primary hover:underline"
-                  >
-                    Remove due date
-                  </button>
-                )}
-              </Field.Root>
+              <DueDateField value={dueAt} onChange={setDueAt} />
 
               {modulesPending ? (
                 <div className="flex flex-col gap-1.5">
