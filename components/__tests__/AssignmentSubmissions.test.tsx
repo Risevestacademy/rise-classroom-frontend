@@ -278,3 +278,41 @@ describe("assignment submissions for admins", () => {
     expect(api.urls("GET /admin/assignments/a1/submissions")).toEqual([]);
   });
 });
+
+describe("changing an assignment's status", () => {
+  it("shows a skeleton in the status column until the list shows the new status", async () => {
+    let status = "DRAFT";
+    let finishSave = () => {};
+    mockApi({
+      ...routes("admin", page([])),
+      /* Each reload of the list reads the assignment's current status. */
+      "GET /admin/topics/t1/assignments": () => envelope([{ ...assignment, publishStatus: status }]),
+      /* Held open until the test lets the save finish. */
+      "PATCH /admin/assignments/a1": (body: unknown) =>
+        new Promise((resolve) => {
+          finishSave = () => {
+            status = (body as { publishStatus: string }).publishStatus;
+            resolve(envelope({ ...assignment, publishStatus: status }));
+          };
+        }),
+    });
+    const { user } = renderWithClient(
+      <CurriculumScopeProvider role="admin">
+        <AssignmentsTab curriculumId="c1" studentCount={12} onOpenAssignment={vi.fn()} />
+      </CurriculumScopeProvider>,
+    );
+    const row = (await screen.findByRole("button", { name: "Grid study" })).closest("tr")!;
+    expect(within(row).getByText("Draft")).toBeInTheDocument();
+
+    await user.click(within(row).getByRole("button", { name: "Grid study actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Publish" }));
+
+    expect(within(row).getByRole("status", { name: "Updating Grid study status" })).toBeInTheDocument();
+    expect(within(row).queryByText("Draft")).not.toBeInTheDocument();
+
+    finishSave();
+
+    expect(await within(row).findByText("Published")).toBeInTheDocument();
+    expect(within(row).queryByRole("status")).not.toBeInTheDocument();
+  });
+});

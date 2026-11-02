@@ -292,7 +292,11 @@ export function ResourceSheet({
             <section className="rounded-xl border border-neutral-100 p-5 shadow-sm">
               <h3 className="text-lg font-bold text-neutral-800">Preview</h3>
               <div className="mt-4 flex aspect-video flex-col items-center justify-center gap-3 rounded-2xl bg-warning-surface">
-                <FileTypeIcon name={item.resource.name} className="scale-150" />
+                <FileTypeIcon
+                  name={item.resource.name}
+                  url={item.resource.url}
+                  className="scale-150"
+                />
                 <p className="mt-2 text-sm text-neutral-600">
                   {item.resource.name}
                 </p>

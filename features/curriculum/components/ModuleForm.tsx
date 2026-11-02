@@ -6,6 +6,7 @@ import { Field } from "@base-ui/react/field";
 import { CirclePlay, NotebookPen, Plus, Trash2, X } from "lucide-react";
 
 import { CurriculumSummaryCard } from "@/features/curriculum/components/CurriculumSummaryCard";
+import { DueDateField } from "@/features/curriculum/components/DueDateField";
 import { LinkListField } from "@/features/curriculum/components/LinkListField";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { InfoNote } from "@/components/ui/info-note";
@@ -13,16 +14,19 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormField } from "@/components/ui/field";
+import { Select } from "@/components/ui/select";
 import { Hint, Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { emptyAssignment } from "@/features/curriculum/mappers";
-import type {
-  Curriculum,
-  CurriculumModule,
-  ModuleAssignment,
-  ModuleLesson,
-  ResourceFile,
-  SaveModuleInput,
+import {
+  submissionTypes,
+  type Curriculum,
+  type CurriculumModule,
+  type ModuleAssignment,
+  type ModuleLesson,
+  type ResourceFile,
+  type SaveModuleInput,
+  type SubmissionType,
 } from "@/features/curriculum/types";
 
 const placeholderOutcomes = [
@@ -257,6 +261,25 @@ export function ModuleForm({
               createEmpty={() => emptyAssignment()}
               titlePlaceholder="Visual Hierarchy"
               descriptionPlaceholder="Redesign a simple landing page using hierarchy and contrast"
+              extra={(assignment, change) => (
+                <>
+                  <DueDateField
+                    value={assignment.dueAt}
+                    onChange={(dueAt) => change({ dueAt })}
+                  />
+                  <Select
+                    label="Submission type"
+                    value={assignment.submissionType}
+                    onChange={(submissionType) =>
+                      change({ submissionType: submissionType as SubmissionType })
+                    }
+                    options={Object.entries(submissionTypes).map(([value, label]) => ({
+                      value,
+                      label,
+                    }))}
+                  />
+                </>
+              )}
             />
           </FormSection>
 
@@ -370,6 +393,7 @@ function DraftList<T extends DraftItem>({
   eyebrow,
   titlePlaceholder,
   descriptionPlaceholder,
+  extra,
 }: {
   kind: "Lesson" | "Assignment";
   drafts: T[];
@@ -378,13 +402,16 @@ function DraftList<T extends DraftItem>({
   eyebrow?: (draft: T) => string | undefined;
   titlePlaceholder: string;
   descriptionPlaceholder: string;
+  /* More fields for one kind of draft, like an assignment's due date. */
+  extra?: (draft: T, change: (changes: Partial<T>) => void) => React.ReactNode;
 }) {
   const [deleteTarget, setDeleteTarget] = React.useState<{
     id: string;
     name: string;
   } | null>(null);
 
-  function update(id: string, changes: Partial<DraftItem>) {
+  /* Shared fields come in as DraftItem changes; `extra` fields as changes to T. */
+  function update(id: string, changes: Partial<DraftItem> | Partial<T>) {
     onChange(drafts.map((d) => (d.id === id ? { ...d, ...changes } : d)));
   }
 
@@ -463,6 +490,7 @@ function DraftList<T extends DraftItem>({
                 leadingIcon: null,
               }}
             />
+            {extra?.(draft, (changes) => update(draft.id, changes))}
             <LinkListField
               links={draft.resources}
               onChange={(resources) => update(draft.id, { resources })}

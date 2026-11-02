@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { screen } from "@testing-library/react";
 
 import { ModuleAccessCard } from "@/features/curriculum/components/ModuleAccessCard";
@@ -35,6 +35,17 @@ function accessReply(unlocked: boolean, open: number, waiting = 0): ModuleAccess
   return { topicId: "m1", trackId: "track-1", enrollmentCount: statuses.length, statuses };
 }
 
+const unlockButton = "Locked. Unlock this module";
+const lockButton = "Unlocked. Lock this module";
+
+/* The card remembers the last change in this browser; start a test from an unlocked module. */
+function startUnlocked() {
+  window.localStorage.setItem(
+    "module-access:m1",
+    JSON.stringify({ unlocked: true, studentCount: 2, openCount: 2 }),
+  );
+}
+
 function renderCard(status: ModuleStatus = "PUBLISHED") {
   return renderWithClient(
     <CurriculumScopeProvider role="instructor">
@@ -44,32 +55,42 @@ function renderCard(status: ModuleStatus = "PUBLISHED") {
 }
 
 describe("ModuleAccessCard", () => {
-  it("offers both actions before anything has changed", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("shows one button, locked, before anything has changed", () => {
     mockApi({});
     renderCard();
 
-    expect(screen.getByRole("button", { name: "Unlock for students" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Lock" })).toBeEnabled();
-    expect(screen.queryByText("Unlocked")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: unlockButton })).toHaveTextContent("Locked");
+    expect(screen.queryByRole("button", { name: lockButton })).not.toBeInTheDocument();
+  });
+
+  it("remembers an unlocked module after a reload", () => {
+    mockApi({});
+    startUnlocked();
+    renderCard();
+
+    expect(screen.getByRole("button", { name: lockButton })).toHaveTextContent("Unlocked");
+    expect(screen.getByText("Unlocked for all 2 students.")).toBeInTheDocument();
   });
 
   it("unlocks the module for the whole track", async () => {
     const api = mockApi(unlockRoutes(accessReply(true, 12)));
     const { user } = renderCard();
 
-    await user.click(screen.getByRole("button", { name: "Unlock for students" }));
+    await user.click(screen.getByRole("button", { name: unlockButton }));
 
     expect(await screen.findByText("Unlocked for all 12 students.")).toBeInTheDocument();
-    expect(screen.getByText("Unlocked")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: lockButton })).toHaveTextContent("Unlocked");
     expect(api.bodies(unlockRoute)).toEqual([{ unlocked: true }]);
-    expect(screen.queryByRole("button", { name: "Unlock for students" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: unlockButton })).not.toBeInTheDocument();
   });
 
   it("opens each lesson for each student after the module", async () => {
     const api = mockApi(unlockRoutes(accessReply(true, 2)));
     const { user } = renderCard();
 
-    await user.click(screen.getByRole("button", { name: "Unlock for students" }));
+    await user.click(screen.getByRole("button", { name: unlockButton }));
     await screen.findByText("Unlocked for all 2 students.");
 
     for (const enrollmentId of ["e0", "e1"]) {
@@ -81,9 +102,10 @@ describe("ModuleAccessCard", () => {
 
   it("locks only the module, which closes its lessons too", async () => {
     const api = mockApi({ [unlockRoute]: envelope(accessReply(false, 2)) });
+    startUnlocked();
     const { user } = renderCard();
 
-    await user.click(screen.getByRole("button", { name: "Lock" }));
+    await user.click(screen.getByRole("button", { name: lockButton }));
     await user.click(await screen.findByRole("button", { name: "Yes, lock it" }));
     await screen.findByText("Locked for all 2 students.");
 
@@ -94,7 +116,7 @@ describe("ModuleAccessCard", () => {
     mockApi(unlockRoutes(accessReply(true, 9, 3)));
     const { user } = renderCard();
 
-    await user.click(screen.getByRole("button", { name: "Unlock for students" }));
+    await user.click(screen.getByRole("button", { name: unlockButton }));
 
     expect(
       await screen.findByText(
@@ -105,23 +127,25 @@ describe("ModuleAccessCard", () => {
 
   it("asks before locking, then locks", async () => {
     const api = mockApi({ [unlockRoute]: envelope(accessReply(false, 12)) });
+    startUnlocked();
     const { user } = renderCard();
 
-    await user.click(screen.getByRole("button", { name: "Lock" }));
+    await user.click(screen.getByRole("button", { name: lockButton }));
     expect(api.bodies(unlockRoute)).toEqual([]);
 
     await user.click(await screen.findByRole("button", { name: "Yes, lock it" }));
 
     expect(await screen.findByText("Locked for all 12 students.")).toBeInTheDocument();
     expect(api.bodies(unlockRoute)).toEqual([{ unlocked: false }]);
-    expect(screen.getByRole("button", { name: "Unlock for students" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: unlockButton })).toBeInTheDocument();
   });
 
   it("can cancel locking", async () => {
     const api = mockApi({});
+    startUnlocked();
     const { user } = renderCard();
 
-    await user.click(screen.getByRole("button", { name: "Lock" }));
+    await user.click(screen.getByRole("button", { name: lockButton }));
     await user.click(await screen.findByRole("button", { name: "Cancel" }));
 
     expect(api.fetchMock).not.toHaveBeenCalled();
@@ -131,10 +155,10 @@ describe("ModuleAccessCard", () => {
     mockApi({ [unlockRoute]: reply(403, { success: false, message: "Not your track" }) });
     const { user } = renderCard();
 
-    await user.click(screen.getByRole("button", { name: "Unlock for students" }));
+    await user.click(screen.getByRole("button", { name: unlockButton }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Not your track");
-    expect(screen.getByRole("button", { name: "Unlock for students" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: unlockButton })).toBeEnabled();
   });
 
   it("warns that a draft stays hidden even when unlocked", () => {
@@ -147,7 +171,7 @@ describe("ModuleAccessCard", () => {
     mockApi(unlockRoutes(accessReply(true, 0)));
     const { user } = renderCard();
 
-    await user.click(screen.getByRole("button", { name: "Unlock for students" }));
+    await user.click(screen.getByRole("button", { name: unlockButton }));
 
     expect(await screen.findByText("No students are enrolled on this track yet.")).toBeInTheDocument();
   });
