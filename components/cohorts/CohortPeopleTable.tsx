@@ -30,6 +30,8 @@ type PeopleTableColumns<T> = {
   columns: PeopleColumn<T>[];
   actionHeader?: string;
   filters?: PeopleFilter<T>[];
+  /** The menu in each row's last cell. */
+  rowActions?: (row: T) => React.ReactNode;
 };
 
 /**
@@ -43,6 +45,7 @@ export function PeopleTableView<T extends Person & { id: string }>({
   columns,
   actionHeader,
   filters = [],
+  rowActions,
   rows,
   loading = false,
   error,
@@ -53,6 +56,7 @@ export function PeopleTableView<T extends Person & { id: string }>({
   singleSelectFilters = false,
   page,
   totalPages,
+  totalItems,
   pageSize,
   onPageChange,
   onPageSizeChange,
@@ -68,6 +72,8 @@ export function PeopleTableView<T extends Person & { id: string }>({
   singleSelectFilters?: boolean;
   page: number;
   totalPages: number;
+  /** Rows across every page, after search and filters. */
+  totalItems: number;
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
@@ -199,15 +205,7 @@ export function PeopleTableView<T extends Person & { id: string }>({
                     {column.cell(row)}
                   </td>
                 ))}
-                <td className="px-3">
-                  <button
-                    type="button"
-                    aria-label={`${row.name} options`}
-                    className="flex size-8 items-center justify-center text-text-primary"
-                  >
-                    <MoreHorizontal className="size-5" />
-                  </button>
-                </td>
+                <td className="px-3">{rowActions?.(row)}</td>
               </tr>
             ))}
           </tbody>
@@ -223,6 +221,7 @@ export function PeopleTableView<T extends Person & { id: string }>({
         <Pagination
           page={page}
           totalPages={totalPages}
+          totalItems={totalItems}
           pageSize={pageSize}
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
@@ -283,6 +282,7 @@ export function CohortPeopleTable<T extends Person & { id: string }>({
       }}
       page={currentPage}
       totalPages={totalPages}
+      totalItems={visible.length}
       pageSize={pageSize}
       onPageChange={setPage}
       onPageSizeChange={(size) => {

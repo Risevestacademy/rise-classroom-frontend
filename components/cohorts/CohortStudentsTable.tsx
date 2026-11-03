@@ -11,6 +11,7 @@ import type {
   PeopleFilter,
   PeopleFilterValues,
 } from "@/components/cohorts/PeopleFilterDialog";
+import { UserRowActions } from "@/components/UserRowActions";
 import { adminQueries, toUserFilters } from "@/lib/admin";
 import { toCohortStudent, type CohortStudent } from "@/lib/cohorts";
 import { useDebounced } from "@/lib/use-debounced";
@@ -55,6 +56,12 @@ export function CohortStudentsTable({
 
   return (
     <PeopleTableView
+      rowActions={(row) => (
+        <UserRowActions
+          user={row.user}
+          profileHref={`/admin/students/${row.id}`}
+        />
+      )}
       title={title}
       personHeader="Student"
       columns={columns}
@@ -81,6 +88,7 @@ export function CohortStudentsTable({
       singleSelectFilters
       page={page}
       totalPages={totalPages}
+      totalItems={studentsQuery.data?.total ?? 0}
       pageSize={pageSize}
       onPageChange={setPage}
       onPageSizeChange={(size) => {

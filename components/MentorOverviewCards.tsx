@@ -71,19 +71,21 @@ export function StudentsProgressCard({
   students,
   studentHref,
   emptyMessage,
+  onViewAll,
 }: {
   title: string;
   students: AssignedStudent[];
   studentHref: (student: AssignedStudent) => string;
   /** Shown in place of the list when there are no students. */
   emptyMessage?: string;
+  onViewAll?: () => void;
 }) {
   return (
     <Card>
       <CardHeader
         title={title}
         action={
-          <Button variant="tertiary" size="sm">
+          <Button variant="tertiary" size="sm" onClick={onViewAll}>
             View all
           </Button>
         }
@@ -143,8 +145,10 @@ export function StudentsProgressCard({
 
 export function UpcomingSessionsCard({
   sessions,
+  onViewAll,
 }: {
   sessions: UpcomingSession[];
+  onViewAll?: () => void;
 }) {
   return (
     <Card className="gap-3">
@@ -152,7 +156,7 @@ export function UpcomingSessionsCard({
         size="h4"
         title="Upcoming sessions"
         action={
-          <Button variant="tertiary" size="sm">
+          <Button variant="tertiary" size="sm" onClick={onViewAll}>
             View all
           </Button>
         }

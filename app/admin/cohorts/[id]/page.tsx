@@ -16,6 +16,8 @@ import { AdminTopNav } from "@/components/AdminTopNav";
 import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
 import { InviteInstructorDialog } from "@/components/InviteInstructorDialog";
 import { InviteStudentDialog } from "@/components/InviteStudentDialog";
+import { MentorActionsMenu } from "@/components/MentorActionsMenu";
+import { UserRowActions } from "@/components/UserRowActions";
 import { CohortOverview } from "@/components/cohorts/CohortOverview";
 import {
   CohortPeopleTable,
@@ -37,6 +39,7 @@ import {
   type CohortStudent,
   type CohortTrack,
 } from "@/lib/cohorts";
+import { toMentor } from "@/lib/mentors";
 import { cn } from "@/lib/utils";
 import { studentStatusLabels, type StudentStatus } from "../cohort-data";
 
@@ -373,6 +376,7 @@ export default function CohortDetailPage({
               columns={staffColumns}
               filters={instructorFilters(cohort.trackList)}
               actionHeader="Action"
+              rowActions={(row) => row.user && <UserRowActions user={row.user} />}
             />
           ))}
         {tab === "mentors" &&
@@ -402,6 +406,9 @@ export default function CohortDetailPage({
               rows={cohort.mentorList}
               columns={staffColumns}
               actionHeader="Action"
+              rowActions={(row) =>
+                row.user && <MentorActionsMenu mentor={toMentor(row.user)} />
+              }
             />
           ))}
         {tab === "settings" && (

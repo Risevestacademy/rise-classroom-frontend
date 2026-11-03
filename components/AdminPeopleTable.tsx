@@ -455,6 +455,7 @@ export function AdminPeopleTable({
         <Pagination
           page={page}
           totalPages={totalPages}
+          totalItems={total}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={(size) => {

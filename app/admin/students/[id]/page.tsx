@@ -233,6 +233,7 @@ export default function StudentDetailsPage({
           )}
           {student && tab === "mentorship" && (
             <MentorshipTab
+              student={{ id: student.id, name, email: student.email }}
               mentor={student.mentor}
               track={assignments?.tracks[0]}
               cohort={cohort}
@@ -419,6 +420,8 @@ function MentorCard({ mentor }: { mentor: AdminUser["mentor"] }) {
 
 function ProgressCard({ student }: { student: AdminUser }) {
   const { tracks } = assignmentsFor(student);
+  // PENDING-BACKEND: there's no progress per module, so picking one doesn't
+  // change the sample numbers below.
   const [module, setModule] =
     React.useState<(typeof moduleFilters)[number]["value"]>("all");
   const trackName = tracks[0] ?? "track";

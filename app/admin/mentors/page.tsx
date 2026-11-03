@@ -392,6 +392,7 @@ export default function MentorsPage() {
           <Pagination
             page={page}
             totalPages={totalPages}
+            totalItems={mentorsQuery.data?.total ?? 0}
             pageSize={pageSize}
             onPageChange={setPage}
             onPageSizeChange={(size) => {

@@ -255,7 +255,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div className="mt-auto flex justify-end">
-                  <Button onClick={() => {router.push("/admin/report")}} variant="tertiary" size="sm">
+                  <Button onClick={() => {router.push("/admin/reports")}} variant="tertiary" size="sm">
                     View detailed progress
                     <ArrowRight02 className="size-4" />
                   </Button>

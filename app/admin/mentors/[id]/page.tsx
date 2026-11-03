@@ -263,6 +263,7 @@ function menteesMessage(query: ReturnType<typeof useMentees>) {
 }
 
 function OverviewTab({ mentor }: { mentor: Mentor }) {
+  const router = useRouter();
   const mentees = useMentees(mentor.id);
 
   return (
@@ -274,10 +275,18 @@ function OverviewTab({ mentor }: { mentor: Mentor }) {
           students={mentees.students}
           studentHref={(student) => `/admin/students/${student.id}`}
           emptyMessage={menteesMessage(mentees)}
+          onViewAll={() =>
+            router.replace(`/admin/mentors/${mentor.id}?tab=students`, {
+              scroll: false,
+            })
+          }
         />
       </div>
       <div className="flex min-w-0 flex-col gap-4">
-        <UpcomingSessionsCard sessions={upcomingSessions} />
+        <UpcomingSessionsCard
+          sessions={upcomingSessions}
+          onViewAll={() => router.push("/admin/calendar")}
+        />
         <Card className="gap-4">
           <CardHeader title="Recent Activities" />
           {/* The Overview shows the two most recent days. */}

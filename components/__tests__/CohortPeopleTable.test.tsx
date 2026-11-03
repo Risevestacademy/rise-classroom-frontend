@@ -74,6 +74,7 @@ describe("CohortPeopleTable", () => {
 
     await user.type(screen.getByRole("searchbox"), "Person 3");
     expect(screen.getByText("Person 3")).toBeInTheDocument();
-    expect(screen.getByLabelText("Page")).toHaveValue("1");
+    // One match fits on a page, so the pagination goes away.
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   });
 });

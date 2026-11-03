@@ -56,6 +56,7 @@ export type CohortStudent = Person & {
   // PENDING-BACKEND: no student health or activity data yet.
   status: StudentStatus | null;
   lastActive: string;
+  user: AdminUser;
 };
 
 export type CohortStaff = Person & {
@@ -64,6 +65,8 @@ export type CohortStaff = Person & {
   trackId: string;
   /** `null` when the user record couldn't be loaded. */
   accountStatus: UserStatus | null;
+  /** Missing when the user record couldn't be loaded. */
+  user?: AdminUser;
   /** `null` when it isn't known, as for mentors. */
   students: number | null;
   // PENDING-BACKEND: no activity data yet.
@@ -160,6 +163,7 @@ export function toCohortStudent(
     onboardingStatus: user.onboardingStatus,
     status: null,
     lastActive: "--",
+    user,
   };
 }
 
@@ -282,12 +286,16 @@ async function getCohortDetail(id: string): Promise<CohortDetail> {
       api.get<Envelope<Cohort>>(`/admin/cohorts/${id}`),
       listInstructorTracks(id),
       listAllStudents(id),
-      // Only needed for statuses and roles, so a failure shouldn't hide the page.
+      // Only needed for statuses, roles and row actions, so a failure
+      // shouldn't hide the page.
       listAllStaff("INSTRUCTOR").catch(() => [] as AdminUser[]),
       listAllStaff("MENTOR").catch(() => [] as AdminUser[]),
     ]);
+  const staffUsers = new Map(
+    [...instructors, ...mentors].map((user) => [user.id, user]),
+  );
   const staffStatus = new Map(
-    [...instructors, ...mentors].map((user) => [user.id, user.status]),
+    [...staffUsers].map(([userId, user]) => [userId, user.status]),
   );
   // Mentors are assigned to a cohort and track the same way instructors are.
   const mentorIds = new Set(mentors.map((user) => user.id));
@@ -333,6 +341,7 @@ async function getCohortDetail(id: string): Promise<CohortDetail> {
         track: assignment.track?.name ?? "--",
         trackId: assignment.trackId,
         accountStatus: staffStatus.get(assignment.instructorId) ?? null,
+        user: staffUsers.get(assignment.instructorId),
         // PENDING-BACKEND: admins can't list a mentor's mentees.
         students: isMentor
           ? null

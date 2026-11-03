@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Menu } from "@base-ui/react/menu";
 import { MoreHorizontal } from "@/assets/icons";
@@ -14,7 +15,14 @@ import {
 } from "@/lib/admin";
 import { sessionQuery } from "@/lib/session-query";
 
-export function UserRowActions({ user }: { user: AdminUser }) {
+export function UserRowActions({
+  user,
+  profileHref,
+}: {
+  user: AdminUser;
+  /** Adds a View profile item, for tables whose names aren't links. */
+  profileHref?: string;
+}) {
   const { data: session } = useQuery(sessionQuery());
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
@@ -58,6 +66,14 @@ export function UserRowActions({ user }: { user: AdminUser }) {
         <Menu.Portal>
           <Menu.Positioner align="end">
             <Menu.Popup className="z-50 w-52 rounded-lg border border-neutral-200 bg-neutral-0 py-1 text-sm shadow-lg outline-none">
+              {profileHref && (
+                <Menu.LinkItem
+                  render={<Link href={profileHref} />}
+                  className="block cursor-pointer px-3 py-2 text-neutral-700 outline-none hover:bg-neutral-50 data-[highlighted]:bg-neutral-50"
+                >
+                  View profile
+                </Menu.LinkItem>
+              )}
               <Menu.Item
                 disabled={!canManage}
                 title={restrictedHint}

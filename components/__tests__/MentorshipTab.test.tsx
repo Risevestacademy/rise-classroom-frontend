@@ -20,7 +20,12 @@ const mentor = {
 describe("MentorshipTab", () => {
   it("shows the student's mentor with their track and cohort", () => {
     renderWithClient(
-      <MentorshipTab mentor={mentor} track="Design" cohort="Cohort 2026" />,
+      <MentorshipTab
+        student={{ id: "s1", name: "Ada Obi", email: "ada@example.com" }}
+        mentor={mentor}
+        track="Design"
+        cohort="Cohort 2026"
+      />,
     );
 
     expect(screen.getByRole("link", { name: "David Orobosa" })).toHaveAttribute(
@@ -33,7 +38,7 @@ describe("MentorshipTab", () => {
   });
 
   it("says so when no mentor is assigned", () => {
-    renderWithClient(<MentorshipTab mentor={null} />);
+    renderWithClient(<MentorshipTab student={{ id: "s1", name: "Ada Obi", email: "ada@example.com" }} mentor={null} />);
     expect(screen.getByText("No mentor assigned yet.")).toBeInTheDocument();
   });
 });
