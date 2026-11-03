@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   adminQueries,
   assignmentsFor,
+  staffAssignments,
   toUserFilters,
   type AdminUser,
 } from "@/lib/admin";
@@ -39,7 +40,7 @@ const statusText = {
 /** Track ids a user is assigned to (instructors) or enrolled on (students). */
 function trackIdsFor(user: AdminUser) {
   const ids = new Set<string>();
-  for (const assignment of user.instructorTrack ?? []) {
+  for (const assignment of staffAssignments(user)) {
     if (assignment.track?.id) ids.add(assignment.track.id);
   }
   for (const membership of user.studentProfile ?? []) {

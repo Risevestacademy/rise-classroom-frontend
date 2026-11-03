@@ -29,7 +29,11 @@ export const studentStatusPill = {
 } as const;
 
 export function needsAttention(student: AssignedStudent) {
-  return student.progress < attentionThreshold;
+  return student.progress !== null && student.progress < attentionThreshold;
+}
+
+export function progressLabel(student: AssignedStudent) {
+  return student.progress === null ? "--" : `${student.progress}%`;
 }
 
 export function progressTone(student: AssignedStudent) {
@@ -66,10 +70,13 @@ export function StudentsProgressCard({
   title,
   students,
   studentHref,
+  emptyMessage,
 }: {
   title: string;
   students: AssignedStudent[];
   studentHref: (student: AssignedStudent) => string;
+  /** Shown in place of the list when there are no students. */
+  emptyMessage?: string;
 }) {
   return (
     <Card>
@@ -81,6 +88,11 @@ export function StudentsProgressCard({
           </Button>
         }
       />
+      {students.length === 0 && emptyMessage && (
+        <p className="py-6 text-center font-work text-sm text-text-muted">
+          {emptyMessage}
+        </p>
+      )}
       <ul className="flex flex-col gap-3">
         {students.map((student) => {
           const tone = progressTone(student);
@@ -109,14 +121,14 @@ export function StudentsProgressCard({
                 <div className="flex w-[152px] flex-col gap-2">
                   <div>
                     <p className={cn("text-lg/6 font-semibold", tone.text)}>
-                      {student.progress}%
+                      {progressLabel(student)}
                     </p>
                     <p className="font-work text-[13px]/[18px] text-text-muted">
                       Overall progress
                     </p>
                   </div>
                   <ProgressBar
-                    value={student.progress}
+                    value={student.progress ?? 0}
                     fillClassName={tone.bar}
                   />
                 </div>

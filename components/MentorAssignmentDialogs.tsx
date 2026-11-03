@@ -21,7 +21,7 @@ import { LockedField } from "@/components/ui/locked-field";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { adminQueries, type AdminUser } from "@/lib/admin";
+import { adminQueries, staffAssignments, type AdminUser } from "@/lib/admin";
 import { adminDashboardKeys } from "@/lib/admin-dashboard";
 import {
   assignMentor,
@@ -80,7 +80,7 @@ function AssignStudentsForm({
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
   // Mentors can only take students from a cohort and track they're on.
-  const scopes = (mentor.instructorTrack ?? []).flatMap((assignment) =>
+  const scopes = staffAssignments(mentor).flatMap((assignment) =>
     assignment.cohort?.id && assignment.track?.id
       ? [{ cohortId: assignment.cohort.id, trackId: assignment.track.id }]
       : [],
