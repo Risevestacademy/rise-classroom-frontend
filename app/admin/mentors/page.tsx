@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Add01, Filter, MoreHorizontal, Search01 } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
@@ -10,17 +10,19 @@ import { InviteInstructorDialog } from "@/components/InviteInstructorDialog";
 import { MentorActionsMenu } from "@/components/MentorActionsMenu";
 import { StatCard } from "@/components/StatCard";
 import {
-  matchesPeopleFilters,
   PeopleFilterDialog,
   type PeopleFilter,
   type PeopleFilterValues,
 } from "@/components/cohorts/PeopleFilterDialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import { adminQueries, type UserFilters } from "@/lib/admin";
 import { adminDashboardQueries } from "@/lib/admin-dashboard";
-import { mentorQueries, type Mentor, type MentorStatus } from "@/lib/mentors";
+import { toMentor, type Mentor, type MentorStatus } from "@/lib/mentors";
 import { useSelectedCohort } from "@/lib/selected-cohort";
+import { useDebounced } from "@/lib/use-debounced";
 import { cn } from "@/lib/utils";
 
 /** Status pills sit on the brand surface; only the text is coloured. */
@@ -30,8 +32,16 @@ const statusBadge: Record<MentorStatus, { label: string; text: string }> = {
   inactive: { label: "Inactive", text: "text-text-default-badge" },
 };
 
-function mentorFilters(mentors: Mentor[]): PeopleFilter<Mentor>[] {
-  const tracks = Array.from(new Set(mentors.map((mentor) => mentor.track)));
+/** What each status on this page means in `/admin/users` query params. */
+const statusQuery: Record<MentorStatus, UserFilters> = {
+  active: { status: "ACTIVE", onboardingStatus: "COMPLETED" },
+  pending: { status: "ACTIVE", onboardingStatus: "INVITED" },
+  inactive: { status: "SUSPENDED" },
+};
+
+function mentorFilters(
+  tracks: { id: string; name: string }[],
+): PeopleFilter<Mentor>[] {
   return [
     {
       key: "status",
@@ -45,11 +55,14 @@ function mentorFilters(mentors: Mentor[]): PeopleFilter<Mentor>[] {
       values: (mentor) => [mentor.status],
     },
     {
-      key: "track",
+      key: "trackId",
       title: "Track",
       allLabel: "All tracks",
-      options: tracks.map((track) => ({ value: track, label: track })),
-      values: (mentor) => [mentor.track],
+      options: tracks.map((track) => ({ value: track.id, label: track.name })),
+      values: (mentor) =>
+        (mentor.user.instructorTrack ?? []).flatMap((assignment) =>
+          assignment.track ? [assignment.track.id] : [],
+        ),
     },
   ];
 }
@@ -59,39 +72,72 @@ const headerCell =
 
 export default function MentorsPage() {
   const { cohortId, isReady } = useSelectedCohort();
-  const mentorsQuery = useQuery({
-    ...mentorQueries.list(cohortId),
-    enabled: isReady,
-  });
-  const mentors = mentorsQuery.data ?? [];
-  // Only platform-wide: the control tower doesn't count mentorships per cohort.
-  const controlTower = useQuery({
-    ...adminDashboardQueries.controlTower(),
-    enabled: isReady && !cohortId,
-  });
-  const filters = mentorFilters(mentors);
-  const isLoading = mentorsQuery.isPending;
   const [search, setSearch] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
   const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
     {},
   );
   const [filterOpen, setFilterOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const debouncedSearch = useDebounced(search);
+  const pickedStatus = filterValues.status?.[0] as MentorStatus | undefined;
+  const pickedTrack = filterValues.trackId?.[0];
 
-  const query = search.trim().toLowerCase();
-  const rows = mentors.filter(
-    (mentor) =>
-      (mentor.name.toLowerCase().includes(query) ||
-        mentor.email.toLowerCase().includes(query)) &&
-      matchesPeopleFilters(mentor, filters, filterValues),
-  );
+  // Another cohort has its own pages, so start it from the first one.
+  const [listedCohortId, setListedCohortId] = React.useState(cohortId);
+  if (listedCohortId !== cohortId) {
+    setListedCohortId(cohortId);
+    setPage(1);
+    setSelected(new Set());
+  }
+
+  const mentorsQuery = useQuery({
+    ...adminQueries.users({
+      role: "MENTOR",
+      cohortId,
+      ...(pickedStatus && statusQuery[pickedStatus]),
+      trackId: pickedTrack,
+      search: debouncedSearch || undefined,
+      page,
+      limit: pageSize,
+    }),
+    enabled: isReady,
+    // Keeps the rows and pagination on screen while the next page loads.
+    placeholderData: keepPreviousData,
+  });
+  const totalQuery = useQuery({
+    ...adminQueries.userCount({ role: "MENTOR", cohortId }),
+    enabled: isReady,
+  });
+  const activeQuery = useQuery({
+    ...adminQueries.userCount({
+      role: "MENTOR",
+      cohortId,
+      ...statusQuery.active,
+    }),
+    enabled: isReady,
+  });
+  const tracksQuery = useQuery(adminQueries.tracks());
+  const rows = (mentorsQuery.data?.items ?? []).map(toMentor);
+  const totalPages = mentorsQuery.data?.totalPages ?? 1;
+
+  // Removing the last row of the last page leaves this page empty.
+  if (totalPages > 0 && page > totalPages) setPage(totalPages);
+
+  // Only platform-wide: the control tower doesn't count mentorships per cohort.
+  const controlTower = useQuery({
+    ...adminDashboardQueries.controlTower(),
+    enabled: isReady && !cohortId,
+  });
+  const filters = mentorFilters(tracksQuery.data ?? []);
+  const isLoading = mentorsQuery.isPending;
+  const isNarrowed =
+    debouncedSearch.length > 0 || Boolean(pickedStatus || pickedTrack);
 
   const stats = [
-    { title: "Total mentors", value: mentors.length },
-    {
-      title: "Active mentors",
-      value: mentors.filter((mentor) => mentor.status === "active").length,
-    },
+    { title: "Total mentors", value: totalQuery.data ?? "--" },
+    { title: "Active mentors", value: activeQuery.data ?? "--" },
     // PENDING-BACKEND: admins can't list mentorships yet, so mentors without
     // students can't be counted.
     { title: "Unassigned mentors", value: "--" },
@@ -171,7 +217,11 @@ export default function MentorsPage() {
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  // A new search starts from the first page again.
+                  setPage(1);
+                }}
                 placeholder="Search by name or email"
                 className="w-full min-w-0 bg-transparent font-work text-sm text-text-primary outline-none placeholder:text-text-muted"
               />
@@ -313,9 +363,9 @@ export default function MentorsPage() {
             !isLoading &&
             rows.length === 0 && (
               <p className="px-6 py-10 text-center font-work text-sm text-text-muted">
-                {mentors.length === 0
-                  ? "No mentors yet. Invited mentors will appear here."
-                  : "No one matches your search or filters."}
+                {isNarrowed
+                  ? "No one matches your search or filters."
+                  : "No mentors yet. Invited mentors will appear here."}
               </p>
             )
           )}
@@ -325,9 +375,29 @@ export default function MentorsPage() {
             onOpenChange={setFilterOpen}
             filters={filters}
             value={filterValues}
-            onApply={setFilterValues}
+            singleSelect
+            onApply={(next) => {
+              setFilterValues(next);
+              // New filters start from the first page again.
+              setPage(1);
+            }}
           />
         </section>
+
+        {rows.length > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+            disabled={mentorsQuery.isFetching}
+            className="mt-4"
+          />
+        )}
       </main>
     </>
   );

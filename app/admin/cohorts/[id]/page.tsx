@@ -22,6 +22,7 @@ import {
   StatusPill,
 } from "@/components/cohorts/CohortPeopleTable";
 import { CohortSettings } from "@/components/cohorts/CohortSettings";
+import { CohortStudentsTable } from "@/components/cohorts/CohortStudentsTable";
 import { CohortStatusBadge } from "@/components/cohorts/CohortStatusBadge";
 import type { PeopleFilter } from "@/components/cohorts/PeopleFilterDialog";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
@@ -100,7 +101,7 @@ function trackFilter<T>(
   values: (row: T) => string[],
 ): PeopleFilter<T> {
   return {
-    key: "track",
+    key: "trackId",
     title: "Track",
     description: "Filter by the learning track they belong to.",
     allLabel: "All tracks",
@@ -121,7 +122,7 @@ function studentFilters(tracks: CohortTrack[]): PeopleFilter<CohortStudent>[] {
       values: (row) => [row.accountStatus],
     },
     {
-      key: "onboarding",
+      key: "onboardingStatus",
       title: "Onboarding",
       description:
         "Find students who have joined or are yet to accept their invite.",
@@ -324,10 +325,9 @@ export default function CohortDetailPage({
           />
         )}
         {tab === "students" && cohort.studentList.length > 0 && (
-          <CohortPeopleTable
+          <CohortStudentsTable
+            cohortId={cohort.id}
             title={`${cohort.students} students`}
-            personHeader="Student"
-            rows={cohort.studentList}
             filters={studentFilters(cohort.trackList)}
             columns={[
               { header: "Track", width: "w-[210px]", cell: (row) => row.track },

@@ -4,7 +4,7 @@ import * as React from "react";
 import { notFound, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Code, PenLine, Smartphone } from "lucide-react";
-
+import { UserMoreActions } from "@/components/student-profile/UserMoreAction";
 import {
   Add01,
   Calendar03,
@@ -12,7 +12,6 @@ import {
   File01,
   Location01,
   Mail02,
-  MoreVertical,
   Search01,
   UserCircle,
   Video,
@@ -215,7 +214,7 @@ export default function StudentDetailsPage({
           )}
 
           {student && tab === "overview" && (
-            <OverviewTab student={student} name={name} />
+            <OverviewTab student={student} name={name} router={router} id={id} />
           )}
           {student && tab === "progress" && (
             <ProgressTab track={assignments?.tracks[0]} cohort={cohort} />
@@ -240,19 +239,19 @@ export default function StudentDetailsPage({
   );
 }
 
-function OverviewTab({ student, name }: { student: AdminUser; name: string }) {
+function OverviewTab({ student, name, router, id }: { student: AdminUser; name: string; router: ReturnType<typeof useRouter>; id: string }) {
   return (
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,657fr)_minmax(0,463fr)]">
       <div className="flex min-w-0 flex-col gap-4">
         <ProfileCard student={student} name={name} />
         <MentorCard />
         <ProgressCard student={student} />
-        <DeadlinesCard />
+        <DeadlinesCard router={router} id={id} />
       </div>
       <div className="flex min-w-0 flex-col gap-4">
         <AttendanceCard />
         <ActivitiesCard />
-        <NotesCard />
+        <OverviewNotesCard router={router} id={id} />
       </div>
     </div>
   );
@@ -341,15 +340,7 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
 
         <div className="flex shrink-0 items-center gap-3">
           <MessageButton />
-          {/* The design has no menu for this button yet. */}
-          <Button
-            variant="tertiary"
-            size="medium"
-            aria-label="More actions"
-            className="w-10 px-0 text-icon-primary"
-          >
-            <MoreVertical className="size-5" />
-          </Button>
+          <UserMoreActions user={student} />
         </div>
       </div>
 
@@ -501,13 +492,13 @@ function ListItem({
   );
 }
 
-function DeadlinesCard() {
+function DeadlinesCard({ router, id }: { router: ReturnType<typeof useRouter>; id: string }) {
   return (
     <Card>
       <CardHeader
         title="Upcoming Deadlines"
         action={
-          <Button variant="tertiary" size="sm">
+          <Button onClick={()=> router.replace(`/admin/students/${id}?tab=assignments`)} variant="tertiary" size="sm">
             View all
           </Button>
         }
@@ -639,13 +630,19 @@ function ActivitiesCard() {
   );
 }
 
-function NotesCard() {
+function OverviewNotesCard({
+  router,
+  id,
+}: {
+  router: ReturnType<typeof useRouter>;
+  id: string;
+}) {
   return (
     <Card className="gap-4">
       <CardHeader
         title="Notes"
         action={
-          <Button variant="tertiary" size="sm">
+          <Button onClick={() => router.replace(`/admin/students/${id}?tab=notes`)} variant="tertiary" size="sm">
             View all
           </Button>
         }
