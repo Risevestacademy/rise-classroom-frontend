@@ -371,13 +371,6 @@ export const assignments: {
 ];
 
 export const mentorship = {
-  mentor: {
-    name: "David Orobosa",
-    role: "Senior Product Designer",
-    track: "Design",
-    status: "Active",
-    cohort: "Cohort 2026",
-  },
   sessions: { total: 12, attended: 8, missed: 4 },
   upcoming: [
     { date: "Mon, Oct 12 2026", time: "6:00 PM -7:00 PM" },

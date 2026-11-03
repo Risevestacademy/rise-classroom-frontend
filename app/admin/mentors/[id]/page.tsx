@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { notFound, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu } from "@base-ui/react/menu";
 
 import {
@@ -37,7 +37,7 @@ import {
   ReassignStudentDialog,
 } from "@/components/MentorAssignmentDialogs";
 import {
-  needsAttention,
+  progressLabel,
   progressTone,
   StudentName,
   StudentsProgressCard,
@@ -60,10 +60,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
 import { adminQueries, assignmentsFor, type AdminUser } from "@/lib/admin";
-import { toMentor, type Mentor, type MentorStatus } from "@/lib/mentors";
+import {
+  assignMentor,
+  mentorQueries,
+  toAssignedStudent,
+  toMentor,
+  type Mentor,
+  type MentorStatus,
+} from "@/lib/mentors";
 import { cn } from "@/lib/utils";
 import {
-  assignedStudents,
   mentorActivity,
   mentorActivityFilters,
   upcomingSessions,
@@ -244,15 +250,30 @@ function MentorSummary({ mentor }: { mentor: Mentor }) {
   );
 }
 
+function useMentees(mentorId: string) {
+  const query = useQuery(mentorQueries.mentees(mentorId));
+  return { ...query, students: (query.data ?? []).map(toAssignedStudent) };
+}
+
+/** Why the students list is empty: still loading, failed, or no mentees. */
+function menteesMessage(query: ReturnType<typeof useMentees>) {
+  if (query.isPending) return "Loading students…";
+  if (query.isError) return `Couldn't load students. ${query.error.message}`;
+  return "No students assigned yet.";
+}
+
 function OverviewTab({ mentor }: { mentor: Mentor }) {
+  const mentees = useMentees(mentor.id);
+
   return (
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,657fr)_minmax(0,463fr)]">
       <div className="flex min-w-0 flex-col gap-4">
         <ProfileCard mentor={mentor} />
         <StudentsProgressCard
           title="Assigned students"
-          students={assignedStudents}
+          students={mentees.students}
           studentHref={(student) => `/admin/students/${student.id}`}
+          emptyMessage={menteesMessage(mentees)}
         />
       </div>
       <div className="flex min-w-0 flex-col gap-4">
@@ -332,6 +353,9 @@ const headerCell =
   "border-r border-border-default px-2.5 font-work text-sm font-medium tracking-[-0.01em]";
 
 function StudentsTab({ mentor }: { mentor: Mentor }) {
+  const queryClient = useQueryClient();
+  const mentees = useMentees(mentor.id);
+  const assignedStudents = mentees.students;
   const [search, setSearch] = React.useState("");
   const [reassigning, setReassigning] = React.useState<AssignedStudent | null>(
     null,
@@ -360,10 +384,9 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
       value: assignedStudents.filter((student) => student.status === "active")
         .length,
     },
-    {
-      title: "Students needing attention",
-      value: assignedStudents.filter(needsAttention).length,
-    },
+    // PENDING-BACKEND: needing attention is based on progress, which the API
+    // doesn't have yet.
+    { title: "Students needing attention", value: "--" },
   ];
 
   function toggle(email: string, checked: boolean) {
@@ -379,7 +402,12 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(3,minmax(0,272px))]">
         {stats.map((stat) => (
-          <StatCard key={stat.title} title={stat.title} value={stat.value} />
+          <StatCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            loading={mentees.isPending}
+          />
         ))}
       </div>
 
@@ -481,10 +509,10 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
                             tone.text,
                           )}
                         >
-                          {student.progress}%
+                          {progressLabel(student)}
                         </span>
                         <ProgressBar
-                          value={student.progress}
+                          value={student.progress ?? 0}
                           fillClassName={tone.bar}
                           className="w-[150px]"
                         />
@@ -520,7 +548,9 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
         </div>
         {rows.length === 0 && (
           <p className="px-6 py-10 text-center font-work text-sm text-text-muted">
-            No one matches your search or filters.
+            {assignedStudents.length > 0
+              ? "No one matches your search or filters."
+              : menteesMessage(mentees)}
           </p>
         )}
 
@@ -538,9 +568,13 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
             currentMentor={{ id: mentor.id, name: mentor.name }}
             open
             onOpenChange={(open) => !open && setReassigning(null)}
-            // PENDING-BACKEND: these are sample students without real IDs, so
-            // reassigning can't call the API until the list is real.
-            onReassign={async () => {}}
+            // Assigning a new mentor replaces the current one.
+            onReassign={async (mentorId) => {
+              await assignMentor({ mentorId, studentUserId: reassigning.id });
+              await queryClient.invalidateQueries({
+                queryKey: ["admin", "users"],
+              });
+            }}
           />
         )}
       </section>

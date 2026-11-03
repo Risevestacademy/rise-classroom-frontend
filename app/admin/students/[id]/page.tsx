@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Code, PenLine, Smartphone } from "lucide-react";
@@ -52,7 +53,6 @@ import {
   activityGroups,
   attendanceMonth,
   deadlines,
-  mentor,
   moduleFilters,
   moduleProgress,
   notes,
@@ -231,7 +231,13 @@ export default function StudentDetailsPage({
           {student && tab === "assignments" && (
             <AssignmentsTab firstName={firstName} />
           )}
-          {student && tab === "mentorship" && <MentorshipTab />}
+          {student && tab === "mentorship" && (
+            <MentorshipTab
+              mentor={student.mentor}
+              track={assignments?.tracks[0]}
+              cohort={cohort}
+            />
+          )}
           {student && tab === "notes" && <NotesTab />}
         </div>
       </main>
@@ -244,7 +250,7 @@ function OverviewTab({ student, name, router, id }: { student: AdminUser; name: 
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,657fr)_minmax(0,463fr)]">
       <div className="flex min-w-0 flex-col gap-4">
         <ProfileCard student={student} name={name} />
-        <MentorCard />
+        <MentorCard mentor={student.mentor} />
         <ProgressCard student={student} />
         <DeadlinesCard router={router} id={id} />
       </div>
@@ -355,19 +361,41 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
   );
 }
 
-function MentorCard() {
+function MentorCard({ mentor }: { mentor: AdminUser["mentor"] }) {
+  if (!mentor) {
+    return (
+      <Card className="gap-4">
+        <CardHeader title="Mentor" />
+        <p className="font-work text-sm text-text-muted">
+          No mentor assigned yet.
+        </p>
+      </Card>
+    );
+  }
+
+  const name = mentor.displayName ?? mentor.name;
+
   return (
     <Card className="gap-4">
       <CardHeader title="Mentor" />
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <PersonAvatar name={mentor.name} size={60} />
+          <PersonAvatar
+            name={name}
+            src={mentor.image}
+            colorKey={mentor.id}
+            size={60}
+          />
           <div className="flex min-w-0 flex-col gap-1">
-            <p className="truncate text-lg/6 font-semibold text-text-primary">
-              {mentor.name}
-            </p>
+            <Link
+              href={`/admin/mentors/${mentor.id}`}
+              className="truncate text-lg/6 font-semibold text-text-primary hover:underline"
+            >
+              {name}
+            </Link>
+            {/* PENDING-BACKEND: the API has no job title for a mentor. */}
             <p className="truncate font-work text-sm text-text-secondary">
-              {mentor.role}
+              --
             </p>
           </div>
         </div>
@@ -379,8 +407,9 @@ function MentorCard() {
           <p className="font-work text-sm font-medium text-text-secondary">
             Next session
           </p>
+          {/* PENDING-BACKEND: there are no mentorship sessions yet. */}
           <p className="font-work text-[13px]/[18px] text-text-secondary">
-            {mentor.nextSession}
+            --
           </p>
         </div>
       </div>

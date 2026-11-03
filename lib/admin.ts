@@ -37,8 +37,34 @@ export type AdminUser = {
   createdAt: string;
   emailVerified?: boolean;
   instructorTrack?: InstructorAssignment[];
+  /** Mentors get this in place of `instructorTrack`. */
+  mentorTrack?: InstructorAssignment[];
   studentProfile?: StudentMembership[];
+  /**
+   * A student's active mentor, or null if they have none. Only on
+   * `GET /admin/users/{id}`.
+   */
+  mentor?: AssignedMentor | null;
 };
+
+export type AssignedMentor = {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string | null;
+  email: string;
+  phoneNumber?: string | null;
+  image?: string | null;
+  status: UserStatus;
+  mentorshipId: string;
+  assignedAt: string;
+};
+
+/** The cohorts and tracks an instructor teaches or a mentor mentors in. */
+export function staffAssignments(user: AdminUser) {
+  return [...(user.instructorTrack ?? []), ...(user.mentorTrack ?? [])];
+}
 
 /** Payload for `POST /admin/users` — every field is required by the API. */
 export type InviteUserInput = {
@@ -397,7 +423,7 @@ export function assignmentsFor(user: AdminUser) {
   const tracks = new Set<string>();
   const cohorts = new Set<string>();
 
-  for (const assignment of user.instructorTrack ?? []) {
+  for (const assignment of staffAssignments(user)) {
     if (assignment.track?.name) tracks.add(assignment.track.name);
     if (assignment.cohort?.name) cohorts.add(assignment.cohort.name);
   }

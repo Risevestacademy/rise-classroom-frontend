@@ -18,7 +18,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
-import { adminQueries, type UserFilters } from "@/lib/admin";
+import {
+  adminQueries,
+  staffAssignments,
+  type UserFilters,
+} from "@/lib/admin";
 import { adminDashboardQueries } from "@/lib/admin-dashboard";
 import { toMentor, type Mentor, type MentorStatus } from "@/lib/mentors";
 import { useSelectedCohort } from "@/lib/selected-cohort";
@@ -60,7 +64,7 @@ function mentorFilters(
       allLabel: "All tracks",
       options: tracks.map((track) => ({ value: track.id, label: track.name })),
       values: (mentor) =>
-        (mentor.user.instructorTrack ?? []).flatMap((assignment) =>
+        staffAssignments(mentor.user).flatMap((assignment) =>
           assignment.track ? [assignment.track.id] : [],
         ),
     },

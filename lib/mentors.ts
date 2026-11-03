@@ -6,6 +6,7 @@ import {
   type AdminUser,
 } from "@/lib/admin";
 import { api, ApiError, type Envelope, type Paginated } from "@/lib/api";
+import type { AssignedStudent } from "@/app/admin/mentors/[id]/profile-data";
 import { formatJoined } from "@/app/admin/students/student-display";
 
 export type MentorStatus = "active" | "pending" | "inactive";
@@ -16,8 +17,8 @@ export type Mentor = {
   email: string;
   track: string;
   /**
-   * PENDING-BACKEND: admins can't list mentorships yet, so this is always
-   * null until there's an endpoint for a mentor's students.
+   * PENDING-BACKEND: the users list has no mentee count, and fetching each
+   * mentor's mentees would be a request per row, so this stays null.
    */
   studentsAssigned: number | null;
   status: MentorStatus;
@@ -63,10 +64,53 @@ async function listMentors(cohortId?: string) {
   return [first, ...rest].flatMap((page) => page.items).map(toMentor);
 }
 
+/** One of a mentor's active mentees, from `GET /admin/users/{id}/mentees`. */
+export type MentorStudent = {
+  mentorshipId: string;
+  assignedAt: string;
+  studentProfileId: string;
+  cohort: { id: string; name: string; year?: string };
+  enrollment: { status: string; track?: { id: string; name: string } }[];
+  user: {
+    id: string;
+    name: string;
+    firstName: string;
+    lastName: string;
+    displayName?: string | null;
+    email: string;
+    phoneNumber?: string | null;
+    image?: string | null;
+    status: AdminUser["status"];
+  };
+};
+
+async function listMentees(mentorId: string) {
+  const { data } = await api.get<Envelope<MentorStudent[]>>(
+    `/admin/users/${mentorId}/mentees`,
+  );
+  return data;
+}
+
+/**
+ * A mentee as the mentor profile lists them. PENDING-BACKEND: the API has no
+ * student progress, so it's null.
+ */
+export function toAssignedStudent(mentee: MentorStudent): AssignedStudent {
+  return {
+    id: mentee.user.id,
+    name: mentee.user.displayName ?? mentee.user.name,
+    email: mentee.user.email,
+    status: mentee.user.status === "SUSPENDED" ? "inactive" : "active",
+    progress: null,
+  };
+}
+
 export const mentorKeys = {
   // Under the users key, so inviting or editing a user refreshes it.
   list: (cohortId?: string) =>
     ["admin", "users", "mentors", cohortId] as const,
+  mentees: (mentorId: string) =>
+    ["admin", "users", "mentees", mentorId] as const,
 };
 
 export const mentorQueries = {
@@ -74,6 +118,12 @@ export const mentorQueries = {
     queryOptions({
       queryKey: mentorKeys.list(cohortId),
       queryFn: () => listMentors(cohortId),
+    }),
+
+  mentees: (mentorId: string) =>
+    queryOptions({
+      queryKey: mentorKeys.mentees(mentorId),
+      queryFn: () => listMentees(mentorId),
     }),
 };
 

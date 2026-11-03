@@ -1,15 +1,17 @@
-// PENDING-BACKEND: admins can't list a mentor's students, sessions or
-// activity yet, so the mentor profile shows this sample data from the design.
+// PENDING-BACKEND: there are no mentor sessions or activity yet, so the mentor
+// profile shows this sample data from the design. The mentor dashboard still
+// uses the sample students, as mentors can't list their own students yet.
 
 export type AssignedStudent = {
   id: string;
   name: string;
   email: string;
   status: "active" | "pending" | "inactive";
-  progress: number;
+  /** `null` while the API has no student progress. */
+  progress: number | null;
 };
 
-export const assignedStudents: AssignedStudent[] = [
+export const assignedStudents: (AssignedStudent & { progress: number })[] = [
   { id: "1", name: "Seyi Wakil", email: "seyiwawa@gmail.com", status: "active", progress: 84 },
   { id: "2", name: "Tola Adebayo", email: "tobayo123@gmail.com", status: "active", progress: 72 },
   { id: "3", name: "James Okafor", email: "jammiefor123@gmail.com", status: "active", progress: 68 },

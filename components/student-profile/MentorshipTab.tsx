@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   Calendar03,
   CancelCircle,
@@ -9,6 +11,9 @@ import {
 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
+import type { AdminUser } from "@/lib/admin";
+// PENDING-BACKEND: there are no mentorship sessions yet, so the session totals
+// and upcoming sessions are the design's sample data.
 import { mentorship } from "@/app/admin/students/[id]/profile-data";
 import { BrandBadge, Card, CardHeader } from "./shared";
 
@@ -34,8 +39,32 @@ const sessionStats = [
   },
 ];
 
-export function MentorshipTab() {
-  const { mentor } = mentorship;
+/**
+ * The student's mentor, from the student record. A mentorship is made within
+ * the student's cohort and track, so those are the student's.
+ */
+export function MentorshipTab({
+  mentor,
+  track,
+  cohort,
+}: {
+  mentor: AdminUser["mentor"];
+  track?: string;
+  cohort?: string;
+}) {
+  if (!mentor) {
+    return (
+      <Card>
+        <CardHeader title="Assigned mentor" />
+        <p className="font-work text-sm text-text-muted">
+          No mentor assigned yet.
+        </p>
+      </Card>
+    );
+  }
+
+  const name = mentor.displayName ?? mentor.name;
+  const suspended = mentor.status === "SUSPENDED";
 
   return (
     <div className="flex flex-col gap-4">
@@ -43,26 +72,42 @@ export function MentorshipTab() {
         <CardHeader title="Assigned mentor" />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <PersonAvatar name={mentor.name} size={80} />
+            <PersonAvatar
+              name={name}
+              src={mentor.image}
+              colorKey={mentor.id}
+              size={80}
+            />
             <div className="flex min-w-0 flex-col gap-2">
               <div className="flex flex-col">
-                <p className="truncate text-xl font-semibold text-text-primary">
-                  {mentor.name}
-                </p>
+                <Link
+                  href={`/admin/mentors/${mentor.id}`}
+                  className="truncate text-xl font-semibold text-text-primary hover:underline"
+                >
+                  {name}
+                </Link>
+                {/* PENDING-BACKEND: the API has no job title for a mentor. */}
                 <p className="truncate font-work text-sm text-text-secondary">
-                  {mentor.role}
+                  --
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <BrandBadge size="lg" className="text-text-info">
-                  {mentor.track}
+                {track && (
+                  <BrandBadge size="lg" className="text-text-info">
+                    {track}
+                  </BrandBadge>
+                )}
+                <BrandBadge
+                  size="lg"
+                  className={suspended ? "text-text-error" : "text-text-success"}
+                >
+                  {suspended ? "Suspended" : "Active"}
                 </BrandBadge>
-                <BrandBadge size="lg" className="text-text-success">
-                  {mentor.status}
-                </BrandBadge>
-                <BrandBadge size="lg" className="text-text-info">
-                  {mentor.cohort}
-                </BrandBadge>
+                {cohort && (
+                  <BrandBadge size="lg" className="text-text-info">
+                    {cohort}
+                  </BrandBadge>
+                )}
               </div>
             </div>
           </div>

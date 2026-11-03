@@ -41,6 +41,29 @@ describe("AssignStudentsDialog", () => {
     expect(url.searchParams.get("trackId")).toBe("track-1");
   });
 
+  it("reads the cohort and track from a mentor's mentorTrack", async () => {
+    const api = mockApi({ "GET /admin/users": studentsPage() });
+    const mentorOnMentorTrack = makeUser({
+      id: "mentor-2",
+      role: "MENTOR",
+      mentorTrack: [
+        { cohort: { id: "cohort-2", name: "Cohort 2027" }, track: { id: "track-2", name: "Backend" } },
+      ],
+    });
+    renderWithClient(
+      <AssignStudentsDialog
+        mentor={mentorOnMentorTrack}
+        open
+        onOpenChange={() => {}}
+      />,
+    );
+
+    expect(await screen.findByText("Tobi Adeyemi")).toBeInTheDocument();
+    const [url] = api.urls("GET /admin/users");
+    expect(url.searchParams.get("cohortId")).toBe("cohort-2");
+    expect(url.searchParams.get("trackId")).toBe("track-2");
+  });
+
   it("filters by name or email", async () => {
     mockApi({ "GET /admin/users": studentsPage() });
     const { user } = renderWithClient(
