@@ -1,6 +1,9 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
+import { Menu } from "@base-ui/react/menu";
 
 import {
   Calendar03,
@@ -9,9 +12,16 @@ import {
   Message01,
   MoreVertical,
 } from "@/assets/icons";
+import {
+  actionsMenuItemClass,
+  actionsMenuPopupClass,
+} from "@/components/MentorActionsMenu";
+import { ReassignStudentDialog } from "@/components/MentorAssignmentDialogs";
 import { PersonAvatar } from "@/components/PersonAvatar";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import type { AdminUser } from "@/lib/admin";
+import { assignMentor } from "@/lib/mentors";
+import { cn } from "@/lib/utils";
 // PENDING-BACKEND: there are no mentorship sessions yet, so the session totals
 // and upcoming sessions are the design's sample data.
 import { mentorship } from "@/app/admin/students/[id]/profile-data";
@@ -44,10 +54,12 @@ const sessionStats = [
  * the student's cohort and track, so those are the student's.
  */
 export function MentorshipTab({
+  student,
   mentor,
   track,
   cohort,
 }: {
+  student: { id: string; name: string; email: string };
   mentor: AdminUser["mentor"];
   track?: string;
   cohort?: string;
@@ -118,15 +130,10 @@ export function MentorshipTab({
               <Message01 className="size-[18px]" />
               Message
             </Button>
-            {/* The design has no menu for this button yet. */}
-            <Button
-              variant="tertiary"
-              size="medium"
-              aria-label="More actions"
-              className="w-10 px-0 text-icon-primary"
-            >
-              <MoreVertical className="size-5" />
-            </Button>
+            <MentorshipActions
+              student={student}
+              mentor={{ id: mentor.id, name }}
+            />
           </div>
         </div>
       </Card>
@@ -177,5 +184,63 @@ export function MentorshipTab({
         </Card>
       </div>
     </div>
+  );
+}
+
+/** The ⋮ menu beside the mentor: reassigning swaps in another mentor. */
+function MentorshipActions({
+  student,
+  mentor,
+}: {
+  student: { id: string; name: string; email: string };
+  mentor: { id: string; name: string };
+}) {
+  const queryClient = useQueryClient();
+  const [reassigning, setReassigning] = React.useState(false);
+
+  return (
+    <>
+      <Menu.Root>
+        <Menu.Trigger
+          aria-label="More actions"
+          className={cn(
+            buttonVariants({ variant: "tertiary", size: "medium" }),
+            "w-10 cursor-pointer px-0 text-icon-primary",
+          )}
+        >
+          <MoreVertical className="size-5" />
+        </Menu.Trigger>
+        <Menu.Portal>
+          <Menu.Positioner align="end" sideOffset={4} className="z-50">
+            <Menu.Popup className={actionsMenuPopupClass}>
+              <Menu.LinkItem
+                className={actionsMenuItemClass}
+                render={<Link href={`/admin/mentors/${mentor.id}`} />}
+              >
+                View mentor profile
+              </Menu.LinkItem>
+              <Menu.Item
+                onClick={() => setReassigning(true)}
+                className={actionsMenuItemClass}
+              >
+                Reassign mentor
+              </Menu.Item>
+            </Menu.Popup>
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
+
+      <ReassignStudentDialog
+        student={student}
+        currentMentor={mentor}
+        open={reassigning}
+        onOpenChange={setReassigning}
+        // Assigning a new mentor replaces the current one.
+        onReassign={async (mentorId) => {
+          await assignMentor({ mentorId, studentUserId: student.id });
+          await queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+        }}
+      />
+    </>
   );
 }

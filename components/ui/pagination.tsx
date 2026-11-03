@@ -11,9 +11,10 @@ import {
 import { SelectInput } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-const pageSizeOptions = ["10", "20", "50"].map((size) => ({
-  value: size,
-  label: size,
+const pageSizes = [10, 20, 50];
+const pageSizeOptions = pageSizes.map((size) => ({
+  value: String(size),
+  label: String(size),
 }));
 
 /** "1 2 3 … 8 9 10": three pages from the current one, then the last three. */
@@ -27,9 +28,14 @@ function visiblePages(page: number, totalPages: number) {
   return start + 3 < last[0] ? [...first, null, ...last] : [...first, ...last];
 }
 
+/**
+ * Hidden while everything fits on the smallest page, so a short list doesn't
+ * show "Page 1 of 1".
+ */
 export function Pagination({
   page,
   totalPages,
+  totalItems,
   pageSize,
   onPageChange,
   onPageSizeChange,
@@ -38,6 +44,7 @@ export function Pagination({
 }: {
   page: number;
   totalPages: number;
+  totalItems: number;
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
@@ -52,6 +59,8 @@ export function Pagination({
       input.value = String(page);
     }
   }
+
+  if (totalItems <= pageSizes[0]) return null;
 
   const atStart = page <= 1 || disabled;
   const atEnd = page >= totalPages || disabled;

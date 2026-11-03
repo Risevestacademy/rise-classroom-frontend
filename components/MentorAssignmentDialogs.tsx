@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import { Field } from "@base-ui/react/field";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { Search01 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
@@ -26,8 +32,10 @@ import { adminDashboardKeys } from "@/lib/admin-dashboard";
 import {
   assignMentor,
   getAssignMentorErrorMessage,
+  maxMentees,
   mentorQueries,
 } from "@/lib/mentors";
+import { useDebounced } from "@/lib/use-debounced";
 
 type Person = { id: string; name: string; email: string };
 
@@ -78,6 +86,7 @@ function AssignStudentsForm({
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const debouncedSearch = useDebounced(search.trim());
 
   // Mentors can only take students from a cohort and track they're on.
   const scopes = staffAssignments(mentor).flatMap((assignment) =>
@@ -85,27 +94,34 @@ function AssignStudentsForm({
       ? [{ cohortId: assignment.cohort.id, trackId: assignment.track.id }]
       : [],
   );
+  // The API searches, so students past the first page can still be found.
   const lists = useQueries({
-    queries: scopes.map((scope) =>
-      adminQueries.users({ role: "STUDENT", ...scope, limit: 100 }),
-    ),
+    queries: scopes.map((scope) => ({
+      ...adminQueries.users({
+        role: "STUDENT",
+        ...scope,
+        search: debouncedSearch || undefined,
+        limit: 100,
+      }),
+      placeholderData: keepPreviousData,
+    })),
   });
-  const isPending = lists.some((list) => list.isPending);
-  const isError = lists.some((list) => list.isError);
-  const students = [
+  // Current mentees are left out, and they count towards the mentor's limit.
+  const mentees = useQuery(mentorQueries.mentees(mentor.id));
+  const menteeIds = new Set(
+    (mentees.data ?? []).map((mentee) => mentee.user.id),
+  );
+  const openPlaces = Math.max(0, maxMentees - menteeIds.size);
+  const isPending = mentees.isPending || lists.some((list) => list.isPending);
+  const isError = mentees.isError || lists.some((list) => list.isError);
+  const rows = [
     ...new Map(
       lists
         .flatMap((list) => list.data?.items ?? [])
+        .filter((user) => !menteeIds.has(user.id))
         .map((user) => [user.id, user]),
     ).values(),
   ];
-
-  const query = search.trim().toLowerCase();
-  const rows = students.filter(
-    (student) =>
-      student.name.toLowerCase().includes(query) ||
-      student.email.toLowerCase().includes(query),
-  );
 
   const assign = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -177,6 +193,12 @@ function AssignStudentsForm({
         </label>
         <p className="text-sm font-medium text-black">
           {selected.size} {selected.size === 1 ? "student" : "students"} selected
+          {mentees.data && (
+            <span className="font-normal text-text-secondary">
+              {" "}
+              · {openPlaces} of {maxMentees} places left
+            </span>
+          )}
         </p>
       </div>
 
@@ -194,11 +216,16 @@ function AssignStudentsForm({
           ))
         ) : isError ? (
           <EmptyRow>We couldn&apos;t load students. Please try again.</EmptyRow>
+        ) : openPlaces === 0 ? (
+          <EmptyRow>
+            This mentor already has {maxMentees} students, the most a mentor
+            can have.
+          </EmptyRow>
         ) : rows.length === 0 ? (
           <EmptyRow>
-            {students.length === 0
-              ? "There are no students in this mentor's cohort and track."
-              : "No students match your search."}
+            {debouncedSearch
+              ? "No students match your search."
+              : "There are no other students in this mentor's cohort and track."}
           </EmptyRow>
         ) : (
           rows.map((student) => {
@@ -208,6 +235,9 @@ function AssignStudentsForm({
                 <label className="flex cursor-pointer items-center gap-2">
                   <Checkbox
                     checked={selected.has(student.id)}
+                    disabled={
+                      !selected.has(student.id) && selected.size >= openPlaces
+                    }
                     onCheckedChange={(checked) => toggle(student.id, checked)}
                     className="size-4 border-icon-secondary"
                   />

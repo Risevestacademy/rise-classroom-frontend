@@ -4,13 +4,19 @@ import { screen } from "@testing-library/react";
 import { Pagination } from "@/components/ui/pagination";
 import { renderWithClient } from "@/test/utils";
 
-function setup(page: number, totalPages: number, disabled = false) {
+function setup(
+  page: number,
+  totalPages: number,
+  disabled = false,
+  totalItems = totalPages * 10,
+) {
   const onPageChange = vi.fn();
   const onPageSizeChange = vi.fn();
   const view = renderWithClient(
     <Pagination
       page={page}
       totalPages={totalPages}
+      totalItems={totalItems}
       pageSize={10}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
@@ -83,8 +89,18 @@ describe("Pagination", () => {
     expect(onPageSizeChange).toHaveBeenCalledWith(50);
   });
 
+  it("hides when everything fits on the smallest page", () => {
+    setup(1, 1, false, 7);
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+
+  it("stays when a bigger page size holds every row, so it can be changed back", () => {
+    setup(1, 1, false, 30);
+    expect(screen.getByRole("navigation", { name: "Pagination" })).toBeInTheDocument();
+  });
+
   it("disables what can't be used at either end", () => {
-    setup(1, 1);
+    setup(1, 1, false, 30);
 
     for (const name of ["First page", "Previous page", "Next page", "Last page"]) {
       expect(screen.getByRole("button", { name })).toBeDisabled();

@@ -136,6 +136,9 @@ export type MentorshipRecord = {
   endedAt?: string | null;
 };
 
+/** The most active mentees a mentor can have. */
+export const maxMentees = 4;
+
 /**
  * Gives a student this mentor, replacing any mentor they had, so it both
  * assigns and reassigns. A mentor can have at most 4 active mentees.

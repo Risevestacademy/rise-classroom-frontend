@@ -24,11 +24,11 @@ export interface NavSectionConfig {
 export function AppSidebar({
   homeHref,
   sections,
-  accountItems,
+  accountItems = [],
 }: {
   homeHref: string;
   sections: NavSectionConfig[];
-  accountItems: NavItem[];
+  accountItems?: NavItem[];
 }) {
   const pathname = usePathname();
   const { open, setOpen } = useSidebarNav();
@@ -86,16 +86,20 @@ export function AppSidebar({
         </div>
 
         <div className="mb-3 px-3.5">
-          <div className="space-y-1">
-            {accountItems.map((item) => (
-              <SidebarNavItem
-                key={item.href}
-                item={item}
-                isActive={isActivePath(pathname, item.href)}
-              />
-            ))}
-          </div>
-          <hr className="mx-2 text-neutral-200" />
+          {accountItems.length > 0 && (
+            <>
+              <div className="space-y-1">
+                {accountItems.map((item) => (
+                  <SidebarNavItem
+                    key={item.href}
+                    item={item}
+                    isActive={isActivePath(pathname, item.href)}
+                  />
+                ))}
+              </div>
+              <hr className="mx-2 text-neutral-200" />
+            </>
+          )}
           <div className="mt-auto p-2">
             {/* Sign-out lives in the top nav's profile menu. */}
             <UserMenu variant="plain-white" subtitle="email" withMenu={false} />
