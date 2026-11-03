@@ -146,6 +146,23 @@ function studentTracks(user: AdminUser, cohortId: string) {
     .flatMap((enrollment) => (enrollment.track ? [enrollment.track] : []));
 }
 
+export function toCohortStudent(
+  user: AdminUser,
+  cohortId: string,
+): CohortStudent {
+  const tracks = studentTracks(user, cohortId);
+  return {
+    ...personFor(user.id, user.name, user.email),
+    id: user.id,
+    track: tracks.map((track) => track.name).join(", ") || "--",
+    trackIds: tracks.map((track) => track.id),
+    accountStatus: user.status,
+    onboardingStatus: user.onboardingStatus,
+    status: null,
+    lastActive: "--",
+  };
+}
+
 async function listInstructorTracks(cohortId?: string) {
   const { data } = await api.get<Envelope<InstructorTrack[]>>(
     "/admin/instructor-tracks",
@@ -295,19 +312,9 @@ async function getCohortDetail(id: string): Promise<CohortDetail> {
     progress: 0,
   }));
 
-  const studentList = students.map((student) => ({
-    ...personFor(student.id, student.name, student.email),
-    id: student.id,
-    track:
-      studentTracks(student, id)
-        .map((track) => track.name)
-        .join(", ") || "--",
-    trackIds: studentTracks(student, id).map((track) => track.id),
-    accountStatus: student.status,
-    onboardingStatus: student.onboardingStatus,
-    status: null,
-    lastActive: "--",
-  }));
+  const studentList = students.map((student) =>
+    toCohortStudent(student, id),
+  );
 
   const staffList = assignments
     .filter((assignment) => assignment.cohortId === id)

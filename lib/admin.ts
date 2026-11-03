@@ -104,6 +104,15 @@ export type UserFilters = {
   limit?: number;
 };
 
+/** The API takes one value per filter, so each section holds at most one. */
+export function toUserFilters(values: Record<string, string[]>): UserFilters {
+  return Object.fromEntries(
+    Object.entries(values)
+      .filter(([, picked]) => picked.length > 0)
+      .map(([key, picked]) => [key, picked[0]]),
+  );
+}
+
 async function listUsers(filters: UserFilters = {}) {
   const { data } = await api.get<Envelope<Paginated<AdminUser>>>(
     "/admin/users",

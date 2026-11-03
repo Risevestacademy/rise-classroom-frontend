@@ -6,6 +6,8 @@ import { Filter, MoreHorizontal, Search01 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Pagination } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   matchesPeopleFilters,
   PeopleFilterDialog,
@@ -22,46 +24,66 @@ export type PeopleColumn<T> = {
   cell: (row: T) => React.ReactNode;
 };
 
-/** The searchable people table used by the Students, Instructors and Mentors tabs. */
-export function CohortPeopleTable<T extends Person>({
-  title,
-  personHeader,
-  rows,
-  columns,
-  actionHeader,
-  filters = [],
-}: {
+type PeopleTableColumns<T> = {
   title: string;
   personHeader: string;
-  rows: T[];
   columns: PeopleColumn<T>[];
   actionHeader?: string;
   filters?: PeopleFilter<T>[];
+};
+
+/**
+ * The table the Students, Instructors and Mentors tabs share. Whoever renders it
+ * owns the search, filters and page, as some lists come from the API a page at
+ * a time and others are already in memory.
+ */
+export function PeopleTableView<T extends Person & { id: string }>({
+  title,
+  personHeader,
+  columns,
+  actionHeader,
+  filters = [],
+  rows,
+  loading = false,
+  error,
+  search,
+  onSearchChange,
+  filterValues,
+  onFilterValuesChange,
+  singleSelectFilters = false,
+  page,
+  totalPages,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  paginationDisabled = false,
+}: PeopleTableColumns<T> & {
+  rows: T[];
+  loading?: boolean;
+  error?: string;
+  search: string;
+  onSearchChange: (search: string) => void;
+  filterValues: PeopleFilterValues;
+  onFilterValuesChange: (values: PeopleFilterValues) => void;
+  singleSelectFilters?: boolean;
+  page: number;
+  totalPages: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  paginationDisabled?: boolean;
 }) {
-  const [search, setSearch] = React.useState("");
-  const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
-    {},
-  );
   const [filterOpen, setFilterOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<Set<number>>(new Set());
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
-  const query = search.trim().toLowerCase();
-  const visible = rows
-    .map((row, index) => ({ row, index }))
-    .filter(
-      ({ row }) =>
-        (row.name.toLowerCase().includes(query) ||
-          row.email.toLowerCase().includes(query)) &&
-        matchesPeopleFilters(row, filters, filterValues),
-    );
   const allSelected =
-    visible.length > 0 && visible.every(({ index }) => selected.has(index));
+    rows.length > 0 && rows.every((row) => selected.has(row.id));
 
-  function toggle(index: number, checked: boolean) {
+  function toggle(id: string, checked: boolean) {
     setSelected((current) => {
       const next = new Set(current);
-      if (checked) next.add(index);
-      else next.delete(index);
+      if (checked) next.add(id);
+      else next.delete(id);
       return next;
     });
   }
@@ -79,7 +101,7 @@ export function CohortPeopleTable<T extends Person>({
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => onSearchChange(event.target.value)}
               placeholder="Search by name or email"
               className="w-full min-w-0 bg-transparent font-work text-sm text-text-primary outline-none placeholder:text-text-muted"
             />
@@ -107,7 +129,7 @@ export function CohortPeopleTable<T extends Person>({
                   aria-label="Select all"
                   checked={allSelected}
                   onCheckedChange={(checked) =>
-                    visible.forEach(({ index }) => toggle(index, checked))
+                    rows.forEach((row) => toggle(row.id, checked))
                   }
                   className="size-4"
                 />
@@ -133,13 +155,21 @@ export function CohortPeopleTable<T extends Person>({
             </tr>
           </thead>
           <tbody>
-            {visible.map(({ row, index }) => (
-              <tr key={index} className="h-[85px] border-b border-neutral-200">
+            {loading &&
+              Array.from({ length: 5 }).map((_, index) => (
+                <tr key={index} className="h-[85px] border-b border-neutral-200">
+                  <td colSpan={columns.length + 3} className="px-3.5">
+                    <Skeleton className="h-11 w-full" />
+                  </td>
+                </tr>
+              ))}
+            {rows.map((row) => (
+              <tr key={row.id} className="h-[85px] border-b border-neutral-200">
                 <td className="pl-3.5">
                   <Checkbox
                     aria-label={`Select ${row.name}`}
-                    checked={selected.has(index)}
-                    onCheckedChange={(checked) => toggle(index, checked)}
+                    checked={selected.has(row.id)}
+                    onCheckedChange={(checked) => toggle(row.id, checked)}
                     className="size-4"
                   />
                 </td>
@@ -183,10 +213,22 @@ export function CohortPeopleTable<T extends Person>({
           </tbody>
         </table>
       </div>
-      {visible.length === 0 && (
+      {!loading && rows.length === 0 && (
         <p className="bg-white px-6 py-10 text-center font-work text-sm text-text-muted">
-          No one matches your search or filters.
+          {error ?? "No one matches your search or filters."}
         </p>
+      )}
+
+      {rows.length > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          disabled={paginationDisabled}
+          className="mt-4"
+        />
       )}
 
       <PeopleFilterDialog
@@ -194,9 +236,60 @@ export function CohortPeopleTable<T extends Person>({
         onOpenChange={setFilterOpen}
         filters={filters}
         value={filterValues}
-        onApply={setFilterValues}
+        singleSelect={singleSelectFilters}
+        onApply={onFilterValuesChange}
       />
     </section>
+  );
+}
+
+/** For lists the API returns whole: searches, filters and pages them here. */
+export function CohortPeopleTable<T extends Person & { id: string }>({
+  rows,
+  filters = [],
+  ...table
+}: PeopleTableColumns<T> & { rows: T[] }) {
+  const [search, setSearch] = React.useState("");
+  const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
+    {},
+  );
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
+
+  const query = search.trim().toLowerCase();
+  const visible = rows.filter(
+    (row) =>
+      (row.name.toLowerCase().includes(query) ||
+        row.email.toLowerCase().includes(query)) &&
+      matchesPeopleFilters(row, filters, filterValues),
+  );
+  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  return (
+    <PeopleTableView
+      {...table}
+      filters={filters}
+      rows={visible.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
+      search={search}
+      onSearchChange={(next) => {
+        setSearch(next);
+        setPage(1);
+      }}
+      filterValues={filterValues}
+      onFilterValuesChange={(next) => {
+        setFilterValues(next);
+        setPage(1);
+      }}
+      page={currentPage}
+      totalPages={totalPages}
+      pageSize={pageSize}
+      onPageChange={setPage}
+      onPageSizeChange={(size) => {
+        setPageSize(size);
+        setPage(1);
+      }}
+    />
   );
 }
 

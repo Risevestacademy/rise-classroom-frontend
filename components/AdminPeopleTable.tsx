@@ -3,8 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { Filter, MoreHorizontal, Search01 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
@@ -15,20 +14,20 @@ import {
   type PeopleFilterValues,
 } from "@/components/cohorts/PeopleFilterDialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   adminQueries,
   assignmentsFor,
+  toUserFilters,
   type AdminUser,
-  type UserFilters,
 } from "@/lib/admin";
 import { useSelectedCohort } from "@/lib/selected-cohort";
+import { useDebounced } from "@/lib/use-debounced";
 import {
   formatJoined,
   getStudentStatus,
 } from "@/app/admin/students/student-display";
-
-const pageSize = 20;
 
 /** Status pills sit on the brand surface; only the text is coloured. */
 const statusText = {
@@ -36,18 +35,6 @@ const statusText = {
   warning: "text-text-warning",
   error: "text-text-error",
 } as const;
-
-/** Delays a value so typing in the search box doesn't fire a request per key. */
-function useDebounced<T>(value: T, delay = 350) {
-  const [debounced, setDebounced] = React.useState(value);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-
-  return debounced;
-}
 
 /** Track ids a user is assigned to (instructors) or enrolled on (students). */
 function trackIdsFor(user: AdminUser) {
@@ -111,15 +98,6 @@ function peopleFilters(
   return filters;
 }
 
-/** The API takes one value per filter, so each section holds at most one. */
-function toUserFilters(values: PeopleFilterValues): UserFilters {
-  return Object.fromEntries(
-    Object.entries(values)
-      .filter(([, picked]) => picked.length > 0)
-      .map(([key, picked]) => [key, picked[0]]),
-  );
-}
-
 /** The program-wide Students / Instructors page body under People. */
 export function AdminPeopleTable({
   role,
@@ -146,6 +124,7 @@ export function AdminPeopleTable({
   const router = useRouter();
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
   const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
     {},
   );
@@ -173,6 +152,8 @@ export function AdminPeopleTable({
       limit: pageSize,
     }),
     enabled: isReady,
+    // Keeps the rows and pagination on screen while the next page loads.
+    placeholderData: keepPreviousData,
   });
   const activeQuery = useQuery({
     ...adminQueries.userCount({
@@ -192,6 +173,9 @@ export function AdminPeopleTable({
   const total = usersQuery.data?.total ?? 0;
   const totalPages = usersQuery.data?.totalPages ?? 1;
   const filters = peopleFilters(role, tracksQuery.data ?? []);
+
+  // Removing the last row of the last page leaves this page empty.
+  if (totalPages > 0 && page > totalPages) setPage(totalPages);
 
   const isNarrowed =
     debouncedSearch.length > 0 || Object.keys(userFilters).length > 0;
@@ -452,34 +436,6 @@ export function AdminPeopleTable({
           </p>
         )}
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6">
-            <p className="font-work text-sm text-text-secondary">
-              Page {page} of {totalPages}
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((current) => current - 1)}
-                disabled={page <= 1 || usersQuery.isFetching}
-                className="flex h-9 items-center gap-1 rounded-lg border border-neutral-200 px-3 font-work text-sm text-text-primary disabled:opacity-40"
-              >
-                <ChevronLeft className="size-4" />
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((current) => current + 1)}
-                disabled={page >= totalPages || usersQuery.isFetching}
-                className="flex h-9 items-center gap-1 rounded-lg border border-neutral-200 px-3 font-work text-sm text-text-primary disabled:opacity-40"
-              >
-                Next
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
         <PeopleFilterDialog
           open={filterOpen}
           onOpenChange={setFilterOpen}
@@ -493,6 +449,21 @@ export function AdminPeopleTable({
           }}
         />
       </section>
+
+      {users.length > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          disabled={usersQuery.isFetching}
+          className="mt-4"
+        />
+      )}
     </>
   );
 }
