@@ -2,6 +2,7 @@
 
 import { SelectInput } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { setSelectedCohortId, useSelectedCohort } from "@/lib/selected-cohort";
 
 /**
@@ -9,11 +10,11 @@ import { setSelectedCohortId, useSelectedCohort } from "@/lib/selected-cohort";
  * Students, instructors, tracks, curriculum and the dashboard follow it.
  * PENDING-BACKEND: the calendar has no events API to scope.
  */
-export function AdminCohortSelect() {
+export function AdminCohortSelect({ className }: { className?: string }) {
   const { cohort, cohorts, cohortsQuery } = useSelectedCohort();
 
   if (cohortsQuery.isPending) {
-    return <Skeleton className="h-10 w-36 rounded-lg" />;
+    return <Skeleton className={cn("h-10 w-36 rounded-lg", className)} />;
   }
   if (cohorts.length === 0) return null;
 
@@ -23,7 +24,10 @@ export function AdminCohortSelect() {
       value={cohort?.id ?? ""}
       onChange={setSelectedCohortId}
       options={cohorts.map((c) => ({ value: c.id, label: c.name }))}
-      className="h-10 w-auto max-w-48 gap-3 border-neutral-200 bg-neutral-100 px-4 font-medium text-neutral-800 hover:bg-neutral-200"
+      className={cn(
+        "h-10 w-auto max-w-48 gap-3 border-neutral-200 bg-neutral-100 px-4 font-medium text-neutral-800 hover:bg-neutral-200",
+        className,
+      )}
       chevronClassName="text-neutral-800"
     />
   );

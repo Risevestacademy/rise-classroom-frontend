@@ -16,6 +16,7 @@ import {
   Notification02,
   Marketing,
 } from "@/assets/icons";
+import { AdminCohortSelect } from "@/components/AdminCohortSelect";
 import { AppSidebar, type NavSectionConfig } from "@/components/AppSidebar";
 
 const sections: NavSectionConfig[] = [
@@ -70,6 +71,7 @@ export function AdminSidebar() {
     <AppSidebar
       homeHref="/admin/dashboard"
       sections={sections}
+      mobileTop={<AdminCohortSelect className="w-full max-w-none" />}
     />
   );
 }

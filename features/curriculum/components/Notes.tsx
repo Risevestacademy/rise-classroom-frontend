@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { Field } from "@base-ui/react/field";
 import { Menu } from "@base-ui/react/menu";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, NotepadText, Pin, Plus, X } from "lucide-react";
 import { cn } from "cn";
 
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
@@ -184,13 +184,7 @@ export function NotesTab({
                   {note.body}
                 </p>
                 <p className="mt-4 flex flex-wrap items-center gap-2 text-sm text-neutral-500">
-                  <Image
-                    src="/default-avatar.png"
-                    alt=""
-                    width={24}
-                    height={24}
-                    className="h-6 w-6 rounded-full object-cover"
-                  />
+                  <PersonAvatar name={note.author} size={24} />
                   {note.author}
                   <span aria-hidden>·</span>
                   {formatDate(note.createdAt)}

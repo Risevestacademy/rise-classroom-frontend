@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { BookOpen, Pencil } from "lucide-react";
 
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { trackDetails } from "@/features/curriculum/mappers";
 import type { Curriculum } from "@/features/curriculum/types";
@@ -59,12 +60,10 @@ export function CurriculumSummaryCard({
         </div>
 
         <div className="mt-4 flex items-center gap-3 border-t border-neutral-200 pt-4">
-          <Image
-            src="/default-avatar.png"
-            alt=""
-            width={36}
-            height={36}
-            className="h-9 w-9 rounded-full object-cover"
+          <PersonAvatar
+            name={curriculum.instructor.name}
+            colorKey={curriculum.instructor.email}
+            size={36}
           />
           <div className="min-w-0">
             <p className="text-xs text-neutral-400">Instructor</p>

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { Dialog } from "@base-ui/react/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellOff, X } from "lucide-react";
@@ -11,6 +10,7 @@ import {
   adminDashboardQueries,
   type AdminNotification,
 } from "@/lib/admin-dashboard";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { cn } from "@/lib/utils";
 
 type Filter = "all" | "unread";
@@ -130,12 +130,10 @@ export function AdminNotificationsPanel({
                       onClick={() => markRead(item.id)}
                       className="flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-neutral-50"
                     >
-                      <Image
-                        src={item.avatar ?? "/default-avatar.png"}
-                        alt=""
-                        width={40}
-                        height={40}
-                        className="size-10 shrink-0 rounded-full object-cover"
+                      <PersonAvatar
+                        name={item.actor}
+                        src={item.avatar}
+                        size={40}
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block font-work text-sm text-neutral-600">
