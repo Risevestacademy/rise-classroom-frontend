@@ -4,7 +4,7 @@ import * as React from "react";
 import { Popover } from "@base-ui/react/popover";
 
 import { ArrowDown01, Message01 } from "@/assets/icons";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { SelectInput } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -138,13 +138,16 @@ export function BrandBadge({
   );
 }
 
-export function MessageButton() {
-  // PENDING-BACKEND: there's no messaging yet.
+/** Opens the user's mail app to write to `email`. */
+export function MessageButton({ email }: { email: string }) {
   return (
-    <Button variant="tertiary" size="medium">
+    <a
+      href={`mailto:${email}`}
+      className={buttonVariants({ variant: "tertiary", size: "medium" })}
+    >
       <Message01 className="size-[18px]" />
       Message
-    </Button>
+    </a>
   );
 }
 

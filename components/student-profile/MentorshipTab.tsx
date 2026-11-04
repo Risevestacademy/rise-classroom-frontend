@@ -9,7 +9,6 @@ import {
   Calendar03,
   CancelCircle,
   CheckmarkCircle03,
-  Message01,
   MoreVertical,
 } from "@/assets/icons";
 import {
@@ -18,14 +17,14 @@ import {
 } from "@/components/MentorActionsMenu";
 import { ReassignStudentDialog } from "@/components/MentorAssignmentDialogs";
 import { PersonAvatar } from "@/components/PersonAvatar";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import type { AdminUser } from "@/lib/admin";
 import { assignMentor } from "@/lib/mentors";
 import { cn } from "@/lib/utils";
 // PENDING-BACKEND: there are no mentorship sessions yet, so the session totals
 // and upcoming sessions are the design's sample data.
 import { mentorship } from "@/app/admin/students/[id]/profile-data";
-import { BrandBadge, Card, CardHeader } from "./shared";
+import { BrandBadge, Card, CardHeader, MessageButton } from "./shared";
 
 // Each session total sits on its own tint, as on the design's canvas.
 const sessionStats = [
@@ -125,11 +124,7 @@ export function MentorshipTab({
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
-            {/* PENDING-BACKEND: there's no messaging yet. */}
-            <Button variant="tertiary" size="medium">
-              <Message01 className="size-[18px]" />
-              Message
-            </Button>
+            <MessageButton email={mentor.email} />
             <MentorshipActions
               student={student}
               mentor={{ id: mentor.id, name }}
