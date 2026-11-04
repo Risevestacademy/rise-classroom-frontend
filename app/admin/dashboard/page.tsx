@@ -14,20 +14,15 @@ import {
   ArrowRight02,
   ArrowUpRight01,
   Calendar03,
-  Chatting01,
   File02,
-  Radial,
-  VideoReplay,
 } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { trackStyles } from "@/components/cohorts/CohortOverview";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminQueries } from "@/lib/admin";
-import {
-  dashboardMock,
-  type ActivityKind,
-} from "@/lib/admin-dashboard";
+import { dashboardMock } from "@/lib/admin-dashboard";
+import { ActivityTimeline } from "@/components/student-profile/shared";
 import { cohortQueries, trackKeyFor } from "@/lib/cohorts";
 import { daysLeftIn, weekRangeFor } from "@/lib/control-tower";
 import { useSelectedCohort } from "@/lib/selected-cohort";
@@ -40,13 +35,6 @@ import { MetricCard } from "@/components/MetricCard";
 const cardClass =
   "rounded-xl bg-surface-default shadow-[0_1px_3px_0_rgb(0_0_0/0.15)]";
 
-const activityIcons: Record<ActivityKind, React.ComponentType<{ className?: string }>> = {
-  assignment: File02,
-  lesson: VideoReplay,
-  mentorship: Chatting01,
-  controlTower: Radial,
-};
-
 /** Tile and text colours per track, as used on the dashboard. */
 const trackTones: Record<TrackKey, { tile: string; text: string; bar: string }> = {
   design: { tile: "bg-surface-brand", text: "text-text-success", bar: "bg-brand-primary" },
@@ -55,7 +43,7 @@ const trackTones: Record<TrackKey, { tile: string; text: string; bar: string }> 
   mobile: { tile: "bg-[#fdeafc]", text: "text-[#960b93]", bar: "bg-[#960b93]" },
 };
 
-/** Track Health keeps the brand colour for design, unlike the activity badges. */
+/** Track Health keeps the brand colour for design. */
 const healthIconTones: Record<TrackKey, string> = {
   design: "text-brand-primary",
   frontend: "text-text-info",
@@ -321,47 +309,17 @@ export default function AdminDashboardPage() {
                     <ArrowRight02 className="size-4" />
                   </Button>}
                 />
-                <ul className="flex flex-col gap-1">
-                  {dashboardMock.recentActivity.map((item) => {
-                    const Icon = activityIcons[item.kind];
-                    const tone = trackTones[item.track.key];
-                    return (
-                      <li
-                        key={item.id}
-                        className="flex items-start justify-between gap-3 border-b border-border-default p-2 last:border-b-0"
-                      >
-                        <div className="flex min-w-0 items-start gap-3">
-                          <span
-                            className={cn(
-                              "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                              tone.tile,
-                              tone.text,
-                            )}
-                          >
-                            <Icon className="size-4" />
-                          </span>
-                          <div className="flex min-w-0 flex-col gap-1">
-                            <p className="truncate font-work text-sm text-text-primary">
-                              {item.message}
-                            </p>
-                            <p className="font-work text-xs text-text-secondary">
-                              {item.time}
-                            </p>
-                          </div>
-                        </div>
-                        <span
-                          className={cn(
-                            "hidden h-6 shrink-0 items-center rounded-full px-1.5 text-xs font-medium sm:flex",
-                            tone.tile,
-                            tone.text,
-                          )}
-                        >
-                          {item.track.name}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <ActivityTimeline
+                  groups={[
+                    {
+                      items: dashboardMock.recentActivity.map((item) => ({
+                        time: item.time,
+                        title: item.message,
+                        detail: item.track.name,
+                      })),
+                    },
+                  ]}
+                />
               </section>
 
               {/* PENDING-BACKEND: no events or calendar yet. */}
