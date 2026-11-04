@@ -36,6 +36,7 @@ import {
   ResourcesTab,
 } from "@/features/curriculum/components/Resources";
 import { SettingsTab } from "@/features/curriculum/components/SettingsTab";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
@@ -225,12 +226,10 @@ export function CurriculumDetailScreen({
           </div>
 
           <div className="flex flex-col gap-2 sm:items-end sm:text-right">
-            <Image
-              src="/default-avatar.png"
-              alt=""
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded-full object-cover"
+            <PersonAvatar
+              name={curriculum.instructor.name}
+              colorKey={curriculum.instructor.email}
+              size={40}
             />
             <p className="text-sm text-neutral-600">
               Instructor:{" "}

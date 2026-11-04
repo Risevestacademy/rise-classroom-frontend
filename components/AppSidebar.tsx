@@ -25,10 +25,13 @@ export function AppSidebar({
   homeHref,
   sections,
   accountItems = [],
+  mobileTop,
 }: {
   homeHref: string;
   sections: NavSectionConfig[];
   accountItems?: NavItem[];
+  /** Shown above the links on screens where the top nav hides its filters. */
+  mobileTop?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const { open, setOpen } = useSidebarNav();
@@ -73,6 +76,8 @@ export function AppSidebar({
         </div>
 
         <hr className="mx-4 text-neutral-200" />
+
+        {mobileTop && <div className="px-5 pt-4 md:hidden">{mobileTop}</div>}
 
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-4">
           {sections.map((section) => (
