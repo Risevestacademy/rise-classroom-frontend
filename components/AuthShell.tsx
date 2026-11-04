@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +32,9 @@ export function AuthShell({
         {!plain && (
           <>
             <div className="absolute inset-x-0 top-[48.4%] flex -translate-y-1/2 justify-center">
-              <Logo variant="white" size="lg" />
+              <Link href="/" aria-label="Rise Classroom home">
+                <Logo variant="white" size="lg" />
+              </Link>
             </div>
             <p className="absolute inset-x-0 bottom-18 text-center text-2xl font-bold [word-spacing:0.3rem] text-neutral-0">
               Learn. Practice. Progress.
@@ -42,7 +46,9 @@ export function AuthShell({
       <div className="flex min-h-dvh flex-col lg:min-h-[calc(100dvh-2rem)]">
         {!plain && (
           <div className="flex items-center px-6 pt-6 lg:hidden">
-            <Logo variant="teal" size="sm" />
+            <Link href="/" aria-label="Rise Classroom home">
+              <Logo variant="teal" size="sm" />
+            </Link>
           </div>
         )}
 

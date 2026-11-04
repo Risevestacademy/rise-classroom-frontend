@@ -21,6 +21,8 @@ const PRODUCT_TABS = [
   { label: "Calendar", screen: "/landing/calendar-mockup.webp" },
 ];
 const TAB_COUNT = PRODUCT_TABS.length;
+/** The design opens on Learning. */
+const FIRST_TAB = 1;
 /** How long each tab stays up before advancing to the next. */
 const AUTO_ADVANCE_SECONDS = 5;
 
@@ -47,10 +49,10 @@ export function HeroShowcase() {
     else if (!hovered.current) timer.current?.resume();
   };
   const mounted = useRef(false);
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState(FIRST_TAB);
 
   // Every tab change goes through select(), which keeps this in sync.
-  const activeRef = useRef(0);
+  const activeRef = useRef(FIRST_TAB);
 
   const select = (index: number) => {
     if (index === activeRef.current) return;
@@ -148,13 +150,13 @@ export function HeroShowcase() {
         ref={tabScroller}
         data-intro="tabs"
         data-hero-tabs
-        className="group/tabs sticky top-3 z-20 -mx-4 mt-[33px] w-[calc(100%+2rem)] overflow-x-auto px-4 py-3 [scrollbar-width:none] lg:top-4 lg:mx-0 lg:mt-[45px] lg:w-auto lg:overflow-visible lg:px-0 lg:py-0 [&::-webkit-scrollbar]:hidden"
+        className="group/tabs sticky top-3 z-20 -mx-4 mt-[33px] w-[calc(100%+2rem)] overflow-x-auto px-4 py-3 [scrollbar-width:none] lg:top-4 lg:mx-0 lg:mt-[74px] lg:w-auto lg:overflow-visible lg:px-0 lg:py-0 [&::-webkit-scrollbar]:hidden"
       >
         <div
           role="tablist"
           aria-label="Product areas"
           onKeyDown={onKeyDown}
-          className="mx-auto flex h-[50px] w-max items-center gap-2 rounded-full border border-neutral-300 bg-white p-1 shadow-[inset_0_2px_8px_rgb(0_0_0/0.04)] transition-shadow duration-500 group-data-[stuck=true]/tabs:shadow-[inset_0_2px_8px_rgb(0_0_0/0.04),0_12px_32px_rgb(16_22_79/0.16)]"
+          className="mx-auto flex h-[50px] w-max items-center gap-2 rounded-full border border-border-strong bg-white p-1 transition-shadow duration-500 group-data-[stuck=true]/tabs:shadow-[0_12px_32px_rgb(16_22_79/0.16)]"
         >
           {PRODUCT_TABS.map((tab, index) => {
             const isActive = index === active;
@@ -222,18 +224,17 @@ export function HeroShowcase() {
         </div>
       </div>
 
-      {/* Mobile shows a zoomed crop of the dashboard so it stays readable. */}
       <div
         data-intro="dashboard"
         data-hero-dashboard
-        className="mt-[16px] w-full max-w-[1208px] overflow-hidden rounded-[12px] lg:mt-[28px] lg:overflow-visible lg:rounded-none"
+        className="mt-[16px] w-full max-w-[800px] overflow-hidden rounded-[12px] lg:mt-6 lg:overflow-visible"
       >
         <div
           data-hero-tilt
           id="product-panel"
           role="tabpanel"
           aria-labelledby={`product-tab-${active}`}
-          className="grid w-[170%] will-change-transform lg:w-full"
+          className="grid w-full will-change-transform lg:overflow-hidden lg:rounded-[12px]"
         >
           {PRODUCT_TABS.map((tab, index) => (
             <Image
@@ -245,7 +246,7 @@ export function HeroShowcase() {
               width={1208}
               height={861}
               unoptimized
-              fetchPriority={index === 0 ? "high" : undefined}
+              fetchPriority={index === FIRST_TAB ? "high" : undefined}
               className={cn(
                 "col-start-1 row-start-1 h-auto w-full",
                 index === active
