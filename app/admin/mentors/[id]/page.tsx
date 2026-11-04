@@ -47,6 +47,12 @@ import {
 import { StatCard } from "@/components/StatCard";
 import { ActivityCard } from "@/components/student-profile/ActivityTab";
 import {
+  ActivityCardSkeleton,
+  MenteeTableRowsSkeleton,
+  MentorOverviewSkeleton,
+  ProfileSummarySkeleton,
+} from "@/components/student-profile/skeletons";
+import {
   ActivityTimeline,
   Card,
   CardHeader,
@@ -150,6 +156,9 @@ export default function MentorProfilePage({
         {/* The Overview has its own profile card; the other tabs lead with
           this summary. */}
         {mentor && tab !== "overview" && <MentorSummary mentor={mentor} />}
+        {mentorQuery.isPending && tab !== "overview" && (
+          <ProfileSummarySkeleton />
+        )}
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <CohortTabs
@@ -172,7 +181,7 @@ export default function MentorProfilePage({
         </div>
 
         <div className="mt-6">
-          {mentorQuery.isPending && <OverviewSkeleton />}
+          {mentorQuery.isPending && <TabSkeleton tab={tab} />}
 
           {mentorQuery.isError && (
             <CohortEmptyState
@@ -255,9 +264,8 @@ function useMentees(mentorId: string) {
   return { ...query, students: (query.data ?? []).map(toAssignedStudent) };
 }
 
-/** Why the students list is empty: still loading, failed, or no mentees. */
+/** Why the students list is empty: it failed, or there are no mentees. */
 function menteesMessage(query: ReturnType<typeof useMentees>) {
-  if (query.isPending) return "Loading students…";
   if (query.isError) return `Couldn't load students. ${query.error.message}`;
   return "No students assigned yet.";
 }
@@ -275,6 +283,7 @@ function OverviewTab({ mentor }: { mentor: Mentor }) {
           students={mentees.students}
           studentHref={(student) => `/admin/students/${student.id}`}
           emptyMessage={menteesMessage(mentees)}
+          loading={mentees.isPending}
           onViewAll={() =>
             router.replace(`/admin/mentors/${mentor.id}?tab=students`, {
               scroll: false,
@@ -471,6 +480,7 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
               </tr>
             </thead>
             <tbody>
+              {mentees.isPending && <MenteeTableRowsSkeleton />}
               {rows.map((student) => {
                 const tone = progressTone(student);
                 const pill = studentStatusPill[student.status];
@@ -555,7 +565,7 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
             </tbody>
           </table>
         </div>
-        {rows.length === 0 && (
+        {rows.length === 0 && !mentees.isPending && (
           <p className="px-6 py-10 text-center font-work text-sm text-text-muted">
             {assignedStudents.length > 0
               ? "No one matches your search or filters."
@@ -591,23 +601,50 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
   );
 }
 
-function OverviewSkeleton() {
+/** What each tab looks like while the mentor loads. */
+function TabSkeleton({ tab }: { tab: Tab }) {
+  switch (tab) {
+    case "overview":
+      return <MentorOverviewSkeleton />;
+    case "students":
+      return <StudentsTabSkeleton />;
+    case "activity":
+      return <ActivityCardSkeleton className="max-w-[730px]" />;
+  }
+}
+
+function StudentsTabSkeleton() {
   return (
-    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,657fr)_minmax(0,463fr)]">
-      <Card>
-        <div className="flex items-center gap-3">
-          <Skeleton className="size-[80px] rounded-full" />
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-7 w-64" />
-          </div>
+    <>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(3,minmax(0,272px))]">
+        {["Total students", "Active students", "Students needing attention"].map(
+          (title) => (
+            <StatCard key={title} title={title} value={null} loading />
+          ),
+        )}
+      </div>
+      <section className="mt-6 overflow-hidden rounded-xl bg-surface-default">
+        <div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6">
+          <Skeleton className="h-9 min-w-0 flex-1 rounded-lg sm:w-[281px] sm:flex-none" />
+          <Skeleton className="h-10 w-20 shrink-0 rounded-lg" />
         </div>
-        <Skeleton className="h-[88px] w-full max-w-md" />
-      </Card>
-      <Card>
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-40 w-full" />
-      </Card>
-    </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px] table-fixed">
+            <thead className="bg-surface-subtle">
+              <tr className="h-11">
+                <th className="w-[69px]" />
+                <th className="w-[431px]" />
+                <th className="w-[160px]" />
+                <th className="w-[420px]" />
+                <th className="w-[56px]" />
+              </tr>
+            </thead>
+            <tbody>
+              <MenteeTableRowsSkeleton />
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </>
   );
 }

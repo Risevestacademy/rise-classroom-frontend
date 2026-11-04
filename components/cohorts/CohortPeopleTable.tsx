@@ -7,7 +7,7 @@ import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pagination } from "@/components/ui/pagination";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PeopleRowsSkeleton } from "@/components/cohorts/CohortSkeletons";
 import {
   matchesPeopleFilters,
   PeopleFilterDialog,
@@ -161,14 +161,7 @@ export function PeopleTableView<T extends Person & { id: string }>({
             </tr>
           </thead>
           <tbody>
-            {loading &&
-              Array.from({ length: 5 }).map((_, index) => (
-                <tr key={index} className="h-[85px] border-b border-neutral-200">
-                  <td colSpan={columns.length + 3} className="px-3.5">
-                    <Skeleton className="h-11 w-full" />
-                  </td>
-                </tr>
-              ))}
+            {loading && <PeopleRowsSkeleton columns={columns.length} />}
             {rows.map((row) => (
               <tr key={row.id} className="h-[85px] border-b border-neutral-200">
                 <td className="pl-3.5">

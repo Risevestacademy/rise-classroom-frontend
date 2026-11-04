@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Delete02 } from "@/assets/icons";
 import { CohortStatusDialog } from "@/components/cohorts/CohortActionsMenu";
 import { CohortForm } from "@/components/cohorts/CohortForm";
+import { CohortSettingsSkeleton } from "@/components/cohorts/CohortSkeletons";
 import {
   adminQueries,
   getCohortErrorMessage,
@@ -67,7 +68,7 @@ export function CohortSettings({
       </p>
     );
   }
-  if (!cohort) return null;
+  if (!cohort) return <CohortSettingsSkeleton />;
 
   const values = cohortFormValues(cohort);
   const terminated = values.status === "terminated";

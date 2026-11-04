@@ -8,6 +8,7 @@ import {
   CardHeader,
   ProgressBar,
 } from "@/components/student-profile/shared";
+import { MenteeRowsSkeleton } from "@/components/student-profile/skeletons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -71,6 +72,7 @@ export function StudentsProgressCard({
   students,
   studentHref,
   emptyMessage,
+  loading = false,
   onViewAll,
 }: {
   title: string;
@@ -78,6 +80,8 @@ export function StudentsProgressCard({
   studentHref: (student: AssignedStudent) => string;
   /** Shown in place of the list when there are no students. */
   emptyMessage?: string;
+  /** Shows skeleton rows while the students load. */
+  loading?: boolean;
   onViewAll?: () => void;
 }) {
   return (
@@ -90,7 +94,8 @@ export function StudentsProgressCard({
           </Button>
         }
       />
-      {students.length === 0 && emptyMessage && (
+      {loading && <MenteeRowsSkeleton />}
+      {!loading && students.length === 0 && emptyMessage && (
         <p className="py-6 text-center font-work text-sm text-text-muted">
           {emptyMessage}
         </p>

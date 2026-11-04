@@ -14,7 +14,6 @@ import {
   Mail02,
   Search01,
   UserCircle,
-  Video,
 } from "@/assets/icons";
 import { cn } from "@/lib/utils";
 import { AdminTopNav } from "@/components/AdminTopNav";
@@ -30,6 +29,18 @@ import { MentorshipTab } from "@/components/student-profile/MentorshipTab";
 import { NotesTab } from "@/components/student-profile/NotesTab";
 import { ProgressTab } from "@/components/student-profile/ProgressTab";
 import {
+  ActivityTabSkeleton,
+  AssignmentsTabSkeleton,
+  AttendanceTabSkeleton,
+  ControlTowerTabSkeleton,
+  MentorshipTabSkeleton,
+  NotesTabSkeleton,
+  ProfileSummarySkeleton,
+  ProgressTabSkeleton,
+  StudentOverviewSkeleton,
+} from "@/components/student-profile/skeletons";
+import {
+  ActivityTimeline,
   AttendanceGrid,
   BrandBadge,
   Card,
@@ -45,7 +56,6 @@ import {
 } from "@/components/student-profile/shared";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
 import { adminQueries, assignmentsFor, type AdminUser } from "@/lib/admin";
 import { getStudentStatus } from "../student-display";
@@ -118,12 +128,6 @@ const badgeText = {
 const overviewCells = { ...attendanceCell, absent: "bg-surface-brand" };
 
 
-const activityKinds = {
-  assignment: { icon: File01, box: "bg-surface-brand text-icon-info" },
-  lesson: { icon: File01, box: "bg-surface-brand text-icon-success" },
-  session: { icon: Video, box: "bg-surface-brand text-icon-info" },
-} as const;
-
 function formatLongDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
     month: "long",
@@ -179,6 +183,9 @@ export default function StudentDetailsPage({
         {student && tab !== "overview" && (
           <StudentSummary student={student} name={name} />
         )}
+        {studentQuery.isPending && tab !== "overview" && (
+          <ProfileSummarySkeleton />
+        )}
 
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <CohortTabs
@@ -196,7 +203,7 @@ export default function StudentDetailsPage({
         </div>
 
         <div className="mt-6">
-          {studentQuery.isPending && <OverviewSkeleton />}
+          {studentQuery.isPending && <TabSkeleton tab={tab} />}
 
           {studentQuery.isError && (
             <CohortEmptyState
@@ -625,32 +632,7 @@ function ActivitiesCard() {
   return (
     <Card className="gap-4">
       <CardHeader title="Recent Activites" />
-      <div className="flex flex-col gap-6 py-6">
-        {activityGroups.map((group) => (
-          <div key={group.label} className="flex flex-col gap-6">
-            <GroupLabel>{group.label}</GroupLabel>
-            <ul className="flex flex-col gap-6">
-              {group.items.map((item) => {
-                const kind = activityKinds[item.kind];
-                return (
-                  <ListItem
-                    key={item.title}
-                    icon={kind.icon}
-                    iconClassName={kind.box}
-                    title={item.title}
-                    detail={item.detail}
-                    trailing={
-                      <span className="shrink-0 text-xs font-medium text-text-muted">
-                        {item.time}
-                      </span>
-                    }
-                  />
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </div>
+      <ActivityTimeline groups={activityGroups} />
     </Card>
   );
 }
@@ -699,29 +681,24 @@ function OverviewNotesCard({
   );
 }
 
-function OverviewSkeleton() {
-  return (
-    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,657fr)_minmax(0,463fr)]">
-      <div className="flex flex-col gap-4">
-        <Card>
-          <div className="flex items-center gap-3">
-            <Skeleton className="size-[80px] rounded-full" />
-            <div className="flex flex-col gap-2">
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-7 w-64" />
-            </div>
-          </div>
-          <Skeleton className="h-[88px] w-full max-w-md" />
-        </Card>
-        <Card>
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-24 w-full" />
-        </Card>
-      </div>
-      <Card>
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-40 w-full" />
-      </Card>
-    </div>
-  );
+/** What each tab looks like while the student loads. */
+function TabSkeleton({ tab }: { tab: Tab }) {
+  switch (tab) {
+    case "overview":
+      return <StudentOverviewSkeleton />;
+    case "progress":
+      return <ProgressTabSkeleton />;
+    case "control-tower":
+      return <ControlTowerTabSkeleton />;
+    case "activity":
+      return <ActivityTabSkeleton />;
+    case "attendance":
+      return <AttendanceTabSkeleton />;
+    case "assignments":
+      return <AssignmentsTabSkeleton />;
+    case "mentorship":
+      return <MentorshipTabSkeleton />;
+    case "notes":
+      return <NotesTabSkeleton />;
+  }
 }

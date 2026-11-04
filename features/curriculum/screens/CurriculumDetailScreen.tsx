@@ -79,7 +79,32 @@ export type CurriculumDetailSearchParams = {
  * The page's shape while the curriculum loads. Also the route's loading.tsx, so it
  * shows straight away instead of a blank page while the server answers.
  */
-export function CurriculumDetailSkeleton() {
+/** The Modules tab's cards while they load. */
+function ModuleRowsSkeleton() {
+  return (
+    <div className="flex max-w-4xl flex-col gap-3">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="flex items-start gap-3">
+          <Skeleton className="mt-5 h-5 w-5" />
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-6 w-56" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+            <Skeleton className="h-9 w-9 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** `tab` is the tab being opened; the route's loading screen has no tab yet. */
+export function CurriculumDetailSkeleton({
+  tab = "overview",
+}: {
+  tab?: TabKey;
+}) {
   const { TopNav, breadcrumbRoot } = useCurriculumScope();
 
   return (
@@ -103,12 +128,42 @@ export function CurriculumDetailSkeleton() {
             <Skeleton className="h-4 w-36" />
           </div>
         </div>
-        <Skeleton className="mt-8 h-10 w-full max-w-2xl rounded-full" />
-        <div className="mt-6 flex max-w-2xl flex-col gap-2">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-        </div>
+        <Tabs value={tab} className="mt-8 gap-6">
+          <div className="max-w-full overflow-x-auto">
+            <TabsList variant="pill">
+              {(Object.keys(tabLabels) as TabKey[]).map((key) => (
+                <TabsTrigger key={key} value={key}>
+                  {tabLabels[key]}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
+          {tab === "overview" ? (
+            <div className="flex flex-col gap-8">
+              <section className="flex max-w-2xl flex-col gap-2">
+                <h2 className="text-lg font-bold text-neutral-800">
+                  About this curriculum
+                </h2>
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </section>
+              <section className="w-full max-w-sm rounded-xl bg-neutral-100 p-5">
+                <h2 className="text-lg font-bold text-neutral-800">Usage</h2>
+                <div className="mt-4 flex items-center gap-3">
+                  <Skeleton className="size-10 shrink-0 rounded-lg bg-white" />
+                  <div className="flex flex-col gap-1.5">
+                    <Skeleton className="h-5 w-44 bg-white" />
+                    <Skeleton className="h-4 w-24 bg-white" />
+                  </div>
+                </div>
+              </section>
+            </div>
+          ) : (
+            // The other tabs load their own lists once the curriculum is in.
+            tab === "modules" && <ModuleRowsSkeleton />
+          )}
+        </Tabs>
       </main>
     </>
   );
@@ -169,7 +224,9 @@ export function CurriculumDetailScreen({
 
   const curriculum = curriculumQuery.data;
   if (!curriculum) {
-    if (!curriculumQuery.isError) return <CurriculumDetailSkeleton />;
+    if (!curriculumQuery.isError) {
+      return <CurriculumDetailSkeleton tab={activeTab} />;
+    }
     return (
       <>
         <TopNav breadcrumb={breadcrumbRoot} />
@@ -508,24 +565,7 @@ function ModulesTab({ curriculumId }: { curriculumId: string }) {
     );
   }
 
-  if (modulesQuery.isPending) {
-    return (
-      <div className="flex max-w-4xl flex-col gap-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="flex items-start gap-3">
-            <Skeleton className="mt-5 h-5 w-5" />
-            <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl bg-white p-5 shadow-sm sm:p-6">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-6 w-56" />
-                <Skeleton className="h-6 w-20 rounded-full" />
-              </div>
-              <Skeleton className="h-9 w-9 rounded-full" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (modulesQuery.isPending) return <ModuleRowsSkeleton />;
 
   return (
     <div className="flex max-w-4xl flex-col gap-3">

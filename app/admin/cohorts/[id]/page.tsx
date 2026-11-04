@@ -29,6 +29,12 @@ import { CohortStatusBadge } from "@/components/cohorts/CohortStatusBadge";
 import type { PeopleFilter } from "@/components/cohorts/PeopleFilterDialog";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
 import { CohortTracks } from "@/components/cohorts/CohortTracks";
+import {
+  CohortOverviewSkeleton,
+  CohortSettingsSkeleton,
+  CohortTracksSkeleton,
+  PeopleTableSkeleton,
+} from "@/components/cohorts/CohortSkeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SuccessToast } from "@/components/ui/toast";
 import { getProgramOptionsErrorMessage } from "@/lib/admin";
@@ -201,7 +207,7 @@ export default function CohortDetailPage({
               {getProgramOptionsErrorMessage(cohortQuery.error)}
             </p>
           ) : (
-            <CohortDetailSkeleton />
+            <CohortDetailSkeleton tab={tab} onTabChange={setTab} />
           )}
         </main>
       </>
@@ -463,7 +469,13 @@ function HeaderStat({
   );
 }
 
-function CohortDetailSkeleton() {
+function CohortDetailSkeleton({
+  tab,
+  onTabChange,
+}: {
+  tab: Tab;
+  onTabChange: (tab: Tab) => void;
+}) {
   return (
     <div aria-busy>
       <div className="flex items-center gap-3.5">
@@ -485,16 +497,32 @@ function CohortDetailSkeleton() {
         ))}
       </div>
 
-      <div className="mt-[22px] flex flex-wrap gap-2">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Skeleton key={index} className="h-10 w-24 rounded-lg" />
-        ))}
+      <div className="mt-[22px]">
+        <CohortTabs
+          label="Cohort sections"
+          tabs={tabs}
+          value={tab}
+          onChange={onTabChange}
+        />
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <Skeleton className="h-48 rounded-2xl bg-white" />
-        <Skeleton className="h-48 rounded-2xl bg-white" />
-      </div>
+      {tab === "overview" && <CohortOverviewSkeleton />}
+      {tab === "tracks" && <CohortTracksSkeleton />}
+      {tab === "students" && (
+        <PeopleTableSkeleton
+          personHeader="Student"
+          headers={[
+            { header: "Track", width: "w-[210px]" },
+            { header: "Status", width: "w-[159px]" },
+            { header: "Last active", width: "w-[297px]" },
+          ]}
+        />
+      )}
+      {(tab === "instructors" || tab === "mentors") && (
+        // Both tables use the "Instructors" header, as in the design.
+        <PeopleTableSkeleton personHeader="Instructors" headers={staffColumns} />
+      )}
+      {tab === "settings" && <CohortSettingsSkeleton />}
     </div>
   );
 }
