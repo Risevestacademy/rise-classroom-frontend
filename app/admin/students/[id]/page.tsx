@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Code, PenLine, Smartphone } from "lucide-react";
 import { UserMoreActions } from "@/components/student-profile/UserMoreAction";
 import {
-  Add01,
   Calendar03,
   Call02,
   File01,
@@ -23,6 +22,7 @@ import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { ActivityTab } from "@/components/student-profile/ActivityTab";
+import { AddNoteDialog } from "@/components/student-profile/AddNoteDialog";
 import { AssignmentsTab } from "@/components/student-profile/AssignmentsTab";
 import { AttendanceTab } from "@/components/student-profile/AttendanceTab";
 import { ControlTowerTab } from "@/components/student-profile/ControlTowerTab";
@@ -192,14 +192,7 @@ export default function StudentDetailsPage({
             }
             className="shadow-[0_1px_3px_rgb(0_0_0/0.15)]"
           />
-          {tab === "notes" && (
-            // PENDING-BACKEND: notes can't be added yet, and the flow has no
-            // add note modal.
-            <Button size="medium" className="shrink-0 gap-2">
-              <Add01 className="size-[18px]" />
-              Add Note
-            </Button>
-          )}
+          {tab === "notes" && <AddNoteDialog />}
         </div>
 
         <div className="mt-6">
@@ -346,7 +339,7 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
-          <MessageButton />
+          <MessageButton email={student.email} />
           <UserMoreActions user={student} />
         </div>
       </div>
@@ -400,7 +393,7 @@ function MentorCard({ mentor }: { mentor: AdminUser["mentor"] }) {
             </p>
           </div>
         </div>
-        <MessageButton />
+        <MessageButton email={mentor.email} />
       </div>
       <div className="flex items-start gap-2 p-2">
         <Calendar03 className="size-6 shrink-0 text-icon-secondary" />

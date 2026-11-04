@@ -328,7 +328,7 @@ function ProfileCard({ mentor }: { mentor: Mentor }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
-          <MessageButton />
+          <MessageButton email={user.email} />
           <MentorActionsMenu mentor={mentor} placement="profile" />
         </div>
       </div>
