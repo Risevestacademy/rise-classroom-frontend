@@ -1,6 +1,11 @@
 import { api, ApiError } from "@/lib/api";
 
-export type Role = "SUPERADMIN" | "INSTRUCTOR" | "MENTOR" | "STUDENT";
+export type Role =
+  | "PLATFORM_ADMIN"
+  | "SUPERADMIN"
+  | "INSTRUCTOR"
+  | "MENTOR"
+  | "STUDENT";
 export type UserStatus = "ACTIVE" | "SUSPENDED";
 export type OnboardingStatus = "INVITED" | "COMPLETED";
 
@@ -78,6 +83,7 @@ export function signOut() {
  * never onboarded finish their profile first.
  */
 export function landingPathFor(user: AuthUser) {
+  if (user.role === "PLATFORM_ADMIN") return "/platform-admin/dashboard";
   if (user.role === "SUPERADMIN") return "/admin/dashboard";
 
   // Onboarding needs the token from the invite email, so this lands on a page

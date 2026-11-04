@@ -154,6 +154,9 @@ describe("signOut", () => {
 
 describe("landingPathFor", () => {
   it("sends each role to its own area", () => {
+    expect(landingPathFor(makeUser({ role: "PLATFORM_ADMIN" }))).toBe(
+      "/platform-admin/dashboard"
+    );
     expect(landingPathFor(makeUser({ role: "SUPERADMIN" }))).toBe(
       "/admin/dashboard"
     );
