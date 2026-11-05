@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu } from "@base-ui/react/menu";
 
 import {
@@ -65,6 +66,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
+import { instructorStudentQueries, toTaughtStudent } from "@/lib/instructors";
 import {
   adminQueries,
   assignmentsFor,
@@ -82,6 +84,7 @@ import {
 import { useTabParam } from "@/lib/use-tab-param";
 import { cn } from "@/lib/utils";
 import {
+  instructorRecentActivity,
   mentorActivity,
   mentorActivityFilters,
   upcomingSessions,
@@ -116,26 +119,36 @@ function formatLongDate(value: string) {
   });
 }
 
+export type StaffRole = "MENTOR" | "INSTRUCTOR";
+
+const roleCopy = {
+  MENTOR: { label: "Mentor", path: "/admin/mentors" },
+  INSTRUCTOR: { label: "Instructor", path: "/admin/instructors" },
+} satisfies Record<StaffRole, { label: string; path: string }>;
+
 /**
- * The mentor profile. The server loads the mentor first; with `loading` it
- * only shows the skeleton, for while that happens.
+ * The mentor or instructor profile. The server loads the person first; with
+ * `loading` it only shows the skeleton, for while that happens.
  */
 export function MentorProfile({
   id,
+  role = "MENTOR",
   loading = false,
 }: {
   id: string;
+  role?: StaffRole;
   loading?: boolean;
 }) {
   const [tab, setTab] = useTabParam(tabs);
   const mentorQuery = useQuery({ ...adminQueries.user(id), enabled: !loading });
   const [assignOpen, setAssignOpen] = React.useState(false);
+  const copy = roleCopy[role];
 
-  // A missing user, or a user who isn't a mentor, gets the normal 404 page.
+  // A missing user, or a user with another role, gets the normal 404 page.
   const isNotFound =
     (mentorQuery.error instanceof ApiError &&
       mentorQuery.error.status === 404) ||
-    (mentorQuery.data !== undefined && mentorQuery.data.role !== "MENTOR");
+    (mentorQuery.data !== undefined && mentorQuery.data.role !== role);
   if (isNotFound) notFound();
 
   const mentor = mentorQuery.data ? toMentor(mentorQuery.data) : undefined;
@@ -145,15 +158,15 @@ export function MentorProfile({
       <AdminTopNav
         breadcrumb={[
           "People",
-          { label: "Mentors", href: "/admin/mentors" },
+          { label: `${copy.label}s`, href: copy.path },
           ...(mentor
-            ? [{ label: mentor.name, href: `/admin/mentors/${id}` }]
+            ? [{ label: mentor.name, href: `${copy.path}/${id}` }]
             : []),
         ]}
       />
       <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
         <h1 className="text-2xl font-semibold text-text-primary">
-          Mentor Profile
+          {copy.label} Profile
         </h1>
 
         {/* The Overview has its own profile card; the other tabs lead with
@@ -165,13 +178,13 @@ export function MentorProfile({
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <CohortTabs
-            label="Mentor profile sections"
+            label={`${copy.label} profile sections`}
             tabs={tabs}
             value={tab}
             onChange={setTab}
             className="shadow-[0_1px_3px_rgb(0_0_0/0.15)]"
           />
-          {mentor && tab === "students" && (
+          {mentor && role === "MENTOR" && tab === "students" && (
             <Button variant="primary" size="medium" onClick={() => setAssignOpen(true)}>
               <Add01 className="size-5" />
               Assign student
@@ -185,7 +198,7 @@ export function MentorProfile({
           {mentorQuery.isError && (
             <CohortEmptyState
               icon={UserCircle}
-              title="Couldn't load this mentor"
+              title={`Couldn't load this ${copy.label.toLowerCase()}`}
               description={mentorQuery.error.message}
             />
           )}
@@ -203,7 +216,7 @@ export function MentorProfile({
         </div>
       </main>
 
-      {mentor && (
+      {mentor && role === "MENTOR" && (
         <AssignStudentsDialog
           mentor={mentor.user}
           open={assignOpen}
@@ -258,14 +271,47 @@ function MentorSummary({ mentor }: { mentor: Mentor }) {
   );
 }
 
-function useMentees(mentorId: string) {
-  const query = useQuery(mentorQueries.mentees(mentorId));
-  return { ...query, students: (query.data ?? []).map(toAssignedStudent) };
+/**
+ * A mentor's mentees, or the students on an instructor's cohort tracks.
+ * `total` also counts instructor students past the first page.
+ */
+function useMentees(mentor: Mentor) {
+  const isMentor = mentor.user.role === "MENTOR";
+  const mentees = useQuery({
+    ...mentorQueries.mentees(mentor.id),
+    enabled: isMentor,
+  });
+  const taught = useQueries({
+    queries: isMentor ? [] : instructorStudentQueries(mentor.user),
+  });
+
+  if (isMentor) {
+    const students = (mentees.data ?? []).map(toAssignedStudent);
+    return {
+      students,
+      total: students.length,
+      isPending: mentees.isPending,
+      error: mentees.error,
+    };
+  }
+
+  // Someone on two of the instructor's tracks is listed once.
+  const byId = new Map(
+    taught
+      .flatMap((query) => query.data?.items ?? [])
+      .map((user) => [user.id, toTaughtStudent(user)]),
+  );
+  return {
+    students: [...byId.values()],
+    total: taught.reduce((sum, query) => sum + (query.data?.total ?? 0), 0),
+    isPending: taught.some((query) => query.isPending),
+    error: taught.find((query) => query.error)?.error ?? null,
+  };
 }
 
-/** Why the students list is empty: it failed, or there are no mentees. */
+/** Why the students list is empty: it failed, or there are none. */
 function menteesMessage(query: ReturnType<typeof useMentees>) {
-  if (query.isError) return `Couldn't load students. ${query.error.message}`;
+  if (query.error) return `Couldn't load students. ${query.error.message}`;
   return "No students assigned yet.";
 }
 
@@ -277,15 +323,20 @@ function OverviewTab({
   onTabChange: (tab: Tab) => void;
 }) {
   const router = useRouter();
-  const mentees = useMentees(mentor.id);
+  const mentees = useMentees(mentor);
+  const isMentor = mentor.user.role === "MENTOR";
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,657fr)_minmax(0,463fr)]">
       <div className="flex min-w-0 flex-col gap-4">
         <ProfileCard mentor={mentor} />
         <StudentsProgressCard
-          title="Assigned students"
-          students={mentees.students}
+          title={
+            isMentor || mentees.isPending
+              ? "Assigned students"
+              : `Assigned students (${mentees.total})`
+          }
+          students={mentees.students.slice(0, 5)}
           studentHref={(student) => `/admin/students/${student.id}`}
           emptyMessage={menteesMessage(mentees)}
           loading={mentees.isPending}
@@ -300,7 +351,13 @@ function OverviewTab({
         <Card className="gap-4">
           <CardHeader title="Recent Activities" />
           {/* The Overview shows the two most recent days. */}
-          <ActivityTimeline groups={mentorActivity(mentor.name).slice(0, 2)} />
+          <ActivityTimeline
+            groups={
+              isMentor
+                ? mentorActivity(mentor.name).slice(0, 2)
+                : instructorRecentActivity
+            }
+          />
         </Card>
       </div>
     </div>
@@ -373,7 +430,8 @@ const headerCell =
 
 function StudentsTab({ mentor }: { mentor: Mentor }) {
   const queryClient = useQueryClient();
-  const mentees = useMentees(mentor.id);
+  const mentees = useMentees(mentor);
+  const isMentor = mentor.user.role === "MENTOR";
   const assignedStudents = mentees.students;
   const [search, setSearch] = React.useState("");
   const [reassigning, setReassigning] = React.useState<AssignedStudent | null>(
@@ -397,7 +455,7 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
   const someSelected = rows.some((student) => selected.has(student.email));
 
   const stats = [
-    { title: "Total students", value: assignedStudents.length },
+    { title: "Total students", value: mentees.total },
     {
       title: "Active students",
       value: assignedStudents.filter((student) => student.status === "active")
@@ -549,12 +607,23 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
                         <Menu.Portal>
                           <Menu.Positioner align="end" sideOffset={4} className="z-50">
                             <Menu.Popup className={actionsMenuPopupClass}>
-                              <Menu.Item
-                                onClick={() => setReassigning(student)}
-                                className={actionsMenuItemClass}
-                              >
-                                Reassign student
-                              </Menu.Item>
+                              {isMentor ? (
+                                <Menu.Item
+                                  onClick={() => setReassigning(student)}
+                                  className={actionsMenuItemClass}
+                                >
+                                  Reassign student
+                                </Menu.Item>
+                              ) : (
+                                <Menu.LinkItem
+                                  render={
+                                    <Link href={`/admin/students/${student.id}`} />
+                                  }
+                                  className={actionsMenuItemClass}
+                                >
+                                  View profile
+                                </Menu.LinkItem>
+                              )}
                             </Menu.Popup>
                           </Menu.Positioner>
                         </Menu.Portal>

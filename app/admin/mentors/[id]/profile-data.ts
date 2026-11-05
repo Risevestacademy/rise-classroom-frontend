@@ -1,5 +1,5 @@
-// PENDING-BACKEND: there are no mentor sessions or activity yet, so the mentor
-// profile shows this sample data from the design. The mentor dashboard still
+// PENDING-BACKEND: there are no mentor or instructor sessions or activity yet,
+// so their profiles show this sample data from the design. The mentor dashboard still
 // uses the sample students, as mentors can't list their own students yet.
 
 export type AssignedStudent = {
@@ -35,6 +35,38 @@ export const mentorActivityFilters = [
   { value: "session", label: "Sessions" },
   { value: "note", label: "Notes" },
 ] as const;
+
+/** The instructor Overview's recent activities. */
+export const instructorRecentActivity: ReturnType<typeof mentorActivity> = [
+  {
+    label: "Today · Oct 18, 2026",
+    items: [
+      {
+        time: "10:24 AM",
+        title: "Created an assignment",
+        detail: "Module 1",
+        kind: "session",
+      },
+      {
+        time: "09:14 AM",
+        title: "Graded student submissions",
+        detail: "4 students",
+        kind: "student",
+      },
+    ],
+  },
+  {
+    label: "Yesterday · Oct 17, 2026",
+    items: [
+      {
+        time: "06:04 PM",
+        title: "Note added",
+        detail: "Added a note to Seyi Wakil's profile.",
+        kind: "note",
+      },
+    ],
+  },
+];
 
 export const mentorActivity = (
   mentorName: string,

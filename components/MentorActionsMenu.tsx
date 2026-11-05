@@ -21,9 +21,10 @@ export const actionsMenuItemClass =
   "flex cursor-pointer p-2 text-text-primary outline-none data-highlighted:bg-neutral-200 data-[disabled]:cursor-not-allowed data-[disabled]:text-text-muted";
 
 /**
- * The mentor actions menu: the "…" on a mentors list row, or the "⋮" button
- * on the mentor profile, which leaves out View profile. PENDING-BACKEND:
- * there's no delete endpoint, so Delete mentor doesn't do anything yet.
+ * The mentor or instructor actions menu: the "…" on a list row, or the "⋮"
+ * button on their profile, which leaves out View profile. Only mentors can be
+ * assigned students. PENDING-BACKEND: there's no delete endpoint, so Delete
+ * doesn't do anything yet.
  */
 export function MentorActionsMenu({
   mentor,
@@ -37,8 +38,10 @@ export function MentorActionsMenu({
   const [editOpen, setEditOpen] = React.useState(false);
   const [assignOpen, setAssignOpen] = React.useState(false);
   const canManage = session?.user.role === "SUPERADMIN";
+  const isMentor = mentor.user.role !== "INSTRUCTOR";
+  const noun = isMentor ? "mentor" : "instructor";
 
-  // Suspending the account is how a mentor is deactivated; Edit mentor can
+  // Suspending the account is how they're deactivated; Edit can
   // set them back to active.
   const deactivate = useMutation({
     mutationFn: () => updateUser(mentor.id, { status: "SUSPENDED" }),
@@ -72,7 +75,7 @@ export function MentorActionsMenu({
               {placement === "row" && (
                 <Menu.LinkItem
                   className={actionsMenuItemClass}
-                  render={<Link href={`/admin/mentors/${mentor.id}`} />}
+                  render={<Link href={`/admin/${noun}s/${mentor.id}`} />}
                 >
                   View profile
                 </Menu.LinkItem>
@@ -82,15 +85,17 @@ export function MentorActionsMenu({
                 onClick={() => setEditOpen(true)}
                 className={actionsMenuItemClass}
               >
-                Edit mentor
+                Edit {noun}
               </Menu.Item>
-              <Menu.Item
-                disabled={!canManage}
-                onClick={() => setAssignOpen(true)}
-                className={actionsMenuItemClass}
-              >
-                Assign students
-              </Menu.Item>
+              {isMentor && (
+                <Menu.Item
+                  disabled={!canManage}
+                  onClick={() => setAssignOpen(true)}
+                  className={actionsMenuItemClass}
+                >
+                  Assign students
+                </Menu.Item>
+              )}
               <Menu.Item
                 disabled={
                   !canManage ||
@@ -105,10 +110,10 @@ export function MentorActionsMenu({
                   ? "Deactivating…"
                   : deactivate.isError
                     ? getUpdateUserErrorMessage(deactivate.error)
-                    : "Deactivate mentor"}
+                    : `Deactivate ${noun}`}
               </Menu.Item>
               <Menu.Item className="flex cursor-pointer p-2 text-text-error outline-none data-highlighted:bg-neutral-200">
-                Delete mentor
+                Delete {noun}
               </Menu.Item>
             </Menu.Popup>
           </Menu.Positioner>
@@ -121,11 +126,13 @@ export function MentorActionsMenu({
         onOpenChange={setEditOpen}
         isSelf={session?.user.id === mentor.id}
       />
-      <AssignStudentsDialog
-        mentor={mentor.user}
-        open={assignOpen}
-        onOpenChange={setAssignOpen}
-      />
+      {isMentor && (
+        <AssignStudentsDialog
+          mentor={mentor.user}
+          open={assignOpen}
+          onOpenChange={setAssignOpen}
+        />
+      )}
     </>
   );
 }
