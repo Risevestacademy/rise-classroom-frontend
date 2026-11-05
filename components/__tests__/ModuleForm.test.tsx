@@ -179,7 +179,7 @@ describe("ModuleForm", () => {
       expect(screen.queryByLabelText(/^Assignment title/)).not.toBeInTheDocument();
     });
 
-    it("needs a title and a description", async () => {
+    it("needs a title, a description and instructions", async () => {
       const { user } = renderForm();
       await openDialog(user);
       const create = screen.getByRole("button", { name: "Create Assignment" });
@@ -191,6 +191,8 @@ describe("ModuleForm", () => {
         screen.getByPlaceholderText(/^Redesign a simple landing page/),
         "Lay out a page"
       );
+      expect(create).toBeDisabled();
+      await user.type(screen.getByPlaceholderText(/^Use typography, spacing/), "Use 12 columns");
       expect(create).toBeEnabled();
     });
 
@@ -205,6 +207,7 @@ describe("ModuleForm", () => {
         screen.getByPlaceholderText(/^Redesign a simple landing page/),
         "Lay out a page"
       );
+      await user.type(screen.getByPlaceholderText(/^Use typography, spacing/), "Use 12 columns");
       await user.click(screen.getByRole("button", { name: /^Due date/ }));
       await user.click(await screen.findByRole("button", { name: day.toDateString() }));
       await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -222,6 +225,7 @@ describe("ModuleForm", () => {
         {
           title: "Grid study",
           description: "Lay out a page",
+          instructions: "Use 12 columns",
           dueAt: `${dayKey}T23:59:00`,
           afterLesson: 1,
           maxPoints: 50,

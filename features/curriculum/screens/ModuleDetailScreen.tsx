@@ -420,6 +420,7 @@ export function ModuleDetailScreen({
               <ModuleAccessCard
                 moduleId={moduleId}
                 moduleStatus={curriculumModule.status}
+                unlocked={curriculumModule.unlocked}
               />
             )}
 
