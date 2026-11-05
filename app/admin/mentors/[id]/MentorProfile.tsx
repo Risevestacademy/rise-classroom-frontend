@@ -336,7 +336,7 @@ function OverviewTab({
               ? "Assigned students"
               : `Assigned students (${mentees.total})`
           }
-          students={mentees.students}
+          students={mentees.students.slice(0, 5)}
           studentHref={(student) => `/admin/students/${student.id}`}
           emptyMessage={menteesMessage(mentees)}
           loading={mentees.isPending}
