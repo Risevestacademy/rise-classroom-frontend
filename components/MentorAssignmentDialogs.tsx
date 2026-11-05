@@ -112,13 +112,49 @@ function AssignStudentsForm({
     (mentees.data ?? []).map((mentee) => mentee.user.id),
   );
   const openPlaces = Math.max(0, maxMentees - menteeIds.size);
-  const isPending = mentees.isPending || lists.some((list) => list.isPending);
-  const isError = mentees.isError || lists.some((list) => list.isError);
+
+  // Students another mentor already has are left out too, since assigning
+  // them would quietly move them here. PENDING-BACKEND: the users list doesn't
+  // say who a student's mentor is, so they're found through the other mentors
+  // on the same cohort and track. Use the list's mentor once the API sends it.
+  const scopeKeys = new Set(
+    scopes.map((scope) => `${scope.cohortId}:${scope.trackId}`),
+  );
+  const mentors = useQuery({
+    ...mentorQueries.list(),
+    enabled: scopes.length > 0,
+  });
+  const otherMentorIds = (mentors.data ?? [])
+    .filter(
+      (other) =>
+        other.id !== mentor.id &&
+        staffAssignments(other.user).some((assignment) =>
+          scopeKeys.has(`${assignment.cohort?.id}:${assignment.track?.id}`),
+        ),
+    )
+    .map((other) => other.id);
+  const otherMentees = useQueries({
+    queries: otherMentorIds.map((id) => mentorQueries.mentees(id)),
+  });
+  const takenIds = new Set(
+    otherMentees.flatMap((list) => list.data ?? []).map((m) => m.user.id),
+  );
+
+  const isPending =
+    mentees.isPending ||
+    mentors.isPending ||
+    lists.some((list) => list.isPending) ||
+    otherMentees.some((list) => list.isPending);
+  const isError =
+    mentees.isError ||
+    mentors.isError ||
+    lists.some((list) => list.isError) ||
+    otherMentees.some((list) => list.isError);
   const rows = [
     ...new Map(
       lists
         .flatMap((list) => list.data?.items ?? [])
-        .filter((user) => !menteeIds.has(user.id))
+        .filter((user) => !menteeIds.has(user.id) && !takenIds.has(user.id))
         .map((user) => [user.id, user]),
     ).values(),
   ];
@@ -174,7 +210,7 @@ function AssignStudentsForm({
       <PersonCard
         person={{
           id: mentor.id,
-          name: mentor.displayName ?? mentor.name,
+          name: mentor.name,
           email: mentor.email,
         }}
       />
@@ -229,7 +265,7 @@ function AssignStudentsForm({
           </EmptyRow>
         ) : (
           rows.map((student) => {
-            const name = student.displayName ?? student.name;
+            const name = student.name;
             return (
               <li key={student.id}>
                 <label className="flex cursor-pointer items-center gap-2">

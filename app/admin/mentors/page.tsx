@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pagination } from "@/components/ui/pagination";
+import { usePageParams } from "@/lib/use-page-params";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   adminQueries,
@@ -77,8 +78,7 @@ const headerCell =
 export default function MentorsPage() {
   const { cohortId, isReady } = useSelectedCohort();
   const [search, setSearch] = React.useState("");
-  const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(10);
+  const { page, setPage, pageSize, setPageSize } = usePageParams();
   const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
     {},
   );
@@ -92,7 +92,8 @@ export default function MentorsPage() {
   const [listedCohortId, setListedCohortId] = React.useState(cohortId);
   if (listedCohortId !== cohortId) {
     setListedCohortId(cohortId);
-    setPage(1);
+    // Not on the first load, so a page from the URL is kept.
+    if (listedCohortId !== undefined) setPage(1);
     setSelected(new Set());
   }
 

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu } from "@base-ui/react/menu";
 import {
@@ -169,36 +169,45 @@ export function CurriculumDetailSkeleton({
   );
 }
 
+/**
+ * One curriculum. Its tab, open sheet and toast live in the URL. With
+ * `loading` it only shows the skeleton, while the server loads the
+ * curriculum.
+ */
 export function CurriculumDetailScreen({
   id,
-  searchParams,
+  loading = false,
 }: {
   id: string;
-  searchParams: CurriculumDetailSearchParams;
+  loading?: boolean;
 }) {
-  const {
-    tab,
-    assignment: openAssignmentId,
-    resource: openResourceId,
-    note: openNoteId,
-    created: createdTitle,
-    module: createdInModule,
-  } = searchParams;
+  const searchParams = useSearchParams();
+  const param = (key: keyof CurriculumDetailSearchParams) =>
+    searchParams.get(key) ?? undefined;
+  const tab = param("tab");
+  const openAssignmentId = param("assignment");
+  const openResourceId = param("resource");
+  const openNoteId = param("note");
+  const createdTitle = param("created");
+  const createdInModule = param("module");
   const { api, paths, permissions, TopNav, breadcrumbRoot } =
     useCurriculumScope();
   const activeTab: TabKey = isTabKey(tab) ? tab : "overview";
   const router = useRouter();
   const queryClient = useQueryClient();
-  const curriculumQuery = useQuery(api.queries.detail(id));
-  const assignmentsQuery = useQuery(api.queries.assignments(id));
-  const resourcesQuery = useQuery(api.queries.resources(id));
-  const notesQuery = useQuery(api.queries.notes(id));
+  const enabled = !loading;
+  const curriculumQuery = useQuery({ ...api.queries.detail(id), enabled });
+  const assignmentsQuery = useQuery({ ...api.queries.assignments(id), enabled });
+  const resourcesQuery = useQuery({ ...api.queries.resources(id), enabled });
+  const notesQuery = useQuery({ ...api.queries.notes(id), enabled });
   const [confirmDelete, setConfirmDelete] = React.useState(false);
 
+  // Updates the URL in place, so opening a sheet or switching tabs doesn't
+  // ask the server to render the page again.
   const goTo = React.useCallback(
     (query: Record<string, string>) =>
-      router.replace(paths.detail(id, query), { scroll: false }),
-    [id, router, paths],
+      window.history.replaceState(null, "", paths.detail(id, query)),
+    [id, paths],
   );
   // Closes a sheet or toast while staying on the current tab.
   const clearOverlay = React.useCallback(

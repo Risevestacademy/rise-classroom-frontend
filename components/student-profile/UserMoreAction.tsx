@@ -110,7 +110,7 @@ function SuspendUserForm({
   const queryClient = useQueryClient();
 
   const reactivating = user.status === "SUSPENDED";
-  const name = user.displayName ?? user.name;
+  const name = user.name;
 
   const suspend = useMutation({
     mutationFn: () =>

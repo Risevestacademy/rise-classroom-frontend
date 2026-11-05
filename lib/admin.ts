@@ -61,6 +61,14 @@ export type AssignedMentor = {
   assignedAt: string;
 };
 
+type Named = { name: string; displayName?: string | null };
+
+/** "Full Name (Display Name)", or just the full name when they match. */
+export function nameWithDisplayName({ name, displayName }: Named) {
+  const display = displayName?.trim();
+  return display && display !== name ? `${name} (${display})` : name;
+}
+
 /** The cohorts and tracks an instructor teaches or a mentor mentors in. */
 export function staffAssignments(user: AdminUser) {
   return [...(user.instructorTrack ?? []), ...(user.mentorTrack ?? [])];

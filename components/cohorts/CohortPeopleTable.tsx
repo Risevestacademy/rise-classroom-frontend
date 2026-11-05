@@ -7,6 +7,7 @@ import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pagination } from "@/components/ui/pagination";
+import { usePageParams } from "@/lib/use-page-params";
 import { PeopleRowsSkeleton } from "@/components/cohorts/CohortSkeletons";
 import {
   matchesPeopleFilters,
@@ -245,8 +246,7 @@ export function CohortPeopleTable<T extends Person & { id: string }>({
   const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
     {},
   );
-  const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(10);
+  const { page, setPage, pageSize, setPageSize } = usePageParams();
 
   const query = search.trim().toLowerCase();
   const visible = rows.filter(
