@@ -120,6 +120,9 @@ export function isHttpsLink(value: string) {
   }
 }
 
+/** What an assignment is marked out of until it's given its own maximum. */
+export const defaultMaxPoints = 100;
+
 export function emptyAssignment(id: string = crypto.randomUUID()): ModuleAssignment {
   return {
     id,
@@ -132,6 +135,7 @@ export function emptyAssignment(id: string = crypto.randomUUID()): ModuleAssignm
     submissionType: "FILE_UPLOAD",
     dueAt: null,
     afterLesson: null,
+    maxPoints: defaultMaxPoints,
     status: "DRAFT",
   };
 }
@@ -283,7 +287,7 @@ export function toCurriculum(
   studentCount: number,
   history: CurriculumHistoryEntry[]
 ): Curriculum {
-  const instructor = record.assignedInstructors[0];
+  const instructor = record.assignedInstructors?.[0];
 
   return {
     id: record.id,

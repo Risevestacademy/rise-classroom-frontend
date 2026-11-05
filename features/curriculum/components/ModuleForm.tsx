@@ -5,28 +5,25 @@ import Link from "next/link";
 import { Field } from "@base-ui/react/field";
 import { CirclePlay, NotebookPen, Plus, Trash2, X } from "lucide-react";
 
+import { AddAssignmentDialog } from "@/features/curriculum/components/AddAssignmentDialog";
 import { CurriculumSummaryCard } from "@/features/curriculum/components/CurriculumSummaryCard";
-import { DueDateField } from "@/features/curriculum/components/DueDateField";
-import { LinkListField } from "@/features/curriculum/components/LinkListField";
+import { FileUploadField } from "@/features/curriculum/components/FileUploadField";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { InfoNote } from "@/components/ui/info-note";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormField } from "@/components/ui/field";
-import { Select } from "@/components/ui/select";
 import { Hint, Label } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { emptyAssignment } from "@/features/curriculum/mappers";
-import {
-  submissionTypes,
-  type Curriculum,
-  type CurriculumModule,
-  type ModuleAssignment,
-  type ModuleLesson,
-  type ResourceFile,
-  type SaveModuleInput,
-  type SubmissionType,
+import { trackDetails } from "@/features/curriculum/mappers";
+import type {
+  Curriculum,
+  CurriculumModule,
+  ModuleAssignment,
+  ModuleLesson,
+  ResourceFile,
+  SaveModuleInput,
 } from "@/features/curriculum/types";
 
 const placeholderOutcomes = [
@@ -105,10 +102,9 @@ export function ModuleForm({
     initialModule?.lessons.length ? initialModule.lessons : [emptyLesson()],
   );
   const [assignments, setAssignments] = React.useState<ModuleAssignment[]>(
-    initialModule?.assignments.length
-      ? initialModule.assignments
-      : [emptyAssignment()],
+    initialModule?.assignments ?? [],
   );
+  const [addingAssignment, setAddingAssignment] = React.useState(false);
   const [keepAsDraft, setKeepAsDraft] = React.useState(
     initialModule ? initialModule.status === "DRAFT" : true,
   );
@@ -215,7 +211,7 @@ export function ModuleForm({
 
           <FormSection
             title="Module content"
-            description="Add a class recording and links to supporting material. You can add more later."
+            description="Add a class recording and supporting material. You can add more later."
           >
             <FormField
               label="Class recording link"
@@ -232,7 +228,7 @@ export function ModuleForm({
                 ),
               }}
             />
-            <LinkListField links={resources} onChange={setResources} />
+            <FileUploadField files={resources} onChange={setResources} />
           </FormSection>
 
           <FormSection
@@ -258,30 +254,22 @@ export function ModuleForm({
               kind="Assignment"
               drafts={assignments}
               onChange={setAssignments}
-              createEmpty={() => emptyAssignment()}
+              onAdd={() => setAddingAssignment(true)}
               titlePlaceholder="Visual Hierarchy"
               descriptionPlaceholder="Redesign a simple landing page using hierarchy and contrast"
-              extra={(assignment, change) => (
-                <>
-                  <DueDateField
-                    value={assignment.dueAt}
-                    onChange={(dueAt) => change({ dueAt })}
-                  />
-                  <Select
-                    label="Submission type"
-                    value={assignment.submissionType}
-                    onChange={(submissionType) =>
-                      change({ submissionType: submissionType as SubmissionType })
-                    }
-                    options={Object.entries(submissionTypes).map(([value, label]) => ({
-                      value,
-                      label,
-                    }))}
-                  />
-                </>
-              )}
             />
           </FormSection>
+
+          <AddAssignmentDialog
+            open={addingAssignment}
+            onOpenChange={setAddingAssignment}
+            moduleLabel={`${moduleTitle} - ${title.trim() || "New module"}`}
+            subtitle={`${trackDetails(curriculum.track.name).label} · ${curriculum.cohort}`}
+            lessonCount={lessons.length}
+            onAdd={(assignment) =>
+              setAssignments((current) => [...current, assignment])
+            }
+          />
 
           <label className="flex cursor-pointer items-center gap-2.5 text-sm text-neutral-600">
             <Checkbox
@@ -390,28 +378,27 @@ function DraftList<T extends DraftItem>({
   drafts,
   onChange,
   createEmpty,
+  onAdd,
   eyebrow,
   titlePlaceholder,
   descriptionPlaceholder,
-  extra,
 }: {
   kind: "Lesson" | "Assignment";
   drafts: T[];
   onChange: (drafts: T[]) => void;
-  createEmpty: () => T;
+  /** Adds a blank draft to the list; `onAdd` replaces it, e.g. with a dialog. */
+  createEmpty?: () => T;
+  onAdd?: () => void;
   eyebrow?: (draft: T) => string | undefined;
   titlePlaceholder: string;
   descriptionPlaceholder: string;
-  /* More fields for one kind of draft, like an assignment's due date. */
-  extra?: (draft: T, change: (changes: Partial<T>) => void) => React.ReactNode;
 }) {
   const [deleteTarget, setDeleteTarget] = React.useState<{
     id: string;
     name: string;
   } | null>(null);
 
-  /* Shared fields come in as DraftItem changes; `extra` fields as changes to T. */
-  function update(id: string, changes: Partial<DraftItem> | Partial<T>) {
+  function update(id: string, changes: Partial<DraftItem>) {
     onChange(drafts.map((d) => (d.id === id ? { ...d, ...changes } : d)));
   }
 
@@ -490,16 +477,19 @@ function DraftList<T extends DraftItem>({
                 leadingIcon: null,
               }}
             />
-            {extra?.(draft, (changes) => update(draft.id, changes))}
-            <LinkListField
-              links={draft.resources}
+            <FileUploadField
+              files={draft.resources}
               onChange={(resources) => update(draft.id, { resources })}
             />
           </div>
         </div>
       ))}
 
-      <AddButton onClick={() => onChange([...drafts, createEmpty()])}>
+      <AddButton
+        onClick={() =>
+          onAdd ? onAdd() : createEmpty && onChange([...drafts, createEmpty()])
+        }
+      >
         Add {kind.toLowerCase()}
       </AddButton>
 

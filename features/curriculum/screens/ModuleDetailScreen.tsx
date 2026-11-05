@@ -11,8 +11,8 @@ import { Menu } from "@base-ui/react/menu";
 import { CirclePlay, MoreHorizontal, Pencil } from "lucide-react";
 /* PENDING-BACKEND: used by the commented-out live classes card.
 import { Calendar, Plus, Video } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 */
+import { Badge } from "@/components/ui/badge";
 
 import { CurriculumSummaryCard } from "@/features/curriculum/components/CurriculumSummaryCard";
 import { ModuleAccessCard } from "@/features/curriculum/components/ModuleAccessCard";
@@ -326,6 +326,13 @@ export function ModuleDetailScreen({
                     item={assignment}
                     /* Opens the assignment's own editor, which has the due date and submission type. */
                     editHref={paths.editAssignment(id, assignment.id)}
+                    badge={
+                      assignment.afterLesson && (
+                        <Badge variant="light" status="info">
+                          Attached to lesson {assignment.afterLesson}
+                        </Badge>
+                      )
+                    }
                     detail={
                       assignment.dueAt
                         ? `Due ${formatDate(assignment.dueAt)} · ${formatTime(assignment.dueAt)}`
@@ -472,6 +479,20 @@ export function ModuleDetailScreen({
             </section>
             */}
 
+            {curriculumModule.status === "PUBLISHED" && (
+              <InfoNote title="This module is now live for students">
+                <p>
+                  Students can now access the module. Feel free to update or add
+                  resources anytime.
+                </p>
+                {/* PENDING-DESIGN: there's no student preview yet.
+                <Button variant="secondary" size="sm" className="mt-2 w-full">
+                  Preview as student
+                </Button>
+                */}
+              </InfoNote>
+            )}
+
             {curriculumModule.status === "DRAFT" && (
               <InfoNote title="Not visible to students yet">
                 <p>
@@ -538,12 +559,15 @@ function ItemCard({
   eyebrow,
   item,
   editHref,
+  badge,
   detail,
   onRemove,
 }: {
   eyebrow: string;
   item: Pick<ModuleLesson, "title" | "description" | "resources">;
   editHref: string;
+  /* Beside the actions, like the lesson an assignment is attached to. */
+  badge?: React.ReactNode;
   /* A line under the title, like an assignment's due date. */
   detail?: string;
   onRemove: () => void;
@@ -554,35 +578,40 @@ function ItemCard({
         <div className="min-w-0">
           <p className="text-xs text-neutral-500">{eyebrow}</p>
           <p className="mt-0.5 font-medium text-neutral-800">{item.title}</p>
-          {detail && <p className="mt-0.5 text-xs text-neutral-500">{detail}</p>}
+          {detail && (
+            <p className="mt-0.5 text-xs text-neutral-500">{detail}</p>
+          )}
         </div>
 
-        <Menu.Root>
-          <Menu.Trigger
-            aria-label={`${eyebrow} actions`}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white text-neutral-800 hover:bg-neutral-200"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Menu.Trigger>
-          <Menu.Portal>
-            <Menu.Positioner align="end" sideOffset={6} className="z-50">
-              <Menu.Popup className="w-36 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg outline-none">
-                <Menu.Item
-                  render={<Link href={editHref} />}
-                  className="flex cursor-pointer rounded-md px-3 py-2 text-neutral-700 outline-none data-highlighted:bg-neutral-100"
-                >
-                  Edit
-                </Menu.Item>
-                <Menu.Item
-                  onClick={onRemove}
-                  className="flex cursor-pointer rounded-md px-3 py-2 text-text-error outline-none data-highlighted:bg-surface-error-badge"
-                >
-                  Delete
-                </Menu.Item>
-              </Menu.Popup>
-            </Menu.Positioner>
-          </Menu.Portal>
-        </Menu.Root>
+        <div className="flex shrink-0 items-center gap-2">
+          {badge}
+          <Menu.Root>
+            <Menu.Trigger
+              aria-label={`${eyebrow} actions`}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white text-neutral-800 hover:bg-neutral-200"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Menu.Trigger>
+            <Menu.Portal>
+              <Menu.Positioner align="end" sideOffset={6} className="z-50">
+                <Menu.Popup className="w-36 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg outline-none">
+                  <Menu.Item
+                    render={<Link href={editHref} />}
+                    className="flex cursor-pointer rounded-md px-3 py-2 text-neutral-700 outline-none data-highlighted:bg-neutral-100"
+                  >
+                    Edit
+                  </Menu.Item>
+                  <Menu.Item
+                    onClick={onRemove}
+                    className="flex cursor-pointer rounded-md px-3 py-2 text-text-error outline-none data-highlighted:bg-surface-error-badge"
+                  >
+                    Delete
+                  </Menu.Item>
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
+        </div>
       </div>
 
       {item.description && (

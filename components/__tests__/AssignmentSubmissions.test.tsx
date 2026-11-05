@@ -191,18 +191,25 @@ async function openReview(detail: Record<string, unknown>) {
 }
 
 describe("reviewing a submission", () => {
-  it("shows the student's work and grades it out of 100 with feedback", async () => {
+  it("opens over the sheet with the student's work", async () => {
+    await openReview({});
+
+    const dialog = await screen.findByRole("dialog", { name: "View submission" });
+    expect(within(dialog).getByText("Grid study · Module 1 - Visual design")).toBeInTheDocument();
+    expect(await within(dialog).findByText("https://figma.com/file/grid")).toBeInTheDocument();
+    expect(within(dialog).getByText("bayo@example.com")).toBeInTheDocument();
+  });
+
+  it("publishes a score out of 100 with written feedback", async () => {
     const { user, reviews } = await openReview({});
 
-    expect(await screen.findByText("https://figma.com/file/grid")).toBeInTheDocument();
-    expect(screen.getByText("bayo@example.com · Cohort 4")).toBeInTheDocument();
-
-    await user.type(screen.getByPlaceholderText("e.g. 85"), "90");
+    await user.type(await screen.findByPlaceholderText("e.g. 85"), "90");
+    expect(screen.getByText("Maximum points: 100 · Draft score: 90/100")).toBeInTheDocument();
     await user.type(
       screen.getByPlaceholderText("What went well, and what to work on next"),
       "Clear grid, tighten the type scale",
     );
-    await user.click(screen.getByRole("button", { name: "Save grade" }));
+    await user.click(screen.getByRole("button", { name: "Publish grade" }));
 
     await vi.waitFor(() =>
       expect(reviews).toEqual([
@@ -211,27 +218,30 @@ describe("reviewing a submission", () => {
     );
   });
 
-  it("won't save a grade outside 0 to 100", async () => {
+  it("won't publish a score above the maximum", async () => {
     const { user } = await openReview({});
 
     await user.type(await screen.findByPlaceholderText("e.g. 85"), "120");
 
     expect(screen.getByText("Enter a whole number from 0 to 100")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save grade" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Publish grade" })).toBeDisabled();
   });
 
-  it("starts a review", async () => {
+  /* PENDING-BACKEND: the API has no draft grades, so only the review status is sent. */
+  it("saves a draft privately and marks the work as under review", async () => {
     const { user, reviews } = await openReview({});
 
-    await user.click(await screen.findByRole("button", { name: "Start review" }));
+    await user.type(await screen.findByPlaceholderText("e.g. 85"), "70");
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
 
+    expect(screen.getByText("Draft saved. Only instructors can see it.")).toBeInTheDocument();
     await vi.waitFor(() => expect(reviews).toEqual([{ status: "UNDER_REVIEW" }]));
   });
 
   it("sends the work back with a reason when changes are needed", async () => {
     const { user, reviews } = await openReview({ status: "UNDER_REVIEW" });
 
-    await user.click(await screen.findByRole("button", { name: "Request changes" }));
+    await user.click(await screen.findByRole("button", { name: "Request changes instead" }));
     const send = screen.getByRole("button", { name: "Send to student" });
     expect(send).toBeDisabled();
 
@@ -248,12 +258,12 @@ describe("reviewing a submission", () => {
     );
   });
 
-  it("shows the grade instead of the form once graded", async () => {
+  it("shows the published grade instead of the form", async () => {
     await openReview({ status: "GRADED", grade: 78, feedback: "Good start" });
 
     expect(await screen.findByText("78")).toBeInTheDocument();
     expect(screen.getByText("Good start")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Save grade" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Publish grade" })).not.toBeInTheDocument();
   });
 });
 

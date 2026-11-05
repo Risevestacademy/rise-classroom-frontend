@@ -30,7 +30,7 @@ import { DetailRows, DetailSheet } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurriculumScope } from "@/features/curriculum/scope";
 import { formatDate, formatTime } from "@/features/curriculum/mappers";
-import { SubmissionReviewPanel } from "@/features/curriculum/components/SubmissionReview";
+import { SubmissionReviewDialog } from "@/features/curriculum/components/SubmissionReview";
 import {
   submissionBadges,
   submissionTypes,
@@ -349,6 +349,9 @@ export function AssignmentSheet({
     (tab) => tab.value !== "submissions" || permissions.canViewSubmissions,
   );
   const assignment = assignmentQuery.data?.assignment;
+  const moduleLabel =
+    assignmentQuery.data &&
+    `Module ${assignmentQuery.data.modulePosition} - ${assignmentQuery.data.module.title}`;
 
   return (
     <DetailSheet onClose={onClose}>
@@ -378,7 +381,10 @@ export function AssignmentSheet({
               <DialogTitle className="sr-only">
                 {assignment.title} submissions
               </DialogTitle>
-              <SubmissionsPanel assignment={assignment} />
+              <SubmissionsPanel
+                assignment={assignment}
+                moduleLabel={moduleLabel}
+              />
             </TabsContent>
           )}
         </Tabs>
@@ -494,22 +500,19 @@ function BriefItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* Students' submissions, loaded from the API. Opening one shows the work and the review actions. */
-function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
+/* Students' submissions, loaded from the API. Opening one shows the work and grading over the sheet. */
+function SubmissionsPanel({
+  assignment,
+  moduleLabel,
+}: {
+  assignment: ModuleAssignment;
+  moduleLabel?: string;
+}) {
   const { api } = useCurriculumScope();
   const submissionsQuery = useQuery(api.queries.submissions(assignment.id));
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [openId, setOpenId] = React.useState<string | null>(null);
 
-  if (openId) {
-    return (
-      <SubmissionReviewPanel
-        assignmentId={assignment.id}
-        submissionId={openId}
-        onBack={() => setOpenId(null)}
-      />
-    );
-  }
   const submissions = submissionsQuery.data ?? [];
   const allSelected =
     submissions.length > 0 && submissions.every((s) => selectedIds.has(s.id));
@@ -573,6 +576,14 @@ function SubmissionsPanel({ assignment }: { assignment: ModuleAssignment }) {
 
   return (
     <div className="overflow-x-auto">
+      {openId && (
+        <SubmissionReviewDialog
+          assignment={assignment}
+          moduleLabel={moduleLabel}
+          submissionId={openId}
+          onClose={() => setOpenId(null)}
+        />
+      )}
       <table className="w-full min-w-180 text-left text-sm">
         <thead className="bg-neutral-100 text-xs tracking-wider text-neutral-500 uppercase">
           <tr>
