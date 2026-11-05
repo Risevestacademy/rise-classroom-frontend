@@ -14,6 +14,8 @@ export interface NavItem {
   title: string;
   href: string;
   icon: React.ComponentType<IconProps<"stroke" | "solid">>;
+  /* A red count beside the title; left out at zero. */
+  badge?: number;
 }
 
 export interface NavSectionConfig {
@@ -26,12 +28,14 @@ export function AppSidebar({
   sections,
   accountItems = [],
   mobileTop,
+  showUserMenu = true,
 }: {
   homeHref: string;
   sections: NavSectionConfig[];
   accountItems?: NavItem[];
   /** Shown above the links on screens where the top nav hides its filters. */
   mobileTop?: React.ReactNode;
+  showUserMenu?: boolean;
 }) {
   const pathname = usePathname();
   const { open, setOpen } = useSidebarNav();
@@ -105,10 +109,12 @@ export function AppSidebar({
               <hr className="mx-2 text-neutral-200" />
             </>
           )}
-          <div className="mt-auto p-2">
-            {/* Sign-out lives in the top nav's profile menu. */}
-            <UserMenu variant="plain-white" subtitle="email" withMenu={false} />
-          </div>
+          {showUserMenu && (
+            <div className="mt-auto p-2">
+              {/* Sign-out lives in the top nav's profile menu. */}
+              <UserMenu variant="plain-white" subtitle="email" withMenu={false} />
+            </div>
+          )}
         </div>
       </aside>
     </>
@@ -159,6 +165,8 @@ function SidebarNavItem({
         href={item.href}
         className={cn(
           "flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium",
+          /* Makes room for a long title beside the count. */
+          item.badge && "gap-2 pr-1 tracking-tight",
           isActive
             ? "border-2 border-brand-primary bg-neutral-100 text-brand-primary"
             : "text-neutral-400",
@@ -173,6 +181,14 @@ function SidebarNavItem({
           )}
         />
         <span className="truncate">{item.title}</span>
+        {Boolean(item.badge) && (
+          <span
+            aria-label={`${item.badge} new`}
+            className="ml-auto flex size-4 shrink-0 items-center justify-center rounded-full bg-text-error text-[10px] font-medium text-white"
+          >
+            {item.badge}
+          </span>
+        )}
       </Link>
     </div>
   );
