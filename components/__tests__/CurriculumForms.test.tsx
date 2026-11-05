@@ -224,15 +224,17 @@ describe("NewAssignmentScreen", () => {
     expect(create).toBeEnabled();
   });
 
-  it("saves a draft on the whole module, with links as attachments", async () => {
+  /* PENDING-BACKEND: the API has no file uploads, so picked files aren't sent. */
+  it("saves a draft on the whole module, keeping picked files local", async () => {
     const { user, api } = await renderScreen();
 
     await user.type(screen.getByRole("textbox", { name: /Assignment title/ }), " Grid study ");
     await user.type(description(), "Lay out a page on a grid");
-    await user.type(
-      screen.getByPlaceholderText("https://drive.google.com/…"),
-      "https://www.figma.com/file/brief{Enter}",
+    await user.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(["x"], "brief.pdf", { type: "application/pdf" }),
     );
+    expect(screen.getByText("brief.pdf")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create Assignment" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
@@ -242,7 +244,7 @@ describe("NewAssignmentScreen", () => {
         description: "Lay out a page on a grid",
         submissionType: "FILE_UPLOAD",
         publishStatus: "DRAFT",
-        attachments: ["https://www.figma.com/file/brief"],
+        attachments: [],
       },
     ]);
     expect(push.mock.calls[0][0]).toBe(
@@ -255,7 +257,7 @@ describe("NewAssignmentScreen", () => {
 
     await user.type(screen.getByRole("textbox", { name: /Assignment title/ }), "Grid study");
     await user.type(description(), "Lay out a page on a grid");
-    await choose(user, /Due relative to lesson/, "After lesson 1");
+    await choose(user, /Attach to lesson/, "After lesson 1");
     await choose(user, /Assignment type/, "Link");
     await user.click(screen.getByRole("button", { name: "Create Assignment" }));
 
@@ -265,10 +267,10 @@ describe("NewAssignmentScreen", () => {
     ]);
   });
 
-  it("has no file upload for resources", async () => {
+  it("offers a file drop zone for resources and points out of 100", async () => {
     await renderScreen();
-    expect(screen.getByRole("button", { name: "Add link" })).toBeInTheDocument();
-    expect(screen.queryByText(/Drag|drop|Browse/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Browse File" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Maximum points/)).toHaveValue("100");
   });
 
   it("sends the picked due date and time", async () => {
@@ -366,7 +368,7 @@ describe("EditAssignmentScreen", () => {
   it("moves it onto a lesson in the same module", async () => {
     const { user, api } = await renderScreen();
 
-    await choose(user, /Due relative to lesson/, "After lesson 1");
+    await choose(user, /Attach to lesson/, "After lesson 1");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());

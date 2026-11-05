@@ -592,11 +592,12 @@ function createCurriculumApi(role: CurriculumRole) {
     id: string,
     changes: Partial<ModuleAssignment>,
   ) {
-    const { type, mode, resources } = changes;
+    const { type, mode, maxPoints, resources } = changes;
     local.assignments.set(id, {
       ...local.assignments.get(id),
       ...(type && { type }),
       ...(mode && { mode }),
+      ...(maxPoints && { maxPoints }),
       ...(resources && { files: resources.filter((r) => !r.url) }),
     });
   }

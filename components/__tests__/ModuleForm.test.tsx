@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 import { ModuleForm } from "@/features/curriculum/components/ModuleForm";
 import type { Curriculum } from "@/features/curriculum/types";
@@ -113,70 +113,50 @@ describe("ModuleForm", () => {
     expect(screen.getByRole("button", { name: "Creating…" })).toBeDisabled();
   });
 
-  /* The API has no file uploads, so resources are added as links. */
-  describe("resource links", () => {
-    const moduleLinkInput = () =>
-      screen.getAllByPlaceholderText("https://drive.google.com/…")[0];
-    const addLink = () => screen.getAllByRole("button", { name: "Add link" })[0];
+  /* PENDING-BACKEND: the API has no file uploads, so picked files stay in the session. */
+  describe("supporting resources", () => {
+    const moduleUpload = () =>
+      screen.getAllByLabelText("Upload supporting resources")[0] as HTMLInputElement;
 
-    it("adds a link and sends it with the module", async () => {
+    it("adds a picked file and sends it with the module", async () => {
       const { user, onSubmit } = renderForm();
 
       await fillRequired(user);
-      await user.type(moduleLinkInput(), "https://drive.google.com/file/d/slides.pdf");
-      await user.click(addLink());
-      expect(screen.getByText("slides")).toBeInTheDocument();
-      expect(moduleLinkInput()).toHaveValue("");
+      await user.upload(
+        moduleUpload(),
+        new File(["x"], "workbook.pdf", { type: "application/pdf" })
+      );
+      expect(screen.getByText("workbook.pdf")).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Create Module" }));
       expect(onSubmit.mock.calls[0][0].resources).toMatchObject([
-        { name: "slides.pdf", url: "https://drive.google.com/file/d/slides.pdf" },
+        { name: "workbook.pdf" },
       ]);
     });
 
-    it("adds a link with Enter", async () => {
-      const { user } = renderForm();
-
-      await user.type(moduleLinkInput(), "https://youtu.be/abc{Enter}");
-      expect(screen.getByRole("link", { name: "https://youtu.be/abc" })).toBeInTheDocument();
-    });
-
-    it("rejects links that aren't https", async () => {
-      const { user } = renderForm();
-
-      await user.type(moduleLinkInput(), "drive.google.com/slides");
-      await user.click(addLink());
-
-      expect(screen.getByText("Paste a full link starting with https://")).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /^Remove slides/ })).not.toBeInTheDocument();
-    });
-
-    it("rejects the same link twice", async () => {
-      const { user } = renderForm();
-
-      await user.type(moduleLinkInput(), "https://youtu.be/abc{Enter}");
-      await user.type(moduleLinkInput(), "https://youtu.be/abc{Enter}");
-
-      expect(screen.getByText("That link is already added.")).toBeInTheDocument();
-      expect(screen.getAllByRole("link", { name: "https://youtu.be/abc" })).toHaveLength(1);
-    });
-
-    it("removes a link", async () => {
-      const { user } = renderForm();
-
-      await user.type(moduleLinkInput(), "https://youtu.be/abc{Enter}");
-      await user.click(screen.getByRole("button", { name: "Remove abc" }));
-
-      expect(screen.queryByRole("link", { name: "https://youtu.be/abc" })).not.toBeInTheDocument();
-    });
-
-    it("has no file upload", () => {
+    it("turns away files that aren't PDF, PPTX or DOCX", () => {
       renderForm();
-      expect(screen.queryByRole("button", { name: /Upload file/ })).not.toBeInTheDocument();
+
+      fireEvent.change(moduleUpload(), {
+        target: { files: [new File(["x"], "photo.png", { type: "image/png" })] },
+      });
+
+      expect(
+        screen.getByText(/photo.png couldn't be added/)
+      ).toBeInTheDocument();
+    });
+
+    it("removes a picked file", async () => {
+      const { user } = renderForm();
+
+      await user.upload(moduleUpload(), new File(["x"], "workbook.pdf"));
+      await user.click(screen.getByRole("button", { name: "Remove workbook.pdf" }));
+
+      expect(screen.queryByText("workbook.pdf")).not.toBeInTheDocument();
     });
   });
 
-  describe("assignment due date", () => {
+  describe("adding an assignment", () => {
     type User = ReturnType<typeof renderWithClient>["user"];
 
     /* The picker opens on the current month, so tests pick a day in it. */
@@ -184,15 +164,9 @@ describe("ModuleForm", () => {
     const day = new Date(today.getFullYear(), today.getMonth(), 20);
     const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-20`;
 
-    async function addAssignment(user: User) {
-      await fillRequired(user);
-      await user.type(screen.getByLabelText(/^Assignment title/), " Grid study ");
-    }
-
-    async function pickDueDate(user: User, date: Date) {
-      await user.click(screen.getByRole("button", { name: /^Due date/ }));
-      await user.click(await screen.findByRole("button", { name: date.toDateString() }));
-      await user.click(screen.getByRole("button", { name: "Apply" }));
+    async function openDialog(user: User) {
+      await user.click(screen.getByRole("button", { name: "Add assignment" }));
+      return screen.findByRole("dialog", { name: "Add Assignment" });
     }
 
     async function choose(user: User, label: RegExp, option: string) {
@@ -200,61 +174,84 @@ describe("ModuleForm", () => {
       await user.click(await screen.findByRole("option", { name: option }));
     }
 
-    let onSubmit: ReturnType<typeof renderForm>["onSubmit"];
-
-    /* The first assignment in the saved module. */
-    const submitted = () => onSubmit.mock.calls[0][0].assignments[0];
-
-    function render(props: Partial<React.ComponentProps<typeof ModuleForm>> = {}) {
-      const view = renderForm(props);
-      onSubmit = view.onSubmit;
-      return view;
-    }
-
-    it("sends no due date when none is picked", async () => {
-      const { user } = render();
-
-      await addAssignment(user);
-      await user.click(screen.getByRole("button", { name: "Create Module" }));
-
-      expect(submitted()).toMatchObject({
-        title: "Grid study",
-        dueAt: null,
-        submissionType: "FILE_UPLOAD",
-      });
+    it("starts with no assignments", () => {
+      renderForm();
+      expect(screen.queryByLabelText(/^Assignment title/)).not.toBeInTheDocument();
     });
 
-    it("defaults the time to 11:59 PM once a date is picked", async () => {
-      const { user } = render();
-      const time = screen.getByRole("combobox", { name: "Due time" });
+    it("needs a title and a description", async () => {
+      const { user } = renderForm();
+      await openDialog(user);
+      const create = screen.getByRole("button", { name: "Create Assignment" });
 
-      expect(time).toHaveAttribute("data-disabled");
-      await addAssignment(user);
-      await pickDueDate(user, day);
-
-      expect(time).not.toHaveAttribute("data-disabled");
-      expect(time).toHaveTextContent("11:59PM");
-      await user.click(screen.getByRole("button", { name: "Create Module" }));
-      expect(submitted().dueAt).toBe(`${dayKey}T23:59:00`);
+      expect(create).toBeDisabled();
+      await user.type(screen.getByLabelText(/^Assignment title/), "Grid study");
+      expect(create).toBeDisabled();
+      await user.type(
+        screen.getByPlaceholderText(/^Redesign a simple landing page/),
+        "Lay out a page"
+      );
+      expect(create).toBeEnabled();
     });
 
-    it("sends the picked date, time and submission type", async () => {
-      const { user } = render();
+    it("adds the assignment to the module with its settings", async () => {
+      const { user, onSubmit } = renderForm();
 
-      await addAssignment(user);
-      await pickDueDate(user, day);
-      await choose(user, /Due time/, "2:30PM");
-      await choose(user, /Submission type/, "Link");
+      await fillRequired(user);
+      await user.type(screen.getByLabelText(/^Lesson title/), "Grids");
+      await openDialog(user);
+      await user.type(screen.getByLabelText(/^Assignment title/), " Grid study ");
+      await user.type(
+        screen.getByPlaceholderText(/^Redesign a simple landing page/),
+        "Lay out a page"
+      );
+      await user.click(screen.getByRole("button", { name: /^Due date/ }));
+      await user.click(await screen.findByRole("button", { name: day.toDateString() }));
+      await user.click(screen.getByRole("button", { name: "Apply" }));
+      await choose(user, /Attach to lesson/, "After lesson 1");
+      await user.clear(screen.getByLabelText(/^Maximum points/));
+      await user.type(screen.getByLabelText(/^Maximum points/), "50");
+      await choose(user, /Assignment type/, "Link");
+      await user.click(screen.getByRole("button", { name: "Create Assignment" }));
+
+      expect(screen.queryByRole("dialog", { name: "Add Assignment" })).not.toBeInTheDocument();
+      expect(screen.getByLabelText(/^Assignment title/)).toHaveValue("Grid study");
+
       await user.click(screen.getByRole("button", { name: "Create Module" }));
-
-      expect(submitted()).toMatchObject({
-        dueAt: `${dayKey}T14:30:00`,
-        submissionType: "LINK",
-      });
+      expect(onSubmit.mock.calls[0][0].assignments).toMatchObject([
+        {
+          title: "Grid study",
+          description: "Lay out a page",
+          dueAt: `${dayKey}T23:59:00`,
+          afterLesson: 1,
+          maxPoints: 50,
+          submissionType: "LINK",
+        },
+      ]);
     });
 
-    describe("editing a module", () => {
-      const saved = new Date(2026, 10, 20, 17, 0);
+    it("only offers this module", async () => {
+      const { user } = renderForm();
+
+      await user.type(screen.getByLabelText(/Module title/), "Visual design");
+      await openDialog(user);
+
+      expect(screen.getByRole("combobox", { name: /Module/ })).toHaveTextContent(
+        "Module 3 - Visual design"
+      );
+    });
+
+    it("asks for a whole number of points", async () => {
+      const { user } = renderForm();
+      await openDialog(user);
+
+      await user.clear(screen.getByLabelText(/^Maximum points/));
+      await user.type(screen.getByLabelText(/^Maximum points/), "0");
+
+      expect(screen.getByText("Enter a whole number above 0")).toBeInTheDocument();
+    });
+
+    it("keeps a saved assignment's settings when the module is saved", async () => {
       const initialModule = {
         id: "m1",
         curriculumId: "c1",
@@ -275,44 +272,31 @@ describe("ModuleForm", () => {
             type: "Project",
             mode: "Individual",
             submissionType: "TEXT",
-            dueAt: saved.toISOString(),
-            afterLesson: null,
+            dueAt: "2026-11-20T17:00:00",
+            afterLesson: 1,
+            maxPoints: 40,
             status: "DRAFT",
           },
         ],
         coverImage: null,
         liveClassRecordings: [],
       } as React.ComponentProps<typeof ModuleForm>["initialModule"];
-
-      it("shows the saved due date and time", () => {
-        render({ initialModule, submitLabel: "Save changes" });
-
-        expect(screen.getByRole("button", { name: "Due date, Nov 20, 2026" })).toBeInTheDocument();
-        expect(screen.getByRole("combobox", { name: "Due time" })).toHaveTextContent("5:00PM");
+      const { user, onSubmit } = renderForm({
+        initialModule,
+        submitLabel: "Save changes",
       });
 
-      it("changes the due date and keeps the saved time", async () => {
-        const { user } = render({ initialModule, submitLabel: "Save changes" });
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
 
-        await pickDueDate(user, new Date(2026, 10, 27));
-        await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-        expect(submitted()).toMatchObject({
+      expect(onSubmit.mock.calls[0][0].assignments).toMatchObject([
+        {
           id: "a1",
-          dueAt: "2026-11-27T17:00:00",
+          dueAt: "2026-11-20T17:00:00",
+          afterLesson: 1,
+          maxPoints: 40,
           submissionType: "TEXT",
-        });
-      });
-
-      it("removes the due date", async () => {
-        const { user } = render({ initialModule, submitLabel: "Save changes" });
-
-        await user.click(screen.getByRole("button", { name: "Remove due date" }));
-        expect(screen.getByRole("button", { name: "Due date" })).toHaveTextContent("Pick a date");
-        await user.click(screen.getByRole("button", { name: "Save changes" }));
-
-        expect(submitted().dueAt).toBeNull();
-      });
+        },
+      ]);
     });
   });
 

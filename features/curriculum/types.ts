@@ -125,6 +125,8 @@ export type ModuleAssignment = {
   dueAt: string | null;
   /** The lesson the assignment is attached to in the API (1-based). */
   afterLesson: number | null;
+  /** The score a submission is marked out of. PENDING-BACKEND: session only. */
+  maxPoints: number;
   status: ModuleStatus;
 };
 
@@ -137,6 +139,7 @@ export type CreateAssignmentInput = Pick<
   | "submissionType"
   | "dueAt"
   | "afterLesson"
+  | "maxPoints"
 >;
 
 /** An assignment together with the module it belongs to. */
@@ -254,7 +257,8 @@ export type CurriculumRecord = Timestamps & {
   totalLessons: number;
   totalAssignments: number;
   cohort?: { id: string; name: string } | null;
-  assignedInstructors: { id: string; name: string; email: string }[];
+  /** Not sent by the curriculums list. */
+  assignedInstructors?: { id: string; name: string; email: string }[];
 };
 
 export type TopicRecord = Timestamps & {
@@ -401,11 +405,13 @@ export type TopicTree = TopicRecord & {
 // ---- Session-only fields the API doesn't have ----------------------------------
 
 /**
- * PENDING-BACKEND: the API has no assignment type or group mode, and no file
- * upload, so picked files stay in the session.
+ * PENDING-BACKEND: the API has no assignment type, group mode or maximum
+ * points, and no file upload, so picked files stay in the session.
  */
 export type AssignmentExtras = Partial<
-  Pick<ModuleAssignment, "type" | "mode"> & { files: ResourceFile[] }
+  Pick<ModuleAssignment, "type" | "mode" | "maxPoints"> & {
+    files: ResourceFile[];
+  }
 >;
 
 /** The in-memory store in `api.ts`; it resets on a full page reload. */
