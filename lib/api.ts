@@ -98,15 +98,48 @@ function extractMessage(
   return response.statusText || `Request failed with status ${response.status}`;
 }
 
+/**
+ * Set by `lib/query.server.ts`: reads the incoming request's cookies, so
+ * server-rendered pages call the API as the signed-in user. This file is
+ * shared with the browser, so it can't import `next/headers` itself.
+ */
+let readServerCookie: (() => Promise<string | null>) | undefined;
+
+export function setServerCookieReader(read: () => Promise<string | null>) {
+  readServerCookie = read;
+}
+
+/**
+ * A server render waits on the API, so a slow or cold backend is cut off
+ * here and the browser loads the data instead.
+ */
+const SERVER_TIMEOUT_MS = 8_000;
+
+async function serverDefaults(
+  headers: HeadersInit | undefined,
+  signal: RequestInit["signal"],
+): Promise<{ cookie: Record<string, string>; signal?: AbortSignal | null }> {
+  if (typeof window !== "undefined" || !readServerCookie) return { cookie: {} };
+
+  const hasCookie = new Headers(headers).has("cookie");
+  const cookie = hasCookie ? null : await readServerCookie();
+  return {
+    cookie: cookie ? { cookie } : {},
+    signal: signal ?? AbortSignal.timeout(SERVER_TIMEOUT_MS),
+  };
+}
+
 async function request<T>(
   method: string,
   path: string,
   { body, query, headers, ...init }: RequestOptions = {}
 ): Promise<T> {
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const server = await serverDefaults(headers, init.signal);
 
   const response = await fetch(buildUrl(path, query), {
     ...init,
+    signal: server.signal ?? init.signal,
     method,
     // Auth is the backend's HttpOnly session cookie, so nothing is attached by
     // hand here. The backend ignores `Authorization: Bearer` entirely.
@@ -114,6 +147,7 @@ async function request<T>(
     headers: {
       Accept: "application/json",
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...server.cookie,
       ...headers,
     },
     body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),

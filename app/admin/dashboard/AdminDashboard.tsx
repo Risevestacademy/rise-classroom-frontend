@@ -9,7 +9,6 @@ import {
   UserMultiple,
   ListView,
   AlertCircle,
-  ArrowDown01,
   ArrowRight01,
   ArrowRight02,
   ArrowUpRight01,
@@ -65,19 +64,27 @@ function checkInDue(now = new Date()) {
   return `Due in ${days - 1} days`;
 }
 
-export default function AdminDashboardPage() {
+/**
+ * The admin dashboard. The server loads its figures first; with `loading` it
+ * only shows the skeletons, for while that happens.
+ */
+export function AdminDashboard({ loading = false }: { loading?: boolean }) {
   const router = useRouter();
   const session = useQuery(sessionQuery());
-  const { cohortId, isReady } = useSelectedCohort();
+  const { cohortId, isReady: cohortReady } = useSelectedCohort();
+  const isReady = cohortReady && !loading;
   const participants = useQuery({
     ...adminQueries.userCount({ role: "STUDENT", status: "ACTIVE", cohortId }),
     enabled: isReady,
   });
-  const allActiveTracks = useQuery(adminQueries.tracks("ACTIVE"));
+  const allActiveTracks = useQuery({
+    ...adminQueries.tracks("ACTIVE"),
+    enabled: !loading,
+  });
   // The API can't filter tracks by cohort, so this works out which ones it runs.
   const cohortTracks = useQuery({
     ...cohortQueries.trackIds(cohortId ?? ""),
-    enabled: Boolean(cohortId),
+    enabled: Boolean(cohortId) && !loading,
   });
   const activeTracks = {
     isPending:

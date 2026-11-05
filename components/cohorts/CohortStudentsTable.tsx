@@ -15,6 +15,7 @@ import { UserRowActions } from "@/components/UserRowActions";
 import { adminQueries, toUserFilters } from "@/lib/admin";
 import { toCohortStudent, type CohortStudent } from "@/lib/cohorts";
 import { useDebounced } from "@/lib/use-debounced";
+import { usePageParams } from "@/lib/use-page-params";
 
 /** A cohort's Students tab: search, filters and pages all come from the API. */
 export function CohortStudentsTable({
@@ -33,8 +34,7 @@ export function CohortStudentsTable({
   const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
     {},
   );
-  const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(10);
+  const { page, setPage, pageSize, setPageSize } = usePageParams();
   const debouncedSearch = useDebounced(search);
 
   const studentsQuery = useQuery({

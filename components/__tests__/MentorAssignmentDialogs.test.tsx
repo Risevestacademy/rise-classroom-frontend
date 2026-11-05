@@ -105,6 +105,33 @@ describe("AssignStudentsDialog", () => {
     expect(screen.getByRole("checkbox", { name: /Grace Williams/ })).toBeChecked();
   });
 
+  it("leaves out students another mentor on the cohort and track has", async () => {
+    const otherMentor = makeUser({
+      id: "mentor-3",
+      role: "MENTOR",
+      mentorTrack: [
+        { cohort: { id: "cohort-1", name: "Cohort 2026" }, track: { id: "track-1", name: "Design" } },
+      ],
+    });
+    mockApi({
+      ...noMentees,
+      "GET /admin/users/mentor-3/mentees": envelope([
+        { mentorshipId: "ms-9", user: { id: "student-1" } },
+      ]),
+      "GET /admin/users": (_body: unknown, url: URL) =>
+        url.searchParams.get("role") === "MENTOR"
+          ? envelope({ items: [mentor, otherMentor], page: 1, limit: 20, total: 2, totalPages: 1 })
+          : studentsPage(),
+    });
+    renderWithClient(
+      <AssignStudentsDialog mentor={mentor} open onOpenChange={() => {}} />,
+    );
+
+    expect(await screen.findByText("Grace Williams")).toBeInTheDocument();
+    expect(screen.queryByText("Tobi Adeyemi")).not.toBeInTheDocument();
+    expect(screen.getByText(/4 of 4 places left/)).toBeInTheDocument();
+  });
+
   it("says when the mentor is already full", async () => {
     const mentee = (id: string) => ({ mentorshipId: id, user: { id } });
     mockApi({

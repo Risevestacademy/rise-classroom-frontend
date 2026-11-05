@@ -92,19 +92,23 @@ export function ModuleDetailSkeleton() {
   );
 }
 
+/** One module. With `loading` it only shows the skeleton, while the server loads it. */
 export function ModuleDetailScreen({
   id,
   moduleId,
+  loading = false,
 }: {
   id: string;
   moduleId: string;
+  loading?: boolean;
 }) {
   const { api, paths, permissions, TopNav, breadcrumbRoot } =
     useCurriculumScope();
   const queryClient = useQueryClient();
-  const curriculumQuery = useQuery(api.queries.detail(id));
-  const modulesQuery = useQuery(api.queries.modules(id));
-  const moduleQuery = useQuery(api.queries.module(moduleId));
+  const enabled = !loading;
+  const curriculumQuery = useQuery({ ...api.queries.detail(id), enabled });
+  const modulesQuery = useQuery({ ...api.queries.modules(id), enabled });
+  const moduleQuery = useQuery({ ...api.queries.module(moduleId), enabled });
   const [removeTarget, setRemoveTarget] = React.useState<{
     name: string;
     changes: Partial<CurriculumModule>;

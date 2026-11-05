@@ -74,7 +74,7 @@ export function MentorshipTab({
     );
   }
 
-  const name = mentor.displayName ?? mentor.name;
+  const name = mentor.name;
   const suspended = mentor.status === "SUSPENDED";
 
   return (

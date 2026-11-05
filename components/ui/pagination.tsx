@@ -11,7 +11,7 @@ import {
 import { SelectInput } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-const pageSizes = [10, 20, 50];
+export const pageSizes = [10, 20, 50];
 const pageSizeOptions = pageSizes.map((size) => ({
   value: String(size),
   label: String(size),

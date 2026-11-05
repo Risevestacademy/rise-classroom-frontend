@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
+import { notFound } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Code, PenLine, Smartphone } from "lucide-react";
 import { UserMoreActions } from "@/components/student-profile/UserMoreAction";
@@ -57,7 +57,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { ApiError } from "@/lib/api";
-import { adminQueries, assignmentsFor, type AdminUser } from "@/lib/admin";
+import {
+  adminQueries,
+  assignmentsFor,
+  nameWithDisplayName,
+  type AdminUser,
+} from "@/lib/admin";
+import { useTabParam } from "@/lib/use-tab-param";
 import { getStudentStatus } from "../student-display";
 import {
   activityGroups,
@@ -81,10 +87,6 @@ const tabs = [
 ] as const;
 
 type Tab = (typeof tabs)[number]["value"];
-
-function isTab(value: string | undefined): value is Tab {
-  return tabs.some((tab) => tab.value === value);
-}
 
 const moduleTones = {
   brand: {
@@ -136,18 +138,19 @@ function formatLongDate(value: string) {
   });
 }
 
-export default function StudentDetailsPage({
-  params,
-  searchParams,
+/**
+ * The student profile. The server loads the student first; with `loading`
+ * it only shows the skeleton, for while that happens.
+ */
+export function StudentProfile({
+  id,
+  loading = false,
 }: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  id: string;
+  loading?: boolean;
 }) {
-  const { id } = React.use(params);
-  const { tab: tabParam } = React.use(searchParams);
-  const tab: Tab = isTab(tabParam) ? tabParam : "overview";
-  const router = useRouter();
-  const studentQuery = useQuery(adminQueries.user(id));
+  const [tab, setTab] = useTabParam(tabs);
+  const studentQuery = useQuery({ ...adminQueries.user(id), enabled: !loading });
 
   // A missing user, or a user who isn't a student, gets the normal 404 page.
   const isNotFound =
@@ -157,7 +160,7 @@ export default function StudentDetailsPage({
   if (isNotFound) notFound();
 
   const student = studentQuery.data;
-  const name = student ? (student.displayName ?? student.name) : "";
+  const name = student?.name ?? "";
   const firstName = student?.firstName || name.split(" ")[0];
   const assignments = student ? assignmentsFor(student) : undefined;
   const cohort = assignments?.cohorts[0];
@@ -181,7 +184,7 @@ export default function StudentDetailsPage({
         {/* The Overview has its own profile card; every other tab leads
           with this summary. */}
         {student && tab !== "overview" && (
-          <StudentSummary student={student} name={name} />
+          <StudentSummary student={student} />
         )}
         {studentQuery.isPending && tab !== "overview" && (
           <ProfileSummarySkeleton />
@@ -192,11 +195,7 @@ export default function StudentDetailsPage({
             label="Student profile sections"
             tabs={tabs}
             value={tab}
-            onChange={(next) =>
-              router.replace(`/admin/students/${id}?tab=${next}`, {
-                scroll: false,
-              })
-            }
+            onChange={setTab}
             className="shadow-[0_1px_3px_rgb(0_0_0/0.15)]"
           />
           {tab === "notes" && <AddNoteDialog />}
@@ -214,7 +213,7 @@ export default function StudentDetailsPage({
           )}
 
           {student && tab === "overview" && (
-            <OverviewTab student={student} name={name} router={router} id={id} />
+            <OverviewTab student={student} onTabChange={setTab} />
           )}
           {student && tab === "progress" && (
             <ProgressTab track={assignments?.tracks[0]} cohort={cohort} />
@@ -246,32 +245,32 @@ export default function StudentDetailsPage({
   );
 }
 
-function OverviewTab({ student, name, router, id }: { student: AdminUser; name: string; router: ReturnType<typeof useRouter>; id: string }) {
+function OverviewTab({
+  student,
+  onTabChange,
+}: {
+  student: AdminUser;
+  onTabChange: (tab: Tab) => void;
+}) {
   return (
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,657fr)_minmax(0,463fr)]">
       <div className="flex min-w-0 flex-col gap-4">
-        <ProfileCard student={student} name={name} />
+        <ProfileCard student={student} />
         <MentorCard mentor={student.mentor} />
         <ProgressCard student={student} />
-        <DeadlinesCard router={router} id={id} />
+        <DeadlinesCard onTabChange={onTabChange} />
       </div>
       <div className="flex min-w-0 flex-col gap-4">
         <AttendanceCard />
         <ActivitiesCard />
-        <OverviewNotesCard router={router} id={id} />
+        <OverviewNotesCard onTabChange={onTabChange} />
       </div>
     </div>
   );
 }
 
 /** The compact profile shown above the tabs on every tab but the Overview. */
-function StudentSummary({
-  student,
-  name,
-}: {
-  student: AdminUser;
-  name: string;
-}) {
+function StudentSummary({ student }: { student: AdminUser }) {
   const { tracks, cohorts } = assignmentsFor(student);
   const status = getStudentStatus(student);
 
@@ -280,7 +279,7 @@ function StudentSummary({
       <PersonAvatar name={student.name} colorKey={student.id} size={60} />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="truncate text-lg/6 font-semibold text-text-primary">
-          {name}
+          {nameWithDisplayName(student)}
         </p>
         <div className="flex flex-wrap gap-2">
           {tracks.map((track) => (
@@ -302,7 +301,7 @@ function StudentSummary({
   );
 }
 
-function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
+function ProfileCard({ student }: { student: AdminUser }) {
   const { tracks, cohorts } = assignmentsFor(student);
   const status = getStudentStatus(student);
 
@@ -325,7 +324,7 @@ function ProfileCard({ student, name }: { student: AdminUser; name: string }) {
           <PersonAvatar name={student.name} colorKey={student.id} size={80} />
           <div className="flex min-w-0 flex-col gap-2">
             <p className="truncate text-2xl font-semibold text-text-primary">
-              {name}
+              {nameWithDisplayName(student)}
             </p>
             <div className="flex flex-wrap gap-2">
               {tracks.map((track) => (
@@ -374,7 +373,7 @@ function MentorCard({ mentor }: { mentor: AdminUser["mentor"] }) {
     );
   }
 
-  const name = mentor.displayName ?? mentor.name;
+  const name = mentor.name;
 
   return (
     <Card className="gap-4">
@@ -524,13 +523,13 @@ function ListItem({
   );
 }
 
-function DeadlinesCard({ router, id }: { router: ReturnType<typeof useRouter>; id: string }) {
+function DeadlinesCard({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
   return (
     <Card>
       <CardHeader
         title="Upcoming Deadlines"
         action={
-          <Button onClick={()=> router.replace(`/admin/students/${id}?tab=assignments`)} variant="tertiary" size="sm">
+          <Button onClick={() => onTabChange("assignments")} variant="tertiary" size="sm">
             View all
           </Button>
         }
@@ -638,18 +637,16 @@ function ActivitiesCard() {
 }
 
 function OverviewNotesCard({
-  router,
-  id,
+  onTabChange,
 }: {
-  router: ReturnType<typeof useRouter>;
-  id: string;
+  onTabChange: (tab: Tab) => void;
 }) {
   return (
     <Card className="gap-4">
       <CardHeader
         title="Notes"
         action={
-          <Button onClick={() => router.replace(`/admin/students/${id}?tab=notes`)} variant="tertiary" size="sm">
+          <Button onClick={() => onTabChange("notes")} variant="tertiary" size="sm">
             View all
           </Button>
         }

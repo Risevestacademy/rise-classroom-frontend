@@ -35,7 +35,7 @@ function mentorStatus(user: AdminUser): MentorStatus {
 export function toMentor(user: AdminUser): Mentor {
   return {
     id: user.id,
-    name: user.displayName ?? user.name,
+    name: user.name,
     email: user.email,
     track: assignmentsFor(user).tracks.join(", ") || "--",
     studentsAssigned: null,
@@ -98,7 +98,7 @@ async function listMentees(mentorId: string) {
 export function toAssignedStudent(mentee: MentorStudent): AssignedStudent {
   return {
     id: mentee.user.id,
-    name: mentee.user.displayName ?? mentee.user.name,
+    name: mentee.user.name,
     email: mentee.user.email,
     status: mentee.user.status === "SUSPENDED" ? "inactive" : "active",
     progress: null,

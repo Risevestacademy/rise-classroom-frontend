@@ -61,10 +61,10 @@ describe("toAssignedStudent", () => {
     },
   };
 
-  it("uses the student's user id, display name and status", () => {
+  it("uses the student's user id, full name and status", () => {
     expect(toAssignedStudent(mentee)).toEqual({
       id: "u1",
-      name: "Ada O.",
+      name: "Ada Obi",
       email: "ada@example.com",
       status: "inactive",
       progress: null,

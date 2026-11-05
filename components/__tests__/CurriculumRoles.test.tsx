@@ -14,6 +14,7 @@ import { envelope, mockApi, renderWithClient } from "@/test/utils";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
   notFound: vi.fn(),
 }));
 
@@ -179,7 +180,7 @@ describe("curriculum detail permissions", () => {
       ...moduleRoutes(role),
       [`GET /${role}/curriculums/c1/notes`]: envelope([]),
     });
-    return renderAs(role, <CurriculumDetailScreen id="c1" searchParams={{}} />);
+    return renderAs(role, <CurriculumDetailScreen id="c1" />);
   }
 
   it("lets admins delete the curriculum", async () => {

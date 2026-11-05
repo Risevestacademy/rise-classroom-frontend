@@ -65,7 +65,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
-import { adminQueries, assignmentsFor, type AdminUser } from "@/lib/admin";
+import {
+  adminQueries,
+  assignmentsFor,
+  nameWithDisplayName,
+  type AdminUser,
+} from "@/lib/admin";
 import {
   assignMentor,
   mentorQueries,
@@ -74,6 +79,7 @@ import {
   type Mentor,
   type MentorStatus,
 } from "@/lib/mentors";
+import { useTabParam } from "@/lib/use-tab-param";
 import { cn } from "@/lib/utils";
 import {
   mentorActivity,
@@ -89,10 +95,6 @@ const tabs = [
 ] as const;
 
 type Tab = (typeof tabs)[number]["value"];
-
-function isTab(value: string | undefined): value is Tab {
-  return tabs.some((tab) => tab.value === value);
-}
 
 const statusBadge: Record<
   MentorStatus,
@@ -114,18 +116,19 @@ function formatLongDate(value: string) {
   });
 }
 
-export default function MentorProfilePage({
-  params,
-  searchParams,
+/**
+ * The mentor profile. The server loads the mentor first; with `loading` it
+ * only shows the skeleton, for while that happens.
+ */
+export function MentorProfile({
+  id,
+  loading = false,
 }: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  id: string;
+  loading?: boolean;
 }) {
-  const { id } = React.use(params);
-  const { tab: tabParam } = React.use(searchParams);
-  const tab: Tab = isTab(tabParam) ? tabParam : "overview";
-  const router = useRouter();
-  const mentorQuery = useQuery(adminQueries.user(id));
+  const [tab, setTab] = useTabParam(tabs);
+  const mentorQuery = useQuery({ ...adminQueries.user(id), enabled: !loading });
   const [assignOpen, setAssignOpen] = React.useState(false);
 
   // A missing user, or a user who isn't a mentor, gets the normal 404 page.
@@ -165,11 +168,7 @@ export default function MentorProfilePage({
             label="Mentor profile sections"
             tabs={tabs}
             value={tab}
-            onChange={(next) =>
-              router.replace(`/admin/mentors/${id}?tab=${next}`, {
-                scroll: false,
-              })
-            }
+            onChange={setTab}
             className="shadow-[0_1px_3px_rgb(0_0_0/0.15)]"
           />
           {mentor && tab === "students" && (
@@ -191,7 +190,7 @@ export default function MentorProfilePage({
             />
           )}
 
-          {mentor && tab === "overview" && <OverviewTab mentor={mentor} />}
+          {mentor && tab === "overview" && <OverviewTab mentor={mentor} onTabChange={setTab} />}
           {mentor && tab === "students" && <StudentsTab mentor={mentor} />}
           {mentor && tab === "activity" && (
             <ActivityCard
@@ -251,7 +250,7 @@ function MentorSummary({ mentor }: { mentor: Mentor }) {
       <PersonAvatar name={mentor.name} colorKey={mentor.id} size={60} />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="truncate text-lg/6 font-semibold text-text-primary">
-          {mentor.name}
+          {nameWithDisplayName(mentor.user)}
         </p>
         <MentorBadges mentor={mentor} />
       </div>
@@ -270,7 +269,13 @@ function menteesMessage(query: ReturnType<typeof useMentees>) {
   return "No students assigned yet.";
 }
 
-function OverviewTab({ mentor }: { mentor: Mentor }) {
+function OverviewTab({
+  mentor,
+  onTabChange,
+}: {
+  mentor: Mentor;
+  onTabChange: (tab: Tab) => void;
+}) {
   const router = useRouter();
   const mentees = useMentees(mentor.id);
 
@@ -284,11 +289,7 @@ function OverviewTab({ mentor }: { mentor: Mentor }) {
           studentHref={(student) => `/admin/students/${student.id}`}
           emptyMessage={menteesMessage(mentees)}
           loading={mentees.isPending}
-          onViewAll={() =>
-            router.replace(`/admin/mentors/${mentor.id}?tab=students`, {
-              scroll: false,
-            })
-          }
+          onViewAll={() => onTabChange("students")}
         />
       </div>
       <div className="flex min-w-0 flex-col gap-4">
@@ -329,7 +330,7 @@ function ProfileCard({ mentor }: { mentor: Mentor }) {
           <PersonAvatar name={mentor.name} colorKey={mentor.id} size={80} />
           <div className="flex min-w-0 flex-col gap-1">
             <p className="truncate text-2xl font-semibold text-text-primary">
-              {mentor.name}
+              {nameWithDisplayName(mentor.user)}
             </p>
             <p className="truncate font-work text-sm text-text-secondary">--</p>
             <MentorBadges mentor={mentor} />

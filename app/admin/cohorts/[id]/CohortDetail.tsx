@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { notFound, useRouter } from "next/navigation";
+import { notFound } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -46,6 +46,7 @@ import {
   type CohortTrack,
 } from "@/lib/cohorts";
 import { toMentor } from "@/lib/mentors";
+import { useTabParam } from "@/lib/use-tab-param";
 import { cn } from "@/lib/utils";
 import { studentStatusLabels, type StudentStatus } from "../cohort-data";
 
@@ -159,22 +160,19 @@ function instructorFilters(tracks: CohortTrack[]): PeopleFilter<CohortStaff>[] {
   ];
 }
 
-function isTab(value: string | undefined): value is Tab {
-  return tabs.some((tab) => tab.value === value);
-}
-
-export default function CohortDetailPage({
-  params,
-  searchParams,
+/**
+ * The cohort detail page. The server loads the cohort first; with `loading`
+ * it only shows the skeleton, for while that happens.
+ */
+export function CohortDetail({
+  id,
+  loading = false,
 }: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  id: string;
+  loading?: boolean;
 }) {
-  const { id } = React.use(params);
-  const { tab: tabParam } = React.use(searchParams);
-  const tab: Tab = isTab(tabParam) ? tabParam : "overview";
-  const router = useRouter();
-  const cohortQuery = useQuery(cohortQueries.detail(id));
+  const [tab, replaceTab] = useTabParam(tabs);
+  const cohortQuery = useQuery({ ...cohortQueries.detail(id), enabled: !loading });
   const cohort = cohortQuery.data;
   const [editingSettings, setEditingSettings] = React.useState(false);
   const [toast, setToast] = React.useState<{
@@ -185,9 +183,9 @@ export default function CohortDetailPage({
   const setTab = React.useCallback(
     (next: Tab) => {
       setEditingSettings(false);
-      router.replace(`/admin/cohorts/${id}?tab=${next}`, { scroll: false });
+      replaceTab(next);
     },
-    [id, router],
+    [replaceTab],
   );
 
   if (

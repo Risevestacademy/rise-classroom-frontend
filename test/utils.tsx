@@ -15,7 +15,7 @@ export function reply(status: number, body: unknown = {}): Reply {
   return { status, body };
 }
 
-type Handler = unknown | Reply | ((body: unknown) => unknown);
+type Handler = unknown | Reply | ((body: unknown, url: URL) => unknown);
 
 function isReply(value: unknown): value is Reply {
   return (
@@ -45,7 +45,7 @@ export function mockApi(routes: Record<string, Handler>) {
     if (!(key in routes)) throw new TypeError(`Unmocked request: ${key}`);
 
     const handler = routes[key];
-    const result = typeof handler === "function" ? await handler(body) : handler;
+    const result = typeof handler === "function" ? await handler(body, url) : handler;
     const { status, body: payload } = isReply(result)
       ? result
       : { status: 200, body: result };

@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 
 import { CohortPeopleTable } from "@/components/cohorts/CohortPeopleTable";
 import { CohortStudentsTable } from "@/components/cohorts/CohortStudentsTable";
 import { envelope, mockApi, renderWithClient } from "@/test/utils";
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
+
+beforeEach(() => window.history.replaceState(null, "", "/"));
 
 const student = {
   id: "u1",
@@ -45,6 +51,33 @@ describe("CohortStudentsTable", () => {
     await waitFor(() =>
       expect(urls("GET /admin/users").at(-1)?.searchParams.get("page")).toBe("2"),
     );
+    expect(window.location.search).toBe("?page=2");
+  });
+
+  it("starts on the page and page size in the URL", async () => {
+    window.history.replaceState(null, "", "/?page=2&size=20");
+    const { urls } = mockApi({
+      "GET /admin/users": envelope({
+        items: [student],
+        page: 2,
+        limit: 20,
+        total: 45,
+        totalPages: 3,
+      }),
+    });
+    renderWithClient(
+      <CohortStudentsTable
+        cohortId="c1"
+        title="45 students"
+        columns={[]}
+        filters={[]}
+      />,
+    );
+
+    expect(await screen.findByText("Ada Obi")).toBeInTheDocument();
+    const first = urls("GET /admin/users")[0].searchParams;
+    expect(first.get("page")).toBe("2");
+    expect(first.get("limit")).toBe("20");
   });
 });
 
