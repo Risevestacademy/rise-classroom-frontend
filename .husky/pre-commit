@@ -4,5 +4,4 @@ if [ "$branch" = "main" ] || [ "$branch" = "dev" ]; then
   exit 1
 fi
 
-pnpm lint
-pnpm test
+pnpm lint-staged
