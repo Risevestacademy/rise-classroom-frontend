@@ -342,3 +342,36 @@ body {
   scroll-padding-top: 72px;
 }
 
+/* ---------------------------------------------------------------------------
+ * Landing redesign
+ * ------------------------------------------------------------------------- */
+
+/* Buttons with a solid bottom edge that press down when clicked. */
+@layer components {
+  .btn-press {
+    box-shadow: 0 4px 0 var(--press, var(--color-brand-950));
+    transition:
+      translate 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .btn-press:active {
+    translate: 0 3px;
+    box-shadow: 0 1px 0 var(--press, var(--color-brand-950));
+  }
+}
+
+/* Faint squared paper, like the page of an exercise book. */
+.graph-paper {
+  background-image:
+    linear-gradient(var(--color-brand-100) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-brand-100) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+}

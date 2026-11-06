@@ -196,7 +196,7 @@ export function HeroShowcase() {
         ref={tabScroller}
         data-intro="tabs"
         data-hero-tabs
-        className="group/tabs sticky top-3 z-20 -mx-4 mt-[33px] w-[calc(100%+2rem)] overflow-x-auto px-4 py-3 [scrollbar-width:none] lg:top-4 lg:mx-0 lg:mt-[74px] lg:w-auto lg:overflow-visible lg:px-0 lg:py-0 [&::-webkit-scrollbar]:hidden"
+        className="group/tabs sticky top-3 z-20 -mx-4 mt-12 w-[calc(100%+2rem)] overflow-x-auto px-4 py-3 [scrollbar-width:none] lg:top-4 lg:mx-0 lg:mt-16 lg:w-auto lg:overflow-visible lg:px-0 lg:py-0 [&::-webkit-scrollbar]:hidden"
       >
         <div
           role="tablist"
@@ -273,48 +273,50 @@ export function HeroShowcase() {
       <div
         data-intro="dashboard"
         data-hero-dashboard
-        className="mt-[16px] w-full max-w-[800px] overflow-hidden rounded-[12px] lg:mt-6 lg:overflow-visible"
+        className="mt-4 w-full max-w-[1040px] overflow-hidden rounded-[12px] lg:mt-6 lg:overflow-visible"
       >
         <div
           data-hero-tilt
           id="product-panel"
           role="tabpanel"
           aria-labelledby={`product-tab-${active}`}
-          className="relative w-full will-change-transform"
+          className="w-full rounded-[14px] border border-border-default bg-white p-1 shadow-[0_30px_80px_-30px_rgb(8_13_56/0.35)] will-change-transform lg:rounded-[20px] lg:p-2"
         >
-          <div className="grid w-full lg:overflow-hidden lg:rounded-[12px]">
-            {PRODUCT_TABS.map((tab, index) => (
-              <Image
-                key={tab.label}
-                data-screen={index}
-                src={tab.screen}
-                alt={`Rise Classroom ${tab.label.toLowerCase()} dashboard`}
-                aria-hidden={index !== active}
-                width={1208}
-                height={861}
-                unoptimized
-                fetchPriority={index === FIRST_TAB ? "high" : undefined}
-                className={cn(
-                  "col-start-1 row-start-1 h-auto w-full",
-                  index === active
-                    ? "z-10 opacity-100"
-                    : // Fade the old screen only after the new one has wiped in.
-                      "opacity-0 transition-opacity delay-500 duration-300",
-                )}
-              />
-            ))}
-          </div>
-          {/* Draws the rolling hand-off between screens; taller than the panel
+          <div className="relative">
+            <div className="grid w-full overflow-hidden rounded-[10px] lg:rounded-[12px]">
+              {PRODUCT_TABS.map((tab, index) => (
+                <Image
+                  key={tab.label}
+                  data-screen={index}
+                  src={tab.screen}
+                  alt={`Rise Classroom ${tab.label.toLowerCase()} dashboard`}
+                  aria-hidden={index !== active}
+                  width={1208}
+                  height={861}
+                  unoptimized
+                  fetchPriority={index === FIRST_TAB ? "high" : undefined}
+                  className={cn(
+                    "col-start-1 row-start-1 h-auto w-full",
+                    index === active
+                      ? "z-10 opacity-100"
+                      : // Fade the old screen only after the new one has wiped in.
+                        "opacity-0 transition-opacity delay-500 duration-300",
+                  )}
+                />
+              ))}
+            </div>
+            {/* Draws the rolling hand-off between screens; taller than the panel
               so the edge can bulge past it. */}
-          <canvas
-            ref={rollCanvas}
-            aria-hidden
-            className="pointer-events-none invisible absolute inset-x-0 z-20 w-full"
-            style={{
-              top: `${-ROLL_OVERFLOW * 100}%`,
-              height: `${(1 + 2 * ROLL_OVERFLOW) * 100}%`,
-            }}
-          />
+            <canvas
+              ref={rollCanvas}
+              aria-hidden
+              className="pointer-events-none invisible absolute inset-x-0 z-20 w-full"
+              style={{
+                top: `${-ROLL_OVERFLOW * 100}%`,
+                height: `${(1 + 2 * ROLL_OVERFLOW) * 100}%`,
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>

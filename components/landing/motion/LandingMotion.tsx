@@ -5,21 +5,22 @@ import Lenis from "lenis";
 import "lenis/dist/lenis.css";
 
 import { gsap, MEDIA, ScrollTrigger, useGSAP } from "./gsap";
-import { hoverTilt, magneticButtons } from "./interactions";
 import { heroDashboardTilt, heroIntro } from "./intro";
 import {
   backgroundMorph,
+  ctaSteps,
+  curriculumPath,
+  driftShapes,
   footerReveal,
-  keywordMarquee,
+  inViewFlags,
   navAutoHide,
   navScrolledState,
   pricingCards,
   revealGroups,
+  riseMarks,
   scrollReveals,
-  solutionCards,
   testimonialsExpand,
-  valueCards,
-  valueDeal,
+  valueLabels,
 } from "./scroll";
 
 /**
@@ -96,32 +97,33 @@ export function LandingMotion({ sections = true }: { sections?: boolean }) {
       navAutoHide();
       backgroundMorph();
       scrollReveals();
-      keywordMarquee();
-      solutionCards();
+      riseMarks();
+      curriculumPath();
+      ctaSteps();
+      inViewFlags();
       footerReveal();
     });
 
     // Without motion the nav still gets out of the way of the stuck tabs and
     // the footer, just instantly.
-    mm.add(MEDIA.reduce, () => navAutoHide({ followScroll: false }));
+    mm.add(MEDIA.reduce, () => {
+      navAutoHide({ followScroll: false });
+      inViewFlags({ instant: true });
+      curriculumPath({ instant: true });
+    });
 
     mm.add(MEDIA.desktop, () => {
       heroDashboardTilt();
-      valueDeal();
+      driftShapes();
+      valueLabels();
       revealGroups({ perItem: false });
       pricingCards({ perItem: false });
       testimonialsExpand();
     });
 
     mm.add(MEDIA.mobile, () => {
-      valueCards();
       revealGroups({ perItem: true });
       pricingCards({ perItem: true });
-    });
-
-    mm.add(MEDIA.finePointer, () => {
-      const cleanups = [hoverTilt(), magneticButtons()];
-      return () => cleanups.forEach((cleanup) => cleanup());
     });
   });
 

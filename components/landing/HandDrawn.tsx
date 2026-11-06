@@ -24,7 +24,7 @@ export function HandDrawn({
         fill="none"
         className={cn(
           "pointer-events-none absolute -top-[0.14em] -left-[0.2em] h-[calc(100%+0.28em)] w-[calc(100%+0.4em)] overflow-visible",
-          strokeClassName
+          strokeClassName,
         )}
       >
         <path

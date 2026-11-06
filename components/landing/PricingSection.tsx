@@ -1,103 +1,89 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
+import { RiseMark } from "@/components/landing/RiseMark";
 import { RollText } from "@/components/landing/RollText";
-
-import { cn } from "@/lib/utils";
 
 const CONTACT_EMAIL = "contact@riseclassroom.com";
 
-const PLANS = [
-  {
-    status: "Available",
-    title: "Free to start",
-    body: "For independent instructors and small learning communities getting started with Rise Classroom.",
-    cta: { label: "Get started for free", href: "/sign-up" },
-    featured: true,
-  },
-  {
-    status: "Coming later",
-    title: "For organizations",
-    body: "For academies, schools, and teams managing learning at scale.",
-    cta: {
-      label: "Talk to our team",
-      href: `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Rise Classroom for organizations")}`,
-    },
-    featured: false,
-  },
-];
-
 export function PricingSection() {
   return (
-    <section
-      id="pricing"
-      data-bg="#FFFFFF"
-      className="flex flex-col items-center bg-white px-4 pt-[72px] pb-[72px] lg:pt-[100px] lg:pb-[100px]"
-    >
-      <h2
-        data-reveal="chars"
-        className="text-center text-[36px] leading-[44px] font-bold text-text-primary lg:text-[48px] lg:leading-[56px]"
-      >
-        Start free.
-        <br />
-        Grow with Rise.
-      </h2>
-      <p
-        data-reveal="up"
-        className="mt-[8px] w-full max-w-[501px] text-center text-[16px] leading-6 font-medium text-text-secondary"
-      >
-        Everything you need to get started, with room to grow as your learning
-        community expands.
-      </p>
-
-      <ul className="mt-12 grid lg:mt-[80px] w-full max-w-[947px] gap-[15px] md:grid-cols-2">
-        {PLANS.map((plan) => (
-          <li
-            key={plan.title}
-            data-pricing-card
-            data-tilt
-            className={cn(
-              "rounded-[16px] p-6 lg:p-10",
-              plan.featured
-                ? "bg-neutral-50 shadow-[0_1px_2px_rgb(17_24_25/0.12),0_0_0_1px_rgb(17_24_25/0.04)]"
-                : "border border-neutral-200 bg-white"
-            )}
+    <section id="pricing" data-bg="#FFFFFF" className="px-4 py-19 lg:py-[128px]">
+      <div className="mx-auto max-w-[1040px]">
+        <div className="text-center">
+          <RiseMark className="mx-auto" />
+          <h2
+            data-reveal="lines"
+            className="mt-6 text-[36px] leading-[1.08] font-black tracking-[-0.035em] text-brand-950 lg:text-[56px]"
           >
-            <span
-              className={cn(
-                "inline-flex h-7 items-center rounded-full px-2 text-[14px] leading-5 font-medium",
-                plan.featured
-                  ? "bg-success-surface text-success-text"
-                  : "bg-neutral-100 text-text-primary"
-              )}
-            >
-              {plan.featured && (
-                <span aria-hidden className="relative mr-[6px] flex size-2">
+            Start free.
+            <br />
+            Grow with Rise.
+          </h2>
+          <p
+            data-reveal="up"
+            className="mx-auto mt-6 max-w-[500px] text-[17px] leading-7 text-text-secondary"
+          >
+            Everything you need to get started, with room to grow as your
+            learning community expands.
+          </p>
+        </div>
+
+        <ul className="mt-14 grid gap-5 md:grid-cols-[1.15fr_1fr] lg:mt-16">
+          <li data-pricing-card>
+            <div className="flex h-full flex-col rounded-[32px] bg-brand-950 p-8 text-white lg:p-10">
+              <span className="inline-flex h-7 w-fit items-center gap-2 rounded-full bg-success-surface px-2.5 text-[13px] font-semibold text-success-text">
+                <span aria-hidden className="relative flex size-2">
                   <span className="absolute inset-0 animate-ping rounded-full bg-current opacity-60 motion-reduce:hidden" />
                   <span className="relative size-2 rounded-full bg-current" />
                 </span>
-              )}
-              {plan.status}
+                Available now
+              </span>
+              <h3 className="mt-8 text-[20px] font-semibold text-brand-200">
+                Free to start
+              </h3>
+              <p className="mt-1 text-[64px] leading-none font-black tracking-[-0.04em]">
+                Free
+              </p>
+              <p className="mt-4 mb-12 max-w-[380px] text-[15px] leading-6 text-brand-100/70">
+                For independent instructors and small learning communities
+                getting started with Rise Classroom.
+              </p>
+              <Link
+                href="/sign-up"
+                className="btn-press mt-auto flex h-13 items-center justify-center rounded-[16px] bg-white text-[15px] font-semibold text-brand-950 [--press:var(--color-brand-400)]"
+              >
+                <RollText>Get started for free</RollText>
+              </Link>
+            </div>
+          </li>
+
+          <li
+            data-pricing-card
+            className="flex flex-col rounded-[32px] bg-brand-50 p-8 lg:p-10"
+          >
+            <span className="inline-flex h-7 w-fit items-center rounded-full bg-white px-2.5 text-[13px] font-semibold text-text-primary">
+              Coming later
             </span>
-            <h3 className="mt-8 text-[24px] leading-8 font-semibold text-black">
-              {plan.title}
+            <h3 className="mt-8 text-[20px] font-semibold text-text-secondary">
+              For organizations
             </h3>
-            <p className="mt-2 max-w-[384px] font-work text-[14px] leading-5 text-text-secondary">
-              {plan.body}
+            <p className="mt-1 text-[64px] leading-none font-black tracking-[-0.04em] text-brand-950">
+              Let&apos;s talk
+            </p>
+            <p className="mt-4 mb-12 max-w-[340px] text-[15px] leading-6 text-text-secondary">
+              For academies, schools, and teams managing learning at scale.
             </p>
             <Link
-              href={plan.cta.href}
-              className={cn(
-                "landing-btn mt-10 inline-flex h-10 items-center rounded-[8px] px-4 text-[14px] leading-5 font-medium",
-                plan.featured
-                  ? "landing-shine bg-brand-950 text-white"
-                  : "border border-neutral-200 bg-white text-brand-950 [--btn-fill:var(--color-neutral-100)]"
-              )}
+              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("Rise Classroom for organizations")}`}
+              className="group btn-press mt-auto flex h-13 items-center justify-center gap-2 rounded-[16px] border border-border-default bg-white text-[15px] font-semibold text-brand-950 [--press:var(--color-border-strong)]"
             >
-              <RollText>{plan.cta.label}</RollText>
+              Talk to our team
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </li>
-        ))}
-      </ul>
+        </ul>
+      </div>
     </section>
   );
 }

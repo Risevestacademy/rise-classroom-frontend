@@ -1,48 +1,72 @@
 import Link from "next/link";
 
-import { HeroBackground } from "@/components/landing/HeroBackground";
+import { HandDrawn } from "@/components/landing/HandDrawn";
 import { HeroShowcase } from "@/components/landing/HeroShowcase";
+import { LineShapes } from "@/components/landing/LineShapes";
 import { RollText } from "@/components/landing/RollText";
 
 export function HeroSection() {
   return (
-    // data-bg is white so the page behind is already white for the marquee;
-    // data-bg-keep holds the hero's own dark backdrop.
     <section
       id="product"
       data-bg="#FFFFFF"
-      data-bg-keep
-      className="relative isolate flex flex-col items-center px-4 pt-[128px] pb-[64px] lg:pt-[228px] lg:pb-[50px]"
+      className="relative isolate flex flex-col items-center overflow-hidden px-4 pt-[132px] pb-14 lg:pt-[200px] lg:pb-18"
     >
-      <HeroBackground />
+      <div
+        aria-hidden
+        className="graph-paper absolute inset-x-0 top-0 -z-20 h-[880px] [mask-image:radial-gradient(ellipse_60%_70%_at_50%_20%,#000_20%,transparent_80%)]"
+      />
+      <LineShapes
+        shapes={[
+          {
+            shape: "circle",
+            className: "top-[180px] left-[9%] text-brand-300",
+            drift: -0.3,
+          },
+          {
+            shape: "zigzag",
+            className: "top-[420px] left-[14%] w-14 text-brand-400",
+            drift: -0.15,
+          },
+          {
+            shape: "triangle",
+            className: "top-[200px] right-[11%] rotate-12 text-brand-400",
+            drift: -0.25,
+          },
+          {
+            shape: "square",
+            className: "top-[440px] right-[8%] -rotate-12 text-brand-300",
+            drift: -0.4,
+          },
+        ]}
+      />
 
       <h1
         data-intro="title"
-        className="w-full max-w-[760px] text-center text-[40px] leading-[48px] font-bold text-white lg:text-[72px] lg:leading-[80px]"
+        className="w-full max-w-[880px] text-center text-[44px] leading-[1.14] font-black tracking-[-0.04em] text-brand-950 sm:text-[60px] lg:text-[84px]"
       >
-        Where better learning <em className="italic">takes shape.</em>
+        Where better learning{" "}
+        <HandDrawn strokeClassName="text-brand-400">takes shape.</HandDrawn>
       </h1>
 
       <p
         data-intro="sub"
-        className="mt-[12px] w-full max-w-[501px] text-center text-[16px] leading-6 font-medium text-[#9E9E9E]"
+        className="mt-7 w-full max-w-[500px] text-center text-[17px] leading-7 text-text-secondary"
       >
         Bring classes, learning materials, assignments, and progress together in
         one connected space built for educators and learners.
       </p>
 
-      <div data-intro="ctas" className="mt-[32px] flex items-center gap-4">
+      <div data-intro="ctas" className="mt-9 flex items-center gap-3">
         <Link
-          href="#solutions"
-          data-magnetic
-          className="landing-btn flex h-[56px] items-center justify-center rounded-full border border-border-strong px-4 text-[14px] leading-5 font-medium text-white [--btn-fill:rgb(255_255_255/0.1)] lg:w-[185px]"
+          href="#how-it-works"
+          className="btn-press flex h-12 items-center justify-center rounded-[14px] border border-border-default bg-white px-5 text-[15px] font-semibold text-text-primary [--press:var(--color-border-strong)]"
         >
-          <RollText>Explore the platform</RollText>
+          <RollText>See how it works</RollText>
         </Link>
         <Link
           href="/sign-up"
-          data-magnetic
-          className="landing-btn flex h-[56px] items-center justify-center rounded-full border-2 border-brand-200 bg-surface-background px-4 text-[14px] leading-5 font-medium text-brand-950 [--btn-fill:var(--color-brand-50)] lg:w-[137px]"
+          className="btn-press flex h-12 items-center justify-center rounded-[14px] bg-brand-700 px-5 text-[15px] font-semibold text-white"
         >
           <RollText>Start for free</RollText>
         </Link>
