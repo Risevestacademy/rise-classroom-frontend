@@ -9,6 +9,7 @@ import {
   type CohortStatus as ApiCohortStatus,
 } from "@/lib/admin";
 import { api, type Envelope, type Paginated } from "@/lib/api";
+import { listMentees, type MentorStudent } from "@/lib/mentors";
 import type { OnboardingStatus, UserStatus } from "@/lib/auth";
 import type {
   CohortStatus,
@@ -280,6 +281,41 @@ async function listCohortTrackIds(cohortId: string) {
   return Array.from(cohortTrackNames(cohortId, assignments, students).keys());
 }
 
+/** Each mentor on the cohort's mentees, or null where the list failed. */
+async function listCohortMentees(
+  cohortId: string,
+  assignments: InstructorTrack[],
+  mentorIds: Set<string>,
+) {
+  const ids = new Set(
+    assignments
+      .filter((a) => a.cohortId === cohortId && mentorIds.has(a.instructorId))
+      .map((a) => a.instructorId),
+  );
+  return new Map(
+    await Promise.all(
+      [...ids].map(
+        async (mentorId) =>
+          [mentorId, await listMentees(mentorId).catch(() => null)] as const,
+      ),
+    ),
+  );
+}
+
+/** A mentor's mentees on one cohort track. */
+function countMentees(
+  mentees: MentorStudent[] | null | undefined,
+  cohortId: string,
+  trackId: string,
+) {
+  if (!mentees) return null;
+  return mentees.filter(
+    (mentee) =>
+      mentee.cohort.id === cohortId &&
+      mentee.enrollment.some((enrollment) => enrollment.track?.id === trackId),
+  ).length;
+}
+
 async function getCohortDetail(id: string): Promise<CohortDetail> {
   const [{ data: cohort }, assignments, students, instructors, mentors] =
     await Promise.all([
@@ -299,6 +335,7 @@ async function getCohortDetail(id: string): Promise<CohortDetail> {
   );
   // Mentors are assigned to a cohort and track the same way instructors are.
   const mentorIds = new Set(mentors.map((user) => user.id));
+  const menteesByMentor = await listCohortMentees(id, assignments, mentorIds);
 
   const tracks = cohortTrackNames(id, assignments, students);
   const studentsPerTrack = new Map<string, number>();
@@ -342,9 +379,12 @@ async function getCohortDetail(id: string): Promise<CohortDetail> {
         trackId: assignment.trackId,
         accountStatus: staffStatus.get(assignment.instructorId) ?? null,
         user: staffUsers.get(assignment.instructorId),
-        // PENDING-BACKEND: admins can't list a mentor's mentees.
         students: isMentor
-          ? null
+          ? countMentees(
+              menteesByMentor.get(assignment.instructorId),
+              id,
+              assignment.trackId,
+            )
           : (studentsPerTrack.get(assignment.trackId) ?? 0),
         lastActive: "--",
       };

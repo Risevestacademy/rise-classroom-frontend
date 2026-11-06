@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { HydrationBoundary } from "@tanstack/react-query";
 
 import { adminQueries } from "@/lib/admin";
-import { instructorStudentQueries } from "@/lib/instructors";
+import { instructorStudentsQuery } from "@/lib/instructors";
 import {
   dehydrateServerQueries,
   prefetch,
@@ -39,9 +39,7 @@ export default async function InstructorProfilePage({ params }: Props) {
 async function LoadedInstructorProfile({ id }: { id: string }) {
   const instructor = await loadInstructor(id);
   // The Overview and Students tabs both list the instructor's students.
-  if (instructor) {
-    await Promise.all(instructorStudentQueries(instructor).map(prefetch));
-  }
+  if (instructor) await prefetch(instructorStudentsQuery(id));
 
   return (
     <HydrationBoundary state={dehydrateServerQueries()}>
