@@ -1,4 +1,4 @@
-import { Asterisk } from "lucide-react";
+import { GridRow } from "@/components/landing/GridRow";
 
 const KEYWORDS = [
   "Cohorts",
@@ -10,36 +10,31 @@ const KEYWORDS = [
   "Milestones",
 ];
 
-/** Endless strip of what Rise brings together; the landing motion drives it. */
+/** Endless strip of what Rise brings together, inside the centre column; the landing motion drives it. */
 export function KeywordMarquee() {
   const row = (hidden: boolean) => (
     <ul aria-hidden={hidden} className="flex shrink-0 items-center">
       {KEYWORDS.map((keyword) => (
         <li
           key={keyword}
-          className="flex items-center gap-10 pr-10 text-[40px] leading-none font-semibold text-brand-950 lg:gap-14 lg:pr-14 lg:text-[72px]"
+          className="pr-12 text-[20px] leading-7 font-medium text-text-primary"
         >
           {keyword}
-          <Asterisk
-            data-marquee-icon
-            className="size-8 shrink-0 text-brand-400 lg:size-14"
-            strokeWidth={2.5}
-          />
         </li>
       ))}
     </ul>
   );
 
   return (
-    <section
-      data-bg="#FFFFFF"
-      aria-label="What Rise Classroom brings together"
-      className="overflow-hidden border-y border-neutral-200 bg-white py-8 lg:py-10"
-    >
-      <div data-marquee-track className="flex w-max">
-        {row(false)}
-        {row(true)}
-      </div>
+    <section data-bg="#FFFFFF" aria-label="What Rise Classroom brings together">
+      <GridRow innerClassName="py-12 lg:py-[70px]">
+        <div className="overflow-hidden">
+          <div data-marquee-track className="flex w-max">
+            {row(false)}
+            {row(true)}
+          </div>
+        </div>
+      </GridRow>
     </section>
   );
 }
