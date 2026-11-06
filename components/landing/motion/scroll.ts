@@ -4,7 +4,7 @@ import { EASE_OUT, gsap, ScrollTrigger, SplitText } from "./gsap";
 
 const all = <T extends Element = HTMLElement>(
   selector: string,
-  scope?: Element
+  scope?: Element,
 ) => gsap.utils.toArray<T>(selector, scope);
 
 const one = <T extends Element = HTMLElement>(selector: string) =>
@@ -20,7 +20,7 @@ function drawStrokes(tl: gsap.core.Timeline, scope: Element, position: number) {
       paths,
       { drawSVG: "0%" },
       { drawSVG: "100%", duration: 2.4, ease: "power1.inOut" },
-      position
+      position,
     );
   }
   return tl;
@@ -45,7 +45,8 @@ export function navAutoHide({ followScroll = true } = {}) {
     if (shouldHide === hidden) return;
     hidden = shouldHide;
     gsap.to(header, {
-      yPercent: hidden ? -100 : 0,
+      // Past -100 so the scrolled-state shadow below the bar goes too.
+      yPercent: hidden ? -130 : 0,
       duration: followScroll ? 0.6 : 0,
       ease: EASE_OUT,
       overwrite: "auto",
@@ -121,7 +122,7 @@ export function backgroundMorph() {
 
   gsap.set(
     sections.filter((section) => !section.hasAttribute("data-bg-keep")),
-    { backgroundColor: "transparent" }
+    { backgroundColor: "transparent" },
   );
   gsap.set(main, { backgroundColor: sections[0].dataset.bg });
 
@@ -176,7 +177,7 @@ export function scrollReveals() {
               stagger: type === "lines" ? 0.12 : 0.05,
             }),
           el,
-          0.9
+          0.9,
         ),
     });
   });
@@ -236,7 +237,7 @@ export function scrollReveals() {
             speed: 0.5,
           },
         },
-        0
+        0,
       );
   });
 
@@ -267,7 +268,7 @@ export function revealGroups({ perItem }: { perItem: boolean }) {
           duration: 0.9,
           ease: EASE_OUT,
           scrollTrigger: { trigger: item, start: "top 90%", once: true },
-        })
+        }),
       );
       return;
     }
@@ -286,215 +287,16 @@ export function revealGroups({ perItem }: { perItem: boolean }) {
  * Endless keyword strip. Scrolling speeds it up in the scroll direction, then
  * it eases back to its idle drift.
  */
-export function keywordMarquee() {
-  const track = one("[data-marquee-track]");
-  if (!track) return;
-
-  const loop = gsap
-    .timeline({ repeat: -1 })
-    .to(track, { xPercent: -50, duration: 40, ease: "none" }, 0)
-    .to(
-      all("[data-marquee-icon]", track),
-      { rotate: 360 * 4, duration: 40, ease: "none" },
-      0
-    );
-  // Start deep into the loop so it can run backwards without hitting zero.
-  loop.totalTime(loop.duration() * 1000);
-
-  ScrollTrigger.create({
-    start: 0,
-    end: "max",
-    onUpdate: (self) => {
-      const boost = 1 + Math.min(Math.abs(self.getVelocity()) / 250, 8);
-      loop.timeScale(self.direction * boost);
-      gsap.to(loop, {
-        timeScale: self.direction,
-        duration: 1.2,
-        ease: "power3.out",
-        overwrite: true,
-      });
-    },
-  });
-}
-
 /**
  * Value prop cards on smaller screens: each card, and then its icon, reveals
  * as it arrives. Desktop deals them in one at a time with valueDeal instead.
  */
-export function valueCards() {
-  const grid = one("[data-value-grid]");
-  if (!grid) return;
-
-  all("[data-value-card]", grid).forEach((card) => {
-    gsap
-      .timeline({
-        scrollTrigger: { trigger: card, start: "top 88%", once: true },
-      })
-      .from(card, { y: 32, opacity: 0, duration: 0.9, ease: EASE_OUT })
-      .from(
-        card.querySelector("[data-value-icon]"),
-        { scale: 0, rotate: -30, duration: 0.8, ease: "back.out(2)" },
-        0.3
-      );
-  });
-}
-
 /**
  * "Works together", desktop: the cards are dealt in one after the other. Each
  * rises from a deck below the middle of the row, tilted, and fans out into its
  * own column; its icon pops as it lands. The first is dealt as the row scrolls
  * in, then the section holds still while the other two follow.
  */
-export function valueDeal() {
-  const section = one("[data-value-section]");
-  const grid = one("[data-value-grid]");
-  if (!section || !grid) return;
-  const cards = all("[data-value-card]", grid);
-  if (cards.length !== 3) return;
-  const [first, middle, last] = cards;
-
-  // Hold once the whole row is on screen: the row just clear of the bottom
-  // (not the section's padding, so more of the heading stays in view on
-  // short screens), or the section's centre on the centre when it fits.
-  const holdAt = () => {
-    if (section.offsetHeight <= window.innerHeight) return "center center";
-    const below = section.getBoundingClientRect().bottom -
-      grid.getBoundingClientRect().bottom;
-    return `bottom-=${Math.max(0, below - 24)} bottom`;
-  };
-
-  const deal = (
-    tl: gsap.core.Timeline,
-    card: HTMLElement,
-    tilt: number,
-    at: number
-  ) =>
-    tl
-      .fromTo(
-        card,
-        {
-          x: () => middle.offsetLeft - card.offsetLeft,
-          y: () => window.innerHeight * 0.85,
-          rotate: tilt,
-          autoAlpha: 0,
-        },
-        {
-          x: 0,
-          y: 0,
-          rotate: 0,
-          autoAlpha: 1,
-          duration: 1,
-          ease: "power3.out",
-        },
-        at
-      )
-      .from(
-        card.querySelector("[data-value-icon]"),
-        { scale: 0, rotate: -30, duration: 0.45, ease: "back.out(2)" },
-        at + 0.7
-      );
-
-  deal(
-    gsap.timeline({
-      scrollTrigger: {
-        trigger: grid,
-        start: "top bottom",
-        endTrigger: section,
-        end: holdAt,
-        // The row sits inside the section that pins next; measure it as such.
-        pinnedContainer: section,
-        scrub: 0.8,
-        invalidateOnRefresh: true,
-      },
-    }),
-    first,
-    -9,
-    0
-  );
-
-  const held = gsap.timeline({
-    scrollTrigger: {
-      trigger: section,
-      start: holdAt,
-      end: () => `+=${window.innerHeight * 1.4}`,
-      pin: true,
-      scrub: 0.8,
-      invalidateOnRefresh: true,
-      // The pin adds scroll space, so it must be measured before the
-      // triggers further down the page (created earlier) are.
-      refreshPriority: 1,
-    },
-  });
-  deal(held, middle, 4, 0);
-  deal(held, last, 9, 1.1);
-  // A beat with all three in place before the page moves on.
-  held.to({}, { duration: 0.6 });
-}
-
-/** Audience cards: the photo is unclipped bottom-up, then the copy and bullets follow. */
-export function solutionCards() {
-  all("[data-solution-card]").forEach((card) => {
-    const media = card.querySelector("[data-solution-media]");
-    const tl = gsap.timeline({
-      defaults: { ease: EASE_OUT },
-      scrollTrigger: { trigger: card, start: "top 80%", once: true },
-    });
-
-    if (media) {
-      tl.fromTo(
-        media,
-        { clipPath: "inset(100% 0% 0% 0% round 16px)" },
-        { clipPath: "inset(0% 0% 0% 0% round 16px)", duration: 1.4 }
-      ).from(media.querySelector("img"), { scale: 1.15, duration: 1.6 }, 0);
-    }
-
-    tl.from(
-      all("[data-solution-text]", card),
-      { y: 20, opacity: 0, duration: 0.9, stagger: 0.08 },
-      0.3
-    )
-      .from(
-        all("[data-solution-point]", card),
-        { x: -12, opacity: 0, duration: 0.8, stagger: 0.07 },
-        0.5
-      )
-      .from(
-        all("[data-solution-point] svg", card),
-        { rotate: -90, duration: 0.8, stagger: 0.07 },
-        0.5
-      );
-  });
-}
-
-/**
- * The solution cards are sticky (see SolutionSection); as each next card
- * slides up over one, that card shrinks back and dims into the stack.
- */
-export function solutionStack() {
-  const cards = all("[data-solution-card]");
-  cards.slice(0, -1).forEach((card, i) => {
-    const next = cards[i + 1];
-    gsap.fromTo(
-      card,
-      { filter: "brightness(1)" },
-      {
-        scale: 0.92,
-        filter: "brightness(0.88)",
-        ease: "none",
-        scrollTrigger: {
-          trigger: next,
-          start: "top bottom",
-          // Done once the next card reaches its own sticky position.
-          end: () => `top ${parseFloat(getComputedStyle(next).top)}px`,
-          scrub: true,
-          invalidateOnRefresh: true,
-        },
-      }
-    );
-  });
-}
-
-/** The dark testimonials panel grows from an inset rounded card to full bleed. */
 export function testimonialsExpand() {
   const section = one("[data-testimonials]");
   if (!section) return;
@@ -511,7 +313,7 @@ export function testimonialsExpand() {
         end: "top 25%",
         scrub: true,
       },
-    }
+    },
   );
 }
 
@@ -537,8 +339,8 @@ export function pricingCards({ perItem }: { perItem: boolean }) {
         // Drop the clip afterwards so it doesn't cut off the card shadow.
         clearProps: "clipPath",
         scrollTrigger: { trigger: group[0], start: "top 85%", once: true },
-      }
-    )
+      },
+    ),
   );
 }
 
@@ -553,11 +355,10 @@ export function footerReveal() {
 
   gsap.fromTo(
     wordmark,
-    { yPercent: 30, clipPath: "inset(100% 0% 0% 0%)", "--dots-shift": -1 },
+    { yPercent: 30, clipPath: "inset(100% 0% 0% 0%)" },
     {
       yPercent: 0,
       clipPath: "inset(0% 0% 0% 0%)",
-      "--dots-shift": 0,
       ease: "none",
       scrollTrigger: {
         trigger: main,
@@ -565,6 +366,131 @@ export function footerReveal() {
         end: "max",
         scrub: true,
       },
-    }
+    },
   );
+}
+
+/**
+ * Flips data-inview to "true" as each element scrolls in, once, so CSS can
+ * play its entrance. Without motion everything starts in its final state.
+ */
+export function inViewFlags({ instant = false } = {}) {
+  all("[data-inview]").forEach((el) => {
+    if (instant) {
+      el.dataset.inview = "true";
+      return;
+    }
+    ScrollTrigger.create({
+      trigger: el,
+      start: "top 78%",
+      once: true,
+      onEnter: () => {
+        el.dataset.inview = "true";
+      },
+    });
+  });
+}
+
+/** Each heading's rising steps draw in from left to right. */
+export function riseMarks() {
+  all("[data-rise-mark] path").forEach((path) => {
+    gsap.fromTo(
+      path,
+      { drawSVG: "0%" },
+      {
+        drawSVG: "100%",
+        duration: 1.2,
+        ease: "power2.inOut",
+        scrollTrigger: { trigger: path, start: "top 88%", once: true },
+      },
+    );
+  });
+}
+
+/** Outline shapes drift at their own speed as the page scrolls. */
+export function driftShapes() {
+  all("[data-drift]").forEach((shape) => {
+    gsap.to(shape, {
+      y: () => Number(shape.dataset.drift) * window.innerHeight,
+      rotation: Number(shape.dataset.drift) * 90,
+      ease: "none",
+      scrollTrigger: { start: 0, end: "+=" + window.innerHeight, scrub: true },
+    });
+  });
+}
+
+/** Desktop: the pinned list follows whichever card is in the middle of the screen. */
+export function valueLabels() {
+  const labels = all("[data-value-label]");
+  all("[data-value-card]").forEach((card, index) => {
+    ScrollTrigger.create({
+      trigger: card,
+      start: "top 55%",
+      end: "bottom 55%",
+      onToggle: (self) => {
+        if (!self.isActive) return;
+        labels.forEach((label, i) => {
+          label.dataset.active = String(i === index);
+        });
+      },
+    });
+  });
+}
+
+/**
+ * How it works: the line fills with the scroll, and each step is ticked off
+ * once the line reaches it.
+ */
+export function curriculumPath({ instant = false } = {}) {
+  const path = one("[data-path]");
+  const fill = one("[data-path-fill]");
+  const steps = all("[data-path-step]");
+  if (!path || !fill) return;
+
+  if (instant) {
+    steps.forEach((step) => (step.dataset.done = "true"));
+    return;
+  }
+
+  gsap.fromTo(
+    fill,
+    { scaleY: 0 },
+    {
+      scaleY: 1,
+      ease: "none",
+      scrollTrigger: {
+        trigger: path,
+        start: "top 60%",
+        end: "bottom 60%",
+        scrub: 0.4,
+      },
+    },
+  );
+  steps.forEach((step) => {
+    ScrollTrigger.create({
+      trigger: step,
+      start: "top 62%",
+      onToggle: (self) => {
+        step.dataset.done = String(self.isActive);
+      },
+      end: "max",
+    });
+  });
+}
+
+/** The steps along the bottom of the closing card grow in, left to right. */
+export function ctaSteps() {
+  const card = one("[data-cta]");
+  if (!card) return;
+  gsap.from(all("[data-cta-step]", card), {
+    scaleY: 0,
+    ease: "power2.out",
+    stagger: 0.06,
+    scrollTrigger: {
+      trigger: card,
+      start: "top 75%",
+      end: "bottom bottom",
+      scrub: 0.6,
+    },
+  });
 }

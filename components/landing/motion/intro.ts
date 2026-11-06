@@ -24,6 +24,7 @@ export function heroIntro() {
       type: "lines",
       mask: "lines",
       linesClass: "split-line",
+      ignore: "[data-hand-drawn]",
       autoSplit: true,
       // Returning the tween lets SplitText re-split after fonts load or on
       // resize without restarting the animation.
@@ -38,11 +39,18 @@ export function heroIntro() {
     });
   }
 
+  tl.fromTo(
+    "[data-intro='title'] [data-stroke] path",
+    { drawSVG: "0%" },
+    { drawSVG: "100%", duration: 1.6, ease: "power1.inOut" },
+    0.9,
+  );
+
   tl.from("[data-intro='sub']", { y: 24, opacity: 0 }, 0.5)
     .from(
       "[data-intro='ctas'] > *",
       { y: 24, scale: 0.96, opacity: 0, stagger: 0.08 },
-      0.6
+      0.6,
     )
     .from("[data-intro='tabs']", { y: 24, opacity: 0 }, 0.75)
     .from(
@@ -53,7 +61,7 @@ export function heroIntro() {
         opacity: 0,
         duration: 1.6,
       },
-      0.8
+      0.8,
     );
 }
 
@@ -72,6 +80,6 @@ export function heroDashboardTilt() {
         end: "top 20%",
         scrub: true,
       },
-    }
+    },
   );
 }
