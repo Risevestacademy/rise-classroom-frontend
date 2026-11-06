@@ -970,7 +970,7 @@ function BulkReviewStep({
       <div className="mt-6 overflow-hidden rounded-xl border border-neutral-200">
         <div className="max-h-80 overflow-auto">
           <table className="w-full min-w-[520px] text-left text-sm">
-            <thead className="bg-neutral-50 text-xs tracking-wider text-neutral-400 uppercase">
+            <thead className="bg-neutral-50 text-xs text-neutral-400">
               <tr>
                 <th className="w-10 px-4 py-3" />
                 <th className="px-4 py-3">First name</th>

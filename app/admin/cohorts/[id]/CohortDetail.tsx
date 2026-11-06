@@ -375,6 +375,8 @@ export function CohortDetail({
           ) : (
             <CohortPeopleTable
               title={`${cohort.instructorList.length} Instructors`}
+              noun={{ singular: "instructor", plural: "instructors" }}
+              rowUser={(row) => row.user}
               personHeader="Instructors"
               rows={cohort.instructorList}
               columns={staffColumns}
@@ -405,6 +407,8 @@ export function CohortDetail({
           ) : (
             <CohortPeopleTable
               title={`${cohort.mentorList.length} Mentors`}
+              noun={{ singular: "mentor", plural: "mentors" }}
+              rowUser={(row) => row.user}
               // Header label kept from the design.
               personHeader="Instructors"
               rows={cohort.mentorList}

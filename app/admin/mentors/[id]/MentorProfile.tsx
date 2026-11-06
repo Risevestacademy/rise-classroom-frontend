@@ -28,6 +28,7 @@ import {
   type PeopleFilterValues,
 } from "@/components/cohorts/PeopleFilterDialog";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import { PeopleSelectionBar } from "@/components/PeopleSelectionBar";
 import {
   actionsMenuItemClass,
   actionsMenuPopupClass,
@@ -81,6 +82,7 @@ import {
   type Mentor,
   type MentorStatus,
 } from "@/lib/mentors";
+import { useRowSelection } from "@/lib/use-row-selection";
 import { useTabParam } from "@/lib/use-tab-param";
 import { cn } from "@/lib/utils";
 import {
@@ -441,7 +443,7 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
     {},
   );
   const [filterOpen, setFilterOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const selection = useRowSelection((student: AssignedStudent) => student.email);
 
   const query = search.trim().toLowerCase();
   const rows = assignedStudents.filter(
@@ -450,9 +452,7 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
         student.email.toLowerCase().includes(query)) &&
       matchesPeopleFilters(student, studentFilters, filterValues),
   );
-  const allSelected =
-    rows.length > 0 && rows.every((student) => selected.has(student.email));
-  const someSelected = rows.some((student) => selected.has(student.email));
+  const headerCheckbox = selection.headerState(rows);
 
   const stats = [
     { title: "Total students", value: mentees.total },
@@ -465,15 +465,6 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
     // doesn't have yet.
     { title: "Students needing attention", value: "--" },
   ];
-
-  function toggle(email: string, checked: boolean) {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (checked) next.add(email);
-      else next.delete(email);
-      return next;
-    });
-  }
 
   return (
     <>
@@ -515,16 +506,13 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
           scroll area; without it they widen the whole page on mobile. */}
         <div className="relative overflow-x-auto">
           <table className="w-full min-w-[960px] table-fixed text-left">
-            <thead className="bg-surface-subtle text-text-primary uppercase">
+            <thead className="bg-surface-subtle text-text-primary">
               <tr className="h-11">
                 <th className="w-[69px] border-r border-border-default pl-3">
                   <Checkbox
                     aria-label="Select all students"
-                    checked={allSelected}
-                    indeterminate={someSelected && !allSelected}
-                    onCheckedChange={(checked) =>
-                      rows.forEach((student) => toggle(student.email, checked))
-                    }
+                    {...headerCheckbox}
+                    onCheckedChange={() => selection.toggleAll(rows)}
                     className="size-4 border-icon-secondary"
                   />
                 </th>
@@ -551,9 +539,9 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
                     <td className="pl-3">
                       <Checkbox
                         aria-label={`Select ${student.name}`}
-                        checked={selected.has(student.email)}
+                        checked={selection.isSelected(student)}
                         onCheckedChange={(checked) =>
-                          toggle(student.email, checked)
+                          selection.toggle(student, checked)
                         }
                         className="size-4 border-icon-secondary"
                       />
@@ -667,6 +655,19 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
           />
         )}
       </section>
+
+      <PeopleSelectionBar
+        items={selection.items}
+        noun={{ singular: "student", plural: "students" }}
+        onClear={selection.clear}
+        exportFileName={`${mentor.name} students`}
+        exportColumns={[
+          { header: "Name", value: (student) => student.name },
+          { header: "Email", value: (student) => student.email },
+          { header: "Status", value: (student) => studentStatusPill[student.status].label },
+          { header: "Overall progress", value: (student) => progressLabel(student) },
+        ]}
+      />
     </>
   );
 }
