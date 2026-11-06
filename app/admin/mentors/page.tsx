@@ -6,6 +6,10 @@ import Link from "next/link";
 import { Add01, Filter, MoreHorizontal, Search01 } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import {
+  PeopleSelectionBar,
+  ResendInvitesAction,
+} from "@/components/PeopleSelectionBar";
 import { InviteInstructorDialog } from "@/components/InviteInstructorDialog";
 import { MentorActionsMenu } from "@/components/MentorActionsMenu";
 import { StatCard } from "@/components/StatCard";
@@ -28,6 +32,7 @@ import { adminDashboardQueries } from "@/lib/admin-dashboard";
 import { toMentor, type Mentor, type MentorStatus } from "@/lib/mentors";
 import { useSelectedCohort } from "@/lib/selected-cohort";
 import { useDebounced } from "@/lib/use-debounced";
+import { useRowSelection } from "@/lib/use-row-selection";
 import { cn } from "@/lib/utils";
 
 /** Status pills sit on the brand surface; only the text is coloured. */
@@ -83,7 +88,7 @@ export default function MentorsPage() {
     {},
   );
   const [filterOpen, setFilterOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const selection = useRowSelection((mentor: Mentor) => mentor.id);
   const debouncedSearch = useDebounced(search);
   const pickedStatus = filterValues.status?.[0] as MentorStatus | undefined;
   const pickedTrack = filterValues.trackId?.[0];
@@ -94,7 +99,7 @@ export default function MentorsPage() {
     setListedCohortId(cohortId);
     // Not on the first load, so a page from the URL is kept.
     if (listedCohortId !== undefined) setPage(1);
-    setSelected(new Set());
+    selection.clear();
   }
 
   const mentorsQuery = useQuery({
@@ -153,29 +158,7 @@ export default function MentorsPage() {
     },
   ];
 
-  const allSelected =
-    rows.length > 0 && rows.every((mentor) => selected.has(mentor.id));
-  const someSelected = rows.some((mentor) => selected.has(mentor.id));
-
-  function toggleAll() {
-    setSelected((current) => {
-      const next = new Set(current);
-      for (const mentor of rows) {
-        if (allSelected) next.delete(mentor.id);
-        else next.add(mentor.id);
-      }
-      return next;
-    });
-  }
-
-  function toggleOne(id: string, checked: boolean) {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
+  const headerCheckbox = selection.headerState(rows);
 
   return (
     <>
@@ -245,14 +228,13 @@ export default function MentorsPage() {
             scroll area; without it they widen the whole page on mobile. */}
           <div className="relative overflow-x-auto">
             <table className="w-full min-w-[960px] table-fixed text-left">
-              <thead className="bg-surface-subtle text-text-primary uppercase">
+              <thead className="bg-surface-subtle text-text-primary">
                 <tr className="h-11">
                   <th className="w-[69px] border-r border-border-default pl-3">
                     <Checkbox
                       aria-label="Select all mentors"
-                      checked={allSelected}
-                      indeterminate={someSelected && !allSelected}
-                      onCheckedChange={toggleAll}
+                      {...headerCheckbox}
+                      onCheckedChange={() => selection.toggleAll(rows)}
                       className="size-4 border-icon-secondary"
                     />
                   </th>
@@ -315,9 +297,9 @@ export default function MentorsPage() {
                       <td className="pl-3">
                         <Checkbox
                           aria-label={`Select ${mentor.name}`}
-                          checked={selected.has(mentor.id)}
+                          checked={selection.isSelected(mentor)}
                           onCheckedChange={(checked) =>
-                            toggleOne(mentor.id, checked)
+                            selection.toggle(mentor, checked)
                           }
                           className="size-4 border-icon-secondary"
                         />
@@ -404,6 +386,26 @@ export default function MentorsPage() {
             className="mt-4"
           />
         )}
+
+        <PeopleSelectionBar
+          items={selection.items}
+          noun={{ singular: "mentor", plural: "mentors" }}
+          onClear={selection.clear}
+          exportFileName="mentors"
+          exportColumns={[
+            { header: "Name", value: (mentor) => mentor.name },
+            { header: "Email", value: (mentor) => mentor.email },
+            { header: "Track", value: (mentor) => mentor.track },
+            { header: "Status", value: (mentor) => statusBadge[mentor.status].label },
+            { header: "Joined", value: (mentor) => mentor.joined },
+          ]}
+          actions={(notify) => (
+            <ResendInvitesAction
+              users={selection.items.map((mentor) => mentor.user)}
+              onResult={notify}
+            />
+          )}
+        />
       </main>
     </>
   );

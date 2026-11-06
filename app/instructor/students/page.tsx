@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Search, Download, Filter, MoreVertical } from "lucide-react";
 import jsPDF from "jspdf";
 
+import { PeopleSelectionBar } from "@/components/PeopleSelectionBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -264,7 +265,7 @@ export default function StudentsPage() {
         <div className="bg-white rounded-2xl shadow-xs border border-neutral-200/80 overflow-hidden flex flex-col">
 
           {/* Table Header */}
-          <div className="grid grid-cols-12 px-6 py-3.5 bg-neutral-50/80 border-b border-neutral-200 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider items-center">
+          <div className="grid grid-cols-12 px-6 py-3.5 bg-neutral-50/80 border-b border-neutral-200 text-[11px] font-semibold text-neutral-400 items-center">
             <div className="col-span-4 flex items-center gap-3">
               <input
                 type="checkbox"
@@ -791,6 +792,20 @@ export default function StudentsPage() {
         </Dialog>
 
       </main>
+
+      <PeopleSelectionBar
+        items={DUMMY_STUDENTS.filter((s) => selectedStudentIds.includes(s.id))}
+        noun={{ singular: "student", plural: "students" }}
+        onClear={() => setSelectedStudentIds([])}
+        exportFileName="students"
+        exportColumns={[
+          { header: "Name", value: (student) => student.name },
+          { header: "Email", value: (student) => student.email },
+          { header: "Progress (%)", value: (student) => student.progress },
+          { header: "Average Grade", value: (student) => student.averageGrade },
+          { header: "Status", value: (student) => student.status },
+        ]}
+      />
     </>
   );
 }
