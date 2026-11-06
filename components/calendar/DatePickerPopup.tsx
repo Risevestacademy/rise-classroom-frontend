@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Popover } from "@base-ui/react/popover";
 
-import { ArrowLeft01, ArrowRight01 } from "@/assets/icons";
+import { ArrowDown01, ArrowLeft01, ArrowRight01 } from "@/assets/icons";
 import { Button } from "@/components/ui/button";
 import { addDays, monthNames, toDateKey } from "@/lib/calendar";
 import { cn } from "@/lib/utils";
@@ -101,9 +101,16 @@ function DatePicker({
           >
             <ArrowLeft01 className="size-4" />
           </button>
-          <p className="text-sm font-medium text-text-primary">
-            {monthNames[view.month]} {view.year}
-          </p>
+          <div className="flex items-center gap-1">
+            <MonthSelect
+              value={view.month}
+              onChange={(month) => setView((current) => ({ ...current, month }))}
+            />
+            <YearSelect
+              value={view.year}
+              onChange={(year) => setView((current) => ({ ...current, year }))}
+            />
+          </div>
           <button
             type="button"
             aria-label="Next month"
@@ -180,5 +187,142 @@ function DatePicker({
         </Button>
       </div>
     </>
+  );
+}
+
+const pickerTriggerClass =
+  "flex h-7 items-center gap-1 rounded-md px-2 text-sm font-medium text-text-primary hover:bg-white data-[popup-open]:bg-white";
+
+const pickerOptionClass =
+  "flex h-9 items-center justify-center rounded-lg text-sm text-text-primary hover:bg-neutral-100 aria-pressed:bg-brand-primary aria-pressed:text-white";
+
+/** A header button that opens a small popup under it. */
+function HeaderDropdown({
+  label,
+  ariaLabel,
+  open,
+  onOpenChange,
+  children,
+}: {
+  label: React.ReactNode;
+  ariaLabel: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Popover.Root open={open} onOpenChange={onOpenChange}>
+      <Popover.Trigger aria-label={ariaLabel} className={pickerTriggerClass}>
+        {label}
+        <ArrowDown01 className="size-4" />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner side="bottom" align="center" sideOffset={6} className="z-50">
+          <Popover.Popup className="w-64 rounded-xl bg-neutral-50 p-3 shadow-[0_2px_6px_rgb(0_0_0/0.19),0_0_1px_rgb(0_0_0/0.25)] outline-none">
+            {children}
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+function MonthSelect({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (month: number) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <HeaderDropdown
+      label={monthNames[value]}
+      ariaLabel={`Month, ${monthNames[value]}`}
+      open={open}
+      onOpenChange={setOpen}
+    >
+      <div className="grid grid-cols-3 gap-1">
+        {monthNames.map((name, month) => (
+          <button
+            key={name}
+            type="button"
+            aria-pressed={month === value}
+            aria-label={name}
+            onClick={() => {
+              onChange(month);
+              setOpen(false);
+            }}
+            className={pickerOptionClass}
+          >
+            {name.slice(0, 3)}
+          </button>
+        ))}
+      </div>
+    </HeaderDropdown>
+  );
+}
+
+/** Twelve years at a time; the arrows page back or forward without limit. */
+function YearSelect({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (year: number) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [firstYear, setFirstYear] = React.useState(value - 5);
+  const years = Array.from({ length: 12 }, (_, i) => firstYear + i);
+
+  return (
+    <HeaderDropdown
+      label={value}
+      ariaLabel={`Year, ${value}`}
+      open={open}
+      onOpenChange={(next) => {
+        // Each opening starts with the shown year in view.
+        if (next) setFirstYear(value - 5);
+        setOpen(next);
+      }}
+    >
+      <div className="mb-2 flex items-center justify-between">
+        <button
+          type="button"
+          aria-label="Earlier years"
+          onClick={() => setFirstYear((year) => year - 12)}
+          className="flex size-7 items-center justify-center rounded-md hover:bg-neutral-100"
+        >
+          <ArrowLeft01 className="size-4" />
+        </button>
+        <span className="text-sm font-medium text-text-primary">
+          {years[0]} – {years[11]}
+        </span>
+        <button
+          type="button"
+          aria-label="Later years"
+          onClick={() => setFirstYear((year) => year + 12)}
+          className="flex size-7 items-center justify-center rounded-md hover:bg-neutral-100"
+        >
+          <ArrowRight01 className="size-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-3 gap-1">
+        {years.map((year) => (
+          <button
+            key={year}
+            type="button"
+            aria-pressed={year === value}
+            onClick={() => {
+              onChange(year);
+              setOpen(false);
+            }}
+            className={pickerOptionClass}
+          >
+            {year}
+          </button>
+        ))}
+      </div>
+    </HeaderDropdown>
   );
 }

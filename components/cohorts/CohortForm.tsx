@@ -4,15 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 
 import { ArrowDown01, ArrowLeft01, Calendar03 } from "@/assets/icons";
+import { DatePickerPopup } from "@/components/calendar/DatePickerPopup";
 import { cn } from "@/lib/utils";
 import type { CohortStatus } from "@/app/admin/cohorts/cohort-data";
 
 export type CohortFormValues = {
   name: string;
   description: string;
-  /** DD/MM/YYYY, as typed. */
+  /** DD/MM/YYYY. */
   startDate: string;
-  /** DD/MM/YYYY, as typed. */
+  /** DD/MM/YYYY. */
   endDate: string;
   status: CohortStatus;
 };
@@ -35,6 +36,12 @@ function parseDate(value: string) {
   const [, day, month, year] = match.map(Number);
   const date = new Date(year, month - 1, day);
   return date.getMonth() === month - 1 ? date : undefined;
+}
+
+function formatDate(date: Date) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${date.getFullYear()}`;
 }
 
 function durationLabel(start: string, end: string) {
@@ -314,18 +321,39 @@ function DateInput({
   onChange: (value: string) => void;
   readOnly?: boolean;
 }) {
+  const [open, setOpen] = React.useState(false);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+
   return (
-    <div className="relative">
-      <Calendar03 className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-text-secondary" />
-      <input
+    <>
+      <button
+        ref={triggerRef}
         id={id}
-        inputMode="numeric"
-        placeholder="DD/MM/YYYY"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        readOnly={readOnly}
-        className={cn(inputClass, "pl-10")}
+        type="button"
+        aria-haspopup="dialog"
+        disabled={readOnly}
+        onClick={() => setOpen(true)}
+        className={cn(
+          inputClass,
+          "flex items-center gap-2 text-left disabled:cursor-default data-[popup-open]:border-brand-primary",
+          // Buttons always match :read-only, so only grey it out when it is.
+          readOnly
+            ? "read-only:bg-neutral-100"
+            : "read-only:bg-white read-only:focus:border-brand-primary",
+        )}
+      >
+        <Calendar03 className="size-5 shrink-0 text-text-secondary" />
+        <span className={cn(!value && "text-text-muted")}>
+          {value || "DD/MM/YYYY"}
+        </span>
+      </button>
+      <DatePickerPopup
+        open={open}
+        onOpenChange={setOpen}
+        anchor={triggerRef}
+        value={parseDate(value) ?? new Date()}
+        onApply={(date) => onChange(formatDate(date))}
       />
-    </div>
+    </>
   );
 }
