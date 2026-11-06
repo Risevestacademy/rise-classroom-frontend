@@ -85,7 +85,7 @@ export type MentorStudent = {
   };
 };
 
-async function listMentees(mentorId: string) {
+export async function listMentees(mentorId: string) {
   const { data } = await api.get<Envelope<MentorStudent[]>>(
     `/admin/users/${mentorId}/mentees`,
   );

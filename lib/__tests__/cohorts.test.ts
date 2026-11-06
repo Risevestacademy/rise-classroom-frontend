@@ -45,6 +45,16 @@ const assignments = [instructor, mentor].map((user, index) => ({
   track: tracks[0],
 }));
 
+// One mentee on the mentor's track, one on another track of the same cohort.
+const mentees = [tracks[0], tracks[1]].map((track, index) => ({
+  mentorshipId: `mentorship-${index}`,
+  assignedAt: "2026-01-01T00:00:00.000Z",
+  studentProfileId: `profile-${index}`,
+  cohort: { id: cohort.id, name: cohort.name },
+  enrollment: [{ status: "ENROLLED", track }],
+  user: { id: `mentee-${index}`, name: "Mentee", email: `m${index}@example.com` },
+}));
+
 /** `/admin/users` answers by role, which `mockApi` can't key on. */
 function mockUsersByRole(users: Record<string, AdminUser[] | null>) {
   const api = mockApi({});
@@ -58,7 +68,9 @@ function mockUsersByRole(users: Record<string, AdminUser[] | null>) {
         ? envelope({ items, page: 1, limit: 100, total: items?.length, totalPages: 1 })
         : path === "/admin/instructor-tracks"
           ? envelope(assignments)
-          : envelope(cohort);
+          : path === `/admin/users/${mentor.id}/mentees`
+            ? envelope(mentees)
+            : envelope(cohort);
     return new Response(JSON.stringify(body), {
       status,
       headers: { "content-type": "application/json" },
@@ -85,7 +97,7 @@ describe("cohort detail", () => {
     expect(detail.mentorList[0]).toMatchObject({
       name: "Tunde Bello",
       accountStatus: "SUSPENDED",
-      students: null,
+      students: 1,
     });
     expect(detail.instructorsAndMentors).toBe(2);
   });

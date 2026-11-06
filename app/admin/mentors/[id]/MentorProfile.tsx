@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { notFound, useRouter } from "next/navigation";
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu } from "@base-ui/react/menu";
 
 import {
@@ -66,7 +66,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
-import { instructorStudentQueries, toTaughtStudent } from "@/lib/instructors";
+import { instructorStudentsQuery, toTaughtStudents } from "@/lib/instructors";
 import {
   adminQueries,
   assignmentsFor,
@@ -271,41 +271,27 @@ function MentorSummary({ mentor }: { mentor: Mentor }) {
   );
 }
 
-/**
- * A mentor's mentees, or the students on an instructor's cohort tracks.
- * `total` also counts instructor students past the first page.
- */
+/** A mentor's mentees, or the students on an instructor's cohort tracks. */
 function useMentees(mentor: Mentor) {
   const isMentor = mentor.user.role === "MENTOR";
   const mentees = useQuery({
     ...mentorQueries.mentees(mentor.id),
     enabled: isMentor,
   });
-  const taught = useQueries({
-    queries: isMentor ? [] : instructorStudentQueries(mentor.user),
+  const taught = useQuery({
+    ...instructorStudentsQuery(mentor.id),
+    enabled: !isMentor,
   });
 
-  if (isMentor) {
-    const students = (mentees.data ?? []).map(toAssignedStudent);
-    return {
-      students,
-      total: students.length,
-      isPending: mentees.isPending,
-      error: mentees.error,
-    };
-  }
-
-  // Someone on two of the instructor's tracks is listed once.
-  const byId = new Map(
-    taught
-      .flatMap((query) => query.data?.items ?? [])
-      .map((user) => [user.id, toTaughtStudent(user)]),
-  );
+  const query = isMentor ? mentees : taught;
+  const students = isMentor
+    ? (mentees.data ?? []).map(toAssignedStudent)
+    : toTaughtStudents(taught.data ?? []);
   return {
-    students: [...byId.values()],
-    total: taught.reduce((sum, query) => sum + (query.data?.total ?? 0), 0),
-    isPending: taught.some((query) => query.isPending),
-    error: taught.find((query) => query.error)?.error ?? null,
+    students,
+    total: students.length,
+    isPending: query.isPending,
+    error: query.error,
   };
 }
 
