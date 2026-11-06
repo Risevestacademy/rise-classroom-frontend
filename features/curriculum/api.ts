@@ -659,6 +659,7 @@ function createCurriculumApi(role: CurriculumRole) {
     lessonId: string | undefined,
     assignment: ModuleAssignment,
   ) {
+    const attachments = attachmentLinks(assignment.resources);
     const record = await postData<AssignmentRecord>(
       `${base}/topics/${topicId}/assignments`,
       {
@@ -669,7 +670,7 @@ function createCurriculumApi(role: CurriculumRole) {
         submissionType: assignment.submissionType,
         maxScore: assignment.maxPoints,
         publishStatus: assignment.status,
-        attachments: attachmentLinks(assignment.resources),
+        ...(attachments.length > 0 && { attachments }),
         ...(lessonId && { lessonId }),
       },
     );

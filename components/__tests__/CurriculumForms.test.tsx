@@ -251,7 +251,6 @@ describe("NewAssignmentScreen", () => {
         submissionType: "FILE_UPLOAD",
         maxScore: 100,
         publishStatus: "DRAFT",
-        attachments: [],
       },
     ]);
     expect(push.mock.calls[0][0]).toBe(

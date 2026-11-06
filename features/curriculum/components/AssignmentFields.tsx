@@ -248,8 +248,6 @@ export function AssignmentSettingsFields({
         />
       )}
 
-      {/* PENDING-BACKEND: the API has no maximum points, so it's kept for the
-        session. */}
       <FormField
         label="Maximum points"
         required
