@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
 
 import { curriculumApis } from "@/features/curriculum/api";
 import { resourceFromLink } from "@/features/curriculum/mappers";
-import type { LessonRecord, ResourceRecord, TopicRecord } from "@/features/curriculum/types";
+import type {
+  AssignmentRecord,
+  LessonRecord,
+  ResourceRecord,
+  TopicRecord,
+} from "@/features/curriculum/types";
 import { envelope, mockApi } from "@/test/utils";
 
 const timestamps = {
@@ -40,7 +46,6 @@ function moduleRoutes() {
     "GET /admin/topics/t1/resources": envelope([savedLink]),
     "GET /admin/topics/t1/assignments": envelope([]),
     "GET /admin/lessons/l1/resources": envelope([]),
-    "GET /admin/lessons/l1/assignments": envelope([]),
     "GET /admin/lessons/l1/recordings": envelope([]),
     "POST /admin/topics/t1/resources": envelope(savedLink),
     "POST /admin/lessons/l1/resources": envelope(savedLink),
@@ -98,5 +103,52 @@ describe("saving resource links", () => {
     expect(backend.bodies("POST /admin/lessons/l1/resources")).toEqual([
       { title: "Notes", url: "https://drive.google.com/notes.pdf", type: "PDF", publishStatus: "PUBLISHED" },
     ]);
+  });
+});
+
+describe("loading modules", () => {
+  const api = curriculumApis.admin;
+  const assignment = (id: string, lessonId: string | null) =>
+    ({
+      ...timestamps,
+      id,
+      topicId: "t1",
+      lessonId,
+      title: id,
+      publishStatus: "PUBLISHED",
+    }) as unknown as AssignmentRecord;
+
+  /* Lesson assignments have no lesson route mocked, so asking for one fails the test. */
+  function curriculumRoutes(assignments: AssignmentRecord[]) {
+    return {
+      ...moduleRoutes(),
+      "GET /admin/curriculums/c1/topics": envelope([topic]),
+      "GET /admin/topics/t1/assignments": envelope(assignments),
+    };
+  }
+
+  it("takes lesson assignments from the module's list", async () => {
+    mockApi(
+      curriculumRoutes([assignment("on-lesson", "l1"), assignment("on-module", null)]),
+    );
+
+    const [loaded] = await new QueryClient().fetchQuery(api.queries.modules("c1"));
+
+    expect(loaded.assignments.map((a) => [a.id, a.afterLesson])).toEqual([
+      ["on-lesson", 1],
+      ["on-module", null],
+    ]);
+  });
+
+  it("reloads only the changed module into the cached list", async () => {
+    const backend = mockApi(curriculumRoutes([]));
+    const client = new QueryClient();
+    await client.fetchQuery(api.queries.modules("c1"));
+
+    await api.refreshModule(client, "c1", "t1");
+
+    expect(backend.urls("GET /admin/curriculums/c1/topics")).toHaveLength(1);
+    expect(backend.urls("GET /admin/topics/t1")).toHaveLength(1);
+    expect(client.getQueryData(api.keys.modules("c1"))).toHaveLength(1);
   });
 });

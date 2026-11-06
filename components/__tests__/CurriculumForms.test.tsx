@@ -75,7 +75,6 @@ function curriculumRoutes(extra: Record<string, unknown> = {}) {
     "GET /admin/topics/t1/resources": envelope([]),
     "GET /admin/topics/t1/assignments": envelope([]),
     "GET /admin/lessons/l1/resources": envelope([]),
-    "GET /admin/lessons/l1/assignments": envelope([]),
     "GET /admin/lessons/l1/recordings": envelope([]),
     ...extra,
   };

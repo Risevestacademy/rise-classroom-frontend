@@ -23,8 +23,8 @@ export function NewModuleScreen({ id }: { id: string }) {
 
   const createMutation = useMutation({
     mutationFn: (input: SaveModuleInput) => api.createModule(id, input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: api.keys.modules(id) });
+    onSuccess: (created) => {
+      api.cacheModule(queryClient, id, created);
       router.push(backHref);
     },
   });

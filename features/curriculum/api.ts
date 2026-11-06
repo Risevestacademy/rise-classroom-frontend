@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type QueryClient } from "@tanstack/react-query";
 
 import { api, type Envelope, type Paginated } from "@/lib/api";
 import type { AdminUser, Track } from "@/lib/admin";
@@ -169,12 +169,18 @@ function createCurriculumApi(role: CurriculumRole) {
 
   // ---- Loading -----------------------------------------------------------------
 
-  async function loadLesson(lesson: LessonRecord): Promise<LessonTree> {
-    const [resources, assignments, recordings] = await Promise.all([
+  /** Lesson assignments come from the module's list, which has them all. */
+  async function loadLesson(
+    lesson: LessonRecord,
+    moduleAssignments: AssignmentRecord[],
+  ): Promise<LessonTree> {
+    const [resources, recordings] = await Promise.all([
       getData<ResourceRecord[]>(`${base}/lessons/${lesson.id}/resources`),
-      getData<AssignmentRecord[]>(`${base}/lessons/${lesson.id}/assignments`),
       getData<RecordingRecord[]>(`${base}/lessons/${lesson.id}/recordings`),
     ]);
+    const assignments = moduleAssignments.filter(
+      (a) => a.lessonId === lesson.id,
+    );
     return { ...lesson, resources, assignments, recordings };
   }
 
@@ -186,8 +192,10 @@ function createCurriculumApi(role: CurriculumRole) {
     ]);
     return {
       ...topic,
-      lessons: await Promise.all(byPosition(lessons).map(loadLesson)),
-      // Lesson items are read per lesson, so keep only the module-wide ones.
+      lessons: await Promise.all(
+        byPosition(lessons).map((lesson) => loadLesson(lesson, assignments)),
+      ),
+      // Lesson resources are read per lesson, so keep only the module-wide ones.
       resources: resources.filter((r) => !r.lessonId),
       assignments: assignments.filter((a) => !a.lessonId),
     };
@@ -201,7 +209,7 @@ function createCurriculumApi(role: CurriculumRole) {
     );
   }
 
-  /** One request per topic and three per lesson — the API has no nested read. */
+  /** Three requests per topic and two per lesson — the API has no nested read. */
   async function loadTree(curriculumId: string) {
     return Promise.all((await listTopics(curriculumId)).map(loadTopic));
   }
@@ -353,6 +361,37 @@ function createCurriculumApi(role: CurriculumRole) {
 
   async function getModule(id: string) {
     return toModule(await getTopicTree(id), local);
+  }
+
+  /** Puts one module into the cached list, replacing it or adding it at the end. */
+  function cacheModule(
+    queryClient: QueryClient,
+    curriculumId: string,
+    saved: CurriculumModule,
+  ) {
+    queryClient.setQueryData(
+      keys.modules(curriculumId),
+      (modules: CurriculumModule[] | undefined) =>
+        modules &&
+        (modules.some((m) => m.id === saved.id)
+          ? modules.map((m) => (m.id === saved.id ? saved : m))
+          : [...modules, saved]),
+    );
+  }
+
+  /** Reloads only the module that changed, instead of every module in the curriculum. */
+  async function refreshModule(
+    queryClient: QueryClient,
+    curriculumId: string,
+    moduleId: string,
+  ) {
+    try {
+      cacheModule(queryClient, curriculumId, await getModule(moduleId));
+    } catch {
+      await queryClient.invalidateQueries({
+        queryKey: keys.modules(curriculumId),
+      });
+    }
   }
 
   /** Throws before anything is saved if the content can't be attached anywhere. */
@@ -832,7 +871,6 @@ function createCurriculumApi(role: CurriculumRole) {
     // it refreshes every tab.
     modules: (curriculumId: string) =>
       ["curriculum", role, "modules", curriculumId] as const,
-    module: (id: string) => ["curriculum", role, "module", id] as const,
     notes: (curriculumId: string) =>
       ["curriculum", role, "notes", curriculumId] as const,
     submissions: (assignmentId: string) =>
@@ -844,9 +882,11 @@ function createCurriculumApi(role: CurriculumRole) {
       ["curriculum", role, "module-access", moduleId] as const,
   };
 
+  // Saves update this cache themselves, so it can stay fresh for longer.
   const modulesQuery = (curriculumId: string) => ({
     queryKey: keys.modules(curriculumId),
     queryFn: () => listModules(curriculumId),
+    staleTime: 5 * 60_000,
   });
 
   const queries = {
@@ -879,10 +919,12 @@ function createCurriculumApi(role: CurriculumRole) {
         queryFn: () => getSubmission(submissionId),
       }),
 
-    module: (id: string) =>
+    /** Read from the curriculum's module list; `null` when it has no such module. */
+    module: (curriculumId: string, id: string) =>
       queryOptions({
-        queryKey: keys.module(id),
-        queryFn: () => getModule(id),
+        ...modulesQuery(curriculumId),
+        select: (modules: CurriculumModule[]) =>
+          modules.find((m) => m.id === id) ?? null,
       }),
 
     assignments: (curriculumId: string) =>
@@ -927,6 +969,8 @@ function createCurriculumApi(role: CurriculumRole) {
     updateModule,
     deleteModule,
     reorderModules,
+    cacheModule,
+    refreshModule,
     createAssignment,
     updateAssignment,
     deleteAssignment,
