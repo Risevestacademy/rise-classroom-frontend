@@ -21,3 +21,12 @@ export function stageFromProgress(progress: number): MascotStage {
   if (progress >= 1) return 5;
   return Math.min(4, Math.floor(progress * 5)) as MascotStage;
 }
+
+/** Growth earned from lessons completed. Completed lessons never drop, so it never wilts. */
+export function stageFromLessons(
+  completed: number,
+  total: number,
+): MascotStage {
+  if (total <= 0) return 0;
+  return stageFromProgress(completed / total);
+}
