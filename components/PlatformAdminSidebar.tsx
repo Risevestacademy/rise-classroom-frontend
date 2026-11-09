@@ -2,7 +2,6 @@
 
 import { DashboardSquare01, Mortarboard, UserChat, UserQuestion } from "@/assets/icons";
 import { AppSidebar, type NavSectionConfig } from "@/components/AppSidebar";
-import { onboardingRequests } from "@/lib/platform-sample-data";
 
 const sections: NavSectionConfig[] = [
   {
@@ -17,7 +16,6 @@ const sections: NavSectionConfig[] = [
         title: "Onboarding Requests",
         href: "/platform-admin/onboarding-requests",
         icon: UserQuestion,
-        badge: onboardingRequests.filter(({ status }) => status === "NEW").length,
       },
       {
         title: "Academies",

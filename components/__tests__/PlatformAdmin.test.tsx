@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 
 import { OnboardingRequests } from "@/app/platform-admin/onboarding-requests/OnboardingRequests";
@@ -7,7 +7,8 @@ import { UserQuestion } from "@/assets/icons";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PlatformAdminSidebar } from "@/components/PlatformAdminSidebar";
 import { SidebarNavProvider } from "@/components/SidebarNavContext";
-import { mockApi, renderWithClient } from "@/test/utils";
+import { sessionQuery } from "@/lib/session-query";
+import { envelope, mockApi, renderWithClient, reply } from "@/test/utils";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/platform-admin/dashboard",
@@ -19,43 +20,18 @@ vi.mock("@/components/platform-admin/PlatformTopNav", () => ({
   PlatformTopNav: () => null,
 }));
 
-/* These screens only have development samples for now, so each test picks its own. */
-const sample = vi.hoisted(() => ({
-  academies: [] as unknown[],
-  requests: [] as unknown[],
-  activity: [] as unknown[],
-}));
-vi.mock("@/lib/platform-sample-data", () => ({
-  get platformAcademies() {
-    return sample.academies;
-  },
-  get onboardingRequests() {
-    return sample.requests;
-  },
-  get platformActivity() {
-    return sample.activity;
-  },
-}));
-
-beforeEach(() => {
-  sample.academies = [];
-  sample.requests = [];
-  sample.activity = [];
-});
+type AdminOverrides = { onboardingStatus?: "INVITED" | "COMPLETED" };
 
 function academy(
   id: string,
   name: string,
   createdAt: string,
-  {
-    onboardingStatus = "COMPLETED",
-    status = "ACTIVE",
-  }: { onboardingStatus?: "INVITED" | "COMPLETED"; status?: string } = {},
+  { onboardingStatus = "COMPLETED", status = "ACTIVE" }: AdminOverrides & { status?: string } = {},
 ) {
   return {
     id,
     name,
-    slug: id,
+    slug: name.toLowerCase().replace(/ /g, "-"),
     status,
     createdAt,
     updatedAt: createdAt,
@@ -73,8 +49,8 @@ function academy(
   };
 }
 
-const riseAcademy = academy("a2", "Rise Academy", "2026-10-01T09:00:00.000Z");
 const designLab = academy("a1", "Design Lab", "2026-09-01T09:00:00.000Z");
+const riseAcademy = academy("a2", "Rise Academy", "2026-10-01T09:00:00.000Z");
 const pixelAcademy = academy("a3", "Pixel Academy", "2026-10-05T09:00:00.000Z", {
   onboardingStatus: "INVITED",
 });
@@ -82,9 +58,23 @@ const closedAcademy = academy("a4", "Closed Academy", "2026-08-01T09:00:00.000Z"
   status: "SUSPENDED",
 });
 
-function renderDashboard() {
-  const api = mockApi({});
+function academyRoutes(academies: ReturnType<typeof academy>[]) {
+  return {
+    "GET /platform/organizations": envelope(
+      academies.map((item) => ({ ...item, admins: undefined })),
+    ),
+    ...Object.fromEntries(
+      academies.map((item) => [`GET /platform/organizations/${item.id}`, envelope(item)]),
+    ),
+  };
+}
+
+function renderDashboard(routes: Parameters<typeof mockApi>[0]) {
+  const api = mockApi(routes);
   const view = renderWithClient(<PlatformAdminDashboard />);
+  view.client.setQueryData(sessionQuery().queryKey, {
+    user: { firstName: "Juma" },
+  } as never);
   return { ...view, api };
 }
 
@@ -92,106 +82,123 @@ const metric = (title: string) =>
   screen.getByText(title).parentElement as HTMLElement;
 
 describe("program admin dashboard", () => {
-  it("shows the empty state with no figures when there's nothing yet", () => {
-    renderDashboard();
+  it("shows the empty state with no figures when there's nothing yet", async () => {
+    renderDashboard(academyRoutes([]));
 
-    expect(screen.getByText("You're Good!")).toBeInTheDocument();
+    expect(await screen.findByText("You're Good!")).toBeInTheDocument();
     expect(within(metric("Total Academies")).getByText("--")).toBeInTheDocument();
     expect(within(metric("Pending Request")).getByText("--")).toBeInTheDocument();
     expect(screen.queryByText("Recently created Academies")).not.toBeInTheDocument();
   });
 
-  it("works out the figures from each academy's admins", () => {
-    sample.academies = [riseAcademy, designLab, pixelAcademy, closedAcademy];
-    renderDashboard();
+  it("works out the figures from each academy's admins", async () => {
+    renderDashboard(academyRoutes([designLab, riseAcademy, pixelAcademy, closedAcademy]));
 
+    await screen.findByRole("cell", { name: "Rise Academy" });
     expect(within(metric("Total Academies")).getByText("4")).toBeInTheDocument();
     /* Suspended academies count towards the total only. */
     expect(within(metric("Active academies")).getByText("2")).toBeInTheDocument();
     expect(within(metric("Awaiting set-up")).getByText("1")).toBeInTheDocument();
   });
 
-  it("lists academies still waiting on their admin, with resending turned off", () => {
-    sample.academies = [pixelAcademy, designLab];
-    renderDashboard();
+  it("lists academies still waiting on their admin, with resending turned off", async () => {
+    renderDashboard(academyRoutes([designLab, pixelAcademy]));
 
-    const row = screen.getByText("Pixel Academy").closest("li") as HTMLElement;
+    const name = await screen.findByText("Pixel Academy");
+    const row = name.closest("li") as HTMLElement;
     expect(within(row).getByText("Approved Oct 5, 2026")).toBeInTheDocument();
     expect(within(row).getByRole("button", { name: "Resend email" })).toBeDisabled();
   });
 
-  it("lists finished academies with their super admin, and actions turned off", () => {
-    sample.academies = [pixelAcademy, riseAcademy, designLab];
-    renderDashboard();
+  it("lists finished academies newest first, with their super admin", async () => {
+    renderDashboard(academyRoutes([designLab, riseAcademy, pixelAcademy]));
 
-    const row = screen.getByRole("cell", { name: "Rise Academy" }).closest("tr") as HTMLElement;
+    const rise = await screen.findByRole("cell", { name: "Rise Academy" });
+    const rows = screen
+      .getAllByRole("row")
+      .map((row) => within(row).queryAllByRole("cell")[0]?.textContent);
+    expect(rows.filter(Boolean)).toEqual(["Rise Academy", "Design Lab"]);
+
+    const row = rise.closest("tr") as HTMLElement;
     expect(within(row).getByText("Tobi Rise Academy")).toBeInTheDocument();
     expect(within(row).getByText("a2@example.com")).toBeInTheDocument();
     expect(within(row).getByText("Oct 1, 2026")).toBeInTheDocument();
     expect(within(row).getByText("Active")).toBeInTheDocument();
-    expect(within(row).getByRole("button", { name: "Rise Academy actions" })).toBeDisabled();
     expect(screen.queryByRole("cell", { name: "Pixel Academy" })).not.toBeInTheDocument();
   });
 
-  it("keeps the cards, with short messages, when only requests and activity are missing", () => {
-    sample.academies = [designLab];
-    renderDashboard();
+  it("keeps the cards, with short messages, when only requests and activity are missing", async () => {
+    renderDashboard(academyRoutes([designLab]));
 
-    expect(screen.getByRole("cell", { name: "Design Lab" })).toBeInTheDocument();
+    expect(await screen.findByRole("cell", { name: "Design Lab" })).toBeInTheDocument();
     expect(screen.getByText("No onboarding requests to review.")).toBeInTheDocument();
     expect(screen.getByText("No activity to show yet.")).toBeInTheDocument();
     expect(screen.queryByText("You're Good!")).not.toBeInTheDocument();
   });
 
-  it("shows requests and activity once there are some", () => {
-    sample.requests = [
-      { id: "1", academy: "Dogg Inc", submittedAt: "2026-10-27T09:00:00.000Z", status: "NEW" },
-      { id: "2", academy: "Codehub", submittedAt: "2026-10-21T09:00:00.000Z", status: "PENDING" },
-    ];
-    sample.activity = [
-      { items: [{ time: "10:24 AM", title: "New application received", detail: "Dogg Inc" }] },
-    ];
-    renderDashboard();
+  it("offers a retry rather than the empty state when the academies fail to load", async () => {
+    const { user, api } = renderDashboard({
+      "GET /platform/organizations": reply(500, { success: false, message: "Down" }),
+    });
 
-    const row = screen.getByRole("cell", { name: "Dogg Inc" }).closest("tr") as HTMLElement;
-    expect(within(row).getByText("New")).toBeInTheDocument();
-    expect(within(row).getByText("Oct 27, 2026")).toBeInTheDocument();
-    expect(within(metric("Pending Request")).getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("New application received")).toBeInTheDocument();
+    const retries = await screen.findAllByRole("button", { name: "Try again" });
     expect(screen.queryByText("You're Good!")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Couldn't load this figure.")).toHaveLength(3);
+
+    await user.click(retries[0]);
+    await vi.waitFor(() =>
+      expect(api.urls("GET /platform/organizations")).toHaveLength(2),
+    );
   });
 
-  it("makes no academy requests", () => {
-    const { api } = renderDashboard();
+  it("asks before suspending an academy, then refreshes it", async () => {
+    const suspended = { ...designLab, status: "SUSPENDED" };
+    let current = designLab;
+    const { user, api } = renderDashboard({
+      "GET /platform/organizations": () => envelope([{ ...current, admins: undefined }]),
+      "GET /platform/organizations/a1": () => envelope(current),
+      "PATCH /platform/organizations/a1": () => {
+        current = suspended;
+        return envelope(suspended);
+      },
+    });
 
-    expect(api.urls("GET /platform/organizations")).toEqual([]);
+    await user.click(await screen.findByRole("button", { name: "Design Lab actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Suspend academy" }));
+    expect(api.bodies("PATCH /platform/organizations/a1")).toEqual([]);
+
+    await user.click(await screen.findByRole("button", { name: "Yes, suspend" }));
+
+    expect(await screen.findByText("Suspended")).toBeInTheDocument();
+    expect(api.bodies("PATCH /platform/organizations/a1")).toEqual([{ status: "SUSPENDED" }]);
+  });
+
+  it("shows why suspending failed and keeps the dialog open", async () => {
+    const { user } = renderDashboard({
+      ...academyRoutes([designLab]),
+      "PATCH /platform/organizations/a1": reply(403, { success: false, message: "Not allowed" }),
+    });
+
+    await user.click(await screen.findByRole("button", { name: "Design Lab actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Suspend academy" }));
+    await user.click(await screen.findByRole("button", { name: "Yes, suspend" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Not allowed");
+    expect(screen.getByRole("button", { name: "Yes, suspend" })).toBeEnabled();
   });
 });
 
 describe("onboarding requests page", () => {
-  it("shows the empty state", () => {
-    mockApi({});
+  it("shows the empty state, with only awaiting set-up counted", async () => {
+    mockApi(academyRoutes([pixelAcademy, designLab]));
     renderWithClient(<OnboardingRequests />);
 
     expect(screen.getByText("You're Good!")).toBeInTheDocument();
     expect(within(metric("Total Requests")).getByText("--")).toBeInTheDocument();
     expect(within(metric("New Requests")).getByText("--")).toBeInTheDocument();
-    expect(within(metric("Awaiting set-up")).getByText("--")).toBeInTheDocument();
+    expect(await within(metric("Awaiting set-up")).findByText("1")).toBeInTheDocument();
   });
 
-  it("lists requests instead once there are some", () => {
-    sample.academies = [pixelAcademy];
-    sample.requests = [
-      { id: "1", academy: "Dogg Inc", submittedAt: "2026-10-27T09:00:00.000Z", status: "NEW" },
-    ];
-    mockApi({});
-    renderWithClient(<OnboardingRequests />);
-
-    expect(screen.getByRole("cell", { name: "Dogg Inc" })).toBeInTheDocument();
-    expect(screen.queryByText("You're Good!")).not.toBeInTheDocument();
-    expect(within(metric("New Requests")).getByText("1")).toBeInTheDocument();
-    expect(within(metric("Awaiting set-up")).getByText("1")).toBeInTheDocument();
-  });
 });
 
 describe("program admin sidebar", () => {

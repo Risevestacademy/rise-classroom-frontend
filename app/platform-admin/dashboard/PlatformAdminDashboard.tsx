@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, Hourglass, MoreHorizontal, ToggleRight } from "lucide-react";
+import { Clock, Hourglass, ToggleRight } from "lucide-react";
 
 import { ArrowRight02, Mortarboard } from "@/assets/icons";
 import { MetricCard } from "@/components/MetricCard";
+import { AcademyActionsMenu } from "@/components/platform-admin/AcademyActionsMenu";
 import { AllClearState } from "@/components/platform-admin/AllClearState";
-import { OnboardingRequestsTable } from "@/components/platform-admin/OnboardingRequestsTable";
 import { PlatformTopNav } from "@/components/platform-admin/PlatformTopNav";
-import { ActivityTimeline } from "@/components/student-profile/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,14 +16,10 @@ import { shortDate } from "@/lib/calendar";
 import {
   isActiveAcademy,
   isAwaitingSetup,
+  platformQueries,
   setupAdmin,
   type Academy,
 } from "@/lib/platform";
-import {
-  onboardingRequests,
-  platformAcademies as academies,
-  platformActivity,
-} from "@/lib/platform-sample-data";
 import { sessionQuery } from "@/lib/session-query";
 import { cn, greeting } from "@/lib/utils";
 
@@ -39,11 +34,38 @@ const recentAcademiesLimit = 3;
 const figure = (count: number) => count || "--";
 
 export function PlatformAdminDashboard() {
+  const academiesQuery = useQuery(platformQueries.academies());
+
+  return (
+    <DashboardView
+      academies={academiesQuery.data ?? []}
+      isPending={academiesQuery.isPending}
+      isError={academiesQuery.isError}
+      onRetry={() => academiesQuery.refetch()}
+    />
+  );
+}
+
+export function PlatformAdminDashboardLoading() {
+  return <DashboardView academies={[]} isPending isError={false} onRetry={() => {}} />;
+}
+
+function DashboardView({
+  academies,
+  isPending,
+  isError,
+  onRetry,
+}: {
+  academies: Academy[];
+  isPending: boolean;
+  isError: boolean;
+  onRetry: () => void;
+}) {
   const session = useQuery(sessionQuery());
   const awaitingSetup = academies.filter(isAwaitingSetup);
   const activeCount = academies.filter(isActiveAcademy).length;
   const recentAcademies = academies.filter(setupAdmin).slice(0, recentAcademiesLimit);
-  const isEmpty = academies.length === 0 && onboardingRequests.length === 0;
+  const isEmpty = !isPending && !isError && academies.length === 0;
 
   return (
     <>
@@ -65,10 +87,9 @@ export function PlatformAdminDashboard() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          
             <MetricCard
               title="Pending Request"
-              value={figure(onboardingRequests.length)}
+              value="--"
               icon={Clock}
               iconClassName="bg-surface-warning-badge text-text-warning"
               className="min-h-0"
@@ -76,6 +97,8 @@ export function PlatformAdminDashboard() {
             <MetricCard
               title="Total Academies"
               value={figure(academies.length)}
+              isPending={isPending}
+              isError={isError}
               icon={Mortarboard}
               iconClassName="bg-surface-brand text-text-success"
               className="min-h-0"
@@ -83,6 +106,8 @@ export function PlatformAdminDashboard() {
             <MetricCard
               title="Awaiting set-up"
               value={figure(awaitingSetup.length)}
+              isPending={isPending}
+              isError={isError}
               icon={Hourglass}
               iconClassName="bg-[#fdeafc] text-[#960b93]"
               className="min-h-0"
@@ -90,6 +115,8 @@ export function PlatformAdminDashboard() {
             <MetricCard
               title="Active academies"
               value={figure(activeCount)}
+              isPending={isPending}
+              isError={isError}
               icon={ToggleRight}
               iconClassName="bg-surface-brand text-text-info"
               className="min-h-0"
@@ -107,13 +134,7 @@ export function PlatformAdminDashboard() {
                     subtitle="The latest academy applications that need your attention"
                     action={<ViewAllLink href="/platform-admin/onboarding-requests" />}
                   />
-                  {onboardingRequests.length > 0 ? (
-                    <OnboardingRequestsTable
-                      requests={onboardingRequests.slice(0, previewLimit)}
-                    />
-                  ) : (
-                    <CardMessage>No onboarding requests to review.</CardMessage>
-                  )}
+                  <CardMessage>No onboarding requests to review.</CardMessage>
                 </section>
 
                 <section className={cn(cardClass, "flex min-w-0 flex-col gap-4 p-6")}>
@@ -121,15 +142,19 @@ export function PlatformAdminDashboard() {
                     title="Approved and awaiting setup"
                     subtitle="Applicants who haven't completed their setup"
                   />
-                  {awaitingSetup.length > 0 ? (
+                  <AcademyCardBody
+                    isPending={isPending}
+                    isError={isError}
+                    onRetry={onRetry}
+                    isEmpty={awaitingSetup.length === 0}
+                    emptyMessage="Every approved academy has finished its setup."
+                  >
                     <ul className="flex flex-col">
                       {awaitingSetup.slice(0, previewLimit).map((academy) => (
                         <AwaitingSetupRow key={academy.id} academy={academy} />
                       ))}
                     </ul>
-                  ) : (
-                    <CardMessage>Every approved academy has finished its setup.</CardMessage>
-                  )}
+                  </AcademyCardBody>
                 </section>
               </div>
 
@@ -140,11 +165,15 @@ export function PlatformAdminDashboard() {
                     subtitle="Academies that have completed setup and are now active on Rise Classroom"
                     action={<ViewAllLink href="/platform-admin/academies" />}
                   />
-                  {recentAcademies.length > 0 ? (
+                  <AcademyCardBody
+                    isPending={isPending}
+                    isError={isError}
+                    onRetry={onRetry}
+                    isEmpty={recentAcademies.length === 0}
+                    emptyMessage="No academy has finished its setup yet."
+                  >
                     <RecentAcademiesTable academies={recentAcademies} />
-                  ) : (
-                    <CardMessage>No academy has finished its setup yet.</CardMessage>
-                  )}
+                  </AcademyCardBody>
                 </section>
 
                 <section className={cn(cardClass, "flex min-w-0 flex-col gap-3 p-6")}>
@@ -164,11 +193,7 @@ export function PlatformAdminDashboard() {
                       </Button>
                     }
                   />
-                  {platformActivity.length > 0 ? (
-                    <ActivityTimeline groups={platformActivity} />
-                  ) : (
-                    <CardMessage>No activity to show yet.</CardMessage>
-                  )}
+                  <CardMessage>No activity to show yet.</CardMessage>
                 </section>
               </div>
             </div>
@@ -240,15 +265,7 @@ function RecentAcademiesTable({ academies }: { academies: Academy[] }) {
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    disabled
-                    aria-label={`${academy.name} actions`}
-                    title="Managing academies isn't available yet"
-                    className="rounded-md p-1 text-text-disabled disabled:cursor-not-allowed"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
+                  <AcademyActionsMenu academy={academy} />
                 </td>
               </tr>
             );
@@ -257,6 +274,51 @@ function RecentAcademiesTable({ academies }: { academies: Academy[] }) {
       </table>
     </div>
   );
+}
+
+function AcademyCardBody({
+  isPending,
+  isError,
+  onRetry,
+  isEmpty,
+  emptyMessage,
+  children,
+}: {
+  isPending: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  isEmpty: boolean;
+  emptyMessage: string;
+  children: React.ReactNode;
+}) {
+  if (isPending) {
+    return (
+      <div className="flex flex-col gap-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Skeleton key={index} className="h-10 w-full" />
+        ))}
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8 text-center">
+        <p className="font-work text-sm text-text-secondary">
+          We couldn&apos;t load the academies.
+        </p>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetry}
+          className="border-neutral-200 text-neutral-800"
+        >
+          Try again
+        </Button>
+      </div>
+    );
+  }
+  if (isEmpty) return <CardMessage>{emptyMessage}</CardMessage>;
+  return children;
 }
 
 function CardMessage({ children }: { children: React.ReactNode }) {
