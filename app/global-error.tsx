@@ -1,9 +1,15 @@
 "use client";
 
+import "./globals.css";
+
 import * as Sentry from "@sentry/nextjs";
-import NextError from "next/error";
 import { useEffect } from "react";
 
+import { ServerErrorScreen } from "@/components/ServerErrorScreen";
+import { cn } from "@/lib/utils";
+import { lato, workSans } from "./fonts";
+
+/** Replaces the root layout when it fails, so it brings its own styles and fonts. */
 export default function GlobalError({
   error,
 }: {
@@ -14,13 +20,10 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="en">
+    <html lang="en" className={cn(lato.variable, workSans.variable, "font-lato")}>
       <body>
-        {/* `NextError` is the default Next.js error page component. Its type
-        definition requires a `statusCode` prop. However, since the App Router
-        does not expose status codes for errors, we simply pass 0 to render a
-        generic error message. */}
-        <NextError statusCode={0} />
+        <title>Something went wrong | Rise Classroom</title>
+        <ServerErrorScreen />
       </body>
     </html>
   );
