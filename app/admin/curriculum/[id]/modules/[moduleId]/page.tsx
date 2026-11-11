@@ -1,12 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { HydrationBoundary } from "@tanstack/react-query";
 
 import { curriculumApis } from "@/features/curriculum/api";
 import { ModuleDetailScreen } from "@/features/curriculum/screens/ModuleDetailScreen";
 import {
   dehydrateServerQueries,
-  prefetch,
   prefetchOrNotFound,
 } from "@/lib/query.server";
 
@@ -14,8 +14,17 @@ const { queries } = curriculumApis.admin;
 
 type Props = { params: Promise<{ id: string; moduleId: string }> };
 
+/** The module comes from the curriculum's module list, which the page loads anyway. */
+async function findModule(id: string, moduleId: string) {
+  const modules = await prefetchOrNotFound(queries.modules(id));
+  const found = modules?.find((m) => m.id === moduleId);
+  if (modules && !found) notFound();
+  return found;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const found = await prefetchOrNotFound(queries.module((await params).moduleId));
+  const { id, moduleId } = await params;
+  const found = await findModule(id, moduleId);
   return { title: found?.title ?? "Module" };
 }
 
@@ -31,9 +40,8 @@ export default async function ModuleDetailPage({ params }: Props) {
 
 async function LoadedModule({ id, moduleId }: { id: string; moduleId: string }) {
   await Promise.all([
-    prefetchOrNotFound(queries.module(moduleId)),
+    findModule(id, moduleId),
     prefetchOrNotFound(queries.detail(id)),
-    prefetch(queries.modules(id)),
   ]);
 
   return (

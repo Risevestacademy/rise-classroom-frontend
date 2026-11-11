@@ -75,10 +75,17 @@ export function AssignmentsTab({
   const [deleteTarget, setDeleteTarget] =
     React.useState<CurriculumAssignment | null>(null);
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: api.keys.modules(curriculumId),
-    });
+  /* Reloads only the module the assignment is on. */
+  const refresh = (assignmentId: string) => {
+    const item = assignmentsQuery.data?.find(
+      ({ assignment }) => assignment.id === assignmentId,
+    );
+    return item
+      ? api.refreshModule(queryClient, curriculumId, item.module.id)
+      : queryClient.invalidateQueries({
+          queryKey: api.keys.modules(curriculumId),
+        });
+  };
 
   const statusMutationKey = ["assignment-status", curriculumId];
   const statusMutation = useMutation({
@@ -86,7 +93,7 @@ export function AssignmentsTab({
     mutationFn: ({ id, status }: { id: string; status: ModuleStatus }) =>
       api.updateAssignment(id, { status }),
     /* Returning the refetch keeps the change pending until the list shows the new status. */
-    onSuccess: () => invalidate(),
+    onSuccess: (_, { id }) => refresh(id),
   });
   /* Every row with a status change still saving, so several can show a skeleton at once. */
   const savingStatusIds = useMutationState({
@@ -96,8 +103,8 @@ export function AssignmentsTab({
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteAssignment(id),
-    onSuccess: () => {
-      invalidate();
+    onSuccess: (_, id) => {
+      refresh(id);
       setDeleteTarget(null);
     },
   });

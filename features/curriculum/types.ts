@@ -125,7 +125,7 @@ export type ModuleAssignment = {
   dueAt: string | null;
   /** The lesson the assignment is attached to in the API (1-based). */
   afterLesson: number | null;
-  /** The score a submission is marked out of. PENDING-BACKEND: session only. */
+  /** The score a submission is marked out of. */
   maxPoints: number;
   status: ModuleStatus;
 };
@@ -160,6 +160,8 @@ export type CurriculumModule = {
   resources: ResourceFile[];
   lessons: ModuleLesson[];
   assignments: ModuleAssignment[];
+  /** Whether the module is unlocked for its cohort, when the API says. */
+  unlocked?: boolean;
   coverImage: string | null;
   liveClassRecordings: { title: string; thumbnail: string }[];
 };
@@ -257,8 +259,8 @@ export type CurriculumRecord = Timestamps & {
   totalLessons: number;
   totalAssignments: number;
   cohort?: { id: string; name: string } | null;
-  /** Not sent by the curriculums list. */
-  assignedInstructors?: { id: string; name: string; email: string }[];
+  creatorId?: string | null;
+  creatorType?: "INSTRUCTOR" | "ADMIN" | null;
 };
 
 export type TopicRecord = Timestamps & {
@@ -268,6 +270,8 @@ export type TopicRecord = Timestamps & {
   description: string;
   position: number;
   publishStatus: ModuleStatus;
+  /** Whether the module is unlocked for its cohort. */
+  instructorUnlocked?: boolean;
   outcomes: string[];
 };
 
@@ -277,6 +281,8 @@ export type LessonRecord = Timestamps & {
   title: string;
   description?: string | null;
   position?: number | null;
+  publishStatus?: ModuleStatus;
+  instructorUnlocked?: boolean;
 };
 
 export type ResourceRecord = Timestamps & {
@@ -301,11 +307,25 @@ export type AssignmentRecord = Timestamps & {
   topicId?: string | null;
   title: string;
   description?: string | null;
-  instructions?: string | null;
+  instructions?: AssignmentInstructions | null;
   dueAt?: string | null;
   submissionType: SubmissionType;
+  maxScore?: number | null;
   publishStatus: ModuleStatus;
-  attachments: string[];
+  attachments: AttachmentRecord[];
+};
+
+export type AssignmentInstructions = {
+  description: string;
+  guidelines?: string[];
+};
+
+export type AttachmentRecord = {
+  id: string;
+  title: string;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  downloadUrl: string;
 };
 
 export type NoteRecord = Timestamps & {
@@ -373,12 +393,12 @@ export type ModuleAccessRecord = {
   statuses: TopicLockStatus[];
 };
 
-/* What the last unlock or lock did. The API only reports this when access changes. */
+/* Whether a module is unlocked. The counts only come back when access changes. */
 export type ModuleAccess = {
   unlocked: boolean;
-  studentCount: number;
+  studentCount?: number;
   /* Students who can open the module now, after prerequisites. */
-  openCount: number;
+  openCount?: number;
 };
 
 export type RecordingRecord = Timestamps & {
@@ -405,11 +425,11 @@ export type TopicTree = TopicRecord & {
 // ---- Session-only fields the API doesn't have ----------------------------------
 
 /**
- * PENDING-BACKEND: the API has no assignment type, group mode or maximum
- * points, and no file upload, so picked files stay in the session.
+ * PENDING-BACKEND: the API has no assignment type or group mode, and no file
+ * upload, so picked files stay in the session.
  */
 export type AssignmentExtras = Partial<
-  Pick<ModuleAssignment, "type" | "mode" | "maxPoints"> & {
+  Pick<ModuleAssignment, "type" | "mode"> & {
     files: ResourceFile[];
   }
 >;

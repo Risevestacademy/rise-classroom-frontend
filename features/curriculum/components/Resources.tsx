@@ -67,21 +67,28 @@ export function ResourcesTab({
   const [deleteTarget, setDeleteTarget] =
     React.useState<CurriculumResource | null>(null);
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: api.keys.modules(curriculumId),
-    });
+  /* Reloads only the module the resource is on. */
+  const refresh = (resourceId: string) => {
+    const item = resourcesQuery.data?.find(
+      ({ resource }) => resource.id === resourceId,
+    );
+    return item
+      ? api.refreshModule(queryClient, curriculumId, item.module.id)
+      : queryClient.invalidateQueries({
+          queryKey: api.keys.modules(curriculumId),
+        });
+  };
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: ModuleStatus }) =>
       api.updateResource(id, { status }),
-    onSuccess: invalidate,
+    onSuccess: (_, { id }) => refresh(id),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteResource(id),
-    onSuccess: () => {
-      invalidate();
+    onSuccess: (_, id) => {
+      refresh(id);
       setDeleteTarget(null);
     },
   });

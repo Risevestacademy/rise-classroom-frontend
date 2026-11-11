@@ -94,6 +94,7 @@ export function isAssignmentReady(values: AssignmentValues) {
   return (
     values.title.trim().length > 0 &&
     values.description.trim().length > 0 &&
+    values.instructions.trim().length > 0 &&
     parseMaxPoints(values.maxPoints) !== null
   );
 }
@@ -136,7 +137,7 @@ export function AssignmentBriefFields({
         </div>
       </Field.Root>
       <Field.Root className="flex flex-col">
-        <Label icon={<></>}>Instructions for students</Label>
+        <Label required>Instructions for students</Label>
         <div className="mt-1.5">
           <Textarea
             value={values.instructions}
@@ -247,8 +248,6 @@ export function AssignmentSettingsFields({
         />
       )}
 
-      {/* PENDING-BACKEND: the API has no maximum points, so it's kept for the
-        session. */}
       <FormField
         label="Maximum points"
         required

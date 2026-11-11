@@ -71,7 +71,6 @@ const curriculum: CurriculumRecord = {
   totalLessons: 0,
   totalAssignments: 0,
   cohort: { id: "cohort-1", name: "Cohort 4" },
-  assignedInstructors: [],
 };
 
 /* The module list behind the notes: one module with nothing in it yet. */

@@ -157,8 +157,15 @@ function AssignmentForm({
       }
       return api.createAssignment(selectedModuleId, fields);
     },
-    onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: api.keys.modules(curriculumId) });
+    onSuccess: async (created) => {
+      const changed = new Set([initial.moduleId, selectedModuleId]);
+      await Promise.all(
+        [...changed]
+          .filter(Boolean)
+          .map((moduleId) =>
+            api.refreshModule(queryClient, curriculumId, moduleId),
+          ),
+      );
       if (!created) {
         router.push(backHref);
         return;

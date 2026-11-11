@@ -47,7 +47,8 @@ const curriculumRecord: CurriculumRecord = {
   totalLessons: 1,
   totalAssignments: 0,
   cohort: { id: "cohort-1", name: "Cohort 4" },
-  assignedInstructors: [],
+  creatorId: null,
+  creatorType: null,
 };
 
 const topic: TopicRecord = {
@@ -74,7 +75,6 @@ function curriculumRoutes(extra: Record<string, unknown> = {}) {
     "GET /admin/topics/t1/resources": envelope([]),
     "GET /admin/topics/t1/assignments": envelope([]),
     "GET /admin/lessons/l1/resources": envelope([]),
-    "GET /admin/lessons/l1/assignments": envelope([]),
     "GET /admin/lessons/l1/recordings": envelope([]),
     ...extra,
   };
@@ -210,8 +210,10 @@ describe("NewAssignmentScreen", () => {
 
   const description = () =>
     screen.getByPlaceholderText("Redesign a simple landing page using hierarchy and contrast");
+  const instructions = () =>
+    screen.getByPlaceholderText("Use typography, spacing, and color to guide the viewer through the page.");
 
-  it("needs a title and a description", async () => {
+  it("needs a title, a description and instructions", async () => {
     const { user } = await renderScreen();
     const create = screen.getByRole("button", { name: "Create Assignment" });
 
@@ -221,6 +223,8 @@ describe("NewAssignmentScreen", () => {
     await user.type(description(), "   ");
     expect(create).toBeDisabled();
     await user.type(description(), "Lay out a page on a grid");
+    expect(create).toBeDisabled();
+    await user.type(instructions(), "Use 12 columns");
     expect(create).toBeEnabled();
   });
 
@@ -230,6 +234,7 @@ describe("NewAssignmentScreen", () => {
 
     await user.type(screen.getByRole("textbox", { name: /Assignment title/ }), " Grid study ");
     await user.type(description(), "Lay out a page on a grid");
+    await user.type(instructions(), "Use 12 columns");
     await user.upload(
       document.querySelector<HTMLInputElement>('input[type="file"]')!,
       new File(["x"], "brief.pdf", { type: "application/pdf" }),
@@ -242,9 +247,10 @@ describe("NewAssignmentScreen", () => {
       {
         title: "Grid study",
         description: "Lay out a page on a grid",
+        instructions: { description: "Use 12 columns", guidelines: [] },
         submissionType: "FILE_UPLOAD",
+        maxScore: 100,
         publishStatus: "DRAFT",
-        attachments: [],
       },
     ]);
     expect(push.mock.calls[0][0]).toBe(
@@ -257,6 +263,7 @@ describe("NewAssignmentScreen", () => {
 
     await user.type(screen.getByRole("textbox", { name: /Assignment title/ }), "Grid study");
     await user.type(description(), "Lay out a page on a grid");
+    await user.type(instructions(), "Use 12 columns");
     await choose(user, /Attach to lesson/, "After lesson 1");
     await choose(user, /Assignment type/, "Link");
     await user.click(screen.getByRole("button", { name: "Create Assignment" }));
@@ -286,6 +293,7 @@ describe("NewAssignmentScreen", () => {
 
     await user.type(screen.getByRole("textbox", { name: /Assignment title/ }), "Grid study");
     await user.type(description(), "Lay out a page on a grid");
+    await user.type(instructions(), "Use 12 columns");
     await pickDueDate(user, day);
     await choose(user, /Due time/, "2:30PM");
     await user.click(screen.getByRole("button", { name: "Create Assignment" }));
@@ -307,11 +315,20 @@ describe("EditAssignmentScreen", () => {
     lessonId: null,
     title: "Grid study",
     description: "Lay out a page on a grid",
-    instructions: "Use 12 columns",
+    instructions: { description: "Use 12 columns", guidelines: [] },
     dueAt,
     submissionType: "LINK",
+    maxScore: 50,
     publishStatus: "PUBLISHED",
-    attachments: [],
+    attachments: [
+      {
+        id: "att-1",
+        title: "Brief",
+        mimeType: "application/pdf",
+        sizeBytes: 2048,
+        downloadUrl: "https://example.com/brief.pdf",
+      },
+    ],
   };
 
   async function renderScreen() {
@@ -332,6 +349,7 @@ describe("EditAssignmentScreen", () => {
     expect(screen.getByRole("heading", { name: "Edit Assignment" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("Lay out a page on a grid")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Use 12 columns")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Maximum points/)).toHaveValue("50");
     expect(screen.getByRole("button", { name: "Due date, Nov 20, 2026" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Due time" })).toHaveTextContent("5:00PM");
   });
@@ -349,7 +367,17 @@ describe("EditAssignmentScreen", () => {
         title: "Grid study",
         dueAt: new Date("2026-11-27T09:00:00").toISOString(),
         lessonId: null,
+        instructions: { description: "Use 12 columns", guidelines: [] },
         submissionType: "LINK",
+        maxScore: 50,
+        attachments: [
+          {
+            title: "Brief",
+            mimeType: "application/pdf",
+            sizeBytes: 2048,
+            downloadUrl: "https://example.com/brief.pdf",
+          },
+        ],
       },
     ]);
     expect(push.mock.calls[0][0]).toBe("/admin/curriculum/c1?tab=assignments");

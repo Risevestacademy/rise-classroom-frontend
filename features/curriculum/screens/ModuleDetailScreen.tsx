@@ -108,7 +108,7 @@ export function ModuleDetailScreen({
   const enabled = !loading;
   const curriculumQuery = useQuery({ ...api.queries.detail(id), enabled });
   const modulesQuery = useQuery({ ...api.queries.modules(id), enabled });
-  const moduleQuery = useQuery({ ...api.queries.module(moduleId), enabled });
+  const moduleQuery = useQuery({ ...api.queries.module(id, moduleId), enabled });
   const [removeTarget, setRemoveTarget] = React.useState<{
     name: string;
     changes: Partial<CurriculumModule>;
@@ -117,18 +117,17 @@ export function ModuleDetailScreen({
   const updateMutation = useMutation({
     mutationFn: (changes: Partial<CurriculumModule>) =>
       api.updateModule(moduleId, changes),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: api.keys.module(moduleId),
-      });
-      queryClient.invalidateQueries({ queryKey: api.keys.modules(id) });
+    onSuccess: async () => {
+      await api.refreshModule(queryClient, id, moduleId);
       setRemoveTarget(null);
     },
   });
 
-  const isNotFound = [curriculumQuery.error, moduleQuery.error].some(
-    (error) => error instanceof ApiError && error.status === 404,
-  );
+  const isNotFound =
+    moduleQuery.data === null ||
+    [curriculumQuery.error, moduleQuery.error].some(
+      (error) => error instanceof ApiError && error.status === 404,
+    );
   if (isNotFound) notFound();
 
   const curriculum = curriculumQuery.data;
@@ -420,6 +419,7 @@ export function ModuleDetailScreen({
               <ModuleAccessCard
                 moduleId={moduleId}
                 moduleStatus={curriculumModule.status}
+                unlocked={curriculumModule.unlocked}
               />
             )}
 
