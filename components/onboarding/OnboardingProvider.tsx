@@ -125,13 +125,21 @@ export function OnboardingProvider({
     );
   }
 
+  const copy = onboardingCopy[detailsQuery.data.role];
+  /* The API can send a role this flow has no wording for. */
+  if (!copy) {
+    return (
+      <OnboardingProblem message="This invitation is for an account type that can't be set up here. Please contact support." />
+    );
+  }
+
   return (
     <OnboardingContext.Provider
       value={{
         token,
         details: detailsQuery.data,
         role: detailsQuery.data.role,
-        copy: onboardingCopy[detailsQuery.data.role],
+        copy,
         hrefFor,
         password,
         setPassword,

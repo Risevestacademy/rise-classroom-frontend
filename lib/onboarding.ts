@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { api, ApiError, type Envelope } from "@/lib/api";
 
-export type OnboardingRole = "STUDENT" | "INSTRUCTOR" | "MENTOR";
+export type OnboardingRole = "SUPERADMIN" | "STUDENT" | "INSTRUCTOR" | "MENTOR";
 
 /** The onboarding wording that differs by role, as in each role's designs. */
 export const onboardingCopy: Record<
@@ -14,11 +14,29 @@ export const onboardingCopy: Record<
     showsAccountCreated: boolean;
     confirmTitle: string;
     confirmSubtitle: string;
+    /* Shown on the confirm step when the invite has no cohort or track. */
+    unassignedMessage: string;
     welcomeSubtitle: string;
     welcomeMessage: string;
     dashboardLabel: string;
   }
 > = {
+  /* A new academy's first admin, invited by POST /platform/organizations. */
+  SUPERADMIN: {
+    inviteTitle: (firstName) =>
+      `Hi ${firstName}, you've been invited to Rise Classroom as an academy admin`,
+    createAccountSubtitle:
+      "Set up your account to start running your academy on Rise Classroom.",
+    showsAccountCreated: false,
+    confirmTitle: "Confirm your Account",
+    confirmSubtitle: "Make sure these details are correct before you continue",
+    unassignedMessage:
+      "Once your account is set up, you can create your academy's cohorts and tracks and invite your instructors and students.",
+    welcomeSubtitle: "Your academy is ready for you to set up.",
+    welcomeMessage:
+      "Create your cohorts and tracks, invite your people, and manage your program.",
+    dashboardLabel: "Go to your dashboard",
+  },
   STUDENT: {
     inviteTitle: (firstName) =>
       `Hi ${firstName}, you've been invited to Rise Classroom`,
@@ -27,6 +45,8 @@ export const onboardingCopy: Record<
     showsAccountCreated: false,
     confirmTitle: "Confirm your Program",
     confirmSubtitle: "Make sure these details are correct before you continue",
+    unassignedMessage:
+      "You haven't been assigned to a cohort or track yet. Your program admin can add you once your account is set up.",
     welcomeSubtitle: "",
     welcomeMessage:
       "Learn, track progress, complete assignments, and stay connected.",
@@ -41,6 +61,8 @@ export const onboardingCopy: Record<
     confirmTitle: "Confirm your Program",
     confirmSubtitle:
       "Review your program and teaching assignment before continuing.",
+    unassignedMessage:
+      "You haven't been assigned to a cohort or track yet. Your program admin can add you once your account is set up.",
     welcomeSubtitle:
       "Your teaching space is ready. Let’s get you set up to support your learners.",
     welcomeMessage:
@@ -56,6 +78,8 @@ export const onboardingCopy: Record<
     showsAccountCreated: true,
     confirmTitle: "Confirm your Assignment",
     confirmSubtitle: "Make sure these details are correct before you continue",
+    unassignedMessage:
+      "You haven't been assigned to a cohort or track yet. Your program admin can add you once your account is set up.",
     welcomeSubtitle: "",
     welcomeMessage:
       "Support your students, track their progress, and guide them throughout their learning journey.",

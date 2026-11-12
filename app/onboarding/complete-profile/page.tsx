@@ -243,16 +243,15 @@ function ProfileStep({
 
 function ConfirmProgramStep({
   memberships,
+  unassignedMessage,
 }: {
   memberships: OnboardingDetails["memberships"]
+  unassignedMessage: string
 }) {
   return (
     <div className="space-y-5 rounded-xl bg-surface-brand p-5">
       {memberships.length === 0 ? (
-        <p className="text-sm text-neutral-500">
-          You haven&apos;t been assigned to a cohort or track yet. Your program
-          admin can add you once your account is set up.
-        </p>
+        <p className="text-sm text-neutral-500">{unassignedMessage}</p>
       ) : (
         memberships.map((membership) => (
           <div
@@ -422,7 +421,12 @@ export default function CompleteProfilePage() {
             onPhotoError={setPhotoError}
           />
         )}
-        {step === 2 && <ConfirmProgramStep memberships={details.memberships} />}
+        {step === 2 && (
+          <ConfirmProgramStep
+            memberships={details.memberships}
+            unassignedMessage={copy.unassignedMessage}
+          />
+        )}
         {step === 3 && <WelcomeStep message={copy.welcomeMessage} />}
 
         {finish.isError && (

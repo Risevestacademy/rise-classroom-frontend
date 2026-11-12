@@ -1,17 +1,27 @@
-import { AppTopNav } from "@/components/AppTopNav";
+import { Suspense } from "react";
+import { HydrationBoundary } from "@tanstack/react-query";
 
-// The dashboard is still being designed; this holds the route for it.
+import { platformQueries } from "@/lib/platform";
+import { dehydrateServerQueries, prefetch } from "@/lib/query.server";
+import {
+  PlatformAdminDashboard,
+  PlatformAdminDashboardLoading,
+} from "./PlatformAdminDashboard";
+
 export default function PlatformAdminDashboardPage() {
   return (
-    <>
-      <AppTopNav
-        basePath="/platform-admin"
-        breadcrumb={[
-          "Overview",
-          { label: "Dashboard", href: "/platform-admin/dashboard" },
-        ]}
-      />
-      <main className="flex-1 p-4 sm:p-6" />
-    </>
+    <Suspense fallback={<PlatformAdminDashboardLoading />}>
+      <LoadedDashboard />
+    </Suspense>
+  );
+}
+
+async function LoadedDashboard() {
+  await prefetch(platformQueries.academies());
+
+  return (
+    <HydrationBoundary state={dehydrateServerQueries()}>
+      <PlatformAdminDashboard />
+    </HydrationBoundary>
   );
 }

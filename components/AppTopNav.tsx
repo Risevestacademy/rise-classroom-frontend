@@ -16,6 +16,7 @@ export function AppTopNav({
   basePath,
   breadcrumb,
   filters,
+  showCalendar = true,
   unreadCount = 0,
   notificationsOpen,
   onNotificationsClick,
@@ -26,6 +27,8 @@ export function AppTopNav({
   /** The first crumb is a section name, so it never links. */
   breadcrumb: Crumb[];
   filters?: React.ReactNode;
+  /* Links to `${basePath}/calendar`, so turn it off for an area without one. */
+  showCalendar?: boolean;
   unreadCount?: number;
   notificationsOpen?: boolean;
   onNotificationsClick?: () => void;
@@ -85,18 +88,20 @@ export function AppTopNav({
           />
         </div>
 
-        <Link
-          href={calendarHref}
-          aria-label="Calendar"
-          aria-current={onCalendar ? "page" : undefined}
-          className={
-            onCalendar
-              ? "hidden size-10 items-center justify-center rounded-lg bg-brand-300 text-neutral-800 sm:flex"
-              : "hidden size-10 items-center justify-center rounded-lg bg-surface-subtle text-icon-primary hover:bg-neutral-200 sm:flex"
-          }
-        >
-          <Calendar />
-        </Link>
+        {showCalendar && (
+          <Link
+            href={calendarHref}
+            aria-label="Calendar"
+            aria-current={onCalendar ? "page" : undefined}
+            className={
+              onCalendar
+                ? "hidden size-10 items-center justify-center rounded-lg bg-brand-300 text-neutral-800 sm:flex"
+                : "hidden size-10 items-center justify-center rounded-lg bg-surface-subtle text-icon-primary hover:bg-neutral-200 sm:flex"
+            }
+          >
+            <Calendar />
+          </Link>
+        )}
 
         <button
           type="button"

@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/auth";
 
 const roleLabels: Record<Role, string> = {
-  PLATFORM_ADMIN: "Platform Admin",
+  PLATFORM_ADMIN: "Program Admin",
   SUPERADMIN: "Super Admin",
   INSTRUCTOR: "Instructor",
   MENTOR: "Mentor",
