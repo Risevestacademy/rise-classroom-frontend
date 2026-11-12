@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 
+import { Academies } from "@/app/platform-admin/academies/Academies";
 import { OnboardingRequests } from "@/app/platform-admin/onboarding-requests/OnboardingRequests";
 import { PlatformAdminDashboard } from "@/app/platform-admin/dashboard/PlatformAdminDashboard";
 import { UserQuestion } from "@/assets/icons";
@@ -13,6 +14,7 @@ import { envelope, mockApi, renderWithClient, reply } from "@/test/utils";
 vi.mock("next/navigation", () => ({
   usePathname: () => "/platform-admin/dashboard",
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 /* The top nav brings the session's profile menu along; it doesn't matter here. */
@@ -167,7 +169,7 @@ describe("program admin dashboard", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Suspend academy" }));
     expect(api.bodies("PATCH /platform/organizations/a1")).toEqual([]);
 
-    await user.click(await screen.findByRole("button", { name: "Yes, suspend" }));
+    await user.click(await screen.findByRole("button", { name: "Suspend academy" }));
 
     expect(await screen.findByText("Suspended")).toBeInTheDocument();
     expect(api.bodies("PATCH /platform/organizations/a1")).toEqual([{ status: "SUSPENDED" }]);
@@ -181,10 +183,10 @@ describe("program admin dashboard", () => {
 
     await user.click(await screen.findByRole("button", { name: "Design Lab actions" }));
     await user.click(await screen.findByRole("menuitem", { name: "Suspend academy" }));
-    await user.click(await screen.findByRole("button", { name: "Yes, suspend" }));
+    await user.click(await screen.findByRole("button", { name: "Suspend academy" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Not allowed");
-    expect(screen.getByRole("button", { name: "Yes, suspend" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Suspend academy" })).toBeEnabled();
   });
 });
 
@@ -264,5 +266,129 @@ describe("program admin sidebar", () => {
 
     expect(screen.getByLabelText("2 new")).toHaveTextContent("2");
     expect(screen.queryByText("Not signed in")).not.toBeInTheDocument();
+  });
+});
+
+describe("academies page", () => {
+  function renderAcademies(routes: Parameters<typeof mockApi>[0]) {
+    const api = mockApi(routes);
+    return { ...renderWithClient(<Academies />), api };
+  }
+
+  const rowFor = async (name: string) =>
+    (await screen.findByRole("button", { name })).closest("tr") as HTMLElement;
+
+  it("shows the empty state until an academy finishes its setup", async () => {
+    renderAcademies(academyRoutes([pixelAcademy]));
+
+    expect(await screen.findByText("Nothing to see here yet!")).toBeInTheDocument();
+    expect(within(metric("Total Academies")).getByText("--")).toBeInTheDocument();
+    expect(screen.queryByText("All academies")).not.toBeInTheDocument();
+  });
+
+  it("lists academies that finished setup, with their totals", async () => {
+    renderAcademies(academyRoutes([designLab, riseAcademy, pixelAcademy, closedAcademy]));
+
+    const row = await rowFor("Rise Academy");
+    expect(within(row).getByText("Tobi Rise Academy")).toBeInTheDocument();
+    expect(within(row).getByText("a2@example.com")).toBeInTheDocument();
+    expect(within(row).getByText("Active")).toBeInTheDocument();
+    expect(within(row).getByText("Oct 1, 2026")).toBeInTheDocument();
+    expect(within(await rowFor("Closed Academy")).getByText("Suspended")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pixel Academy" })).not.toBeInTheDocument();
+
+    expect(screen.getByText("3 Academies")).toBeInTheDocument();
+    expect(within(metric("Total Academies")).getByText("3")).toBeInTheDocument();
+    expect(within(metric("Active Academies")).getByText("2")).toBeInTheDocument();
+    expect(within(metric("Suspended Academies")).getByText("1")).toBeInTheDocument();
+  });
+
+  it("searches by academy name or admin email", async () => {
+    const { user } = renderAcademies(academyRoutes([designLab, riseAcademy]));
+    const search = await screen.findByPlaceholderText("Search by name or email");
+    await rowFor("Rise Academy");
+
+    await user.type(search, "a1@example");
+    expect(screen.getByRole("button", { name: "Design Lab" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Rise Academy" })).not.toBeInTheDocument();
+
+    await user.clear(search);
+    await user.type(search, "nowhere");
+    expect(screen.getByText("No academies match your search.")).toBeInTheDocument();
+  });
+
+  it("filters by status", async () => {
+    const { user } = renderAcademies(academyRoutes([designLab, closedAcademy]));
+    await rowFor("Design Lab");
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(await screen.findByRole("checkbox", { name: "Suspended" }));
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+
+    expect(await screen.findByRole("button", { name: "Closed Academy" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Design Lab" })).not.toBeInTheDocument();
+  });
+
+  it("pages through more academies than fit on one page", async () => {
+    const many = Array.from({ length: 12 }, (_, index) => {
+      const day = String(index + 1).padStart(2, "0");
+      return academy(`m${index}`, `Academy ${day}`, `2026-09-${day}T09:00:00.000Z`);
+    });
+    const { user } = renderAcademies(academyRoutes(many));
+
+    await rowFor("Academy 12");
+    expect(screen.queryByRole("button", { name: "Academy 02" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "2" }));
+    expect(await screen.findByRole("button", { name: "Academy 02" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Academy 12" })).not.toBeInTheDocument();
+  });
+
+  it("opens an academy's details, with what the API lacks shown as --", async () => {
+    const { user } = renderAcademies(academyRoutes([riseAcademy]));
+
+    await user.click(await screen.findByRole("button", { name: "Rise Academy" }));
+
+    const panel = await screen.findByRole("dialog", { name: "Academy details" });
+    expect(within(panel).getByText("Tobi Rise Academy")).toBeInTheDocument();
+    expect(within(panel).getByText("a2@example.com")).toBeInTheDocument();
+    expect(within(panel).getByText("Date created").nextSibling).toHaveTextContent("Oct 1, 2026");
+    expect(within(panel).getByText("Website").nextSibling).toHaveTextContent("--");
+    expect(within(panel).getByRole("button", { name: "Suspend academy" })).toBeInTheDocument();
+  });
+
+  it("suspends from the details panel and shows the new status there", async () => {
+    let current = riseAcademy;
+    const { user, api } = renderAcademies({
+      "GET /platform/organizations": () => envelope([{ ...current, admins: undefined }]),
+      "GET /platform/organizations/a2": () => envelope(current),
+      "PATCH /platform/organizations/a2": () => {
+        current = { ...riseAcademy, status: "SUSPENDED" };
+        return envelope(current);
+      },
+    });
+
+    await user.click(await screen.findByRole("button", { name: "Rise Academy" }));
+    const panel = await screen.findByRole("dialog", { name: "Academy details" });
+    await user.click(within(panel).getByRole("button", { name: "Suspend academy" }));
+
+    const confirm = await screen.findByRole("dialog", { name: "Suspend this academy?" });
+    expect(confirm).toHaveTextContent("Suspending Rise Academy will restrict access");
+    await user.click(within(confirm).getByRole("button", { name: "Suspend academy" }));
+
+    expect(
+      await within(panel).findByRole("button", { name: "Reactivate academy" }),
+    ).toBeInTheDocument();
+    expect(within(panel).getByText("Suspended")).toBeInTheDocument();
+    expect(api.bodies("PATCH /platform/organizations/a2")).toEqual([{ status: "SUSPENDED" }]);
+  });
+
+  it("offers a retry when the academies fail to load", async () => {
+    renderAcademies({
+      "GET /platform/organizations": reply(500, { success: false, message: "Down" }),
+    });
+
+    expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(screen.queryByText("Nothing to see here yet!")).not.toBeInTheDocument();
   });
 });

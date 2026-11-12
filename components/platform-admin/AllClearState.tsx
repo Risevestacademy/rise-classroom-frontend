@@ -1,13 +1,18 @@
-export function AllClearState() {
+export function AllClearState({
+  title = "You're Good!",
+  description = "Once you start receiving applications and setups, you'll see activity, requests and key updates here.",
+}: {
+  title?: string;
+  description?: string;
+}) {
   return (
     <div className="flex flex-col items-center gap-3 py-16 text-center">
       <AllClearIllustration />
       <p className="mt-2 text-2xl leading-8 font-semibold text-text-primary">
-        You&apos;re Good!
+        {title}
       </p>
       <p className="max-w-[360px] font-work text-base text-text-secondary">
-        Once you start receiving applications and setups, you&apos;ll see
-        activity, requests and key updates here.
+        {description}
       </p>
     </div>
   );
