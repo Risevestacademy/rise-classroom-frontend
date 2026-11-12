@@ -7,7 +7,6 @@ import { File01 } from "@/assets/icons";
 import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
 import { adminQueries, type AdminUser } from "@/lib/admin";
 import { controlTowerQueries } from "@/lib/control-tower";
-import { mentorQueries } from "@/lib/mentors";
 import {
   answeredCount,
   checkInQuestions,
@@ -15,6 +14,7 @@ import {
   type CheckIn,
   type CheckInStatus,
 } from "@/lib/student-check-ins";
+import { useStudentProfileId } from "@/lib/student-profile";
 import { cn } from "@/lib/utils";
 import { BrandBadge, Card, CardHeader } from "./shared";
 import { ControlTowerTabSkeleton } from "./skeletons";
@@ -37,16 +37,8 @@ export function ControlTowerTab({
   firstName: string;
   cohort?: string;
 }) {
-  // PENDING-BACKEND: the admin user has no student profile id, which the
-  // weekly metrics are keyed on, so it's found in their mentor's students.
-  const mentorId = student.mentor?.id ?? "";
-  const mentees = useQuery({
-    ...mentorQueries.mentees(mentorId),
-    enabled: mentorId.length > 0,
-  });
-  const profileId =
-    mentees.data?.find((mentee) => mentee.user.id === student.id)
-      ?.studentProfileId ?? "";
+  const profile = useStudentProfileId(student);
+  const { profileId } = profile;
 
   const cohortId = student.studentProfile?.[0]?.cohort?.id ?? "";
   const cohortQuery = useQuery({
@@ -56,14 +48,14 @@ export function ControlTowerTab({
   const metrics = useQuery(controlTowerQueries.weeklyMetrics(profileId));
 
   if (
-    (mentorId && mentees.isPending) ||
+    profile.isPending ||
     (cohortId && cohortQuery.isPending) ||
     (profileId && metrics.isPending)
   ) {
     return <ControlTowerTabSkeleton />;
   }
 
-  const error = mentees.error ?? cohortQuery.error ?? metrics.error;
+  const error = profile.error ?? cohortQuery.error ?? metrics.error;
   if (error) {
     return (
       <CohortEmptyState
