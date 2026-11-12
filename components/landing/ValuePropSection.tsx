@@ -44,15 +44,20 @@ export function ValuePropSection() {
             <li
               key={item.icon}
               data-value-card
-              className="group border-border-default py-8 not-first:border-t md:py-[25px] md:not-first:border-t-0"
+              className="group relative isolate border-border-default py-8 not-first:border-t md:py-[25px] md:not-first:border-t-0"
             >
+              {/* Grows out from the content to fill the cell, meeting the grid lines. */}
+              <span
+                aria-hidden
+                className="absolute inset-0 -z-10 scale-[0.92] rounded-[12px] bg-brand-50 opacity-0 transition-[scale,opacity,border-radius] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-100 group-hover:rounded-none group-hover:opacity-100 motion-reduce:transition-none"
+              />
               <div
                 className={cn(
                   "md:px-[14px]",
                   index > 0 && "md:border-l md:border-border-default md:px-[20px]",
                 )}
               >
-                <div className="-mx-3 rounded-[12px] p-3 transition-[background-color,translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1.5 group-hover:bg-brand-50 motion-reduce:transition-none md:mx-0">
+                <div className="-mx-3 p-3 transition-[translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1.5 motion-reduce:transition-none md:mx-0">
                 <span
                   data-value-icon
                   className="flex size-[52px] items-center justify-center rounded-[8px] bg-brand-100 transition-[scale,rotate,background-color] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:-rotate-6 group-hover:bg-brand-200 motion-reduce:transition-none"

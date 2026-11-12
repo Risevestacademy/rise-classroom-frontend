@@ -6,6 +6,7 @@ import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LandingMotion } from "@/components/landing/motion/LandingMotion";
 import { PricingSection } from "@/components/landing/PricingSection";
+import { QuoteSection } from "@/components/landing/QuoteSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
 // Hidden until we have real testimonials.
 // import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
@@ -32,6 +33,7 @@ export default function HomePage() {
         <SolutionSection />
         {/* <TestimonialsSection /> */}
         <PricingSection />
+        <QuoteSection />
         <FaqSection />
       </main>
       <LandingFooter />
