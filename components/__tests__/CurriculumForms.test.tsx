@@ -10,7 +10,7 @@ import type {
   TopicRecord,
 } from "@/features/curriculum/types";
 import { makeTrack } from "@/test/fixtures";
-import { envelope, mockApi, renderWithClient, reply } from "@/test/utils";
+import { curriculumTreeRoutes, envelope, mockApi, renderWithClient, reply } from "@/test/utils";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -65,17 +65,22 @@ const topic: TopicRecord = {
 const lesson: LessonRecord = { ...timestamps, id: "l1", topicId: "t1", title: "Grids", position: 0 };
 
 /* One curriculum with one module, which has one lesson and nothing else yet. */
-function curriculumRoutes(extra: Record<string, unknown> = {}) {
+function curriculumRoutes(
+  extra: Record<string, unknown> = {},
+  assignments: unknown[] = [],
+) {
   return {
     "GET /admin/curriculums/c1": envelope(curriculumRecord),
     "GET /admin/tracks/track-1": envelope(makeTrack()),
     "GET /admin/users": envelope({ items: [], page: 1, limit: 1, total: 12, totalPages: 12 }),
-    "GET /admin/curriculums/c1/topics": envelope([topic]),
-    "GET /admin/topics/t1/lessons": envelope([lesson]),
-    "GET /admin/topics/t1/resources": envelope([]),
-    "GET /admin/topics/t1/assignments": envelope([]),
-    "GET /admin/lessons/l1/resources": envelope([]),
-    "GET /admin/lessons/l1/recordings": envelope([]),
+    ...curriculumTreeRoutes("admin", "c1", [
+      {
+        ...topic,
+        resources: [],
+        assignments,
+        lessons: [{ ...lesson, resources: [], recordings: [] }],
+      },
+    ]),
     ...extra,
   };
 }
@@ -333,10 +338,7 @@ describe("EditAssignmentScreen", () => {
 
   async function renderScreen() {
     const api = mockApi(
-      curriculumRoutes({
-        "GET /admin/topics/t1/assignments": envelope([saved]),
-        "PATCH /admin/assignments/a1": envelope(saved),
-      }),
+      curriculumRoutes({ "PATCH /admin/assignments/a1": envelope(saved) }, [saved]),
     );
     const view = renderAsAdmin(<EditAssignmentScreen id="c1" assignmentId="a1" />);
     await screen.findByDisplayValue("Grid study");

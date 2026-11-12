@@ -9,7 +9,7 @@ import type {
   ResourceRecord,
   TopicRecord,
 } from "@/features/curriculum/types";
-import { envelope, mockApi } from "@/test/utils";
+import { curriculumTreeRoutes, envelope, mockApi } from "@/test/utils";
 
 const timestamps = {
   createdAt: "2026-09-01T00:00:00.000Z",
@@ -39,14 +39,16 @@ const savedLink = {
 } as unknown as ResourceRecord;
 
 /* A module with one lesson and one saved module-wide link. */
-function moduleRoutes() {
+function moduleRoutes(assignments: AssignmentRecord[] = []) {
   return {
-    "GET /admin/topics/t1": envelope(topic),
-    "GET /admin/topics/t1/lessons": envelope([lesson]),
-    "GET /admin/topics/t1/resources": envelope([savedLink]),
-    "GET /admin/topics/t1/assignments": envelope([]),
-    "GET /admin/lessons/l1/resources": envelope([]),
-    "GET /admin/lessons/l1/recordings": envelope([]),
+    ...curriculumTreeRoutes("admin", "c1", [
+      {
+        ...topic,
+        resources: [savedLink],
+        assignments,
+        lessons: [{ ...lesson, resources: [], recordings: [] }],
+      },
+    ]),
     "POST /admin/topics/t1/resources": envelope(savedLink),
     "POST /admin/lessons/l1/resources": envelope(savedLink),
   };
@@ -118,18 +120,9 @@ describe("loading modules", () => {
       publishStatus: "PUBLISHED",
     }) as unknown as AssignmentRecord;
 
-  /* Lesson assignments have no lesson route mocked, so asking for one fails the test. */
-  function curriculumRoutes(assignments: AssignmentRecord[]) {
-    return {
-      ...moduleRoutes(),
-      "GET /admin/curriculums/c1/topics": envelope([topic]),
-      "GET /admin/topics/t1/assignments": envelope(assignments),
-    };
-  }
-
-  it("takes lesson assignments from the module's list", async () => {
-    mockApi(
-      curriculumRoutes([assignment("on-lesson", "l1"), assignment("on-module", null)]),
+  it("loads every module from the curriculum tree in one request", async () => {
+    const backend = mockApi(
+      moduleRoutes([assignment("on-lesson", "l1"), assignment("on-module", null)]),
     );
 
     const [loaded] = await new QueryClient().fetchQuery(api.queries.modules("c1"));
@@ -138,17 +131,18 @@ describe("loading modules", () => {
       ["on-lesson", 1],
       ["on-module", null],
     ]);
+    expect(backend.fetchMock).toHaveBeenCalledOnce();
   });
 
   it("reloads only the changed module into the cached list", async () => {
-    const backend = mockApi(curriculumRoutes([]));
+    const backend = mockApi(moduleRoutes());
     const client = new QueryClient();
     await client.fetchQuery(api.queries.modules("c1"));
 
     await api.refreshModule(client, "c1", "t1");
 
-    expect(backend.urls("GET /admin/curriculums/c1/topics")).toHaveLength(1);
-    expect(backend.urls("GET /admin/topics/t1")).toHaveLength(1);
+    expect(backend.urls("GET /admin/curriculums/c1/tree")).toHaveLength(1);
+    expect(backend.urls("GET /admin/topics/t1/tree")).toHaveLength(1);
     expect(client.getQueryData(api.keys.modules("c1"))).toHaveLength(1);
   });
 });
