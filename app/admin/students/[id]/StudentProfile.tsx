@@ -232,7 +232,12 @@ export function StudentProfile({
           )}
           {student && tab === "mentorship" && (
             <MentorshipTab
-              student={{ id: student.id, name, email: student.email }}
+              student={{
+                id: student.id,
+                name,
+                email: student.email,
+                image: student.image,
+              }}
               mentor={student.mentor}
               track={assignments?.tracks[0]}
               cohort={cohort}
@@ -276,7 +281,12 @@ function StudentSummary({ student }: { student: AdminUser }) {
 
   return (
     <div className="mt-6 flex w-full sm:w-fit max-w-full items-center gap-3 rounded-lg bg-surface-default px-3 py-6 shadow-[0_1px_3px_rgb(0_0_0/0.25)]">
-      <PersonAvatar name={student.name} colorKey={student.id} size={60} />
+      <PersonAvatar
+        name={student.name}
+        src={student.image}
+        colorKey={student.id}
+        size={60}
+      />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="truncate text-lg/6 font-semibold text-text-primary">
           {nameWithDisplayName(student)}
@@ -321,7 +331,12 @@ function ProfileCard({ student }: { student: AdminUser }) {
     <Card>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <PersonAvatar name={student.name} colorKey={student.id} size={80} />
+          <PersonAvatar
+            name={student.name}
+            src={student.image}
+            colorKey={student.id}
+            size={80}
+          />
           <div className="flex min-w-0 flex-col gap-2">
             <p className="truncate text-2xl font-semibold text-text-primary">
               {nameWithDisplayName(student)}

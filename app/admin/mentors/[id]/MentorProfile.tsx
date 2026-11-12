@@ -262,7 +262,12 @@ function MentorBadges({ mentor }: { mentor: Mentor }) {
 function MentorSummary({ mentor }: { mentor: Mentor }) {
   return (
     <div className="mt-6 flex w-full sm:w-fit max-w-full items-center gap-3 rounded-lg bg-surface-default px-3 py-6 shadow-[0_1px_3px_rgb(0_0_0/0.25)]">
-      <PersonAvatar name={mentor.name} colorKey={mentor.id} size={60} />
+      <PersonAvatar
+        name={mentor.name}
+        src={mentor.user.image}
+        colorKey={mentor.id}
+        size={60}
+      />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="truncate text-lg/6 font-semibold text-text-primary">
           {nameWithDisplayName(mentor.user)}
@@ -372,7 +377,12 @@ function ProfileCard({ mentor }: { mentor: Mentor }) {
     <Card>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          <PersonAvatar name={mentor.name} colorKey={mentor.id} size={80} />
+          <PersonAvatar
+            name={mentor.name}
+            src={mentor.user.image}
+            colorKey={mentor.id}
+            size={80}
+          />
           <div className="flex min-w-0 flex-col gap-1">
             <p className="truncate text-2xl font-semibold text-text-primary">
               {nameWithDisplayName(mentor.user)}
@@ -536,6 +546,7 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
                       <div className="flex items-center gap-3">
                         <PersonAvatar
                           name={student.name}
+                          src={student.image}
                           colorKey={student.id}
                           size={40}
                         />

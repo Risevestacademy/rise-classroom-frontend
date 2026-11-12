@@ -58,7 +58,7 @@ export function MentorshipTab({
   track,
   cohort,
 }: {
-  student: { id: string; name: string; email: string };
+  student: { id: string; name: string; email: string; image?: string | null };
   mentor: AdminUser["mentor"];
   track?: string;
   cohort?: string;
@@ -187,7 +187,7 @@ function MentorshipActions({
   student,
   mentor,
 }: {
-  student: { id: string; name: string; email: string };
+  student: { id: string; name: string; email: string; image?: string | null };
   mentor: { id: string; name: string };
 }) {
   const queryClient = useQueryClient();

@@ -30,6 +30,7 @@ export type AdminUser = {
   phoneNumber?: string | null;
   location?: string | null;
   email: string;
+  image?: string | null;
   role: Role;
   status: UserStatus;
   onboardingStatus: OnboardingStatus;

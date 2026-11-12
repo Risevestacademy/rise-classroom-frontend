@@ -306,7 +306,7 @@ export default function MentorsPage() {
                       </td>
                       <td className="px-3">
                         <div className="flex items-center gap-3">
-                          <PersonAvatar name={mentor.name} colorKey={mentor.id} size={40} />
+                          <PersonAvatar name={mentor.name} src={mentor.user.image} colorKey={mentor.id} size={40} />
                           <div className="min-w-0">
                             <Link href={`/admin/mentors/${mentor.id}`} className="truncate font-work text-sm font-medium tracking-[-0.01em] text-black cursor-pointer">
                               {mentor.name}
