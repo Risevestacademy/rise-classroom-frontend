@@ -219,7 +219,11 @@ export function StudentProfile({
             <ProgressTab track={assignments?.tracks[0]} cohort={cohort} />
           )}
           {student && tab === "control-tower" && (
-            <ControlTowerTab firstName={firstName} cohort={cohort} />
+            <ControlTowerTab
+              student={student}
+              firstName={firstName}
+              cohort={cohort}
+            />
           )}
           {student && tab === "activity" && (
             <ActivityTab firstName={firstName} />

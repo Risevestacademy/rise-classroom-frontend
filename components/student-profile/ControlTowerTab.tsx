@@ -1,33 +1,109 @@
 "use client";
 
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { cn } from "@/lib/utils";
+import { File01 } from "@/assets/icons";
+import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
+import { adminQueries, type AdminUser } from "@/lib/admin";
+import { controlTowerQueries } from "@/lib/control-tower";
+import { mentorQueries } from "@/lib/mentors";
 import {
+  answeredCount,
   checkInQuestions,
-  checkIns,
+  studentCheckIns,
+  type CheckIn,
   type CheckInStatus,
-} from "@/app/admin/students/[id]/profile-data";
+} from "@/lib/student-check-ins";
+import { cn } from "@/lib/utils";
 import { BrandBadge, Card, CardHeader } from "./shared";
+import { ControlTowerTabSkeleton } from "./skeletons";
 
 const checkInStatus: Record<
   CheckInStatus,
   { label: string; text: string }
 > = {
   ongoing: { label: "Ongoing", text: "text-text-info" },
-  pending: { label: "Pending", text: "text-text-warning" },
   overdue: { label: "Overdue", text: "text-text-error" },
   submitted: { label: "Submitted", text: "text-text-success" },
 };
 
-function answeredCount(answers: Record<string, string | undefined>) {
-  return Object.values(answers).filter(Boolean).length;
-}
-
 export function ControlTowerTab({
+  student,
   firstName,
   cohort,
 }: {
+  student: AdminUser;
+  firstName: string;
+  cohort?: string;
+}) {
+  // PENDING-BACKEND: the admin user has no student profile id, which the
+  // weekly metrics are keyed on, so it's found in their mentor's students.
+  const mentorId = student.mentor?.id ?? "";
+  const mentees = useQuery({
+    ...mentorQueries.mentees(mentorId),
+    enabled: mentorId.length > 0,
+  });
+  const profileId =
+    mentees.data?.find((mentee) => mentee.user.id === student.id)
+      ?.studentProfileId ?? "";
+
+  const cohortId = student.studentProfile?.[0]?.cohort?.id ?? "";
+  const cohortQuery = useQuery({
+    ...adminQueries.cohort(cohortId),
+    enabled: cohortId.length > 0,
+  });
+  const metrics = useQuery(controlTowerQueries.weeklyMetrics(profileId));
+
+  if (
+    (mentorId && mentees.isPending) ||
+    (cohortId && cohortQuery.isPending) ||
+    (profileId && metrics.isPending)
+  ) {
+    return <ControlTowerTabSkeleton />;
+  }
+
+  const error = mentees.error ?? cohortQuery.error ?? metrics.error;
+  if (error) {
+    return (
+      <CohortEmptyState
+        icon={File01}
+        title="Couldn't load check-ins"
+        description={error.message}
+      />
+    );
+  }
+
+  if (!profileId) {
+    return (
+      <CohortEmptyState
+        icon={File01}
+        title="No check-ins to show"
+        description={`${firstName}’s check-ins show here once they have a mentor.`}
+      />
+    );
+  }
+
+  const checkIns = studentCheckIns(metrics.data ?? [], cohortQuery.data);
+  if (checkIns.length === 0) {
+    return (
+      <CohortEmptyState
+        icon={File01}
+        title="No check-ins yet"
+        description={`${firstName}’s weekly check-ins show here once their cohort starts.`}
+      />
+    );
+  }
+
+  return <CheckIns checkIns={checkIns} firstName={firstName} cohort={cohort} />;
+}
+
+function CheckIns({
+  checkIns,
+  firstName,
+  cohort,
+}: {
+  checkIns: CheckIn[];
   firstName: string;
   cohort?: string;
 }) {
