@@ -63,16 +63,14 @@ import {
   nameWithDisplayName,
   type AdminUser,
 } from "@/lib/admin";
+import { useStudentProgress } from "@/lib/student-profile";
 import { useTabParam } from "@/lib/use-tab-param";
 import { getStudentStatus } from "../student-display";
 import {
   activityGroups,
   attendanceMonth,
   deadlines,
-  moduleFilters,
-  moduleProgress,
   notes,
-  overallProgress,
 } from "./overview-data";
 
 const tabs = [
@@ -87,6 +85,8 @@ const tabs = [
 ] as const;
 
 type Tab = (typeof tabs)[number]["value"];
+
+const toneOrder = ["brand", "info", "success", "accent"] as const;
 
 const moduleTones = {
   brand: {
@@ -216,7 +216,11 @@ export function StudentProfile({
             <OverviewTab student={student} onTabChange={setTab} />
           )}
           {student && tab === "progress" && (
-            <ProgressTab track={assignments?.tracks[0]} cohort={cohort} />
+            <ProgressTab
+              student={student}
+              track={assignments?.tracks[0]}
+              cohort={cohort}
+            />
           )}
           {student && tab === "control-tower" && (
             <ControlTowerTab
@@ -438,10 +442,17 @@ function MentorCard({ mentor }: { mentor: AdminUser["mentor"] }) {
 
 function ProgressCard({ student }: { student: AdminUser }) {
   const { tracks } = assignmentsFor(student);
-  // PENDING-BACKEND: there's no progress per module, so picking one doesn't
-  // change the sample numbers below.
-  const [module, setModule] =
-    React.useState<(typeof moduleFilters)[number]["value"]>("all");
+  const { progress } = useStudentProgress(student);
+  const modules = progress?.modules ?? [];
+  const [module, setModule] = React.useState("all");
+  const moduleFilters = [
+    { value: "all", label: "All modules" },
+    ...modules.map((item) => ({ value: item.id, label: item.name })),
+  ];
+  const shown = modules
+    .map((item, index) => ({ ...item, tone: toneOrder[index % toneOrder.length] }))
+    .filter((item) => module === "all" || item.id === module);
+  const overall = progress?.overall ?? null;
   const trackName = tracks[0] ?? "track";
 
   return (
@@ -461,7 +472,7 @@ function ProgressCard({ student }: { student: AdminUser }) {
 
       <div className="flex flex-col items-center gap-8 sm:flex-row sm:gap-12">
         <CircularProgress
-          value={overallProgress}
+          value={overall ?? 0}
           size={180}
           strokeWidth={12}
           trackClassName="text-surface-subtle"
@@ -469,7 +480,7 @@ function ProgressCard({ student }: { student: AdminUser }) {
         >
           <div className="flex flex-col items-center">
             <span className="text-[32px]/10 font-semibold text-text-primary">
-              {overallProgress}%
+              {overall === null ? "--" : `${overall}%`}
             </span>
             <span className="w-[68px] text-center font-work text-sm text-text-secondary">
               Overall progress
@@ -478,12 +489,12 @@ function ProgressCard({ student }: { student: AdminUser }) {
         </CircularProgress>
 
         <ul className="flex w-full min-w-0 flex-1 flex-col gap-2">
-          {moduleProgress.map((item) => {
+          {shown.map((item) => {
             const tone = moduleTones[item.tone];
             const Icon = tone.icon;
             return (
               <li
-                key={item.label}
+                key={item.id}
                 className="grid grid-cols-[32px_minmax(0,1fr)_minmax(0,148px)_auto] items-center gap-3"
               >
                 <span
@@ -495,11 +506,11 @@ function ProgressCard({ student }: { student: AdminUser }) {
                   <Icon className="size-5" />
                 </span>
                 <span className="truncate font-work text-sm font-medium text-text-primary">
-                  {item.label}
+                  {item.name}
                 </span>
-                <ProgressBar value={item.value} fillClassName={tone.bar} />
+                <ProgressBar value={item.progress ?? 0} fillClassName={tone.bar} />
                 <span className="w-[29px] text-right font-work text-sm font-medium text-text-primary">
-                  {item.value}%
+                  {item.progress === null ? "--" : `${item.progress}%`}
                 </span>
               </li>
             );

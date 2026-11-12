@@ -1,4 +1,4 @@
-// PENDING-BACKEND: the admin API has no curriculum progress,
+// PENDING-BACKEND: the admin API has no learning item,
 // activity, attendance, assignment, mentorship or notes data for a student
 // yet, so these tabs show the design's sample content until it does.
 
@@ -17,101 +17,6 @@ export type LearningItem = {
   note: { text: string; tone?: "warning" | "error" };
   /** Assignments only. */
   score?: string;
-};
-
-export const trackProgress = {
-  name: "Design Track",
-  value: 84,
-};
-
-export const modules = [
-  {
-    id: "m1",
-    label: "Module 1",
-    name: "Introduction to Design",
-    description:
-      "Discover how product design turns user needs into useful, intuitive and meaningful experiences. Explore the core principles, process and tools designers use every day.",
-    progress: 91,
-    completed: 4,
-    total: 6,
-  },
-  {
-    id: "m2",
-    label: "Module 2",
-    name: "User research and analysis",
-    progress: 82,
-  },
-  { id: "m3", label: "Module 3", name: "Design Layout", progress: 74 },
-  { id: "m4", label: "Module 4", name: "Figma Fundamentals", progress: 74 },
-  { id: "m5", label: "Module 5", name: "Grid in Design", progress: 74 },
-  { id: "m6", label: "Module 6", name: "User Journey Mapping", progress: 74 },
-  { id: "m7", label: "Module 7", name: "UX Laws", progress: null },
-  { id: "m8", label: "Module 8", name: "Color Theory", progress: null },
-] as {
-  id: string;
-  label: string;
-  name: string;
-  description?: string;
-  progress: number | null;
-  completed?: number;
-  total?: number;
-}[];
-
-/** Learning items by module id. Only the first module has sample items. */
-export const learningItems: Record<string, LearningItem[]> = {
-  m1: [
-    {
-      id: "li1",
-      title: "Inteoduction to Design",
-      kind: "liveClass",
-      status: "attended",
-      date: "Sep 1, 2026",
-      note: { text: "6:00 - 8:00 PM" },
-    },
-    {
-      id: "li2",
-      title: "Color & typography basics",
-      kind: "liveClass",
-      status: "attended",
-      date: "Sep 1, 2026",
-      note: { text: "6:00 - 8:00 PM" },
-    },
-    {
-      id: "li3",
-      title: "Visual Hierarchy",
-      kind: "assignment",
-      status: "graded",
-      date: "Sep 6, 2026",
-      note: { text: "Submittted" },
-      score: "92/100",
-    },
-    {
-      id: "li4",
-      title: "Grid Layout",
-      kind: "assignment",
-      status: "pending",
-      date: "Sep 6, 2026",
-      note: { text: "Due in 3 days", tone: "warning" },
-      score: "--/100",
-    },
-    {
-      id: "li5",
-      title: "Composition & layout",
-      kind: "liveClass",
-      status: "absent",
-      date: "Sep 1, 2026",
-      note: { text: "6:00 - 8:00 PM" },
-    },
-    {
-      id: "li6",
-      title: "Grid Layout",
-      kind: "assignment",
-      status: "notSubmitted",
-      date: "Sep 6, 2026",
-      note: { text: "Overdue", tone: "error" },
-      score: "--/100",
-    },
-  ],
 };
 
 export type ActivityKind = "assignment" | "liveClass" | "checkIn" | "grade";
