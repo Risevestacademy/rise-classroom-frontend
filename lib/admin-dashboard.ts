@@ -145,53 +145,36 @@ export const dashboardMock = {
   ] satisfies UpcomingActivity[],
 };
 
+/** A notification as `/notifications` returns it. */
 export type AdminNotification = {
   id: string;
-  actor: string;
-  avatar?: string;
-  message: string;
-  time: string;
-  unread: boolean;
+  title: string;
+  body: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
 };
 
-// PENDING-BACKEND: the API has no notifications endpoint.
-const mockNotifications: AdminNotification[] = [
-  {
-    id: "n1",
-    actor: "Sarah Okafor",
-    message: "submitted Assignment 4 in Design",
-    time: "10 minutes ago",
-    unread: true,
-  },
-  {
-    id: "n2",
-    actor: "Femi Adeyemi",
-    message: "accepted the invite and finished onboarding",
-    time: "1 hour ago",
-    unread: true,
-  },
-  {
-    id: "n3",
-    actor: "Amina Bello",
-    message: "was flagged as at risk in Frontend",
-    time: "3 hours ago",
-    unread: true,
-  },
-  {
-    id: "n4",
-    actor: "Francis Eze",
-    message: "booked a mentorship session for Friday",
-    time: "Yesterday",
-    unread: false,
-  },
-  {
-    id: "n5",
-    actor: "Tobi Lawal",
-    message: "filled in this week's control tower",
-    time: "2 days ago",
-    unread: false,
-  },
-];
+export type AdminNotifications = {
+  items: AdminNotification[];
+  unreadCount: number;
+};
+
+/** The latest notifications; the panel has no paging, so it shows one page. */
+async function getNotifications(): Promise<AdminNotifications> {
+  const { data, metadata } = await api.get<
+    Envelope<AdminNotification[]> & { metadata: { unreadCount: number } }
+  >("/notifications", { query: { limit: 50 } });
+  return { items: data, unreadCount: metadata.unreadCount };
+}
+
+export function markNotificationRead(id: string) {
+  return api.patch(`/notifications/${id}/read`);
+}
+
+export function markAllNotificationsRead() {
+  return api.patch("/notifications/read-all");
+}
 
 export const adminDashboardKeys = {
   allControlTowers: () => ["admin", "control-tower"] as const,
@@ -210,10 +193,7 @@ export const adminDashboardQueries = {
   notifications: () =>
     queryOptions({
       queryKey: adminDashboardKeys.notifications(),
-      queryFn: async () => mockNotifications,
-      // Read state lives in the cache until there's an API to save it, so a
-      // refetch must not reset it.
-      staleTime: Infinity,
-      gcTime: Infinity,
+      queryFn: getNotifications,
+      staleTime: 60_000,
     }),
 };
