@@ -92,18 +92,27 @@ export async function listMentees(mentorId: string) {
   return data;
 }
 
-/**
- * A mentee as the mentor profile lists them. PENDING-BACKEND: the API has no
- * student progress, so it's null.
- */
-export function toAssignedStudent(mentee: MentorStudent): AssignedStudent {
+/** A mentee as the mentor profile lists them, with progress once it loads. */
+export function toAssignedStudent(
+  mentee: MentorStudent,
+  progress: number | null = null,
+): AssignedStudent {
   return {
     id: mentee.user.id,
     name: mentee.user.name,
     email: mentee.user.email,
     image: mentee.user.image,
     status: mentee.user.status === "SUSPENDED" ? "inactive" : "active",
-    progress: null,
+    progress,
+  };
+}
+
+/** What a mentee's progress is worked out from. */
+export function menteeProgressTarget(mentee: MentorStudent) {
+  return {
+    profileId: mentee.studentProfileId,
+    cohortId: mentee.cohort.id,
+    trackId: mentee.enrollment[0]?.track?.id ?? "",
   };
 }
 

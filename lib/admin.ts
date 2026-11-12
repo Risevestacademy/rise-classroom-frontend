@@ -148,8 +148,19 @@ export function toUserFilters(values: Record<string, string[]>): UserFilters {
   );
 }
 
+/** Sent with `role: "MENTOR"`, scoped by cohort and track but no other filter. */
+export type MentorSummary = {
+  totalMentors: number;
+  /** Students whose account is active. */
+  activeStudents: number;
+  /** Active students with no active mentor. */
+  unassignedStudents: number;
+};
+
 async function listUsers(filters: UserFilters = {}) {
-  const { data } = await api.get<Envelope<Paginated<AdminUser>>>(
+  const { data } = await api.get<
+    Envelope<Paginated<AdminUser> & { summary?: MentorSummary }>
+  >(
     "/admin/users",
     { query: filters },
   );

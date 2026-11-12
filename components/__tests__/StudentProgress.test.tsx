@@ -9,7 +9,7 @@ import type {
   TopicRecord,
 } from "@/features/curriculum/types";
 import type { AdminUser } from "@/lib/admin";
-import { studentProgress } from "@/lib/student-profile";
+import { studentProgress, useOverallProgress } from "@/lib/student-profile";
 import { curriculumTreeRoutes, envelope, mockApi, renderWithClient } from "@/test/utils";
 
 const timestamps = {
@@ -178,5 +178,49 @@ describe("ProgressTab", () => {
 
     expect(await screen.findAllByText("Design basics")).toHaveLength(2);
     expect(screen.queryByText(/learning items completed/)).not.toBeInTheDocument();
+  });
+});
+
+function Progress({ ids }: { ids: string[] }) {
+  const progress = useOverallProgress(
+    ids.map((profileId) => ({ profileId, cohortId: "c1", trackId: "t1" })),
+  );
+  return (
+    <ul>
+      {ids.map((id) => (
+        <li key={id}>{`${id}: ${progress.has(id) ? progress.get(id) : "loading"}`}</li>
+      ))}
+    </ul>
+  );
+}
+
+describe("useOverallProgress", () => {
+  it("works out each student's progress, loading shared curricula once", async () => {
+    const api = mockApi({
+      "GET /admin/curriculums": envelope([{ id: "cur1", publishStatus: "PUBLISHED" }]),
+      ...curriculumTreeRoutes("admin", "cur1", [
+        {
+          ...topic("tp1", "Design basics", 0),
+          lessons: [lesson("l1", "tp1", 0), lesson("l2", "tp1", 1)],
+        },
+      ]),
+      "GET /admin/progress": (_body: unknown, url: URL) =>
+        envelope({
+          items:
+            url.searchParams.get("studentProfileId") === "sp1"
+              ? [{ lessonId: "l1", completed: true }]
+              : [],
+          page: 1,
+          limit: 100,
+          total: 1,
+          totalPages: 1,
+        }),
+    });
+    renderWithClient(<Progress ids={["sp1", "sp2"]} />);
+
+    expect(await screen.findByText("sp1: 50")).toBeInTheDocument();
+    expect(await screen.findByText("sp2: 0")).toBeInTheDocument();
+    expect(api.urls("GET /admin/curriculums")).toHaveLength(1);
+    expect(api.urls("GET /admin/progress")).toHaveLength(2);
   });
 });

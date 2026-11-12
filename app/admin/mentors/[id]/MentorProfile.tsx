@@ -39,6 +39,7 @@ import {
   ReassignStudentDialog,
 } from "@/components/MentorAssignmentDialogs";
 import {
+  needsAttention,
   progressLabel,
   progressTone,
   StudentName,
@@ -76,12 +77,14 @@ import {
 } from "@/lib/admin";
 import {
   assignMentor,
+  menteeProgressTarget,
   mentorQueries,
   toAssignedStudent,
   toMentor,
   type Mentor,
   type MentorStatus,
 } from "@/lib/mentors";
+import { useOverallProgress } from "@/lib/student-profile";
 import { useRowSelection } from "@/lib/use-row-selection";
 import { useTabParam } from "@/lib/use-tab-param";
 import { cn } from "@/lib/utils";
@@ -290,9 +293,17 @@ function useMentees(mentor: Mentor) {
     enabled: !isMentor,
   });
 
+  // Instructors can teach whole cohorts, so only mentees get progress: it
+  // takes a request per student.
+  const progress = useOverallProgress(
+    isMentor ? (mentees.data ?? []).map(menteeProgressTarget) : [],
+  );
+
   const query = isMentor ? mentees : taught;
   const students = isMentor
-    ? (mentees.data ?? []).map(toAssignedStudent)
+    ? (mentees.data ?? []).map((mentee) =>
+        toAssignedStudent(mentee, progress.get(mentee.studentProfileId)),
+      )
     : toTaughtStudents(taught.data ?? []);
   return {
     students,
@@ -457,9 +468,14 @@ function StudentsTab({ mentor }: { mentor: Mentor }) {
       value: assignedStudents.filter((student) => student.status === "active")
         .length,
     },
-    // PENDING-BACKEND: needing attention is based on progress, which the API
-    // doesn't have yet.
-    { title: "Students needing attention", value: "--" },
+    {
+      title: "Students needing attention",
+      // PENDING-BACKEND: instructors' students have no progress, as it would
+      // take a request per student.
+      value: isMentor
+        ? assignedStudents.filter(needsAttention).length
+        : "--",
+    },
   ];
 
   return (

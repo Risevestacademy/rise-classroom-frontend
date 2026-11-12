@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQueries, useQuery } from "@tanstack/react-query";
 
 import { curriculumApis } from "@/features/curriculum/api";
 import type {
@@ -158,4 +158,58 @@ export function useStudentProgress(student: AdminUser) {
       ? undefined
       : studentProgress(modules.data ?? [], completed.data),
   };
+}
+
+export type ProgressTarget = {
+  profileId: string;
+  cohortId: string;
+  trackId: string;
+};
+
+const unique = (values: string[]) => [...new Set(values.filter(Boolean))];
+
+/**
+ * Overall progress for several students, by profile id. A student is missing
+ * from the map until everything their figure needs has loaded.
+ */
+export function useOverallProgress(targets: ProgressTarget[]) {
+  const scopes = unique(targets.map((t) => `${t.cohortId}:${t.trackId}`));
+  const curricula = useQueries({
+    queries: scopes.map((scope) => {
+      const [cohortId, trackId] = scope.split(":");
+      return studentProfileQueries.curriculumId(cohortId, trackId);
+    }),
+  });
+  const curriculumFor = new Map(
+    scopes.map((scope, index) => [scope, curricula[index].data]),
+  );
+
+  const curriculumIds = unique(
+    [...curriculumFor.values()].map((id) => id ?? ""),
+  );
+  const moduleLists = useQueries({
+    queries: curriculumIds.map((id) => curriculumApis.admin.queries.modules(id)),
+  });
+  const modulesFor = new Map(
+    curriculumIds.map((id, index) => [id, moduleLists[index].data]),
+  );
+
+  const profileIds = unique(targets.map((t) => t.profileId));
+  const completed = useQueries({
+    queries: profileIds.map((id) => studentProfileQueries.completedLessons(id)),
+  });
+  const completedFor = new Map(
+    profileIds.map((id, index) => [id, completed[index].data]),
+  );
+
+  const progress = new Map<string, number | null>();
+  for (const target of targets) {
+    const curriculumId = curriculumFor.get(`${target.cohortId}:${target.trackId}`);
+    const lessons = completedFor.get(target.profileId);
+    if (curriculumId === undefined || !lessons) continue;
+    const modules = curriculumId ? modulesFor.get(curriculumId) : [];
+    if (!modules) continue;
+    progress.set(target.profileId, studentProgress(modules, lessons).overall);
+  }
+  return progress;
 }
