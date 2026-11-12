@@ -17,7 +17,7 @@ export function KeywordMarquee() {
       {KEYWORDS.map((keyword) => (
         <li
           key={keyword}
-          className="pr-12 text-[20px] leading-7 font-medium text-text-primary"
+          className="pr-12 font-tomato text-[20px] leading-7 font-medium text-text-primary"
         >
           {keyword}
         </li>

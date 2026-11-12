@@ -31,7 +31,7 @@ export function FaqAccordion({ items }: { items: Faq[] }) {
                 aria-expanded={isOpen}
                 aria-controls={panelId}
                 onClick={() => setOpen(isOpen ? null : index)}
-                className="flex w-full items-start justify-between gap-6 p-6 text-left text-[16px] leading-6 font-medium text-text-primary"
+                className="flex w-full items-start justify-between gap-6 p-6 text-left font-tomato text-[16px] leading-6 font-medium text-text-primary"
               >
                 {faq.question}
                 <PlusMinusIcon open={isOpen} />

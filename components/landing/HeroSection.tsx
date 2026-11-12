@@ -12,7 +12,7 @@ export function HeroSection() {
       id="product"
       data-bg="#FFFFFF"
       data-bg-keep
-      className="relative isolate flex flex-col items-center px-4 pt-[128px] pb-[64px] lg:pt-[228px] lg:pb-[50px]"
+      className="relative isolate flex flex-col items-center px-4 font-tomato pt-[128px] pb-[64px] lg:pt-[228px] lg:pb-[50px]"
     >
       <HeroBackground />
 

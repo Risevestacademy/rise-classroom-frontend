@@ -64,7 +64,7 @@ export function PricingSection() {
           >
             <span
               className={cn(
-                "inline-flex h-7 items-center rounded-full px-2 text-[14px] leading-5 font-medium",
+                "inline-flex h-7 items-center rounded-full px-2 font-tomato text-[14px] leading-5 font-medium",
                 plan.featured
                   ? "bg-success-surface text-success-text"
                   : "bg-neutral-100 text-text-primary"
@@ -87,7 +87,7 @@ export function PricingSection() {
             <Link
               href={plan.cta.href}
               className={cn(
-                "landing-btn mt-10 inline-flex h-10 items-center rounded-[8px] px-4 text-[14px] leading-5 font-medium",
+                "landing-btn mt-10 inline-flex h-10 items-center rounded-[8px] px-4 font-tomato text-[14px] leading-5 font-medium",
                 plan.featured
                   ? "landing-shine bg-brand-950 text-white"
                   : "border border-neutral-200 bg-white text-brand-950 [--btn-fill:var(--color-neutral-100)]"
