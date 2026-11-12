@@ -19,7 +19,7 @@ import { AllClearState } from "@/components/platform-admin/AllClearState";
 import { PlatformTopNav } from "@/components/platform-admin/PlatformTopNav";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
-import { Pagination } from "@/components/ui/pagination";
+import { Pagination, pageSizes } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shortDate } from "@/lib/calendar";
 import { platformQueries, setupAdmin, type Academy } from "@/lib/platform";
@@ -50,6 +50,7 @@ function matchesSearch(academy: Academy, query: string) {
 
 export function Academies() {
   const academiesQuery = useQuery(platformQueries.academies());
+  const pagination = usePageParams();
 
   return (
     <AcademiesView
@@ -57,30 +58,51 @@ export function Academies() {
       isPending={academiesQuery.isPending}
       isError={academiesQuery.isError}
       onRetry={() => academiesQuery.refetch()}
+      pagination={pagination}
     />
   );
 }
 
+/* Rendered outside the page's Suspense boundary */
+const loadingPagination: PageState = {
+  page: 1,
+  setPage: () => {},
+  pageSize: pageSizes[0],
+  setPageSize: () => {},
+};
+
 export function AcademiesLoading() {
-  return <AcademiesView academies={[]} isPending isError={false} onRetry={() => {}} />;
+  return (
+    <AcademiesView
+      academies={[]}
+      isPending
+      isError={false}
+      onRetry={() => {}}
+      pagination={loadingPagination}
+    />
+  );
 }
+
+type PageState = ReturnType<typeof usePageParams>;
 
 function AcademiesView({
   academies,
   isPending,
   isError,
   onRetry,
+  pagination,
 }: {
   academies: Academy[];
   isPending: boolean;
   isError: boolean;
   onRetry: () => void;
+  pagination: PageState;
 }) {
   const [search, setSearch] = React.useState("");
   const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>({});
   const [filterOpen, setFilterOpen] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const { page, setPage, pageSize, setPageSize } = usePageParams();
+  const { page, setPage, pageSize, setPageSize } = pagination;
 
   const listed = academies.filter(setupAdmin);
   const activeCount = listed.filter((academy) => academy.status === "ACTIVE").length;
