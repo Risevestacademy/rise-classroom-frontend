@@ -1,4 +1,4 @@
-// PENDING-BACKEND: the admin API has no curriculum progress, check-in,
+// PENDING-BACKEND: the admin API has no curriculum progress,
 // activity, attendance, assignment, mentorship or notes data for a student
 // yet, so these tabs show the design's sample content until it does.
 
@@ -113,101 +113,6 @@ export const learningItems: Record<string, LearningItem[]> = {
     },
   ],
 };
-
-export type CheckInStatus = "ongoing" | "pending" | "overdue" | "submitted";
-
-/** The control tower questions, in the order the design lists them. */
-export const checkInQuestions = [
-  { key: "focus", label: "What are you focusing on this week?" },
-  { key: "achieve", label: "What do you want to achieve?" },
-  {
-    key: "meeting",
-    label: "What came out of your meeting?",
-    section: "Mentor Check-in",
-  },
-  { key: "progress", label: "How are you progressing?" },
-  { key: "kpis", label: "Weekly KPIs" },
-  { key: "wentWell", label: "What went well?", section: "Weekly Reflection" },
-  { key: "didntGoWell", label: "What didn't go well?" },
-  { key: "doDifferently", label: "What will you do differently?" },
-] as const;
-
-type Answers = Partial<
-  Record<(typeof checkInQuestions)[number]["key"], string>
->;
-
-const sampleAnswers: Answers = {
-  focus: "Define the main thing you want to make progress on this week...",
-  achieve: "Example: I want to develop my knowledge of the system architecture",
-  meeting:
-    "Example: My mentor was able to guide my understanding of the concept of system design",
-  progress:
-    "Example: My mentor was able to guide my understanding of the concept of system design",
-  kpis: "Example: Build my portfolio",
-  wentWell: "Example: Build my portfolio",
-};
-
-const fullAnswers: Answers = {
-  ...sampleAnswers,
-  didntGoWell:
-    "Example: I spent too long on a problem I could have asked for help with sooner",
-  doDifferently: "Example: Ask my mentor for feedback earlier in the week",
-};
-
-// The design repeats one date range for every week; these step back a week
-// at a time from week 9 instead.
-export const checkIns: {
-  id: string;
-  week: number;
-  range: string;
-  status: CheckInStatus;
-  daysLeft?: number;
-  answers: Answers;
-}[] = [
-  {
-    id: "w9",
-    week: 9,
-    range: "Oct 12 - Oct 18, 2026",
-    status: "ongoing",
-    daysLeft: 3,
-    answers: sampleAnswers,
-  },
-  {
-    id: "w8",
-    week: 8,
-    range: "Oct 5 - Oct 11, 2026",
-    status: "pending",
-    answers: {},
-  },
-  {
-    id: "w7",
-    week: 7,
-    range: "Sep 28 - Oct 4, 2026",
-    status: "overdue",
-    answers: fullAnswers,
-  },
-  {
-    id: "w6",
-    week: 6,
-    range: "Sep 21 - Sep 27, 2026",
-    status: "submitted",
-    answers: fullAnswers,
-  },
-  {
-    id: "w5",
-    week: 5,
-    range: "Sep 14 - Sep 20, 2026",
-    status: "submitted",
-    answers: fullAnswers,
-  },
-  {
-    id: "w4",
-    week: 4,
-    range: "Sep 7 - Sep 13, 2026",
-    status: "submitted",
-    answers: fullAnswers,
-  },
-];
 
 export type ActivityKind = "assignment" | "liveClass" | "checkIn" | "grade";
 

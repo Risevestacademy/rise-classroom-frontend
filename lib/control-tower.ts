@@ -19,8 +19,8 @@ export type WeeklyMetric = {
   challenges: string | null;
   priorities: string | null;
   // kpis: string | null; // PENDING-BACKEND(kpis)
-  // wentWell: string | null; // PENDING-BACKEND(wentWell)
-  // doDifferently: string | null; // PENDING-BACKEND(doDifferently)
+  whatWentWell?: string | null;
+  whatIWillDoDifferently?: string | null;
   /** Written by the mentor when they review the week. */
   mentorMeetingOutcome: string | null;
   mentorFeedback: string | null;
