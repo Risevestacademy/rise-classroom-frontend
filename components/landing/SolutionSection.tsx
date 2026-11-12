@@ -44,7 +44,7 @@ function Audience({
     >
       <p
         data-solution-text
-        className="font-work text-[14px] leading-5 font-medium text-brand-950 transition-[translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/audience:translate-x-1.5 motion-reduce:transition-none"
+        className="font-tomato text-[14px] leading-5 font-medium text-brand-950 transition-[translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/audience:translate-x-1.5 motion-reduce:transition-none"
       >
         {audience.label}
       </p>
@@ -118,7 +118,7 @@ export function SolutionSection() {
             <Link
               href="#product"
               data-magnetic
-              className="landing-btn inline-flex h-[54px] items-center rounded-full bg-brand-950 px-8 text-[14px] leading-5 font-medium text-white ring-2 ring-brand-200"
+              className="landing-btn inline-flex h-[54px] items-center font-tomato rounded-full bg-brand-950 px-8 text-[14px] leading-5 font-medium text-white ring-2 ring-brand-200"
             >
               <RollText>Explore the platform</RollText>
             </Link>

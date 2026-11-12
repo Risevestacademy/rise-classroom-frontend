@@ -165,6 +165,7 @@
   /* Font */
   --font-lato: var(--font-lato-family), system-ui, sans-serif;
   --font-work: var(--font-work-sans), system-ui, sans-serif;
+  --font-tomato: var(--font-tomato-grotesk), system-ui, sans-serif;
 
   /* Radius */
   --radius-xs: 2px;

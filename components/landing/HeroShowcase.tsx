@@ -34,7 +34,7 @@ const PANEL_RADIUS = 12;
 
 /**
  * Product tabs and the dashboard they switch between. The tabs advance on a
- * timer (paused while hovered), and clicking a tab jumps straight to it.
+ * timer (paused while the tab bar is hovered), and clicking a tab jumps straight to it.
  */
 export function HeroShowcase() {
   const root = useRef<HTMLDivElement>(null);
@@ -177,23 +177,22 @@ export function HeroShowcase() {
   };
 
   return (
-    <div
-      ref={root}
-      className="flex w-full flex-col items-center"
-      onPointerEnter={() => {
-        hovered.current = true;
-        timer.current?.pause();
-      }}
-      onPointerLeave={() => {
-        hovered.current = false;
-        if (!pausedRef.current) timer.current?.resume();
-      }}
-    >
+    <div ref={root} className="flex w-full flex-col items-center">
       {/* Sticks to the top while the dashboard is on screen (the nav hides to
           make room), so tabs can be switched without scrolling back up. On
           narrow screens the bar scrolls sideways, edge to edge. */}
       <div
         ref={tabScroller}
+        // Only the tab bar pauses the timer: the dashboard fills most of the
+        // screen, so pausing over it made the tabs look stuck.
+        onPointerEnter={() => {
+          hovered.current = true;
+          timer.current?.pause();
+        }}
+        onPointerLeave={() => {
+          hovered.current = false;
+          if (!pausedRef.current) timer.current?.resume();
+        }}
         data-intro="tabs"
         data-hero-tabs
         className="group/tabs sticky top-3 z-20 -mx-4 mt-[33px] w-[calc(100%+2rem)] overflow-x-auto px-4 py-3 [scrollbar-width:none] lg:top-4 lg:mx-0 lg:mt-[74px] lg:w-auto lg:overflow-visible lg:px-0 lg:py-0 [&::-webkit-scrollbar]:hidden"

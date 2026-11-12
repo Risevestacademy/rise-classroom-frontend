@@ -43,4 +43,15 @@ export const workSans = localFont({
   ],
 });
 
-
+// Landing page only, so it is loaded on the routes that render the landing
+// shell rather than app-wide. Only the weights the design uses are listed.
+export const tomatoGrotesk = localFont({
+  variable: '--font-tomato-grotesk',
+  display: 'swap',
+  src: [
+    { path: '../public/fonts/static/TomatoGrotesk-Medium.otf', weight: '500', style: 'normal' },
+    { path: '../public/fonts/static/TomatoGrotesk-SemiBold.otf', weight: '600', style: 'normal' },
+    { path: '../public/fonts/static/TomatoGrotesk-Bold.otf', weight: '700', style: 'normal' },
+    { path: '../public/fonts/static/TomatoGrotesk-BoldSlanted.otf', weight: '700', style: 'italic' },
+  ],
+});

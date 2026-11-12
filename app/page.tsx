@@ -1,3 +1,4 @@
+import { tomatoGrotesk } from "@/app/fonts";
 import { FaqSection } from "@/components/landing/FaqSection";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { KeywordMarquee } from "@/components/landing/KeywordMarquee";
@@ -17,7 +18,8 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <>
+    // display: contents keeps the layout as it was; it only scopes the font.
+    <div className={`contents ${tomatoGrotesk.variable}`}>
       <LandingNav />
       {/* Sits above the sticky footer and lifts away to reveal it. */}
       <main
@@ -34,6 +36,6 @@ export default function HomePage() {
       </main>
       <LandingFooter />
       <LandingMotion />
-    </>
+    </div>
   );
 }
