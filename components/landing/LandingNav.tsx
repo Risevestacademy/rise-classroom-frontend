@@ -22,16 +22,16 @@ export function LandingNav({ intro = true }: { intro?: boolean }) {
     >
       <nav
         data-intro={intro ? "nav" : undefined}
-        className="pointer-events-auto mx-auto flex h-12 font-tomato w-full max-w-[800px] items-center justify-between rounded-full bg-white/80 py-2 pr-2 pl-4 backdrop-blur-md transition-shadow duration-500 group-data-[scrolled=true]:shadow-[0_8px_24px_rgb(16_22_79/0.12)] lg:px-4"
+        className="pointer-events-auto mx-auto flex h-[64px] w-full font-tomato max-w-[800px] items-center justify-between rounded-full bg-white/80 py-2 pr-2 pl-4 backdrop-blur-md transition-shadow duration-500 group-data-[scrolled=true]:shadow-[0_8px_24px_rgb(16_22_79/0.12)] lg:px-4"
       >
         <Link href="/" aria-label="Rise Classroom home" className="shrink-0">
           <Image
             src="/logo-full-green.svg"
             alt="Rise Classroom"
-            width={112}
+            width={105}
             height={32}
             preload
-            className="h-8 w-auto"
+            className="h-8 w-[105px] object-contain"
           />
         </Link>
 
