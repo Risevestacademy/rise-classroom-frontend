@@ -422,6 +422,17 @@ export type TopicTree = TopicRecord & {
   assignments: AssignmentRecord[];
 };
 
+/** A topic as the `/tree` endpoints return it, with its lessons and items nested. */
+export type TopicTreeRecord = TopicRecord & {
+  resources?: ResourceRecord[];
+  assignments?: AssignmentRecord[];
+  lessons?: (LessonRecord & Partial<Omit<LessonTree, keyof LessonRecord>>)[];
+};
+
+export type CurriculumTreeRecord = CurriculumRecord & {
+  topics: TopicTreeRecord[];
+};
+
 // ---- Session-only fields the API doesn't have ----------------------------------
 
 /**

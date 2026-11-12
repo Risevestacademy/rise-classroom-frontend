@@ -33,6 +33,7 @@ import {
   type CurriculumModule,
   type CurriculumNote,
   type CurriculumRecord,
+  type CurriculumTreeRecord,
   type CurriculumRole,
   type LessonRecord,
   type LessonTree,
@@ -41,7 +42,6 @@ import {
   type ModuleAssignment,
   type ModuleLesson,
   type NoteRecord,
-  type RecordingRecord,
   type ResourceFile,
   type ResourceKind,
   type ResourceRecord,
@@ -50,6 +50,7 @@ import {
   type SessionExtras,
   type TopicRecord,
   type TopicTree,
+  type TopicTreeRecord,
   type UpdateCurriculumInput,
 } from "@/features/curriculum/types";
 
@@ -169,33 +170,23 @@ function createCurriculumApi(role: CurriculumRole) {
 
   // ---- Loading -----------------------------------------------------------------
 
-  /** Lesson assignments come from the module's list, which has them all. */
-  async function loadLesson(
-    lesson: LessonRecord,
-    moduleAssignments: AssignmentRecord[],
-  ): Promise<LessonTree> {
-    const [resources, recordings] = await Promise.all([
-      getData<ResourceRecord[]>(`${base}/lessons/${lesson.id}/resources`),
-      getData<RecordingRecord[]>(`${base}/lessons/${lesson.id}/recordings`),
-    ]);
-    const assignments = moduleAssignments.filter(
-      (a) => a.lessonId === lesson.id,
-    );
-    return { ...lesson, resources, assignments, recordings };
-  }
-
-  async function loadTopic(topic: TopicRecord): Promise<TopicTree> {
-    const [lessons, resources, assignments] = await Promise.all([
-      getData<LessonRecord[]>(`${base}/topics/${topic.id}/lessons`),
-      getData<ResourceRecord[]>(`${base}/topics/${topic.id}/resources`),
-      getData<AssignmentRecord[]>(`${base}/topics/${topic.id}/assignments`),
-    ]);
+  /**
+   * Shapes a topic from the `/tree` endpoints. A lesson's items come from the
+   * lesson, or from the topic's lists when the lesson doesn't carry them.
+   */
+  function toTopicTree(topic: TopicTreeRecord): TopicTree {
+    const { lessons = [], resources = [], assignments = [], ...record } = topic;
     return {
-      ...topic,
-      lessons: await Promise.all(
-        byPosition(lessons).map((lesson) => loadLesson(lesson, assignments)),
-      ),
-      // Lesson resources are read per lesson, so keep only the module-wide ones.
+      ...record,
+      lessons: byPosition(lessons).map((lesson) => ({
+        ...lesson,
+        resources:
+          lesson.resources ?? resources.filter((r) => r.lessonId === lesson.id),
+        assignments:
+          lesson.assignments ??
+          assignments.filter((a) => a.lessonId === lesson.id),
+        recordings: lesson.recordings ?? [],
+      })),
       resources: resources.filter((r) => !r.lessonId),
       assignments: assignments.filter((a) => !a.lessonId),
     };
@@ -209,9 +200,12 @@ function createCurriculumApi(role: CurriculumRole) {
     );
   }
 
-  /** Three requests per topic and two per lesson — the API has no nested read. */
+  /** Every module, lesson, resource, assignment and recording in one request. */
   async function loadTree(curriculumId: string) {
-    return Promise.all((await listTopics(curriculumId)).map(loadTopic));
+    const tree = await getData<CurriculumTreeRecord>(
+      `${base}/curriculums/${curriculumId}/tree`,
+    );
+    return byPosition(tree.topics).map(toTopicTree);
   }
 
   /** Fetches the track (unless known) and student count a curriculum card shows. */
@@ -356,7 +350,7 @@ function createCurriculumApi(role: CurriculumRole) {
   }
 
   async function getTopicTree(id: string) {
-    return loadTopic(await getData<TopicRecord>(`${base}/topics/${id}`));
+    return toTopicTree(await getData<TopicTreeRecord>(`${base}/topics/${id}/tree`));
   }
 
   async function getModule(id: string) {
@@ -682,9 +676,7 @@ function createCurriculumApi(role: CurriculumRole) {
     moduleId: string,
     input: CreateAssignmentInput,
   ) {
-    const lessons = byPosition(
-      await getData<LessonRecord[]>(`${base}/topics/${moduleId}/lessons`),
-    );
+    const { lessons } = await getTopicTree(moduleId);
     // "Due relative to lesson" picks the lesson; otherwise it's on the whole module.
     const lesson = input.afterLesson
       ? lessons[input.afterLesson - 1]

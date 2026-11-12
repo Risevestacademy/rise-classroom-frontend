@@ -9,7 +9,7 @@ import type {
   CurriculumRole,
   TopicRecord,
 } from "@/features/curriculum/types";
-import { envelope, mockApi, renderWithClient, reply } from "@/test/utils";
+import { curriculumTreeRoutes, envelope, mockApi, renderWithClient, reply } from "@/test/utils";
 
 const timestamps = {
   createdAt: "2026-09-01T00:00:00.000Z",
@@ -60,10 +60,9 @@ function page(items: AssignmentSubmissionRecord[]) {
 /* One module with one assignment on it, plus the submissions reply. */
 function routes(role: CurriculumRole, submissions: unknown) {
   return {
-    [`GET /${role}/curriculums/c1/topics`]: envelope([topic]),
-    [`GET /${role}/topics/t1/lessons`]: envelope([]),
-    [`GET /${role}/topics/t1/resources`]: envelope([]),
-    [`GET /${role}/topics/t1/assignments`]: envelope([assignment]),
+    ...curriculumTreeRoutes(role, "c1", [
+      { ...topic, lessons: [], resources: [], assignments: [assignment] },
+    ]),
     [`GET /${role}/assignments/a1/submissions`]: submissions,
   };
 }
@@ -296,7 +295,14 @@ describe("changing an assignment's status", () => {
     mockApi({
       ...routes("admin", page([])),
       /* Each reload of the list reads the assignment's current status. */
-      "GET /admin/topics/t1/assignments": () => envelope([{ ...assignment, publishStatus: status }]),
+      ...curriculumTreeRoutes("admin", "c1", () => [
+        {
+          ...topic,
+          lessons: [],
+          resources: [],
+          assignments: [{ ...assignment, publishStatus: status }],
+        },
+      ]),
       /* Held open until the test lets the save finish. */
       "PATCH /admin/assignments/a1": (body: unknown) =>
         new Promise((resolve) => {

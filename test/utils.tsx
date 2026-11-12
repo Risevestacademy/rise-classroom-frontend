@@ -17,6 +17,30 @@ export function reply(status: number, body: unknown = {}): Reply {
 
 type Handler = unknown | Reply | ((body: unknown, url: URL) => unknown);
 
+type TreeTopic = { id: string } & Record<string, unknown>;
+
+/**
+ * The curriculum and topic `/tree` replies for one role, with each topic's
+ * lessons and items nested in it. Pass a function to read the latest state on
+ * every request.
+ */
+export function curriculumTreeRoutes(
+  role: string,
+  curriculumId: string,
+  topics: TreeTopic[] | (() => TreeTopic[]),
+) {
+  const read = typeof topics === "function" ? topics : () => topics;
+  const routes: Record<string, Handler> = {
+    [`GET /${role}/curriculums/${curriculumId}/tree`]: () =>
+      envelope({ id: curriculumId, topics: read() }),
+  };
+  for (const { id } of read()) {
+    routes[`GET /${role}/topics/${id}/tree`] = () =>
+      envelope(read().find((topic) => topic.id === id));
+  }
+  return routes;
+}
+
 function isReply(value: unknown): value is Reply {
   return (
     typeof value === "object" &&
