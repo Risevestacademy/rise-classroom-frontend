@@ -139,8 +139,13 @@ export function trackKeyFor(name: string, index = 0): TrackKey {
   );
 }
 
-function personFor(id: string, name: string, email: string): Person {
-  return { id, name, email };
+function personFor(
+  id: string,
+  name: string,
+  email: string,
+  avatar?: string | null,
+): Person {
+  return { id, name, email, avatar };
 }
 
 function studentTracks(user: AdminUser, cohortId: string) {
@@ -156,7 +161,7 @@ export function toCohortStudent(
 ): CohortStudent {
   const tracks = studentTracks(user, cohortId);
   return {
-    ...personFor(user.id, user.name, user.email),
+    ...personFor(user.id, user.name, user.email, user.image),
     id: user.id,
     track: tracks.map((track) => track.name).join(", ") || "--",
     trackIds: tracks.map((track) => track.id),
@@ -372,7 +377,12 @@ async function getCohortDetail(id: string): Promise<CohortDetail> {
           ? "Unknown mentor"
           : "Unknown instructor";
       return {
-        ...personFor(assignment.id, name, person?.email ?? ""),
+        ...personFor(
+          assignment.id,
+          name,
+          person?.email ?? "",
+          staffUsers.get(assignment.instructorId)?.image,
+        ),
         id: assignment.id,
         isMentor,
         track: assignment.track?.name ?? "--",

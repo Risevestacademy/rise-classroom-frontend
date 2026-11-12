@@ -37,7 +37,7 @@ import {
 } from "@/lib/mentors";
 import { useDebounced } from "@/lib/use-debounced";
 
-type Person = { id: string; name: string; email: string };
+type Person = { id: string; name: string; email: string; image?: string | null };
 
 const titleClass = "text-lg/6 font-semibold text-text-primary";
 const descriptionClass = "font-work text-sm text-text-secondary";
@@ -45,7 +45,12 @@ const descriptionClass = "font-work text-sm text-text-secondary";
 function PersonCard({ person }: { person: Person }) {
   return (
     <div className="flex w-full items-center gap-3 rounded-xl bg-surface-subtle p-3">
-      <PersonAvatar name={person.name} colorKey={person.id} size={40} />
+      <PersonAvatar
+        name={person.name}
+        src={person.image}
+        colorKey={person.id}
+        size={40}
+      />
       <div className="min-w-0">
         <p className="truncate text-base font-medium text-text-primary">
           {person.name}
@@ -212,6 +217,7 @@ function AssignStudentsForm({
           id: mentor.id,
           name: mentor.name,
           email: mentor.email,
+          image: mentor.image,
         }}
       />
 
@@ -278,7 +284,12 @@ function AssignStudentsForm({
                     className="size-4 border-icon-secondary"
                   />
                   <span className="flex min-w-0 items-center gap-3 p-3">
-                    <PersonAvatar name={name} colorKey={student.id} size={40} />
+                    <PersonAvatar
+                      name={name}
+                      src={student.image}
+                      colorKey={student.id}
+                      size={40}
+                    />
                     <span className="flex min-w-0 flex-col">
                       <span className="truncate font-work text-sm font-medium tracking-[-0.01em] text-text-primary">
                         {name}

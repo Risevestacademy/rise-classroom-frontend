@@ -111,6 +111,7 @@ export function StudentsProgressCard({
               <div className="flex min-w-0 items-center gap-3">
                 <PersonAvatar
                   name={student.name}
+                  src={student.image}
                   colorKey={student.id}
                   size={40}
                 />

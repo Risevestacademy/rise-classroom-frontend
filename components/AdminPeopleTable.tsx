@@ -365,7 +365,12 @@ export function AdminPeopleTable({
                         </td>
                         <td className="px-3">
                           <div className="flex items-center gap-3">
-                            <PersonAvatar name={user.name} colorKey={user.id} size={44} />
+                            <PersonAvatar
+                              name={user.name}
+                              src={user.image}
+                              colorKey={user.id}
+                              size={44}
+                            />
                             <div className="min-w-0">
                               {href ? (
                                 <Link

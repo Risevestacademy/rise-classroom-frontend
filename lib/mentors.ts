@@ -101,6 +101,7 @@ export function toAssignedStudent(mentee: MentorStudent): AssignedStudent {
     id: mentee.user.id,
     name: mentee.user.name,
     email: mentee.user.email,
+    image: mentee.user.image,
     status: mentee.user.status === "SUSPENDED" ? "inactive" : "active",
     progress: null,
   };
