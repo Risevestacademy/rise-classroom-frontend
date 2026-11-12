@@ -25,7 +25,7 @@ export function HeroSection() {
 
       <p
         data-intro="sub"
-        className="mt-[12px] w-full max-w-[501px] text-center text-[16px] leading-6 font-medium text-[#9E9E9E]"
+        className="mt-[12px] w-full max-w-[501px] text-center text-[16px] leading-6 font-medium text-[#D5D5D5]"
       >
         Bring classes, learning materials, assignments, and progress together in
         one connected space built for educators and learners.
