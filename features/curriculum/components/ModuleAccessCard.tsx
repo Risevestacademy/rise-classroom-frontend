@@ -21,10 +21,12 @@ function plural(count: number, word: string) {
 
 /* The sentence under the heading, from the last unlock or lock. */
 function accessSummary(access: ModuleAccess) {
+  if (access.studentCount === undefined)
+    return access.unlocked ? "Unlocked for the cohort." : "Locked for the cohort.";
   if (access.studentCount === 0) return "No students are enrolled on this track yet.";
   if (!access.unlocked) return `Locked for all ${plural(access.studentCount, "student")}.`;
 
-  const waiting = access.studentCount - access.openCount;
+  const waiting = access.studentCount - (access.openCount ?? 0);
   return waiting === 0
     ? `Unlocked for all ${plural(access.studentCount, "student")}.`
     : `Unlocked for ${plural(access.studentCount, "student")}. ${waiting} will get in once they finish the modules before this one.`;
@@ -52,16 +54,18 @@ function saveAccess(moduleId: string, access: ModuleAccess) {
 
 /*
  * Lets an instructor open a module to every student on the track, or close it again,
- * with one button that shows the current state. The API can't be asked whether a module
- * is unlocked, so the card shows the last change made from this browser. Modules start
- * locked, so that's assumed until then.
+ * with one button that shows the current state. `unlocked` comes from the API; the
+ * student counts only come back from an unlock or lock, so the last one made from this
+ * browser is kept while it still matches.
  */
 export function ModuleAccessCard({
   moduleId,
   moduleStatus,
+  unlocked: apiUnlocked,
 }: {
   moduleId: string;
   moduleStatus: ModuleStatus;
+  unlocked?: boolean;
 }) {
   const { api } = useCurriculumScope();
   const queryClient = useQueryClient();
@@ -69,7 +73,11 @@ export function ModuleAccessCard({
   const { data: access } = useQuery<ModuleAccess>({
     queryKey: accessKey,
     queryFn: skipToken,
-    initialData: () => readSavedAccess(moduleId),
+    initialData: () => {
+      const saved = readSavedAccess(moduleId);
+      if (apiUnlocked === undefined || saved?.unlocked === apiUnlocked) return saved;
+      return { unlocked: apiUnlocked };
+    },
     staleTime: Infinity,
   });
   const [confirmLock, setConfirmLock] = React.useState(false);
@@ -119,7 +127,7 @@ export function ModuleAccessCard({
           : "Locked. Click the button to let every student on the track open its lessons. You can lock it again at any time."}
       </p>
 
-      {access?.unlocked && access.studentCount > 0 && (
+      {access?.unlocked && (access.studentCount ?? 1) > 0 && (
         <p className="mt-2 text-xs text-neutral-500">
           Lessons you add later stay locked until you unlock the module again.
         </p>

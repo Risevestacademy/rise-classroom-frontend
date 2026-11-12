@@ -18,6 +18,7 @@ export default function InstructorsPage() {
           action={<InviteInstructorDialog />}
           label={{ singular: "instructor", plural: "instructors" }}
           personHeader="Instructor"
+          rowHref={(instructor) => `/admin/instructors/${instructor.id}`}
           emptyState={
             <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
               <Users className="h-12 w-12 text-neutral-200" />

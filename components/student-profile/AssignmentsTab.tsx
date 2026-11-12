@@ -72,7 +72,7 @@ function formatDue(value: string) {
 }
 
 const headerCell =
-  "border-r border-border-default font-work text-sm font-medium tracking-[-0.01em] text-text-primary uppercase";
+  "border-r border-border-default font-work text-sm font-medium tracking-[-0.01em] text-text-primary";
 
 export function AssignmentsTab({ firstName }: { firstName: string }) {
   const [search, setSearch] = React.useState("");

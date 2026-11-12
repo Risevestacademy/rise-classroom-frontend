@@ -73,8 +73,8 @@ export function NewResourceScreen({ id }: { id: string }) {
           kind,
         },
       ),
-    onSuccess: (resource) => {
-      queryClient.invalidateQueries({ queryKey: api.keys.modules(id) });
+    onSuccess: async (resource) => {
+      await api.refreshModule(queryClient, id, selectedModuleId);
       const position = modules.findIndex((m) => m.id === selectedModuleId) + 1;
       router.push(
         paths.detail(id, {

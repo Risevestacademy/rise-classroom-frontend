@@ -29,7 +29,6 @@ function makeCurriculum(overrides: Partial<CurriculumRecord>): CurriculumRecord 
     totalLessons: 12,
     totalAssignments: 3,
     cohort: { id: "cohort-1", name: "Cohort 4" },
-    assignedInstructors: [],
     ...overrides,
   };
 }

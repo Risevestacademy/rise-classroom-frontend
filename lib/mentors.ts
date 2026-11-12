@@ -26,7 +26,8 @@ export type Mentor = {
   user: AdminUser;
 };
 
-function mentorStatus(user: AdminUser): MentorStatus {
+/** Active, pending (still invited) or inactive (suspended). */
+export function mentorStatus(user: AdminUser): MentorStatus {
   if (user.status === "SUSPENDED") return "inactive";
   if (user.onboardingStatus === "INVITED") return "pending";
   return "active";
@@ -84,7 +85,7 @@ export type MentorStudent = {
   };
 };
 
-async function listMentees(mentorId: string) {
+export async function listMentees(mentorId: string) {
   const { data } = await api.get<Envelope<MentorStudent[]>>(
     `/admin/users/${mentorId}/mentees`,
   );

@@ -30,6 +30,7 @@ import { cn, greeting } from "@/lib/utils";
 import type { TrackKey } from "@/app/admin/cohorts/cohort-data";
 import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/MetricCard";
+import { DashboardEmptyState } from "@/components/DashboardEmptyState";
 
 const cardClass =
   "rounded-xl bg-surface-default shadow-[0_1px_3px_0_rgb(0_0_0/0.15)]";
@@ -98,7 +99,10 @@ export function AdminDashboard({ loading = false }: { loading?: boolean }) {
     (track) => !cohortId || (cohortTracks.data ?? []).includes(track.id),
   );
   const adminName = session.data?.user.firstName ?? "Admin";
-
+  // A cohort with no participants has no activity to report on yet.
+  const isEmpty = participants.isSuccess && participants.data === 0;
+  const noTracks =
+    !activeTracks.isPending && !activeTracks.isError && tracks.length === 0;
 
   return (
     <>
@@ -133,246 +137,258 @@ export function AdminDashboard({ loading = false }: { loading?: boolean }) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               title="Participants"
-              value={participants.data}
+              value={isEmpty ? "--" : participants.data}
               isPending={participants.isPending}
               isError={participants.isError}
-              description="Total active participants"
+              description={
+                isEmpty ? "No participants yet" : "Total active participants"
+              }
               icon={UserMultiple}
               iconClassName="bg-surface-brand text-text-info"
             />
             <MetricCard
               title="Active Tracks"
-              value={tracks.length}
+              value={noTracks ? "--" : tracks.length}
               isPending={activeTracks.isPending}
               isError={activeTracks.isError}
-              description={"Active learning tracks"}
+              description={
+                noTracks ? "No added tracks" : "Active learning tracks"
+              }
               icon={ListView}
               iconClassName="bg-surface-brand text-text-success"
             />
             {/* PENDING-BACKEND: no engagement data yet. */}
             <MetricCard
               title="Engagement"
-              value={`${dashboardMock.engagement}%`}
-              description="This week"
+              value={isEmpty ? "--" : `${dashboardMock.engagement}%`}
+              description={isEmpty ? "No engagement yet" : "This week"}
               icon={Magnet}
               iconClassName="bg-[#fdeafc] text-[#960b93]"
             />
             {/* PENDING-BACKEND: no at-risk data yet. */}
             <MetricCard
               title="At Risk"
-              value={dashboardMock.atRisk.total}
-              description="Students needing attention"
+              value={isEmpty ? "--" : dashboardMock.atRisk.total}
+              description={
+                isEmpty ? "No added student yet" : "Students needing attention"
+              }
               icon={AlertCircle}
               iconClassName="bg-surface-brand text-text-error"
               footer={
-                <span className="mt-1 flex items-center gap-1 font-work text-xs text-text-error">
-                  <ArrowUpRight01 className="size-4" />
-                  {dashboardMock.atRisk.newThisWeek} new this week
-                </span>
+                !isEmpty && (
+                  <span className="mt-1 flex items-center gap-1 font-work text-xs text-text-error">
+                    <ArrowUpRight01 className="size-4" />
+                    {dashboardMock.atRisk.newThisWeek} new this week
+                  </span>
+                )
               }
             />
           </div>
 
-          <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[657fr_463fr]">
-              <section className={cn(cardClass, "flex flex-col gap-6 p-6")}>
-                <CardHeader
-                  title="Program Health"
-                  subtitle="Overall program health across all tracks"
-                />
+          {isEmpty ? (
+            <DashboardEmptyState />
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[657fr_463fr]">
+                <section className={cn(cardClass, "flex flex-col gap-6 p-6")}>
+                  <CardHeader
+                    title="Program Health"
+                    subtitle="Overall program health across all tracks"
+                  />
 
-                <div className="flex flex-col items-center gap-12 md:flex-row md:items-start">
-                  {/* PENDING-BACKEND: no health score yet. */}
-                  <CircularProgress
-                    value={dashboardMock.programHealth}
-                    size={180}
-                    strokeWidth={14}
-                    trackClassName="text-surface-subtle"
-                    progressClassName="text-icon-brand"
-                  >
-                    <div className="flex flex-col items-center">
-                      <span className="text-[32px] leading-10 font-semibold text-text-primary">
-                        {dashboardMock.programHealth}%
-                      </span>
-                      <span className="font-work text-sm text-text-secondary">
-                        Overall health
-                      </span>
-                    </div>
-                  </CircularProgress>
+                  <div className="flex flex-col items-center gap-12 md:flex-row md:items-start">
+                    {/* PENDING-BACKEND: no health score yet. */}
+                    <CircularProgress
+                      value={dashboardMock.programHealth}
+                      size={180}
+                      strokeWidth={14}
+                      trackClassName="text-surface-subtle"
+                      progressClassName="text-icon-brand"
+                    >
+                      <div className="flex flex-col items-center">
+                        <span className="text-[32px] leading-10 font-semibold text-text-primary">
+                          {dashboardMock.programHealth}%
+                        </span>
+                        <span className="font-work text-sm text-text-secondary">
+                          Overall health
+                        </span>
+                      </div>
+                    </CircularProgress>
 
-                  <div className="w-full flex-1">
-                    <h3 className="text-lg leading-6 font-semibold text-text-primary">
-                      Track Health
-                    </h3>
-                    <div className="mt-4 flex flex-col gap-2">
-                      {activeTracks.isPending ? (
-                        Array.from({ length: 4 }).map((_, index) => (
-                          <Skeleton key={index} className="h-8 w-full" />
-                        ))
-                      ) : tracks.length === 0 ? (
-                        <p className="font-work text-sm text-text-muted">
-                          No active tracks to report on yet.
-                        </p>
-                      ) : (
-                        tracks.map((track, index) => {
-                          const key = trackKeyFor(track.name, index);
-                          const Icon = trackStyles[key].icon;
-                          // PENDING-BACKEND: no per-track health yet.
-                          const health = dashboardMock.trackHealth[key];
-                          return (
-                            <div key={track.id} className="flex h-8 items-center gap-3">
-                              <span
-                                className={cn(
-                                  "flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-brand",
-                                  healthIconTones[key],
-                                )}
-                              >
-                                <Icon className="size-5" />
-                              </span>
-                              <span className="w-28 shrink-0 truncate font-work text-sm font-medium text-text-primary sm:w-[133px]">
-                                {track.name}
-                              </span>
-                              <div className="h-2 flex-1 rounded-full bg-brand-100">
-                                <div
-                                  className={cn("h-2 rounded-full", trackTones[key].bar)}
-                                  style={{ width: `${health}%` }}
-                                />
+                    <div className="w-full flex-1">
+                      <h3 className="text-lg leading-6 font-semibold text-text-primary">
+                        Track Health
+                      </h3>
+                      <div className="mt-4 flex flex-col gap-2">
+                        {activeTracks.isPending ? (
+                          Array.from({ length: 4 }).map((_, index) => (
+                            <Skeleton key={index} className="h-8 w-full" />
+                          ))
+                        ) : tracks.length === 0 ? (
+                          <p className="font-work text-sm text-text-muted">
+                            No active tracks to report on yet.
+                          </p>
+                        ) : (
+                          tracks.map((track, index) => {
+                            const key = trackKeyFor(track.name, index);
+                            const Icon = trackStyles[key].icon;
+                            // PENDING-BACKEND: no per-track health yet.
+                            const health = dashboardMock.trackHealth[key];
+                            return (
+                              <div key={track.id} className="flex h-8 items-center gap-3">
+                                <span
+                                  className={cn(
+                                    "flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-brand",
+                                    healthIconTones[key],
+                                  )}
+                                >
+                                  <Icon className="size-5" />
+                                </span>
+                                <span className="w-28 shrink-0 truncate font-work text-sm font-medium text-text-primary sm:w-[133px]">
+                                  {track.name}
+                                </span>
+                                <div className="h-2 flex-1 rounded-full bg-brand-100">
+                                  <div
+                                    className={cn("h-2 rounded-full", trackTones[key].bar)}
+                                    style={{ width: `${health}%` }}
+                                  />
+                                </div>
+                                <span className="w-[30px] shrink-0 text-right font-work text-sm font-medium text-text-primary">
+                                  {health}%
+                                </span>
                               </div>
-                              <span className="w-[30px] shrink-0 text-right font-work text-sm font-medium text-text-primary">
-                                {health}%
-                              </span>
-                            </div>
-                          );
-                        })
-                      )}
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="mt-auto flex justify-end">
-                  <Button onClick={() => {router.push("/admin/reports")}} variant="tertiary" size="sm">
-                    View detailed progress
-                    <ArrowRight02 className="size-4" />
-                  </Button>
-                </div>
-              </section>
+                  <div className="mt-auto flex justify-end">
+                    <Button onClick={() => {router.push("/admin/reports")}} variant="tertiary" size="sm">
+                      View detailed progress
+                      <ArrowRight02 className="size-4" />
+                    </Button>
+                  </div>
+                </section>
 
-              <section className={cn(cardClass, "flex flex-col gap-6 p-6 xl:min-h-[390px]")}>
-                <div className="flex items-center gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-brand text-text-error">
-                    <AlertCircle className="size-5" />
-                  </span>
+                <section className={cn(cardClass, "flex flex-col gap-6 p-6 xl:min-h-[390px]")}>
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-brand text-text-error">
+                      <AlertCircle className="size-5" />
+                    </span>
+                    <CardHeader
+                      title="Attention Required"
+                      subtitle="Items that may need your attention"
+                    />
+                  </div>
+
+                  <ul className="flex flex-col [&>li:last-child>a]:border-b-0">
+                    {/* PENDING-BACKEND: no at-risk data yet. */}
+                    <AttentionRow
+                      href="/admin/students"
+                      icon={UserMultiple}
+                      iconClassName="text-text-error"
+                      title="Student at risk"
+                      subtitle={`${dashboardMock.atRisk.newThisWeek} new this week`}
+                    />
+                    {/* PENDING-BACKEND: the control tower only has all-time
+                      check-in totals, not who has checked in this week. */}
+                    <AttentionRow
+                      href="/admin/students"
+                      icon={Calendar03}
+                      iconClassName="text-text-warning"
+                      title="This week's check ins"
+                      subtitle={checkInDue()}
+                    />
+                    {/* PENDING-BACKEND: admins can't list submissions awaiting grading. */}
+                    <AttentionRow
+                      href="/admin/curriculum"
+                      icon={File02}
+                      iconClassName="text-text-info"
+                      title={`${dashboardMock.assignmentsAwaitingGrading} assignments awaiting grading`}
+                      subtitle="Across all tracks"
+                    />
+                  </ul>
+
+                  <div className="mt-auto flex justify-end">
+                    <Button onClick={() => {router.push("/admin/reports")}} variant="tertiary" size="sm">
+                      View all
+                      <ArrowRight02 className="size-4" />
+                    </Button>
+                  </div>
+                </section>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[621fr_499fr]">
+                {/* PENDING-BACKEND: no activity feed yet. */}
+                <section className={cn(cardClass, "flex flex-col gap-3 p-6")}>
                   <CardHeader
-                    title="Attention Required"
-                    subtitle="Items that may need your attention"
+                    title="Recent Activity"
+                    subtitle="Whats happening across your program"
+                    action={<Button onClick={() => {router.push("/admin/activity-log")}} variant="tertiary" size="sm">
+                      View all
+                      <ArrowRight02 className="size-4" />
+                    </Button>}
                   />
-                </div>
-
-                <ul className="flex flex-col [&>li:last-child>a]:border-b-0">
-                  {/* PENDING-BACKEND: no at-risk data yet. */}
-                  <AttentionRow
-                    href="/admin/students"
-                    icon={UserMultiple}
-                    iconClassName="text-text-error"
-                    title="Student at risk"
-                    subtitle={`${dashboardMock.atRisk.newThisWeek} new this week`}
+                  <ActivityTimeline
+                    groups={[
+                      {
+                        items: dashboardMock.recentActivity.map((item) => ({
+                          time: item.time,
+                          title: item.message,
+                          detail: item.track.name,
+                        })),
+                      },
+                    ]}
                   />
-                  {/* PENDING-BACKEND: the control tower only has all-time
-                    check-in totals, not who has checked in this week. */}
-                  <AttentionRow
-                    href="/admin/students"
-                    icon={Calendar03}
-                    iconClassName="text-text-warning"
-                    title="This week's check ins"
-                    subtitle={checkInDue()}
+                </section>
+
+                {/* PENDING-BACKEND: no events or calendar yet. */}
+                <section className={cn(cardClass, "flex flex-col gap-3 p-6")}>
+                  <CardHeader
+                    title="Upcoming Activites"
+                    subtitle="What's coming up next"
+                    action={<Button onClick={() => {router.push("/admin/calendar")}} variant="tertiary" size="sm">
+                      View Calendar
+                      <ArrowRight02 className="size-4" />
+                    </Button>}
                   />
-                  {/* PENDING-BACKEND: admins can't list submissions awaiting grading. */}
-                  <AttentionRow
-                    href="/admin/curriculum"
-                    icon={File02}
-                    iconClassName="text-text-info"
-                    title={`${dashboardMock.assignmentsAwaitingGrading} assignments awaiting grading`}
-                    subtitle="Across all tracks"
-                  />
-                </ul>
-
-                <div className="mt-auto flex justify-end">
-                  <Button onClick={() => {router.push("/admin/reports")}} variant="tertiary" size="sm">
-                    View all
-                    <ArrowRight02 className="size-4" />
-                  </Button>
-                </div>
-              </section>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[621fr_499fr]">
-              {/* PENDING-BACKEND: no activity feed yet. */}
-              <section className={cn(cardClass, "flex flex-col gap-3 p-6")}>
-                <CardHeader
-                  title="Recent Activity"
-                  subtitle="Whats happening across your program"
-                  action={<Button onClick={() => {router.push("/admin/activity-log")}} variant="tertiary" size="sm">
-                    View all
-                    <ArrowRight02 className="size-4" />
-                  </Button>}
-                />
-                <ActivityTimeline
-                  groups={[
-                    {
-                      items: dashboardMock.recentActivity.map((item) => ({
-                        time: item.time,
-                        title: item.message,
-                        detail: item.track.name,
-                      })),
-                    },
-                  ]}
-                />
-              </section>
-
-              {/* PENDING-BACKEND: no events or calendar yet. */}
-              <section className={cn(cardClass, "flex flex-col gap-3 p-6")}>
-                <CardHeader
-                  title="Upcoming Activites"
-                  subtitle="What's coming up next"
-                  action={<Button onClick={() => {router.push("/admin/calendar")}} variant="tertiary" size="sm">
-                    View Calendar
-                    <ArrowRight02 className="size-4" />
-                  </Button>}
-                />
-                <ul className="flex flex-col gap-2">
-                  {dashboardMock.upcoming.map((item, index) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 border-b border-border-default p-2 last:border-b-0"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span
-                          className={cn(
-                            "flex h-12 w-[51px] shrink-0 flex-col items-center justify-center rounded-lg",
-                            dateTones[index % dateTones.length],
-                          )}
-                        >
-                          <span className="font-work text-sm font-medium">{item.month}</span>
-                          <span className="text-lg leading-6 font-semibold">{item.day}</span>
-                        </span>
-                        <div className="flex min-w-0 flex-col gap-1">
-                          <p className="truncate font-work text-sm text-text-primary">
-                            {item.title}
-                          </p>
-                          <p className="font-work text-[13px] leading-[18px] text-text-secondary">
-                            {item.scope}
-                          </p>
+                  <ul className="flex flex-col gap-2">
+                    {dashboardMock.upcoming.map((item, index) => (
+                      <li
+                        key={item.id}
+                        className="flex items-center justify-between gap-3 border-b border-border-default p-2 last:border-b-0"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span
+                            className={cn(
+                              "flex h-12 w-[51px] shrink-0 flex-col items-center justify-center rounded-lg",
+                              dateTones[index % dateTones.length],
+                            )}
+                          >
+                            <span className="font-work text-sm font-medium">{item.month}</span>
+                            <span className="text-lg leading-6 font-semibold">{item.day}</span>
+                          </span>
+                          <div className="flex min-w-0 flex-col gap-1">
+                            <p className="truncate font-work text-sm text-text-primary">
+                              {item.title}
+                            </p>
+                            <p className="font-work text-[13px] leading-[18px] text-text-secondary">
+                              {item.scope}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <span className="shrink-0 font-work text-[13px] leading-[18px] text-text-muted">
-                        {item.when}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+                        <span className="shrink-0 font-work text-[13px] leading-[18px] text-text-muted">
+                          {item.when}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </>

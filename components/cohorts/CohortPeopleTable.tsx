@@ -4,6 +4,10 @@ import * as React from "react";
 
 import { Filter, MoreHorizontal, Search01 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import {
+  PeopleSelectionBar,
+  ResendInvitesAction,
+} from "@/components/PeopleSelectionBar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pagination } from "@/components/ui/pagination";
@@ -16,6 +20,8 @@ import {
   type PeopleFilterValues,
 } from "@/components/cohorts/PeopleFilterDialog";
 import type { Person } from "@/app/admin/cohorts/cohort-data";
+import type { AdminUser } from "@/lib/admin";
+import { useRowSelection } from "@/lib/use-row-selection";
 import { cn } from "@/lib/utils";
 
 export type PeopleColumn<T> = {
@@ -27,13 +33,27 @@ export type PeopleColumn<T> = {
 
 type PeopleTableColumns<T> = {
   title: string;
+  /** What the rows are, for the selection bar. */
+  noun: { singular: string; plural: string };
   personHeader: string;
   columns: PeopleColumn<T>[];
   actionHeader?: string;
   filters?: PeopleFilter<T>[];
   /** The menu in each row's last cell. */
   rowActions?: (row: T) => React.ReactNode;
+  /** The account behind a row, which lets ticked rows be re-invited. */
+  rowUser?: (row: T) => AdminUser | undefined;
 };
+
+/** The words in a cell, for the CSV export; pills and other markup are dropped. */
+function textOf(node: React.ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  if (React.isValidElement<{ children?: React.ReactNode }>(node))
+    return textOf(node.props.children);
+  return "";
+}
 
 /**
  * The table the Students, Instructors and Mentors tabs share. Whoever renders it
@@ -42,11 +62,13 @@ type PeopleTableColumns<T> = {
  */
 export function PeopleTableView<T extends Person & { id: string }>({
   title,
+  noun,
   personHeader,
   columns,
   actionHeader,
   filters = [],
   rowActions,
+  rowUser,
   rows,
   loading = false,
   error,
@@ -81,19 +103,8 @@ export function PeopleTableView<T extends Person & { id: string }>({
   paginationDisabled?: boolean;
 }) {
   const [filterOpen, setFilterOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<Set<string>>(new Set());
-
-  const allSelected =
-    rows.length > 0 && rows.every((row) => selected.has(row.id));
-
-  function toggle(id: string, checked: boolean) {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
+  const selection = useRowSelection((row: T) => row.id);
+  const headerCheckbox = selection.headerState(rows);
 
   return (
     <section className="relative mt-6">
@@ -129,15 +140,13 @@ export function PeopleTableView<T extends Person & { id: string }>({
           whole page on mobile. */}
       <div className="relative overflow-x-auto">
         <table className="w-full min-w-[960px] table-fixed text-left">
-          <thead className="bg-neutral-100 text-sm font-medium text-text-primary uppercase">
+          <thead className="bg-neutral-100 text-sm font-medium text-text-primary">
             <tr className="h-11">
               <th className="w-[69px] border-r border-neutral-200 pl-3.5">
                 <Checkbox
                   aria-label="Select all"
-                  checked={allSelected}
-                  onCheckedChange={(checked) =>
-                    rows.forEach((row) => toggle(row.id, checked))
-                  }
+                  {...headerCheckbox}
+                  onCheckedChange={() => selection.toggleAll(rows)}
                   className="size-4"
                 />
               </th>
@@ -168,8 +177,8 @@ export function PeopleTableView<T extends Person & { id: string }>({
                 <td className="pl-3.5">
                   <Checkbox
                     aria-label={`Select ${row.name}`}
-                    checked={selected.has(row.id)}
-                    onCheckedChange={(checked) => toggle(row.id, checked)}
+                    checked={selection.isSelected(row)}
+                    onCheckedChange={(checked) => selection.toggle(row, checked)}
                     className="size-4"
                   />
                 </td>
@@ -231,6 +240,30 @@ export function PeopleTableView<T extends Person & { id: string }>({
         value={filterValues}
         singleSelect={singleSelectFilters}
         onApply={onFilterValuesChange}
+      />
+
+      <PeopleSelectionBar
+        items={selection.items}
+        noun={noun}
+        onClear={selection.clear}
+        exportFileName={noun.plural}
+        exportColumns={[
+          { header: "Name", value: (row) => row.name },
+          { header: "Email", value: (row) => row.email },
+          ...columns.map((column) => ({
+            header: column.header,
+            value: (row: T) => textOf(column.cell(row)),
+          })),
+        ]}
+        actions={
+          rowUser &&
+          ((notify) => (
+            <ResendInvitesAction
+              users={selection.items.flatMap((row) => rowUser(row) ?? [])}
+              onResult={notify}
+            />
+          ))
+        }
       />
     </section>
   );

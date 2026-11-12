@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "vitest related --run"
+    ]
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -50,6 +56,7 @@
     "eslint-config-next": "16.3.5",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "^17.6.0",
     "prettier": "^3.9.6",
     "tailwindcss": "^4",
     "typescript": "^5",

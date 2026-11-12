@@ -175,7 +175,7 @@ export function PeopleTableSkeleton({
       </div>
       <div className="relative overflow-x-auto">
         <table className="w-full min-w-[960px] table-fixed text-left">
-          <thead className="bg-neutral-100 text-sm font-medium text-text-primary uppercase">
+          <thead className="bg-neutral-100 text-sm font-medium text-text-primary">
             <tr className="h-11">
               <th className="w-[69px] border-r border-neutral-200 pl-3.5" />
               <th className="w-[319px] border-r border-neutral-200 px-3 font-medium">

@@ -1148,7 +1148,7 @@ function BulkReviewStep({
 
       <div className="mt-6 max-h-80 overflow-auto">
         <table className="w-full min-w-[480px] text-left text-sm">
-          <thead className="sticky top-0 bg-neutral-100 text-xs tracking-wider text-neutral-400 uppercase">
+          <thead className="sticky top-0 bg-neutral-100 text-xs text-neutral-400">
             <tr>
               <th className="w-10 rounded-l-lg px-4 py-3">
                 <Checkbox

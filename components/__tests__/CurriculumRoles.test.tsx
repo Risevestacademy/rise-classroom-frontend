@@ -10,7 +10,7 @@ import type {
   TopicRecord,
 } from "@/features/curriculum/types";
 import { makeTrack } from "@/test/fixtures";
-import { envelope, mockApi, renderWithClient } from "@/test/utils";
+import { curriculumTreeRoutes, envelope, mockApi, renderWithClient } from "@/test/utils";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -71,17 +71,13 @@ const curriculum: CurriculumRecord = {
   totalLessons: 0,
   totalAssignments: 0,
   cohort: { id: "cohort-1", name: "Cohort 4" },
-  assignedInstructors: [],
 };
 
 /* The module list behind the notes: one module with nothing in it yet. */
 function moduleRoutes(role: CurriculumRole) {
-  return {
-    [`GET /${role}/curriculums/c1/topics`]: envelope([topic]),
-    [`GET /${role}/topics/topic-1/lessons`]: envelope([]),
-    [`GET /${role}/topics/topic-1/resources`]: envelope([]),
-    [`GET /${role}/topics/topic-1/assignments`]: envelope([]),
-  };
+  return curriculumTreeRoutes(role, "c1", [
+    { ...topic, lessons: [], resources: [], assignments: [] },
+  ]);
 }
 
 /* A curriculum card needs its track and student count, which each role reads differently. */
@@ -205,7 +201,6 @@ describe("curriculum detail permissions", () => {
     mockApi({
       ...curriculumRoutes[role],
       ...moduleRoutes(role),
-      [`GET /${role}/topics/topic-1`]: envelope(topic),
     });
     renderAs(role, <ModuleDetailScreen id="c1" moduleId="topic-1" />);
 

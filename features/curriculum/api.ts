@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type QueryClient } from "@tanstack/react-query";
 
 import { api, type Envelope, type Paginated } from "@/lib/api";
 import type { AdminUser, Track } from "@/lib/admin";
@@ -15,6 +15,7 @@ import {
   toIsoDate,
   toModule,
   toNote,
+  toApiInstructions,
   toResourceFile,
   toResources,
   toSubmission,
@@ -32,6 +33,7 @@ import {
   type CurriculumModule,
   type CurriculumNote,
   type CurriculumRecord,
+  type CurriculumTreeRecord,
   type CurriculumRole,
   type LessonRecord,
   type LessonTree,
@@ -40,7 +42,6 @@ import {
   type ModuleAssignment,
   type ModuleLesson,
   type NoteRecord,
-  type RecordingRecord,
   type ResourceFile,
   type ResourceKind,
   type ResourceRecord,
@@ -49,6 +50,7 @@ import {
   type SessionExtras,
   type TopicRecord,
   type TopicTree,
+  type TopicTreeRecord,
   type UpdateCurriculumInput,
 } from "@/features/curriculum/types";
 
@@ -101,13 +103,6 @@ const apiResourceTypes: Record<ResourceKind, string> = {
   Link: "LINK",
 };
 
-/* Runs the tasks a few at a time, so a large class doesn't flood the API proxy with requests. */
-async function runInBatches(tasks: (() => Promise<unknown>)[], size = 6) {
-  for (let start = 0; start < tasks.length; start += size) {
-    await Promise.all(tasks.slice(start, start + size).map((task) => task()));
-  }
-}
-
 function assertHttpsLink(url: string, label: string) {
   if (!/^https:\/\/\S+$/.test(url)) {
     throw new Error(`${label} must be a full link starting with https://`);
@@ -148,6 +143,21 @@ async function countStudents(role: CurriculumRole, record: CurriculumRecord) {
   return students.total;
 }
 
+/** The instructor shown on a curriculum: the first one on its track and cohort, or yourself as an instructor. */
+async function findInstructor(role: CurriculumRole, record: CurriculumRecord) {
+  if (role === "instructor") {
+    const session = await getSession().catch(() => null);
+    return session?.user;
+  }
+  const instructors = await getData<Paginated<AdminUser>>("/admin/users", {
+    role: "INSTRUCTOR",
+    trackId: record.trackId,
+    ...(record.cohortId && { cohortId: record.cohortId }),
+    limit: 1,
+  });
+  return instructors.items[0];
+}
+
 // ---- The API for one role --------------------------------------------------------
 
 function createCurriculumApi(role: CurriculumRole) {
@@ -160,25 +170,23 @@ function createCurriculumApi(role: CurriculumRole) {
 
   // ---- Loading -----------------------------------------------------------------
 
-  async function loadLesson(lesson: LessonRecord): Promise<LessonTree> {
-    const [resources, assignments, recordings] = await Promise.all([
-      getData<ResourceRecord[]>(`${base}/lessons/${lesson.id}/resources`),
-      getData<AssignmentRecord[]>(`${base}/lessons/${lesson.id}/assignments`),
-      getData<RecordingRecord[]>(`${base}/lessons/${lesson.id}/recordings`),
-    ]);
-    return { ...lesson, resources, assignments, recordings };
-  }
-
-  async function loadTopic(topic: TopicRecord): Promise<TopicTree> {
-    const [lessons, resources, assignments] = await Promise.all([
-      getData<LessonRecord[]>(`${base}/topics/${topic.id}/lessons`),
-      getData<ResourceRecord[]>(`${base}/topics/${topic.id}/resources`),
-      getData<AssignmentRecord[]>(`${base}/topics/${topic.id}/assignments`),
-    ]);
+  /**
+   * Shapes a topic from the `/tree` endpoints. A lesson's items come from the
+   * lesson, or from the topic's lists when the lesson doesn't carry them.
+   */
+  function toTopicTree(topic: TopicTreeRecord): TopicTree {
+    const { lessons = [], resources = [], assignments = [], ...record } = topic;
     return {
-      ...topic,
-      lessons: await Promise.all(byPosition(lessons).map(loadLesson)),
-      // Lesson items are read per lesson, so keep only the module-wide ones.
+      ...record,
+      lessons: byPosition(lessons).map((lesson) => ({
+        ...lesson,
+        resources:
+          lesson.resources ?? resources.filter((r) => r.lessonId === lesson.id),
+        assignments:
+          lesson.assignments ??
+          assignments.filter((a) => a.lessonId === lesson.id),
+        recordings: lesson.recordings ?? [],
+      })),
       resources: resources.filter((r) => !r.lessonId),
       assignments: assignments.filter((a) => !a.lessonId),
     };
@@ -192,22 +200,27 @@ function createCurriculumApi(role: CurriculumRole) {
     );
   }
 
-  /** One request per topic and three per lesson — the API has no nested read. */
+  /** Every module, lesson, resource, assignment and recording in one request. */
   async function loadTree(curriculumId: string) {
-    return Promise.all((await listTopics(curriculumId)).map(loadTopic));
+    const tree = await getData<CurriculumTreeRecord>(
+      `${base}/curriculums/${curriculumId}/tree`,
+    );
+    return byPosition(tree.topics).map(toTopicTree);
   }
 
   /** Fetches the track (unless known) and student count a curriculum card shows. */
   async function loadCurriculum(record: CurriculumRecord, knownTrack?: Track) {
-    const [track, studentCount] = await Promise.all([
+    const [track, studentCount, instructor] = await Promise.all([
       knownTrack ?? getTrack(role, record.trackId),
       countStudents(role, record),
+      findInstructor(role, record).catch(() => undefined),
     ]);
     return toCurriculum(
       record,
       track,
       studentCount,
       local.history.get(record.id) ?? [],
+      instructor,
     );
   }
 
@@ -337,11 +350,42 @@ function createCurriculumApi(role: CurriculumRole) {
   }
 
   async function getTopicTree(id: string) {
-    return loadTopic(await getData<TopicRecord>(`${base}/topics/${id}`));
+    return toTopicTree(await getData<TopicTreeRecord>(`${base}/topics/${id}/tree`));
   }
 
   async function getModule(id: string) {
     return toModule(await getTopicTree(id), local);
+  }
+
+  /** Puts one module into the cached list, replacing it or adding it at the end. */
+  function cacheModule(
+    queryClient: QueryClient,
+    curriculumId: string,
+    saved: CurriculumModule,
+  ) {
+    queryClient.setQueryData(
+      keys.modules(curriculumId),
+      (modules: CurriculumModule[] | undefined) =>
+        modules &&
+        (modules.some((m) => m.id === saved.id)
+          ? modules.map((m) => (m.id === saved.id ? saved : m))
+          : [...modules, saved]),
+    );
+  }
+
+  /** Reloads only the module that changed, instead of every module in the curriculum. */
+  async function refreshModule(
+    queryClient: QueryClient,
+    curriculumId: string,
+    moduleId: string,
+  ) {
+    try {
+      cacheModule(queryClient, curriculumId, await getModule(moduleId));
+    } catch {
+      await queryClient.invalidateQueries({
+        queryKey: keys.modules(curriculumId),
+      });
+    }
   }
 
   /** Throws before anything is saved if the content can't be attached anywhere. */
@@ -481,6 +525,8 @@ function createCurriculumApi(role: CurriculumRole) {
             title: draft.title,
             ...optionalText("description", draft.description),
             position,
+            // Lessons have no status of their own in the design; the module's status decides.
+            publishStatus: "PUBLISHED",
           },
         );
         lesson = { ...created, resources: [], assignments: [], recordings: [] };
@@ -607,16 +653,18 @@ function createCurriculumApi(role: CurriculumRole) {
     lessonId: string | undefined,
     assignment: ModuleAssignment,
   ) {
+    const attachments = attachmentLinks(assignment.resources);
     const record = await postData<AssignmentRecord>(
       `${base}/topics/${topicId}/assignments`,
       {
         title: assignment.title,
         ...optionalText("description", assignment.description),
-        ...optionalText("instructions", assignment.instructions),
+        instructions: toApiInstructions(assignment.instructions),
         ...(assignment.dueAt && { dueAt: toIsoDate(assignment.dueAt) }),
         submissionType: assignment.submissionType,
+        maxScore: assignment.maxPoints,
         publishStatus: assignment.status,
-        attachments: attachmentLinks(assignment.resources),
+        ...(attachments.length > 0 && { attachments }),
         ...(lessonId && { lessonId }),
       },
     );
@@ -628,9 +676,7 @@ function createCurriculumApi(role: CurriculumRole) {
     moduleId: string,
     input: CreateAssignmentInput,
   ) {
-    const lessons = byPosition(
-      await getData<LessonRecord[]>(`${base}/topics/${moduleId}/lessons`),
-    );
+    const { lessons } = await getTopicTree(moduleId);
     // "Due relative to lesson" picks the lesson; otherwise it's on the whole module.
     const lesson = input.afterLesson
       ? lessons[input.afterLesson - 1]
@@ -655,6 +701,7 @@ function createCurriculumApi(role: CurriculumRole) {
       instructions,
       submissionType,
       dueAt,
+      maxPoints,
       status,
       resources,
       lessonId,
@@ -662,8 +709,11 @@ function createCurriculumApi(role: CurriculumRole) {
     await api.patch(`${base}/assignments/${assignmentId}`, {
       title,
       description,
-      instructions,
+      ...(instructions !== undefined && {
+        instructions: toApiInstructions(instructions),
+      }),
       submissionType,
+      maxScore: maxPoints,
       ...(dueAt !== undefined && { dueAt: toIsoDate(dueAt) }),
       ...(lessonId !== undefined && { lessonId }),
       publishStatus: status,
@@ -773,36 +823,17 @@ function createCurriculumApi(role: CurriculumRole) {
   // ---- Student access ----------------------------------------------------------
 
   /*
-   * Unlocks or locks a module for every student on its track. The API only has this for instructors.
-   * A student can open a lesson only once the module and that lesson are both unlocked for them,
-   * and lessons can only be unlocked one student at a time. The module reply lists every student's
-   * enrollment, so unlocking goes on to open each lesson for each of them. Locking the module alone
-   * is enough to close its lessons.
+   * Unlocks or locks a module for its cohort. Unlocking also opens the module's published
+   * lessons. The API only has this for instructors.
    */
   async function setModuleAccess(
     moduleId: string,
     unlocked: boolean,
   ): Promise<ModuleAccess> {
     const record = await postData<ModuleAccessRecord>(
-      `${base}/topics/${moduleId}/unlock-all`,
-      { unlocked },
+      `${base}/topics/${moduleId}/${unlocked ? "unlock" : "lock"}`,
+      {},
     );
-    if (unlocked) {
-      const lessons = await getData<LessonRecord[]>(
-        `${base}/topics/${moduleId}/lessons`,
-      );
-      await runInBatches(
-        record.statuses.flatMap((status) =>
-          lessons.map(
-            (lesson) => () =>
-              api.patch(
-                `${base}/enrollments/${status.enrollmentId}/lessons/${lesson.id}/unlock`,
-                { unlocked: true },
-              ),
-          ),
-        ),
-      );
-    }
     return {
       unlocked,
       studentCount: record.enrollmentCount,
@@ -833,21 +864,22 @@ function createCurriculumApi(role: CurriculumRole) {
     // it refreshes every tab.
     modules: (curriculumId: string) =>
       ["curriculum", role, "modules", curriculumId] as const,
-    module: (id: string) => ["curriculum", role, "module", id] as const,
     notes: (curriculumId: string) =>
       ["curriculum", role, "notes", curriculumId] as const,
     submissions: (assignmentId: string) =>
       ["curriculum", role, "submissions", assignmentId] as const,
     submission: (submissionId: string) =>
       ["curriculum", role, "submission", submissionId] as const,
-    /* Filled from the last unlock or lock, since the API can't be asked for it. */
+    /* Filled from the last unlock or lock; only that reply has the student counts. */
     moduleAccess: (moduleId: string) =>
       ["curriculum", role, "module-access", moduleId] as const,
   };
 
+  // Saves update this cache themselves, so it can stay fresh for longer.
   const modulesQuery = (curriculumId: string) => ({
     queryKey: keys.modules(curriculumId),
     queryFn: () => listModules(curriculumId),
+    staleTime: 5 * 60_000,
   });
 
   const queries = {
@@ -880,10 +912,12 @@ function createCurriculumApi(role: CurriculumRole) {
         queryFn: () => getSubmission(submissionId),
       }),
 
-    module: (id: string) =>
+    /** Read from the curriculum's module list; `null` when it has no such module. */
+    module: (curriculumId: string, id: string) =>
       queryOptions({
-        queryKey: keys.module(id),
-        queryFn: () => getModule(id),
+        ...modulesQuery(curriculumId),
+        select: (modules: CurriculumModule[]) =>
+          modules.find((m) => m.id === id) ?? null,
       }),
 
     assignments: (curriculumId: string) =>
@@ -928,6 +962,8 @@ function createCurriculumApi(role: CurriculumRole) {
     updateModule,
     deleteModule,
     reorderModules,
+    cacheModule,
+    refreshModule,
     createAssignment,
     updateAssignment,
     deleteAssignment,

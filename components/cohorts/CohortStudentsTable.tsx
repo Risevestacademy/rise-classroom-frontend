@@ -63,7 +63,9 @@ export function CohortStudentsTable({
         />
       )}
       title={title}
+      noun={{ singular: "student", plural: "students" }}
       personHeader="Student"
+      rowUser={(row) => row.user}
       columns={columns}
       filters={filters}
       rows={(studentsQuery.data?.items ?? []).map((user) =>
