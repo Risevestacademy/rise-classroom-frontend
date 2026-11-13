@@ -1,22 +1,23 @@
 import Image from "next/image";
 
-import { HandDrawn } from "@/components/landing/HandDrawn";
+import { GridRow } from "@/components/landing/GridRow";
+import { cn } from "@/lib/utils";
 
 const VALUE_PROPS = [
   {
-    body: "Bring your learning structure into one place. Organize cohorts, manage tracks, and keep lessons and learning resources connected to the right students.",
+    body: "Bring learning structure together. Organize cohorts, manage tracks, and connect lessons and resources to students.",
     icon: "/landing/icon-structured.png",
     iconAlt: "Stacked layers icon",
     title: ["Structured", "Learning."],
   },
   {
-    body: "Give instructors and students a shared space to learn, teach, access materials, and stay connected throughout the learning experience.",
+    body: "Give instructors and students one shared space to teach, learn, access materials, and stay connected.",
     icon: "/landing/icon-connected.png",
     iconAlt: "Three connected people icon",
-    title: ["Keep everyone", "connected."],
+    title: ["Keep Everyone", "Connected."],
   },
   {
-    body: "Make learning progress easier to understand. Follow assignments, goals, feedback, and milestones so learners and educators know what needs attention next.",
+    body: "Make learning progress clear. Track assignments, goals, and feedback so everyone knows what comes next.",
     icon: "/landing/icon-progress.png",
     iconAlt: "Progress pie chart icon",
     title: ["Make progress", "visible."],
@@ -25,62 +26,82 @@ const VALUE_PROPS = [
 
 export function ValuePropSection() {
   return (
-    <section
-      data-bg="#20286F"
-      data-value-section
-      className="flex flex-col items-center bg-brand-800 px-4 pt-[72px] pb-[64px] lg:pt-[100px] lg:pb-[84px]"
-    >
-      <h2
-        data-reveal="lines"
-        className="w-full max-w-[740px] text-center text-[32px] leading-[40px] font-bold text-white lg:text-[48px] lg:leading-[56px]"
-      >
-        Everything works better when it{" "}
-        {/* Keeps the full stop from wrapping away from the circled word. */}
-        <span className="whitespace-nowrap">
-          <em className="italic">
-            works{" "}
-            <HandDrawn strokeClassName="text-brand-300">together</HandDrawn>
-          </em>
-          .
-        </span>
-      </h2>
-      <p
-        data-reveal="fill"
-        className="mt-[8px] w-full max-w-[501px] text-center text-[16px] leading-6 font-medium text-text-disabled"
-      >
-        From organizing classes to delivering lessons and tracking progress,
-        bring the moving parts of learning into one connected space.
-      </p>
+    <section data-bg="#FFFFFF">
+      <GridRow innerClassName="py-12 lg:px-[18px] lg:pt-[74px] lg:pb-[58px]">
+        <p
+          data-reveal="up"
+          className="max-w-[560px] text-[20px] leading-6 font-medium text-[#1E1E1E]"
+        >
+          <span className="text-[#8C8C8C]">Learning deserves better systems.</span>{" "}
+          Rise Classroom brings people, tools, and learning experiences together
+          to make education more connected, structured, and impactful.
+        </p>
+      </GridRow>
 
-      <ul
-        data-value-grid
-        className="relative mt-12 grid lg:mt-[80px] w-full max-w-[1080px] gap-3 md:grid-cols-3"
-      >
-        {VALUE_PROPS.map((item) => (
-          <li
-            key={item.icon}
-            data-value-card
-            className="group relative flex h-[400px] md:h-[472px] transition-[translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-2 motion-reduce:transition-none flex-col justify-between rounded-[28px] bg-neutral-100 px-6 py-8"
-          >
-            <p className="font-work text-[14px] leading-5 font-medium text-text-secondary">
-              {item.body}
-            </p>
-            <Image
-              src={item.icon}
-              alt={item.iconAlt}
-              data-value-icon
-              width={96}
-              height={96}
-              className="mx-auto transition-[rotate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:rotate-6 motion-reduce:transition-none"
-            />
-            <h3 className="text-[24px] leading-8 font-semibold text-text-primary">
-              {item.title[0]}
-              <br />
-              {item.title[1]}
-            </h3>
-          </li>
-        ))}
-      </ul>
+      <GridRow data-value-section>
+        <ul data-value-grid className="grid md:grid-cols-3">
+          {VALUE_PROPS.map((item, index) => (
+            <li
+              key={item.icon}
+              data-value-card
+              className="group relative isolate border-border-default py-8 not-first:border-t md:py-[25px] md:not-first:border-t-0"
+            >
+              {/* Grows out from the content to fill the cell, meeting the grid lines. */}
+              <span
+                aria-hidden
+                className="absolute inset-0 -z-10 scale-[0.92] rounded-[12px] bg-brand-50 opacity-0 transition-[scale,opacity,border-radius] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-100 group-hover:rounded-none group-hover:opacity-100 motion-reduce:transition-none"
+              />
+              <div
+                className={cn(
+                  "md:px-[14px]",
+                  index > 0 && "md:border-l md:border-border-default md:px-[20px]",
+                )}
+              >
+                <div className="-mx-3 p-3 transition-[translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1.5 motion-reduce:transition-none md:mx-0">
+                <span
+                  data-value-icon
+                  className="flex size-[52px] items-center justify-center rounded-[8px] bg-brand-100 transition-[scale,rotate,background-color] duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:-rotate-6 group-hover:bg-brand-200 motion-reduce:transition-none"
+                >
+                  <Image
+                    src={item.icon}
+                    alt={item.iconAlt}
+                    width={28}
+                    height={28}
+                    className="mix-blend-multiply"
+                  />
+                </span>
+                <h3 className="mt-8 text-[20px] leading-[26px] font-semibold text-text-primary md:mt-[84px]">
+                  {item.title[0]}
+                  <br />
+                  {item.title[1]}
+                </h3>
+                <p className="mt-4 max-w-[210px] text-[14px] leading-5 text-text-secondary">
+                  {item.body}
+                </p>
+                <span
+                  aria-hidden
+                  className="mt-4 block h-0.5 w-0 bg-brand-400 transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-12 motion-reduce:transition-none"
+                />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </GridRow>
+
+      <GridRow innerClassName="py-14 text-center lg:pt-[92px] lg:pb-[70px]">
+        <p className="text-[13px] leading-4 font-medium text-[#1E1E1E] uppercase">
+          The Rise Classroom advantage
+        </p>
+        <h2
+          data-reveal="lines"
+          className="mx-auto mt-4 max-w-[640px] text-[28px] leading-[34px] font-semibold text-text-primary lg:text-[32px] lg:leading-[38px]"
+        >
+          More time creating meaningful <br className="hidden lg:block" />
+          experience.{" "}
+          <span className="text-[#8C8C8C]">Less time managing the process.</span>
+        </h2>
+      </GridRow>
     </section>
   );
 }

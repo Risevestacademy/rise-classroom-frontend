@@ -8,6 +8,8 @@ const NAV_LINKS = [
   { label: "Product", href: "/#product" },
   { label: "Solutions", href: "/#solutions" },
   { label: "Pricing", href: "/#pricing" },
+  // Same inbox as the footer and the pricing section's "Contact us".
+  { label: "Contact", href: "mailto:contact@riseclassroom.com" },
 ];
 
 /* intro={false} leaves out the hero intro hook, which keeps the nav hidden
@@ -16,28 +18,29 @@ export function LandingNav({ intro = true }: { intro?: boolean }) {
   return (
     <header
       data-landing-nav
-      className="group fixed inset-x-0 top-0 z-50 bg-white transition-[background-color,box-shadow] duration-500 data-[scrolled=true]:bg-white/80 data-[scrolled=true]:shadow-[0_1px_0_rgb(17_24_25/0.06)] data-[scrolled=true]:backdrop-blur-md"
+      className="group pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-4 lg:pt-8"
     >
       <nav
         data-intro={intro ? "nav" : undefined}
-        className="mx-auto flex h-[72px] w-full max-w-[1200px] items-center px-4 transition-[height] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] lg:h-[100px] lg:group-data-[scrolled=true]:h-[72px] xl:px-0"
+        className="pointer-events-auto mx-auto flex h-[64px] w-full font-tomato max-w-[800px] items-center justify-between rounded-full bg-white/80 py-2 pr-2 pl-4 backdrop-blur-md transition-shadow duration-500 group-data-[scrolled=true]:shadow-[0_8px_24px_rgb(16_22_79/0.12)] lg:px-4"
       >
         <Link href="/" aria-label="Rise Classroom home" className="shrink-0">
           <Image
             src="/logo-full-green.svg"
             alt="Rise Classroom"
-            width={137}
-            height={39}
+            width={105}
+            height={32}
             preload
+            className="h-8 w-[105px] object-contain"
           />
         </Link>
 
-        <ul className="ml-[294px] hidden items-center gap-[52px] lg:flex">
+        <ul className="hidden items-center lg:flex">
           {NAV_LINKS.map((link) => (
             <li key={link.label}>
               <Link
                 href={link.href}
-                className="text-[14px] leading-5 font-medium text-text-primary"
+                className="flex h-10 w-[80px] items-center justify-center rounded-lg text-[14px] leading-5 font-medium text-[#1E1E1E]"
               >
                 <RollText>{link.label}</RollText>
               </Link>
@@ -45,16 +48,16 @@ export function LandingNav({ intro = true }: { intro?: boolean }) {
           ))}
         </ul>
 
-        <div className="ml-auto flex items-center gap-4">
+        <div className="flex items-center gap-1">
           <Link
             href="/sign-in"
-            className="landing-btn flex h-10 items-center rounded-[14px] border border-neutral-200 bg-white px-4 text-[14px] leading-5 font-medium text-text-secondary [--btn-fill:var(--color-neutral-100)]"
+            className="landing-btn flex h-10 items-center rounded-2xl px-4 text-[14px] leading-5 font-medium text-text-brand [--btn-fill:var(--color-brand-50)]"
           >
             <RollText>Sign in</RollText>
           </Link>
           <Link
             href="/sign-up"
-            className="landing-btn flex h-10 items-center rounded-[14px] bg-brand-950 px-4 text-[14px] leading-5 font-medium text-white"
+            className="landing-btn flex h-10 items-center rounded-full border-2 border-brand-400 bg-brand-900 px-4 text-[14px] leading-5 font-medium text-white"
           >
             <RollText>Start for free</RollText>
           </Link>

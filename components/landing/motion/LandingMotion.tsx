@@ -17,7 +17,6 @@ import {
   revealGroups,
   scrollReveals,
   solutionCards,
-  solutionStack,
   testimonialsExpand,
   valueCards,
   valueDeal,
@@ -99,7 +98,6 @@ export function LandingMotion({ sections = true }: { sections?: boolean }) {
       scrollReveals();
       keywordMarquee();
       solutionCards();
-      solutionStack();
       footerReveal();
     });
 
