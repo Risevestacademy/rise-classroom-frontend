@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu } from "@base-ui/react/menu";
 import { useQuery } from "@tanstack/react-query";
-import { Lightbulb } from "lucide-react";
+import { Bell, Lightbulb } from "lucide-react";
 
 import {
   AlertCircle,
@@ -17,6 +17,7 @@ import {
 } from "@/assets/icons";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import { usePushMenuItem } from "@/components/PushNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SuccessToast } from "@/components/ui/toast";
 import type { FeedbackKind } from "@/lib/feedback";
@@ -56,6 +57,7 @@ const feedbackItems: {
 export function ProfileMenu({ basePath }: { basePath: string }) {
   const { data: session, isPending } = useQuery(sessionQuery());
   const signOut = useSignOut();
+  const pushItem = usePushMenuItem();
   /* The dialog lives outside the menu, which unmounts when it closes. */
   const [feedbackKind, setFeedbackKind] = useState<FeedbackKind | null>(null);
   const [showThanks, setShowThanks] = useState(false);
@@ -156,6 +158,16 @@ export function ProfileMenu({ basePath }: { basePath: string }) {
               <MenuLink href={`${basePath}/settings`} icon={Settings01}>
                 Settings
               </MenuLink>
+              {pushItem && (
+                <Menu.Item
+                  disabled={pushItem.disabled}
+                  onClick={pushItem.onClick}
+                  className={cn(itemClass, "data-[disabled]:opacity-50")}
+                >
+                  <Bell className="h-5 w-5 shrink-0" />
+                  {pushItem.label}
+                </Menu.Item>
+              )}
 
               <Menu.Separator className="my-2 h-px bg-neutral-200" />
 

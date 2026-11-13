@@ -2,10 +2,11 @@
 
 import { Menu } from "@base-ui/react/menu";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { Bell, ChevronsUpDown, LogOut } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import { usePushMenuItem } from "@/components/PushNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionQuery } from "@/lib/session-query";
 import { useSignOut } from "@/lib/use-sign-out";
@@ -40,6 +41,7 @@ export function UserMenu({
 }) {
   const { data: session, isPending } = useQuery(sessionQuery());
   const signOut = useSignOut();
+  const pushItem = usePushMenuItem();
   const user = session?.user;
 
   const details = (
@@ -125,6 +127,16 @@ export function UserMenu({
               <p className="truncate px-3 pt-2 pb-1.5 text-xs text-neutral-400">
                 {user.email}
               </p>
+            )}
+            {pushItem && (
+              <Menu.Item
+                disabled={pushItem.disabled}
+                onClick={pushItem.onClick}
+                className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-neutral-800 outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-neutral-100"
+              >
+                <Bell className="h-4 w-4" />
+                {pushItem.label}
+              </Menu.Item>
             )}
             <Menu.Item
               closeOnClick={false}
