@@ -16,14 +16,14 @@ function page(items: unknown[]) {
   return envelope({ items, page: 1, limit: 100, total: items.length, totalPages: 1 });
 }
 
-function lesson(id: string, title: string, unlocked: boolean) {
+/* A locked lesson comes with only its title, position and counts. */
+function lockedLesson(id: string, title: string) {
   return {
     id,
-    topicId: "t1",
     title,
     position: Number(id.slice(1)),
-    completed: false,
-    lock: { instructorUnlocked: unlocked, unlocked, completed: false },
+    publishStatus: "PUBLISHED",
+    counts: { assignments: 1, resources: 0 },
   };
 }
 
@@ -42,6 +42,7 @@ function assignment(id: string, title: string, overrides: Record<string, unknown
 /* One track with two lessons: lesson 1 unlocked with its assignments, lesson 2 still locked. */
 function routes({
   assignments = [] as unknown[],
+  topicAssignments = [] as unknown[],
   submissions = [] as unknown[],
 } = {}) {
   return {
@@ -60,23 +61,26 @@ function routes({
             curriculumId: "c1",
             title: "Visual design",
             position: 0,
-            completed: false,
             lock: { instructorUnlocked: true, unlocked: true, completed: false },
-            lessons: [lesson("l1", "Grids", true), lesson("l2", "Type", false)],
+            assignments: topicAssignments,
+            resources: [],
+            lessons: [
+              {
+                id: "l1",
+                topicId: "t1",
+                title: "Grids",
+                position: 1,
+                lock: { instructorUnlocked: true, unlocked: true, completed: false },
+                resources: [],
+                recordings: [],
+                assignments,
+              },
+              lockedLesson("l2", "Type"),
+            ],
           },
         ],
       },
     ]),
-    "GET /student/enrollments/e1/lessons/l1": envelope({
-      id: "l1",
-      topicId: "t1",
-      title: "Grids",
-      position: 1,
-      lock: { instructorUnlocked: true, unlocked: true, completed: false },
-      resources: [],
-      recordings: [],
-      assignments,
-    }),
   };
 }
 
@@ -110,11 +114,24 @@ describe("student assignments list", () => {
     expect(screen.getByText("1 assignment to do")).toBeInTheDocument();
   });
 
-  it("only loads unlocked lessons", async () => {
+  it("reads assignments from the content, without a request per lesson", async () => {
     const api = await renderPage(undefined, routes({ assignments: [assignment("a1", "Grid study")] }));
 
     await rowFor("Grid study");
+    expect(api.urls("GET /student/enrollments/e1/lessons/l1")).toEqual([]);
     expect(api.urls("GET /student/enrollments/e1/lessons/l2")).toEqual([]);
+  });
+
+  it("lists assignments on the whole module under the module's name", async () => {
+    await renderPage(
+      undefined,
+      routes({
+        topicAssignments: [assignment("a3", "Module project", { lessonId: null, topicId: "t1" })],
+      }),
+    );
+
+    const row = await rowFor("Module project");
+    expect(within(row).getByText("Visual design")).toBeInTheDocument();
   });
 
   it("shows a started assignment once, from its submission", async () => {
@@ -129,7 +146,6 @@ describe("student assignments list", () => {
             enrollmentId: "e1",
             submissionType: "LINK",
             status: "DRAFT",
-            isLate: false,
             updatedAt: "2026-10-01T10:00:00.000Z",
             assignment: { id: "a1", title: "Grid study", dueAt: future, submissionType: "LINK" },
           },

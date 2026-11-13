@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Check,
@@ -14,23 +14,24 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LessonVideo } from "@/components/lessons/LessonVideo";
 import { Notice } from "@/components/lessons/Notice";
 import { ResourceRow } from "@/components/lessons/ResourceRow";
 import { submissionBadges, type SubmissionStatus } from "@/features/curriculum/types";
 import { studentQueries } from "@/lib/student";
-import {
-  assignmentHref,
-  studentAssignmentQueries,
-} from "@/lib/student-assignments";
+import { assignmentHref } from "@/lib/student-assignments";
 import {
   LESSONS_BASE,
   countWatched,
   findLesson,
   flattenTopics,
+  isCompleted,
+  isUnlocked,
   lessonHref,
   lessonQueries,
+  setLessonCompleted,
   type CurriculumTopic,
   type LessonAssignment,
   type LessonDetail,
@@ -39,19 +40,20 @@ import {
 /* What the assignment button offers, depending on how far the student has got. */
 const assignmentActions: Record<SubmissionStatus | "NONE", string> = {
   NONE: "Start assignment",
+  ASSIGNED: "Start assignment",
   DRAFT: "Continue assignment",
+  MISSED: "Submit late",
+  ON_HOLD: "View assignment",
   CHANGES_REQUESTED: "Make changes",
   SUBMITTED: "View submission",
   UNDER_REVIEW: "View submission",
   GRADED: "View feedback",
+  REVIEWED: "View feedback",
 };
 
 function AssignmentCard({ assignment }: { assignment: LessonAssignment }) {
-  const submissionQuery = useQuery(
-    studentAssignmentQueries.submission(assignment.id),
-  );
-  const submission = submissionQuery.data;
-  const badge = submission ? submissionBadges[submission.status] : null;
+  const status = assignment.studentAssignment?.status;
+  const badge = status && status !== "ASSIGNED" ? submissionBadges[status] : null;
 
   return (
     <div className="rounded-2xl bg-neutral-100 p-4">
@@ -72,9 +74,7 @@ function AssignmentCard({ assignment }: { assignment: LessonAssignment }) {
         href={assignmentHref(assignment.id)}
         className="mt-4 flex h-10 w-full items-center justify-center rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-brand-primary-hover"
       >
-        {submissionQuery.isPending
-          ? "View assignment"
-          : assignmentActions[submission?.status ?? "NONE"]}
+        {assignmentActions[status ?? "NONE"]}
       </Link>
     </div>
   );
@@ -105,20 +105,20 @@ function WeekLessons({
           const isNow = item.id === currentLessonId;
           const status = isNow
             ? "Now playing"
-            : item.completed
+            : isCompleted(item)
               ? "Watched"
-              : item.lock.unlocked
+              : isUnlocked(item)
                 ? null
                 : "Locked";
           const row = (
             <>
               <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-neutral-500">
-                {item.lock.unlocked ? (
+                {isUnlocked(item) ? (
                   <FileText className="h-4 w-4" />
                 ) : (
                   <Lock className="h-4 w-4" />
                 )}
-                {item.completed && (
+                {isCompleted(item) && (
                   <span className="absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full bg-text-success text-white">
                     <Check className="h-3 w-3" />
                   </span>
@@ -141,7 +141,7 @@ function WeekLessons({
           );
           return (
             <li key={item.id}>
-              {item.lock.unlocked && !isNow ? (
+              {isUnlocked(item) && !isNow ? (
                 <Link
                   href={lessonHref(item.id)}
                   className={cn(className, "hover:bg-white")}
@@ -149,7 +149,7 @@ function WeekLessons({
                   {row}
                 </Link>
               ) : (
-                <div className={cn(className, !item.lock.unlocked && "opacity-60")}>
+                <div className={cn(className, !isUnlocked(item) && "opacity-60")}>
                   {row}
                 </div>
               )}
@@ -161,12 +161,64 @@ function WeekLessons({
   );
 }
 
+function CompleteButton({
+  enrollmentId,
+  topicId,
+  lessonId,
+  completed,
+}: {
+  enrollmentId: string;
+  topicId: string;
+  lessonId: string;
+  completed: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (next: boolean) =>
+      setLessonCompleted(enrollmentId, topicId, lessonId, next),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["student", "enrollments", enrollmentId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["student", "progress"] }),
+      ]),
+  });
+
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-1">
+      <Button
+        variant={completed ? "secondary" : "primary"}
+        size="medium"
+        aria-pressed={completed}
+        title={completed ? "Mark as not completed" : undefined}
+        disabled={mutation.isPending}
+        onClick={() => mutation.mutate(!completed)}
+      >
+        <Check />
+        {mutation.isPending
+          ? "Saving…"
+          : completed
+            ? "Completed"
+            : "Mark as completed"}
+      </Button>
+      {mutation.error && (
+        <p role="alert" className="text-xs text-text-error">
+          {mutation.error.message}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function LessonView({
+  enrollmentId,
   lesson,
   topic,
   week,
   number,
 }: {
+  enrollmentId: string;
   lesson: LessonDetail;
   topic: CurriculumTopic;
   week: number;
@@ -175,7 +227,7 @@ function LessonView({
   const [tab, setTab] = useState<Tab>("overview");
   const resources = lesson.resources ?? [];
   const assignments = lesson.assignments ?? [];
-  const watched = lesson.lock.completed;
+  const completed = isCompleted(lesson);
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: "overview", label: "Overview" },
@@ -214,9 +266,12 @@ function LessonView({
                 Week {week} · Lesson {number}
               </p>
             </div>
-            <Badge variant="light" status={watched ? "success" : "neutral"}>
-              {watched ? "Watched" : "Not watched"}
-            </Badge>
+            <CompleteButton
+              enrollmentId={enrollmentId}
+              topicId={topic.id}
+              lessonId={lesson.id}
+              completed={completed}
+            />
           </div>
 
           <div>
@@ -368,7 +423,7 @@ export default function LessonPage() {
     );
   }
 
-  if (!lessonQuery.data.lock.unlocked) {
+  if (!isUnlocked(lessonQuery.data)) {
     return (
       <Notice
         icon={Lock}
@@ -380,7 +435,7 @@ export default function LessonPage() {
     );
   }
 
-  if (!located) {
+  if (!located || !enrollmentId) {
     return (
       <Notice
         icon={Lock}
@@ -395,6 +450,7 @@ export default function LessonPage() {
   return (
     <LessonView
       key={lessonQuery.data.id}
+      enrollmentId={enrollmentId}
       lesson={lessonQuery.data}
       topic={located.topic}
       week={located.week}
