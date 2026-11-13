@@ -24,7 +24,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { SubmittedWork } from "@/components/assignments/SubmittedWork";
 import { Notice } from "@/components/lessons/Notice";
 import { ResourceRow } from "@/components/lessons/ResourceRow";
-import { formatDate, formatTime } from "@/features/curriculum/mappers";
+import {
+  formatDate,
+  formatTime,
+  instructionsText,
+} from "@/features/curriculum/mappers";
 import {
   submissionBadges,
   submissionTypes,
@@ -293,6 +297,7 @@ function AssignmentView({
 }) {
   const editable = canEditSubmission(submission);
   const badge = submission ? submissionBadges[submission.status] : null;
+  const instructions = instructionsText(assignment.instructions);
 
   return (
     <div className="flex flex-col gap-6">
@@ -352,13 +357,13 @@ function AssignmentView({
             </section>
           )}
 
-          {assignment.instructions && (
+          {instructions && (
             <div className="rounded-2xl bg-surface-brand p-4">
               <p className="text-xs font-medium text-brand-700">
                 Instructions from your instructor
               </p>
               <p className="mt-1 text-sm whitespace-pre-wrap text-neutral-600">
-                {assignment.instructions}
+                {instructions}
               </p>
             </div>
           )}

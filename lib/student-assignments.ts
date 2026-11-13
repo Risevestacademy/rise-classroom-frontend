@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { api, type Envelope, type Paginated } from "@/lib/api";
 import type {
+  AssignmentInstructions,
   SubmissionStatus,
   SubmissionType,
   SubmittedWork,
@@ -18,7 +19,7 @@ export type StudentAssignment = {
   topicId?: string | null;
   title: string;
   description?: string | null;
-  instructions?: string | null;
+  instructions?: AssignmentInstructions | string | null;
   dueAt?: string | null;
   submissionType: SubmissionType;
   attachments: string[];
