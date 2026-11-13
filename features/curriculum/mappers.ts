@@ -202,7 +202,7 @@ export function toApiInstructions(text: string): AssignmentInstructions {
   return { description: text, guidelines: [] };
 }
 
-function instructionsText(instructions?: AssignmentInstructions | string | null) {
+export function instructionsText(instructions?: AssignmentInstructions | string | null) {
   if (!instructions) return "";
   // Records saved before the API changed hold a plain string.
   if (typeof instructions === "string") return instructions;
