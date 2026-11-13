@@ -300,7 +300,6 @@ export function toModule(
     description: topic.description,
     status: topic.publishStatus,
     outcomes: topic.outcomes ?? [],
-    recordingLink: topic.lessons.flatMap((l) => l.recordings)[0]?.url ?? "",
     resources: [
       ...topic.resources.map(toResourceFile),
       ...(local.moduleFiles.get(topic.id) ?? []),
@@ -312,6 +311,7 @@ export function toModule(
         topic: lessonExtras?.topic ?? "",
         title: lesson.title,
         description: lesson.description ?? "",
+        recordingLink: lesson.recordings[0]?.url ?? "",
         resources: [
           ...lesson.resources.map(toResourceFile),
           ...(lessonExtras?.files ?? []),

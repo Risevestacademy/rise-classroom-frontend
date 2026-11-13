@@ -62,6 +62,8 @@ export type ModuleLesson = {
   topic: string;
   title: string;
   description: string;
+  /** The lesson's class video. Saved as its recording; "" when there is none. */
+  recordingLink: string;
   resources: ResourceFile[];
 };
 
@@ -164,7 +166,6 @@ export type CurriculumModule = {
   description: string;
   status: ModuleStatus;
   outcomes: string[];
-  recordingLink: string;
   resources: ResourceFile[];
   lessons: ModuleLesson[];
   assignments: ModuleAssignment[];

@@ -388,22 +388,16 @@ function createCurriculumApi(role: CurriculumRole) {
     }
   }
 
-  /** Throws before anything is saved if the content can't be attached anywhere. */
-  function assertModuleContent(
-    lessonCount: number,
-    input: Partial<SaveModuleInput>,
-  ) {
-    if (input.recordingLink && lessonCount === 0) {
-      throw new Error(
-        "Add at least one lesson. The class recording is saved on this module's lessons.",
-      );
-    }
-    if (input.recordingLink)
-      assertHttpsLink(input.recordingLink, "The class recording link");
+  /** Throws before anything is saved if a lesson video link isn't usable. */
+  function assertModuleContent(input: Partial<SaveModuleInput>) {
+    input.lessons?.forEach((lesson, index) => {
+      if (lesson.recordingLink)
+        assertHttpsLink(lesson.recordingLink, `Lesson ${index + 1}'s video link`);
+    });
   }
 
   async function createModule(curriculumId: string, input: SaveModuleInput) {
-    assertModuleContent(input.lessons.length, input);
+    assertModuleContent(input);
     const topics = await listTopics(curriculumId);
     const topic = await postData<TopicRecord>(
       `${base}/curriculums/${curriculumId}/topics`,
@@ -431,7 +425,7 @@ function createCurriculumApi(role: CurriculumRole) {
    */
   async function updateModule(id: string, input: Partial<SaveModuleInput>) {
     const tree = await getTopicTree(id);
-    assertModuleContent(input.lessons?.length ?? tree.lessons.length, input);
+    assertModuleContent(input);
 
     const { title, description, status, outcomes } = input;
     if (
@@ -463,9 +457,6 @@ function createCurriculumApi(role: CurriculumRole) {
     const lessons = input.lessons
       ? await syncLessons(id, tree.lessons, input.lessons)
       : tree.lessons;
-    if (input.recordingLink !== undefined) {
-      await syncRecording(lessons, input.recordingLink);
-    }
     if (input.assignments) {
       await syncAssignments(id, lessons, tree.assignments, input.assignments);
     }
@@ -549,6 +540,7 @@ function createCurriculumApi(role: CurriculumRole) {
         lesson.resources,
         draft.resources,
       );
+      await syncRecording(lesson, draft.recordingLink.trim());
 
       // PENDING-BACKEND: topic labels and uploaded files have no API field.
       local.lessons.set(lesson.id, {
@@ -560,16 +552,16 @@ function createCurriculumApi(role: CurriculumRole) {
     return saved;
   }
 
-  async function syncRecording(lessons: LessonTree[], link: string) {
-    const recording = lessons.flatMap((l) => l.recordings)[0];
+  /* Keeps the lesson's video in step with its link: added, changed or removed. */
+  async function syncRecording(lesson: LessonTree, link: string) {
+    const recording = lesson.recordings[0];
     if (recording && !link) {
       await api.delete(`${base}/recordings/${recording.id}`);
     } else if (recording && recording.url !== link) {
       await api.patch(`${base}/recordings/${recording.id}`, { url: link });
     } else if (!recording && link) {
-      // The API only has lesson recordings, so the module's goes on lesson 1.
-      await postData(`${base}/lessons/${lessons[0].id}/recordings`, {
-        title: "Class recording",
+      await postData(`${base}/lessons/${lesson.id}/recordings`, {
+        title: "Lesson video",
         url: link,
       });
     }

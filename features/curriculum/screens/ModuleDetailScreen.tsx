@@ -294,6 +294,7 @@ export function ModuleDetailScreen({
                     .filter(Boolean)
                     .join(" · ")}
                   item={lesson}
+                  videoLink={lesson.recordingLink}
                   editHref={editHref}
                   onRemove={() =>
                     setRemoveTarget({
@@ -366,28 +367,6 @@ export function ModuleDetailScreen({
                 </Button>
               }
             >
-              <div>
-                <p className="text-sm font-medium text-neutral-800">
-                  Class recording link
-                </p>
-                {curriculumModule.recordingLink ? (
-                  <a
-                    href={curriculumModule.recordingLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 flex items-center gap-3 rounded-lg bg-neutral-100 px-4 py-3 text-sm text-brand-primary hover:underline"
-                  >
-                    <CirclePlay className="h-4 w-4 shrink-0 text-neutral-300" />
-                    <span className="truncate">
-                      {curriculumModule.recordingLink}
-                    </span>
-                  </a>
-                ) : (
-                  <p className="mt-2 text-sm text-neutral-400">
-                    No recording added yet.
-                  </p>
-                )}
-              </div>
               <div>
                 <p className="text-sm font-medium text-neutral-800">
                   Supporting resources
@@ -558,6 +537,7 @@ function ContentCard({
 function ItemCard({
   eyebrow,
   item,
+  videoLink,
   editHref,
   badge,
   detail,
@@ -565,6 +545,8 @@ function ItemCard({
 }: {
   eyebrow: string;
   item: Pick<ModuleLesson, "title" | "description" | "resources">;
+  /* Lessons only: the class video, or "" when none was added. */
+  videoLink?: string;
   editHref: string;
   /* Beside the actions, like the lesson an assignment is attached to. */
   badge?: React.ReactNode;
@@ -617,6 +599,21 @@ function ItemCard({
       {item.description && (
         <p className="mt-3 text-sm text-neutral-600">{item.description}</p>
       )}
+
+      {videoLink !== undefined &&
+        (videoLink ? (
+          <a
+            href={videoLink}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 flex items-center gap-3 rounded-lg bg-white px-4 py-3 text-sm text-brand-primary hover:underline"
+          >
+            <CirclePlay className="h-4 w-4 shrink-0 text-neutral-300" />
+            <span className="truncate">{videoLink}</span>
+          </a>
+        ) : (
+          <p className="mt-3 text-sm text-neutral-400">No lesson video added yet.</p>
+        ))}
 
       {item.resources.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">

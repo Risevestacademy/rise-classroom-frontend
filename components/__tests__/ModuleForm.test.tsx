@@ -77,12 +77,31 @@ describe("ModuleForm", () => {
       description: "The basics of layout",
       status: "DRAFT",
       outcomes: ["Use a grid"],
-      recordingLink: "",
       resources: [],
       assignments: [],
     });
     expect(input.lessons).toHaveLength(1);
-    expect(input.lessons[0]).toMatchObject({ title: "Grids", description: "" });
+    expect(input.lessons[0]).toMatchObject({
+      title: "Grids",
+      description: "",
+      recordingLink: "",
+    });
+  });
+
+  it("keeps a video link for each lesson", async () => {
+    const { user, onSubmit } = renderForm();
+
+    await fillRequired(user);
+    await user.type(screen.getByLabelText(/^Lesson title/), "Grids");
+    await user.type(
+      screen.getByLabelText(/^Lesson video link/),
+      " https://youtu.be/grids ",
+    );
+    await user.click(screen.getByRole("button", { name: "Create Module" }));
+
+    expect(onSubmit.mock.calls[0][0].lessons[0].recordingLink).toBe(
+      "https://youtu.be/grids",
+    );
   });
 
   it("publishes straight away when draft is unticked", async () => {
@@ -263,9 +282,10 @@ describe("ModuleForm", () => {
         description: "The basics of layout",
         status: "DRAFT",
         outcomes: ["Use a grid"],
-        recordingLink: "",
         resources: [],
-        lessons: [{ id: "l1", topic: "", title: "Grids", description: "", resources: [] }],
+        lessons: [
+          { id: "l1", topic: "", title: "Grids", description: "", recordingLink: "", resources: [] },
+        ],
         assignments: [
           {
             id: "a1",

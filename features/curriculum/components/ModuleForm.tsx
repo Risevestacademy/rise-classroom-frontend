@@ -38,6 +38,8 @@ type DraftItem = {
   title: string;
   description: string;
   resources: ResourceFile[];
+  /** Lessons only: the class video link. */
+  recordingLink?: string;
 };
 
 function emptyLesson(): ModuleLesson {
@@ -46,6 +48,7 @@ function emptyLesson(): ModuleLesson {
     topic: "",
     title: "",
     description: "",
+    recordingLink: "",
     resources: [],
   };
 }
@@ -57,6 +60,9 @@ function keepFilled<T extends DraftItem>(drafts: T[]): T[] {
       ...draft,
       title: draft.title.trim(),
       description: draft.description.trim(),
+      ...(draft.recordingLink !== undefined && {
+        recordingLink: draft.recordingLink.trim(),
+      }),
     }));
 }
 
@@ -92,9 +98,6 @@ export function ModuleForm({
   const [outcomes, setOutcomes] = React.useState<string[]>(
     initialModule?.outcomes.length ? initialModule.outcomes : ["", "", ""],
   );
-  const [recordingLink, setRecordingLink] = React.useState(
-    initialModule?.recordingLink ?? "",
-  );
   const [resources, setResources] = React.useState<ResourceFile[]>(
     initialModule?.resources ?? [],
   );
@@ -118,7 +121,6 @@ export function ModuleForm({
       description: description.trim(),
       status: keepAsDraft ? "DRAFT" : "PUBLISHED",
       outcomes: outcomes.map((o) => o.trim()).filter(Boolean),
-      recordingLink: recordingLink.trim(),
       resources,
       lessons: keepFilled(lessons),
       assignments: keepFilled(assignments),
@@ -211,35 +213,21 @@ export function ModuleForm({
 
           <FormSection
             title="Module content"
-            description="Add a class recording and supporting material. You can add more later."
+            description="Add supporting material for the whole module. You can add more later."
           >
-            <FormField
-              label="Class recording link"
-              labelIcon={<></>}
-              inputProps={{
-                type: "basic",
-                size: "medium",
-                value: recordingLink,
-                onChange: (event) => setRecordingLink(event.target.value),
-                placeholder:
-                  "https://risecampus.com/academy/introduction-to-design",
-                leadingIcon: (
-                  <CirclePlay className="fill-neutral-800 text-white" />
-                ),
-              }}
-            />
             <FileUploadField files={resources} onChange={setResources} />
           </FormSection>
 
           <FormSection
             title="Lessons"
-            description="Add lessons to keep this module focused and easy to complete."
+            description="Add lessons to keep this module focused and easy to complete. Each lesson can have its own class video."
           >
             <DraftList
               kind="Lesson"
               drafts={lessons}
               onChange={setLessons}
               createEmpty={emptyLesson}
+              videoLink
               eyebrow={(lesson) => lesson.topic}
               titlePlaceholder="Introduction to visual design"
               descriptionPlaceholder="Cover the basics of design thinking, visual principles, and how to communicate ideas clearly."
@@ -380,6 +368,7 @@ function DraftList<T extends DraftItem>({
   createEmpty,
   onAdd,
   eyebrow,
+  videoLink,
   titlePlaceholder,
   descriptionPlaceholder,
 }: {
@@ -390,6 +379,8 @@ function DraftList<T extends DraftItem>({
   createEmpty?: () => T;
   onAdd?: () => void;
   eyebrow?: (draft: T) => string | undefined;
+  /** Shows a "Lesson video link" field, kept in the draft's `recordingLink`. */
+  videoLink?: boolean;
   titlePlaceholder: string;
   descriptionPlaceholder: string;
 }) {
@@ -411,6 +402,7 @@ function DraftList<T extends DraftItem>({
     const isBlank =
       !draft.title.trim() &&
       !draft.description.trim() &&
+      !draft.recordingLink?.trim() &&
       draft.resources.length === 0;
     if (isBlank) remove(draft.id);
     else
@@ -477,6 +469,23 @@ function DraftList<T extends DraftItem>({
                 leadingIcon: null,
               }}
             />
+            {videoLink && (
+              <FormField
+                label="Lesson video link"
+                labelIcon={<></>}
+                inputProps={{
+                  type: "basic",
+                  size: "medium",
+                  value: draft.recordingLink ?? "",
+                  onChange: (event) =>
+                    update(draft.id, { recordingLink: event.target.value }),
+                  placeholder: "https://www.youtube.com/watch?v=…",
+                  leadingIcon: (
+                    <CirclePlay className="fill-neutral-800 text-white" />
+                  ),
+                }}
+              />
+            )}
             <FileUploadField
               files={draft.resources}
               onChange={(resources) => update(draft.id, { resources })}
