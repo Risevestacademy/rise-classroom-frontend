@@ -11,10 +11,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useStudentNav } from "@/components/StudentNavContext";
 import { sessionQuery } from "@/lib/session-query";
 import { studentQueries } from "@/lib/student";
+import { findTopic, useStudentCurriculum } from "@/lib/student-lessons";
 
 const pageLabels: Record<string, string> = {
   dashboard: "Dashboard",
-  "my-learning": "My learning",
+  "my-learning": "Curriculum",
   assignments: "Assignments",
   "control-tower": "Control tower",
   announcements: "Announcements",
@@ -27,6 +28,20 @@ const pageLabels: Record<string, string> = {
 function toTitle(segment: string) {
   const text = segment.replace(/-/g, " ");
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/* "Module N" for /student/my-learning/module/<id>, numbered as on the curriculum page. */
+function ModuleCrumb({ moduleId }: { moduleId: string }) {
+  const { topics } = useStudentCurriculum();
+  const number = findTopic(topics, moduleId)?.number;
+  return (
+    <>
+      <ChevronRight className="h-4 w-4 text-neutral-400" />
+      <span className="font-medium text-neutral-800">
+        {number ? `Module ${number}` : "Module"}
+      </span>
+    </>
+  );
 }
 
 const iconButton =
@@ -50,7 +65,11 @@ export function StudentTopBar() {
     progress.data?.find((item) => !item.trackComplete) ?? progress.data?.[0];
 
   // /student/<page>/... -> label for <page>
-  const segment = pathname.split("/").filter(Boolean)[1];
+  const segments = pathname.split("/").filter(Boolean);
+  const segment = segments[1];
+  const nested = segments.length > 2;
+  const moduleId =
+    segment === "my-learning" && segments[2] === "module" ? segments[3] : undefined;
   const pageLabel = segment ? (pageLabels[segment] ?? toTitle(segment)) : "Dashboard";
 
   return (
@@ -78,7 +97,17 @@ export function StudentTopBar() {
           Home
         </Link>
         <ChevronRight className="h-4 w-4 text-neutral-400" />
-        <span className="font-medium text-neutral-800">{pageLabel}</span>
+        {nested && segment ? (
+          <Link
+            href={`/student/${segment}`}
+            className="text-neutral-400 hover:text-neutral-600"
+          >
+            {pageLabel}
+          </Link>
+        ) : (
+          <span className="font-medium text-neutral-800">{pageLabel}</span>
+        )}
+        {moduleId && <ModuleCrumb moduleId={moduleId} />}
       </nav>
 
       <div className="ml-auto flex items-center gap-3">

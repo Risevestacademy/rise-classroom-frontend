@@ -51,6 +51,7 @@ function moduleRoutes(assignments: AssignmentRecord[] = []) {
     ]),
     "POST /admin/topics/t1/resources": envelope(savedLink),
     "POST /admin/lessons/l1/resources": envelope(savedLink),
+    "POST /admin/lessons/l1/recordings": envelope({ id: "rec1" }),
   };
 }
 
@@ -80,6 +81,7 @@ describe("saving resource links", () => {
           topic: "",
           title: "Grids",
           description: "",
+          recordingLink: "",
           resources: [resourceFromLink("https://www.figma.com/file/grid")],
         },
       ],
@@ -105,6 +107,50 @@ describe("saving resource links", () => {
     expect(backend.bodies("POST /admin/lessons/l1/resources")).toEqual([
       { title: "Notes", url: "https://drive.google.com/notes.pdf", type: "PDF", publishStatus: "PUBLISHED" },
     ]);
+  });
+});
+
+describe("saving lesson videos", () => {
+  const api = curriculumApis.admin;
+
+  it("saves each lesson's video as that lesson's recording", async () => {
+    const backend = mockApi(moduleRoutes());
+
+    await api.updateModule("t1", {
+      lessons: [
+        {
+          id: "l1",
+          topic: "",
+          title: "Grids",
+          description: "",
+          recordingLink: "https://youtu.be/grids",
+          resources: [],
+        },
+      ],
+    });
+
+    expect(backend.bodies("POST /admin/lessons/l1/recordings")).toEqual([
+      { title: "Lesson video", url: "https://youtu.be/grids" },
+    ]);
+  });
+
+  it("rejects a lesson video link that isn't https", async () => {
+    mockApi(moduleRoutes());
+
+    await expect(
+      api.updateModule("t1", {
+        lessons: [
+          {
+            id: "l1",
+            topic: "",
+            title: "Grids",
+            description: "",
+            recordingLink: "youtube.com/grids",
+            resources: [],
+          },
+        ],
+      }),
+    ).rejects.toThrow("Lesson 1's video link must be a full link starting with https://");
   });
 });
 

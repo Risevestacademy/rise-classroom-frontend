@@ -2,361 +2,248 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { BookOpen, ChevronDown, Lock, Paperclip, Play } from "lucide-react";
-
-import { ApiError } from "@/lib/api";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Notice } from "@/components/lessons/Notice";
-import { studentQueries } from "@/lib/student";
 import {
-  countWatched,
-  flattenTopics,
-  formatDuration,
-  lessonHref,
-  isCompleted,
+  BookOpen,
+  ChevronDown,
+  ClipboardList,
+  Lock,
+  Paperclip,
+  Video,
+  WifiOff,
+} from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  countTopicResources,
   isUnlocked,
-  lessonQueries,
-  type CurriculumLesson,
+  moduleHref,
+  moduleNumber,
+  topicAssignments,
+  topicRecordings,
+  useStudentCurriculum,
   type CurriculumTopic,
 } from "@/lib/student-lessons";
 
-function LessonCard({
-  lesson,
-  number,
-}: {
-  lesson: CurriculumLesson;
-  number: number;
-}) {
-  const unlocked = isUnlocked(lesson);
-  const completed = isCompleted(lesson);
-  const duration = lesson.recordings?.[0]?.durationSec;
-  const resourceCount = lesson.counts?.resources ?? lesson.resources?.length;
+function plural(count: number, one: string, many = `${one}s`) {
+  return `${count} ${count === 1 ? one : many}`;
+}
 
-  const body = (
-    <>
-      <div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-brand-100">
-        <span className="absolute -top-6 -left-6 h-[96px] w-[96px] rounded-full bg-brand-primary/90" />
-        <span className="absolute -right-6 -bottom-8 h-[112px] w-[112px] rounded-full bg-brand-300" />
-        <span className="absolute inset-0 flex items-center justify-center">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800/70 text-white">
-            {unlocked ? (
-              <Play className="h-4 w-4 fill-current" />
-            ) : (
-              <Lock className="h-4 w-4" />
-            )}
-          </span>
-        </span>
-        <span className="absolute top-3 left-3">
-          {unlocked ? (
-            <Badge variant="light" status={completed ? "success" : "neutral"}>
-              {completed ? "Watched" : "Not watched"}
-            </Badge>
-          ) : (
-            <Badge variant="light" status="neutral">
-              Locked
-            </Badge>
-          )}
-        </span>
-        {duration ? (
-          <span className="absolute right-3 bottom-3 rounded-md bg-brand-primary px-2 py-1 text-xs font-medium text-white">
-            {formatDuration(duration)}
-          </span>
-        ) : null}
-      </div>
+function Included({ topic }: { topic: CurriculumTopic }) {
+  const recordings = topicRecordings(topic).length;
+  const lessons = topic.counts?.lessons ?? topic.lessons.length;
+  const assignments = topicAssignments(topic).length;
+  const resources = countTopicResources(topic);
 
-      <p className="mt-3 truncate text-base font-medium text-neutral-800">
-        {lesson.title}
-      </p>
-      <div className="mt-1 flex items-center justify-between gap-3 text-xs text-neutral-400">
-        <span>Lesson {number}</span>
-        {resourceCount ? (
-          <span className="inline-flex items-center gap-1">
-            <Paperclip className="h-3 w-3" />
-            {resourceCount} {resourceCount === 1 ? "resource" : "resources"}
-          </span>
-        ) : null}
-      </div>
-    </>
-  );
+  const items = [
+    recordings > 0 && {
+      icon: Video,
+      label:
+        recordings === 1
+          ? "Live class recording"
+          : plural(recordings, "live class recording"),
+    },
+    lessons > 0 && { icon: BookOpen, label: plural(lessons, "lesson") },
+    assignments > 0 && {
+      icon: ClipboardList,
+      label: plural(assignments, "assignment"),
+    },
+    resources > 0 && { icon: Paperclip, label: "Supporting resources" },
+  ].filter(Boolean) as { icon: React.ElementType; label: string }[];
 
-  return unlocked ? (
-    <Link
-      href={lessonHref(lesson.id)}
-      className="block rounded-2xl border border-neutral-200 bg-surface-brand p-3 transition-colors hover:border-brand-300"
-    >
-      {body}
-    </Link>
-  ) : (
-    <div
-      aria-disabled
-      className="block rounded-2xl border border-neutral-200 bg-surface-brand p-3 opacity-60"
-    >
-      {body}
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-medium text-neutral-800">What&apos;s included</p>
+      <ul className="mt-2 flex flex-wrap gap-2">
+        {items.map(({ icon: Icon, label }) => (
+          <li
+            key={label}
+            className="inline-flex h-7 items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2 text-xs text-neutral-600"
+          >
+            <Icon className="h-3.5 w-3.5 text-neutral-400" />
+            {label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-function WeekSection({
+function ModuleItem({
   topic,
-  weekNumber,
-  isCurrent,
+  number,
   defaultOpen,
 }: {
   topic: CurriculumTopic;
-  weekNumber: number;
-  isCurrent: boolean;
+  number: number;
   defaultOpen: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const watched = countWatched(topic);
-  const total = topic.lessons.length;
-  const allWatched = total > 0 && watched === total;
+  const unlocked = isUnlocked(topic);
+  const [open, setOpen] = useState(defaultOpen && unlocked);
+  const title = `${moduleNumber(number)}. ${topic.title}`;
+
+  if (!unlocked) {
+    return (
+      <li className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3.5">
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-400">
+          {title}
+        </span>
+        <Lock aria-label="Locked" className="h-4 w-4 shrink-0 text-neutral-400" />
+      </li>
+    );
+  }
 
   return (
-    <section className="border-b border-neutral-200 py-4 first:pt-0">
+    <li className="rounded-xl bg-neutral-100">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 text-left"
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
       >
-        <span className="text-base font-medium text-neutral-800">
-          Week {weekNumber}
-        </span>
-        {isCurrent && (
-          <Badge variant="light" status="info">
-            This week
-          </Badge>
-        )}
-        <span
-          className={cn(
-            "text-xs",
-            allWatched ? "text-text-success" : "text-text-warning",
-          )}
-        >
-          {watched} of {total} watched
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-800">
+          {title}
         </span>
         <ChevronDown
           className={cn(
-            "ml-auto h-5 w-5 text-neutral-400 transition-transform",
-            open && "rotate-180",
-          )}
-        />
-      </button>
-
-      {open &&
-        (total === 0 ? (
-          <p className="mt-4 text-sm text-neutral-400">
-            No lessons in this week yet.
-          </p>
-        ) : (
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {topic.lessons.map((lesson, index) => (
-              <LessonCard
-                key={lesson.id}
-                lesson={lesson}
-                number={index + 1}
-              />
-            ))}
-          </div>
-        ))}
-    </section>
-  );
-}
-
-function EarlierWeeks({
-  topics,
-  weekOf,
-}: {
-  topics: CurriculumTopic[];
-  weekOf: Map<string, number>;
-}) {
-  const [open, setOpen] = useState(false);
-  const weeks = topics.map((topic) => weekOf.get(topic.id) ?? 0);
-  const first = Math.min(...weeks);
-  const last = Math.max(...weeks);
-  const watched = topics.reduce((sum, topic) => sum + countWatched(topic), 0);
-  const total = topics.reduce((sum, topic) => sum + topic.lessons.length, 0);
-  const allWatched = total > 0 && watched === total;
-
-  return (
-    <section className="py-4">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        className="flex w-full items-center gap-3 text-left"
-      >
-        <span className="text-base font-medium text-neutral-800">
-          {first === last ? `Week ${first}` : `Weeks ${first} to ${last}`}
-        </span>
-        <span
-          className={cn(
-            "text-xs",
-            allWatched ? "text-text-success" : "text-text-warning",
-          )}
-        >
-          {watched} of {total} watched
-        </span>
-        <ChevronDown
-          className={cn(
-            "ml-auto h-5 w-5 text-neutral-400 transition-transform",
+            "h-4 w-4 shrink-0 text-neutral-500 transition-transform",
             open && "rotate-180",
           )}
         />
       </button>
 
       {open && (
-        <div className="mt-4 rounded-2xl bg-white px-4 py-2 shadow-sm">
-          {topics.map((topic) => (
-            <WeekSection
-              key={topic.id}
-              topic={topic}
-              weekNumber={weekOf.get(topic.id) ?? 0}
-              isCurrent={false}
-              defaultOpen={false}
-            />
-          ))}
+        <div className="px-4 pb-4">
+          {topic.description && (
+            <p className="text-sm text-neutral-500">{topic.description}</p>
+          )}
+          <Included topic={topic} />
+          <Link
+            href={moduleHref(topic.id)}
+            className="mt-4 inline-flex h-8 items-center rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            View module
+          </Link>
         </div>
       )}
-    </section>
+    </li>
   );
 }
 
-function WeekList({
-  topics,
-  currentTopicId,
+/* The grey panel the design uses for the empty and offline states. */
+function StatePanel({
+  icon: Icon,
+  title,
+  message,
+  children,
 }: {
-  topics: CurriculumTopic[];
-  currentTopicId: string | undefined;
+  icon: React.ElementType;
+  title: string;
+  message: string;
+  children?: React.ReactNode;
 }) {
-  // Weeks the student can't reach yet aren't in the design, so they're hidden.
-  const weekOf = new Map(topics.map((topic, index) => [topic.id, index + 1]));
-  const visible = topics;
-  //.filter(
-    //(topic) => topic.lock.unlocked || topic.id === currentTopicId,
-  //);
-
-  // Newest first. The current week and the two before it stay on their own;
-  // anything older is grouped, as in the design.
-  const newestFirst = [...visible].reverse();
-  const currentIndex = newestFirst.findIndex((topic) => topic.id === currentTopicId);
-  const keep = currentIndex === -1 ? 3 : currentIndex + 3;
-  const individual = newestFirst.slice(0, keep);
-  const earlier = newestFirst.slice(keep).reverse();
-
-  if (visible.length === 0) {
-    return (
-      <Notice
-        icon={BookOpen}
-        title="No lessons available yet"
-        message="Lessons will appear here as your instructor unlocks them."
-      />
-    );
-  }
-
   return (
-    <div className="rounded-2xl bg-white px-6 py-6 shadow-sm">
-      {individual.map((topic) => (
-        <WeekSection
-          key={topic.id}
-          topic={topic}
-          weekNumber={weekOf.get(topic.id) ?? 0}
-          isCurrent={topic.id === currentTopicId}
-          defaultOpen={topic.id === currentTopicId}
-        />
-      ))}
-      {earlier.length > 0 && (
-        <EarlierWeeks
-          topics={earlier}
-          weekOf={weekOf}
-        />
-      )}
+    <div className="flex flex-col items-center rounded-xl bg-neutral-100 px-6 py-14 text-center">
+      <Icon className="h-5 w-5 text-neutral-500" />
+      <p className="mt-3 text-sm font-medium text-neutral-800">{title}</p>
+      <p className="mt-1 max-w-[280px] text-xs text-neutral-500">{message}</p>
+      {children && <div className="mt-4">{children}</div>}
     </div>
   );
 }
 
 function ListSkeleton() {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm">
-      <Skeleton className="h-6 w-[160px]" />
-      <div className="grid gap-4 md:grid-cols-2">
-        <Skeleton className="aspect-[16/9] w-full rounded-xl" />
-        <Skeleton className="aspect-[16/9] w-full rounded-xl" />
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3 rounded-xl bg-neutral-100 p-4">
+        <Skeleton className="h-4 w-[180px]" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-3/4" />
+        <Skeleton className="h-7 w-[96px]" />
       </div>
-      <Skeleton className="h-6 w-[200px]" />
-      <Skeleton className="h-6 w-[200px]" />
+      {[0, 1, 2, 3, 4].map((key) => (
+        <Skeleton key={key} className="h-12 w-full rounded-xl" />
+      ))}
     </div>
   );
 }
 
-export default function LessonsPage() {
-  const progress = useQuery(studentQueries.progress());
-
-  // Same pick as the dashboard: the track still being worked through.
-  const enrollment =
-    progress.data?.find((item) => !item.trackComplete) ?? progress.data?.[0];
-  const enrollmentId = enrollment?.enrollmentId;
-
-  const content = useQuery({
-    ...lessonQueries.content(enrollmentId ?? ""),
-    enabled: Boolean(enrollmentId),
-  });
-
-  const notEnrolled =
-    progress.error instanceof ApiError && progress.error.status === 404;
-
-  const topics = flattenTopics(content.data);
-  const currentTopicId = enrollment?.currentTopic?.id;
-  const currentWeek = topics.findIndex((topic) => topic.id === currentTopicId) + 1;
+export default function CurriculumPage() {
+  const curriculum = useStudentCurriculum();
+  const { enrollment, topics } = curriculum;
+  const cohort = curriculum.curricula?.find((item) => item.cohort)?.cohort?.name;
+  const openId =
+    topics.find((topic) => topic.id === enrollment?.currentTopic?.id)?.id ??
+    topics.find(isUnlocked)?.id;
 
   let body: React.ReactNode;
-  if (progress.isPending || (enrollmentId && content.isPending)) {
+  if (curriculum.isPending) {
     body = <ListSkeleton />;
-  } else if (notEnrolled || (!progress.isError && !enrollment)) {
+  } else if (curriculum.notEnrolled) {
     body = (
-      <Notice
+      <StatePanel
         icon={BookOpen}
         title="You're not enrolled on a track yet"
-        message="Once your program admin enrolls you, your lessons will show up here."
+        message="Once your program admin enrolls you, your modules will show up here."
       />
     );
-  } else if (progress.isError || content.isError || !enrollment || !enrollmentId) {
+  } else if (curriculum.error) {
     body = (
-      <Notice
+      <StatePanel
+        icon={WifiOff}
+        title="Couldn't load your curriculum"
+        message="Check your internet connection and try again."
+      >
+        <button
+          type="button"
+          onClick={() => curriculum.refetch()}
+          className="h-8 rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+        >
+          Try again
+        </button>
+      </StatePanel>
+    );
+  } else if (topics.length === 0) {
+    body = (
+      <StatePanel
         icon={BookOpen}
-        title="Couldn't load your lessons"
-        message={
-          content.error?.message ??
-          progress.error?.message ??
-          "Please try again shortly."
-        }
+        title="Your modules will appear here"
+        message="Your instructor hasn't published any modules yet. Check back soon."
       />
     );
   } else {
     body = (
-      <WeekList
-        topics={topics}
-        currentTopicId={currentTopicId}
-      />
+      <ul className="flex flex-col gap-2">
+        {topics.map((topic, index) => (
+          <ModuleItem
+            key={topic.id}
+            topic={topic}
+            number={index + 1}
+            defaultOpen={topic.id === openId}
+          />
+        ))}
+      </ul>
     );
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-medium text-neutral-800">Lessons</h1>
-        {enrollment && (
-          <p className="mt-1 text-sm text-neutral-500">
-            {enrollment.track.name}
-            {currentWeek > 0 && ` · Week ${currentWeek} of ${topics.length}`}
-          </p>
-        )}
-      </div>
+  const subtitle = enrollment
+    ? [
+        enrollment.track.name,
+        cohort,
+        topics.length > 0 && plural(topics.length, "module"),
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
 
+  return (
+    <div className="flex max-w-[780px] flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-medium text-neutral-800">Curriculum</h1>
+        {subtitle && <p className="mt-1 text-xs text-neutral-400">{subtitle}</p>}
+      </div>
       {body}
     </div>
   );

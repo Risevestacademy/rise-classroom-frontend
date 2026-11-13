@@ -1,5 +1,6 @@
-import { queryOptions } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
+import { studentQueries } from "@/lib/student";
 import type { ResourceRecord } from "@/features/curriculum/types";
 import type { StudentAssignment } from "@/lib/student-assignments";
 
@@ -8,6 +9,10 @@ export const LESSONS_BASE = "/student/my-learning";
 
 export function lessonHref(lessonId: string) {
   return `${LESSONS_BASE}/lesson/${lessonId}`;
+}
+
+export function moduleHref(topicId: string) {
+  return `${LESSONS_BASE}/module/${topicId}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,6 +65,8 @@ export type CurriculumTopic = {
   lock?: LessonLock;
   counts?: { lessons?: number; resources?: number; assignments?: number };
   lessons: CurriculumLesson[];
+  /** "What you'll learn" — one line per outcome. */
+  outcomes?: string[] | null;
   /** Module-level assignments and resources, not on any one lesson. */
   assignments?: LessonAssignment[];
   resources?: LessonResource[];
@@ -72,6 +79,7 @@ export type Curriculum = {
   description?: string | null;
   status: string;
   progressMode?: "SEQUENTIAL" | "FLEXIBLE";
+  cohort?: { id: string; name: string; year?: string | null } | null;
   topics?: CurriculumTopic[];
 };
 
@@ -126,6 +134,37 @@ export async function setLessonCompleted(
   );
 }
 
+/**
+ * The student's current track and its curriculum, as every learning page
+ * loads them. Picks the track still being worked through, like the dashboard.
+ */
+export function useStudentCurriculum() {
+  const progress = useQuery(studentQueries.progress());
+  const enrollment =
+    progress.data?.find((item) => !item.trackComplete) ?? progress.data?.[0];
+  const enrollmentId = enrollment?.enrollmentId;
+
+  const content = useQuery({
+    ...lessonQueries.content(enrollmentId ?? ""),
+    enabled: Boolean(enrollmentId),
+  });
+
+  const notEnrolled =
+    (progress.error instanceof ApiError && progress.error.status === 404) ||
+    (progress.isSuccess && !enrollment);
+
+  return {
+    enrollment,
+    enrollmentId,
+    curricula: content.data,
+    topics: flattenTopics(content.data),
+    isPending: progress.isPending || Boolean(enrollmentId && content.isPending),
+    notEnrolled,
+    error: notEnrolled ? null : (progress.error ?? content.error),
+    refetch: () => (enrollmentId ? content.refetch() : progress.refetch()),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Curriculum helpers
 // ---------------------------------------------------------------------------
@@ -165,6 +204,38 @@ export function findLesson(topics: CurriculumTopic[], lessonId: string) {
     }
   }
   return null;
+}
+
+/** "01", "02" … as the design numbers modules. */
+export function moduleNumber(number: number) {
+  return String(number).padStart(2, "0");
+}
+
+/** A module and its 1-based number in the ordered list. */
+export function findTopic(topics: CurriculumTopic[], topicId: string) {
+  const index = topics.findIndex((topic) => topic.id === topicId);
+  return index === -1 ? null : { topic: topics[index], number: index + 1 };
+}
+
+/** Recordings across the module's unlocked lessons, in lesson order. */
+export function topicRecordings(topic: CurriculumTopic) {
+  return topic.lessons
+    .filter(isUnlocked)
+    .flatMap((lesson) =>
+      (lesson.recordings ?? []).map((recording) => ({ recording, lesson })),
+    );
+}
+
+/** Module and lesson resources together, for "What's included". */
+export function countTopicResources(topic: CurriculumTopic) {
+  return (
+    (topic.resources?.length ?? topic.counts?.resources ?? 0) +
+    topic.lessons.reduce(
+      (sum, lesson) =>
+        sum + (lesson.resources?.length ?? lesson.counts?.resources ?? 0),
+      0,
+    )
+  );
 }
 
 export function countWatched(topic: CurriculumTopic) {
@@ -249,6 +320,16 @@ export function describeResource(value: string, type?: LessonResource["type"]) {
     /(youtube\.com|youtu\.be|vimeo\.com|loom\.com)$/.test(host) ||
     ["mp4", "mov", "webm"].includes(extension);
   return { kind: isVideo ? "Video" : "Link", host, isFile: false };
+}
+
+/** A still for the recording, when the host gives one (YouTube only). */
+export function videoThumbnail(value: string): string | null {
+  const source = getVideoSource(value);
+  const id =
+    source.type === "iframe" && source.src.includes("youtube.com/embed/")
+      ? source.src.split("/embed/")[1]?.split(/[?#]/)[0]
+      : null;
+  return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
 }
 
 export type VideoSource =

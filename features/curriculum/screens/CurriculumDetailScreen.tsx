@@ -653,10 +653,14 @@ function ModuleSummary({
 }) {
   const lessonCount = curriculumModule.lessons.length;
   const assignmentCount = curriculumModule.assignments.length;
+  const videoCount = curriculumModule.lessons.filter((l) => l.recordingLink).length;
   const included = [
-    curriculumModule.recordingLink && {
+    videoCount > 0 && {
       icon: Video,
-      label: "Live class recording",
+      label:
+        videoCount === 1
+          ? "Live class recording"
+          : `${videoCount} live class recordings`,
     },
     lessonCount > 0 && {
       icon: GraduationCap,

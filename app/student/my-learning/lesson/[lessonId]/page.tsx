@@ -20,18 +20,18 @@ import { LessonVideo } from "@/components/lessons/LessonVideo";
 import { Notice } from "@/components/lessons/Notice";
 import { ResourceRow } from "@/components/lessons/ResourceRow";
 import { submissionBadges, type SubmissionStatus } from "@/features/curriculum/types";
-import { studentQueries } from "@/lib/student";
 import { assignmentHref } from "@/lib/student-assignments";
 import {
   LESSONS_BASE,
   countWatched,
   findLesson,
-  flattenTopics,
   isCompleted,
   isUnlocked,
   lessonHref,
   lessonQueries,
+  moduleHref,
   setLessonCompleted,
+  useStudentCurriculum,
   type CurriculumTopic,
   type LessonAssignment,
   type LessonDetail,
@@ -82,7 +82,7 @@ function AssignmentCard({ assignment }: { assignment: LessonAssignment }) {
 
 type Tab = "overview" | "resources";
 
-function WeekLessons({
+function ModuleLessons({
   topic,
   week,
   currentLessonId,
@@ -94,9 +94,14 @@ function WeekLessons({
   return (
     <section>
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-neutral-800">Week {week}</h2>
+        <Link
+          href={moduleHref(topic.id)}
+          className="text-sm font-medium text-neutral-800 hover:underline"
+        >
+          Module {week}
+        </Link>
         <span className="text-xs text-neutral-400">
-          {countWatched(topic)} of {topic.lessons.length} watched
+          {countWatched(topic)} of {topic.lessons.length} completed
         </span>
       </div>
 
@@ -106,7 +111,7 @@ function WeekLessons({
           const status = isNow
             ? "Now playing"
             : isCompleted(item)
-              ? "Watched"
+              ? "Completed"
               : isUnlocked(item)
                 ? null
                 : "Locked";
@@ -238,17 +243,22 @@ function LessonView({
     <div className="flex flex-col gap-6">
       <nav aria-label="Breadcrumb" className="flex items-center gap-3 text-xs">
         <Link
-          href={LESSONS_BASE}
-          aria-label="Back to lessons"
+          href={moduleHref(topic.id)}
+          aria-label="Back to module"
           className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <Link href={LESSONS_BASE} className="text-neutral-400 hover:text-neutral-600">
-          Lessons
+          Curriculum
         </Link>
         <ChevronRight className="h-3 w-3 text-neutral-400" />
-        <span className="text-neutral-400">Week {week}</span>
+        <Link
+          href={moduleHref(topic.id)}
+          className="text-neutral-400 hover:text-neutral-600"
+        >
+          Module {week}
+        </Link>
         <ChevronRight className="h-3 w-3 text-neutral-400" />
         <span className="font-medium text-neutral-800">Lesson {number}</span>
       </nav>
@@ -263,7 +273,7 @@ function LessonView({
                 {lesson.title}
               </h1>
               <p className="mt-1 text-sm text-neutral-400">
-                Week {week} · Lesson {number}
+                Module {week} · Lesson {number}
               </p>
             </div>
             <CompleteButton
@@ -341,7 +351,7 @@ function LessonView({
             </section>
           )}
 
-          <WeekLessons topic={topic} week={week} currentLessonId={lesson.id} />
+          <ModuleLessons topic={topic} week={week} currentLessonId={lesson.id} />
         </aside>
       </div>
     </div>
@@ -367,7 +377,7 @@ function BackToLessons() {
       href={LESSONS_BASE}
       className="inline-flex h-10 items-center rounded-lg bg-brand-primary px-5 text-sm font-medium text-white hover:bg-brand-primary-hover"
     >
-      Back to lessons
+      Back to curriculum
     </Link>
   );
 }
@@ -375,23 +385,16 @@ function BackToLessons() {
 export default function LessonPage() {
   const { lessonId } = useParams<{ lessonId: string }>();
 
-  const progress = useQuery(studentQueries.progress());
-  const enrollment =
-    progress.data?.find((item) => !item.trackComplete) ?? progress.data?.[0];
-  const enrollmentId = enrollment?.enrollmentId;
-
-  const content = useQuery({
-    ...lessonQueries.content(enrollmentId ?? ""),
-    enabled: Boolean(enrollmentId),
-  });
+  const curriculum = useStudentCurriculum();
+  const { enrollment, enrollmentId } = curriculum;
   const lessonQuery = useQuery({
     ...lessonQueries.lesson(enrollmentId ?? "", lessonId),
     enabled: Boolean(enrollmentId),
   });
 
-  const located = findLesson(flattenTopics(content.data), lessonId);
+  const located = findLesson(curriculum.topics, lessonId);
 
-  if (progress.isPending || (enrollmentId && (content.isPending || lessonQuery.isPending))) {
+  if (curriculum.isPending || (enrollmentId && lessonQuery.isPending)) {
     return <PlayerSkeleton />;
   }
 
@@ -407,14 +410,14 @@ export default function LessonPage() {
     );
   }
 
-  if (lessonQuery.isError || content.isError || !lessonQuery.data) {
+  if (lessonQuery.isError || curriculum.error || !lessonQuery.data) {
     return (
       <Notice
         icon={Lock}
         title="This lesson isn't available"
         message={
           lessonQuery.error?.message ??
-          content.error?.message ??
+          curriculum.error?.message ??
           "It may be locked, or it may not be part of your track."
         }
       >

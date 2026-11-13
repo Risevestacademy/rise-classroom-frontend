@@ -3,9 +3,10 @@ import { screen } from "@testing-library/react";
 
 import LessonsPage from "@/app/student/my-learning/page";
 import LessonPage from "@/app/student/my-learning/lesson/[lessonId]/page";
+import ModulePage from "@/app/student/my-learning/module/[moduleId]/page";
 import { envelope, mockApi, renderWithClient } from "@/test/utils";
 
-const params = vi.hoisted(() => ({ lessonId: "l1" }));
+const params = vi.hoisted(() => ({ lessonId: "l1", moduleId: "t1" }));
 
 vi.mock("next/navigation", () => ({
   useParams: () => params,
@@ -25,7 +26,9 @@ function unlockedLesson(id: string, title: string, completed: boolean) {
     counts: { assignments: 0, resources: 1 },
     resources: [],
     assignments: [],
-    recordings: [],
+    recordings: [
+      { id: `r-${id}`, lessonId: id, title: "Class recording", url: "https://youtu.be/abc" },
+    ],
   };
 }
 
@@ -45,11 +48,14 @@ function content(l1Completed = false) {
       trackId: "track-1",
       title: "Product Design",
       status: "ONGOING",
+      cohort: { id: "co1", name: "Cohort 2026" },
       topics: [
         {
           id: "t1",
           curriculumId: "c1",
           title: "Visual design",
+          description: "How layout guides the eye.",
+          outcomes: ["Use a grid", "Pair typefaces"],
           position: 0,
           lock: lock(true),
           lessons: [
@@ -57,6 +63,13 @@ function content(l1Completed = false) {
             unlockedLesson("l2", "Type", true),
             lockedLesson,
           ],
+        },
+        {
+          id: "t2",
+          title: "Prototyping",
+          position: 1,
+          counts: { lessons: 2, resources: 0, assignments: 0 },
+          lessons: [],
         },
       ],
     },
@@ -76,21 +89,55 @@ const progress = envelope([
 ]);
 
 describe("student lessons", () => {
-  it("lists locked lessons and counts watched ones from their lock", async () => {
+  it("lists modules with what each one includes", async () => {
     mockApi({
       "GET /student/me/progress": progress,
       "GET /student/enrollments/e1/content": content(),
     });
     renderWithClient(<LessonsPage />);
 
-    expect(await screen.findByText("1 of 3 watched")).toBeInTheDocument();
-    expect(screen.getByText("Colour")).toBeInTheDocument();
-    expect(screen.getByText("Locked")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Grids/ })).toHaveAttribute(
+    expect(await screen.findByText("01. Visual design")).toBeInTheDocument();
+    expect(
+      screen.getByText("Product Design · Cohort 2026 · 2 modules"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("2 live class recordings")).toBeInTheDocument();
+    expect(screen.getByText("3 lessons")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View module" })).toHaveAttribute(
+      "href",
+      "/student/my-learning/module/t1",
+    );
+    expect(screen.getByText("02. Prototyping")).toBeInTheDocument();
+    expect(screen.getByLabelText("Locked")).toBeInTheDocument();
+  });
+
+  it("shows a module's outcomes and lessons, with locked lessons not linked", async () => {
+    mockApi({
+      "GET /student/me/progress": progress,
+      "GET /student/enrollments/e1/content": content(),
+    });
+    renderWithClient(<ModulePage />);
+
+    expect(await screen.findByRole("heading", { name: "Visual design" })).toBeInTheDocument();
+    expect(screen.getByText("Use a grid")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Play Live Class 2" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Grids" })).toHaveAttribute(
       "href",
       "/student/my-learning/lesson/l1",
     );
-    expect(screen.queryByRole("link", { name: /Colour/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Colour")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Colour" })).not.toBeInTheDocument();
+  });
+
+  it("says when a module is locked", async () => {
+    params.moduleId = "t2";
+    mockApi({
+      "GET /student/me/progress": progress,
+      "GET /student/enrollments/e1/content": content(),
+    });
+    renderWithClient(<ModulePage />);
+
+    expect(await screen.findByText("This module is locked")).toBeInTheDocument();
+    params.moduleId = "t1";
   });
 
   it("explains a locked lesson instead of crashing", async () => {
