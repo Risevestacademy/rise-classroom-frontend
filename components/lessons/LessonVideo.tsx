@@ -83,7 +83,8 @@ export function LessonVideo({
                   : "border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-100",
               )}
             >
-              {item.title} · {formatDuration(item.durationSec)}
+              {item.title}
+              {item.durationSec ? ` · ${formatDuration(item.durationSec)}` : ""}
             </button>
           ))}
         </div>

@@ -7,7 +7,11 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { describeResource, toHttpUrl } from "@/lib/student-lessons";
+import {
+  describeResource,
+  toHttpUrl,
+  type LessonResource,
+} from "@/lib/student-lessons";
 
 /* A link or file in a student list: lesson resources, assignment attachments,
    and handed-in work. `detail` replaces the "PDF · host" line when given. */
@@ -15,11 +19,11 @@ export function ResourceRow({
   resource,
   detail,
 }: {
-  resource: { title: string; url: string };
+  resource: { title: string; url: string; type?: LessonResource["type"] };
   detail?: string;
 }) {
   const href = toHttpUrl(resource.url);
-  const info = describeResource(resource.url);
+  const info = describeResource(resource.url, resource.type);
   const Icon = info.isFile ? FileText : info.kind === "Video" ? Video : Link2;
   const Action = info.isFile ? Download : ExternalLink;
 

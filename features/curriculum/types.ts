@@ -74,22 +74,30 @@ export const submissionTypes = {
 export type SubmissionType = keyof typeof submissionTypes;
 
 export type SubmissionStatus =
+  | "ASSIGNED"
   | "DRAFT"
+  | "MISSED"
+  | "ON_HOLD"
   | "SUBMITTED"
   | "UNDER_REVIEW"
   | "CHANGES_REQUESTED"
-  | "GRADED";
+  | "GRADED"
+  | "REVIEWED";
 
 /* How each submission status is labelled and coloured, for students and instructors alike. */
 export const submissionBadges: Record<
   SubmissionStatus,
   { label: string; status: "neutral" | "info" | "warning" | "error" | "success" }
 > = {
+  ASSIGNED: { label: "Not started", status: "neutral" },
   DRAFT: { label: "Draft", status: "neutral" },
+  MISSED: { label: "Missed", status: "error" },
+  ON_HOLD: { label: "On hold", status: "warning" },
   SUBMITTED: { label: "Submitted", status: "info" },
   UNDER_REVIEW: { label: "Under review", status: "warning" },
   CHANGES_REQUESTED: { label: "Changes requested", status: "error" },
   GRADED: { label: "Graded", status: "success" },
+  REVIEWED: { label: "Reviewed", status: "success" },
 };
 
 /* The work a student hands in. Which field is filled depends on `submissionType`. */

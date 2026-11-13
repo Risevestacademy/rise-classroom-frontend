@@ -16,6 +16,8 @@ import {
   flattenTopics,
   formatDuration,
   lessonHref,
+  isCompleted,
+  isUnlocked,
   lessonQueries,
   type CurriculumLesson,
   type CurriculumTopic,
@@ -24,21 +26,14 @@ import {
 function LessonCard({
   lesson,
   number,
-  enrollmentId,
 }: {
   lesson: CurriculumLesson;
   number: number;
-  enrollmentId: string;
 }) {
-  const unlocked = lesson.lock.unlocked;
-
-  // Duration and resource count only come with the lesson detail.
-  const detail = useQuery({
-    ...lessonQueries.lesson(enrollmentId, lesson.id),
-    enabled: unlocked,
-  });
-  const duration = detail.data?.recordings?.[0]?.durationSec;
-  const resourceCount = detail.data?.resources?.length;
+  const unlocked = isUnlocked(lesson);
+  const completed = isCompleted(lesson);
+  const duration = lesson.recordings?.[0]?.durationSec;
+  const resourceCount = lesson.counts?.resources ?? lesson.resources?.length;
 
   const body = (
     <>
@@ -56,8 +51,8 @@ function LessonCard({
         </span>
         <span className="absolute top-3 left-3">
           {unlocked ? (
-            <Badge variant="light" status={lesson.completed ? "success" : "neutral"}>
-              {lesson.completed ? "Watched" : "Not watched"}
+            <Badge variant="light" status={completed ? "success" : "neutral"}>
+              {completed ? "Watched" : "Not watched"}
             </Badge>
           ) : (
             <Badge variant="light" status="neutral">
@@ -109,13 +104,11 @@ function WeekSection({
   weekNumber,
   isCurrent,
   defaultOpen,
-  enrollmentId,
 }: {
   topic: CurriculumTopic;
   weekNumber: number;
   isCurrent: boolean;
   defaultOpen: boolean;
-  enrollmentId: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const watched = countWatched(topic);
@@ -166,7 +159,6 @@ function WeekSection({
                 key={lesson.id}
                 lesson={lesson}
                 number={index + 1}
-                enrollmentId={enrollmentId}
               />
             ))}
           </div>
@@ -178,11 +170,9 @@ function WeekSection({
 function EarlierWeeks({
   topics,
   weekOf,
-  enrollmentId,
 }: {
   topics: CurriculumTopic[];
   weekOf: Map<string, number>;
-  enrollmentId: string;
 }) {
   const [open, setOpen] = useState(false);
   const weeks = topics.map((topic) => weekOf.get(topic.id) ?? 0);
@@ -228,7 +218,6 @@ function EarlierWeeks({
               weekNumber={weekOf.get(topic.id) ?? 0}
               isCurrent={false}
               defaultOpen={false}
-              enrollmentId={enrollmentId}
             />
           ))}
         </div>
@@ -240,11 +229,9 @@ function EarlierWeeks({
 function WeekList({
   topics,
   currentTopicId,
-  enrollmentId,
 }: {
   topics: CurriculumTopic[];
   currentTopicId: string | undefined;
-  enrollmentId: string;
 }) {
   // Weeks the student can't reach yet aren't in the design, so they're hidden.
   const weekOf = new Map(topics.map((topic, index) => [topic.id, index + 1]));
@@ -280,14 +267,12 @@ function WeekList({
           weekNumber={weekOf.get(topic.id) ?? 0}
           isCurrent={topic.id === currentTopicId}
           defaultOpen={topic.id === currentTopicId}
-          enrollmentId={enrollmentId}
         />
       ))}
       {earlier.length > 0 && (
         <EarlierWeeks
           topics={earlier}
           weekOf={weekOf}
-          enrollmentId={enrollmentId}
         />
       )}
     </div>
@@ -356,7 +341,6 @@ export default function LessonsPage() {
       <WeekList
         topics={topics}
         currentTopicId={currentTopicId}
-        enrollmentId={enrollmentId}
       />
     );
   }

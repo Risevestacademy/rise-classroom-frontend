@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { SubmissionType } from "@/features/curriculum/types";
+import type { ResourceRecord } from "@/features/curriculum/types";
+import type { StudentAssignment } from "@/lib/student-assignments";
 
 /** Base path of the learning pages. Change it here if the route is renamed. */
 export const LESSONS_BASE = "/student/my-learning";
@@ -19,25 +20,49 @@ export type LessonLock = {
   completed: boolean;
 };
 
+export type LessonResource = Pick<
+  ResourceRecord,
+  "id" | "title" | "description" | "url" | "type" | "fileName" | "sizeBytes"
+>;
+
+export type LessonAssignment = StudentAssignment;
+
+export type LessonRecording = {
+  id: string;
+  lessonId: string;
+  title: string;
+  url: string;
+  durationSec?: number | null;
+};
+
+/* Locked items come with only their title, position and counts: no `lock`, no content. */
 export type CurriculumLesson = {
   id: string;
-  topicId: string;
+  topicId?: string;
   title: string;
   description?: string | null;
-  position: number;
-  completed: boolean;
-  lock: LessonLock;
+  position?: number | null;
+  lock?: LessonLock;
+  counts?: { assignments?: number; resources?: number };
+  resources?: LessonResource[];
+  assignments?: LessonAssignment[];
+  recordings?: LessonRecording[];
 };
+
+export type LessonDetail = CurriculumLesson;
 
 export type CurriculumTopic = {
   id: string;
-  curriculumId: string;
+  curriculumId?: string;
   title: string;
   description?: string | null;
-  position: number;
-  completed: boolean;
-  lock: LessonLock;
+  position?: number | null;
+  lock?: LessonLock;
+  counts?: { lessons?: number; resources?: number; assignments?: number };
   lessons: CurriculumLesson[];
+  /** Module-level assignments and resources, not on any one lesson. */
+  assignments?: LessonAssignment[];
+  resources?: LessonResource[];
 };
 
 export type Curriculum = {
@@ -46,48 +71,19 @@ export type Curriculum = {
   title: string;
   description?: string | null;
   status: string;
-  topics: CurriculumTopic[];
-};
-
-export type LessonResource = {
-  id: string;
-  lessonId: string;
-  title: string;
-  description?: string | null;
-  url: string;
-};
-
-export type LessonAssignment = {
-  id: string;
-  lessonId: string;
-  title: string;
-  description?: string | null;
-  dueAt?: string | null;
-  submissionType?: SubmissionType;
-  publishStatus?: "DRAFT" | "PUBLISHED";
-};
-
-export type LessonRecording = {
-  id: string;
-  lessonId: string;
-  title: string;
-  url: string;
-  durationSec: number;
-};
-
-export type LessonDetail = {
-  id: string;
-  topicId: string;
-  title: string;
-  description?: string | null;
-  position: number;
-  lock: LessonLock;
-  resources: LessonResource[];
-  assignments: LessonAssignment[];
-  recordings: LessonRecording[];
+  progressMode?: "SEQUENTIAL" | "FLEXIBLE";
+  topics?: CurriculumTopic[];
 };
 
 type Envelope<T> = { success: boolean; data: T };
+
+export function isUnlocked(item: { lock?: LessonLock }) {
+  return item.lock?.unlocked === true;
+}
+
+export function isCompleted(item: { lock?: LessonLock }) {
+  return item.lock?.completed === true;
+}
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -117,12 +113,25 @@ export const lessonQueries = {
     }),
 };
 
+/* Marks one lesson done or not done. Lesson ids go through the module's progress endpoint. */
+export async function setLessonCompleted(
+  enrollmentId: string,
+  topicId: string,
+  lessonId: string,
+  completed: boolean,
+) {
+  await api.patch(
+    `/student/enrollments/${enrollmentId}/topics/${topicId}/progress`,
+    { lessons: [{ id: lessonId, completed }] },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Curriculum helpers
 // ---------------------------------------------------------------------------
 
-function sortByPosition<T extends { position: number }>(items: T[]) {
-  return [...items].sort((a, b) => a.position - b.position);
+function sortByPosition<T extends { position?: number | null }>(items: T[]) {
+  return [...items].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 }
 
 /** All topics ("weeks") in order, each with its lessons in order. */
@@ -159,15 +168,26 @@ export function findLesson(topics: CurriculumTopic[], lessonId: string) {
 }
 
 export function countWatched(topic: CurriculumTopic) {
-  return topic.lessons.filter((item) => item.completed).length;
+  return topic.lessons.filter(isCompleted).length;
+}
+
+/** Published assignments the student can open: the module's own, then each unlocked lesson's. */
+export function topicAssignments(topic: CurriculumTopic) {
+  if (!isUnlocked(topic)) return [];
+  return [
+    ...(topic.assignments ?? []).map((assignment) => ({ assignment, lesson: null })),
+    ...topic.lessons.filter(isUnlocked).flatMap((lesson) =>
+      (lesson.assignments ?? []).map((assignment) => ({ assignment, lesson })),
+    ),
+  ].filter(({ assignment }) => assignment.publishStatus !== "DRAFT");
 }
 
 // ---------------------------------------------------------------------------
 // Formatting and URL helpers
 // ---------------------------------------------------------------------------
 
-export function formatDuration(totalSeconds: number) {
-  const seconds = Math.max(0, Math.round(totalSeconds));
+export function formatDuration(totalSeconds: number | null | undefined) {
+  const seconds = Math.max(0, Math.round(totalSeconds ?? 0));
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const rest = seconds % 60;
@@ -201,14 +221,26 @@ const FILE_EXTENSIONS = [
   "zip",
 ];
 
-/** The API gives a resource a title and a URL only, so the type comes from the URL. */
-export function describeResource(value: string) {
+/** Uses the resource's `type` when the API sends one; otherwise guesses from the URL. */
+export function describeResource(value: string, type?: LessonResource["type"]) {
   const href = toHttpUrl(value);
   if (!href) return { kind: "Link", host: "", isFile: false };
 
   const url = new URL(href);
   const host = url.hostname.replace(/^www\./, "");
   const extension = url.pathname.split(".").pop()?.toLowerCase() ?? "";
+
+  if (type === "VIDEO") return { kind: "Video", host, isFile: false };
+  if (type === "LINK") return { kind: "Link", host, isFile: false };
+  if (type === "PDF") return { kind: "PDF", host, isFile: true };
+  if (type === "DOCUMENT" || type === "IMAGE") {
+    const kind = FILE_EXTENSIONS.includes(extension)
+      ? extension.toUpperCase()
+      : type === "IMAGE"
+        ? "Image"
+        : "Document";
+    return { kind, host, isFile: true };
+  }
 
   if (FILE_EXTENSIONS.includes(extension)) {
     return { kind: extension.toUpperCase(), host, isFile: true };

@@ -3,6 +3,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { api, type Envelope, type Paginated } from "@/lib/api";
 import type {
   AssignmentInstructions,
+  AssignmentRecord,
   SubmissionStatus,
   SubmissionType,
   SubmittedWork,
@@ -12,17 +13,15 @@ export function assignmentHref(assignmentId: string) {
   return `/student/assignments/${assignmentId}`;
 }
 
-/* GET /student/assignments/{id}. Only published assignments on the student's track. */
-export type StudentAssignment = {
-  id: string;
-  lessonId?: string | null;
-  topicId?: string | null;
-  title: string;
-  description?: string | null;
+/* GET /student/assignments/{id}, and the assignments inside the curriculum content. */
+export type StudentAssignment = Omit<AssignmentRecord, "instructions"> & {
   instructions?: AssignmentInstructions | string | null;
-  dueAt?: string | null;
-  submissionType: SubmissionType;
-  attachments: string[];
+  submissionLabel?: string | null;
+  studentAssignment?: {
+    status: SubmissionStatus;
+    submittedAt?: string | null;
+    missedAt?: string | null;
+  };
 };
 
 /* The student's own submission for one assignment. */
@@ -32,9 +31,11 @@ export type StudentSubmission = SubmittedWork & {
   enrollmentId: string;
   status: SubmissionStatus;
   submittedAt?: string | null;
-  isLate: boolean;
-  grade?: number | null;
+  /** Set when the deadline passed before the work was handed in. */
+  missedAt?: string | null;
+  score?: number | null;
   feedback?: string | null;
+  note?: string | null;
   reviewedAt?: string | null;
   changesRequestedReason?: string | null;
   updatedAt: string;
@@ -43,9 +44,19 @@ export type StudentSubmission = SubmittedWork & {
     title: string;
     dueAt?: string | null;
     submissionType: SubmissionType;
+    maxScore?: number | null;
   };
-  reviewer?: { name: string } | null;
+  reviewer?: { name?: string } | null;
 };
+
+export function isLateSubmission(submission: StudentSubmission) {
+  return Boolean(submission.submittedAt && submission.missedAt);
+}
+
+export function formatScore(score: number | null | undefined, maxScore?: number | null) {
+  if (score == null) return null;
+  return maxScore ? `${score}/${maxScore}` : String(score);
+}
 
 /* What the student is handing in. A file is sent as a multipart upload. */
 export type SubmissionDraft =
@@ -67,13 +78,16 @@ export const submissionFileExtensions = [
 ] as const;
 export const submissionFileMaxBytes = 25e6;
 
-/* A draft or a returned submission can still be changed; anything handed in can't. */
+/* Work not yet handed in, or sent back, can still be changed. Late work is accepted. */
+const editableStatuses: SubmissionStatus[] = [
+  "ASSIGNED",
+  "DRAFT",
+  "MISSED",
+  "CHANGES_REQUESTED",
+];
+
 export function canEditSubmission(submission: StudentSubmission | null) {
-  return (
-    !submission ||
-    submission.status === "DRAFT" ||
-    submission.status === "CHANGES_REQUESTED"
-  );
+  return !submission || editableStatuses.includes(submission.status);
 }
 
 async function getAssignment(assignmentId: string) {
@@ -108,10 +122,24 @@ export async function saveSubmissionDraft(
   return data;
 }
 
-/* Hands in the saved draft. The API checks it matches the submission type and marks it late if needed. */
-export async function submitAssignment(assignmentId: string) {
+/* Hands in the work, or the saved draft when `work` is null. The API marks it late if needed. */
+export async function submitAssignment(
+  assignmentId: string,
+  work: SubmissionDraft | null = null,
+) {
+  let body: unknown;
+  if (work?.submissionType === "FILE_UPLOAD") {
+    const form = new FormData();
+    form.append("file", work.file);
+    body = form;
+  } else if (work?.submissionType === "LINK") {
+    body = { linkUrl: work.linkUrl };
+  } else if (work?.submissionType === "TEXT") {
+    body = { textContent: work.textContent };
+  }
   const { data } = await api.post<Envelope<StudentSubmission>>(
     `/student/assignments/${assignmentId}/submit`,
+    body,
   );
   return data;
 }
