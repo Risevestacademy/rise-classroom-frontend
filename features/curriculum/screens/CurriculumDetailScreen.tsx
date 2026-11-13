@@ -44,6 +44,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SuccessToast } from "@/components/ui/toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/lib/api";
+import { useDragReorder } from "@/lib/use-drag-reorder";
 import {
   trackDetails,
   formatModuleNumber,
@@ -512,8 +513,6 @@ function ModulesTab({ curriculumId }: { curriculumId: string }) {
   const [expandedIds, setExpandedIds] = React.useState<Set<string> | null>(
     null,
   );
-  const [dragOrder, setDragOrder] = React.useState<string[] | null>(null);
-  const [draggingId, setDraggingId] = React.useState<string | null>(null);
 
   const reorderMutation = useMutation({
     mutationFn: (orderedIds: string[]) =>
@@ -543,28 +542,10 @@ function ModulesTab({ curriculumId }: { curriculumId: string }) {
     setExpandedIds(next);
   }
 
-  function handleDragOver(overId: string) {
-    if (!draggingId || draggingId === overId) return;
-    const order = dragOrder ?? modules.map((m) => m.id);
-    const from = order.indexOf(draggingId);
-    const to = order.indexOf(overId);
-    const next = [...order];
-    next.splice(from, 1);
-    next.splice(to, 0, draggingId);
-    setDragOrder(next);
-  }
-
-  function handleDragEnd() {
-    if (dragOrder) reorderMutation.mutate(dragOrder);
-    setDraggingId(null);
-    setDragOrder(null);
-  }
-
-  const ordered = dragOrder
-    ? dragOrder
-        .map((moduleId) => modules.find((m) => m.id === moduleId))
-        .filter((m): m is CurriculumModule => m !== undefined)
-    : modules;
+  const drag = useDragReorder({
+    items: modules,
+    onReorder: (next) => reorderMutation.mutate(next.map((m) => m.id)),
+  });
 
   if (modulesQuery.isSuccess && modules.length === 0) {
     return (
@@ -578,31 +559,21 @@ function ModulesTab({ curriculumId }: { curriculumId: string }) {
 
   return (
     <div className="flex max-w-4xl flex-col gap-3">
-      {ordered.map((curriculumModule, index) => {
+      {drag.ordered.map((curriculumModule, index) => {
         const isExpanded = expanded.has(curriculumModule.id);
         return (
           <div
             key={curriculumModule.id}
-            onDragOver={(event) => {
-              event.preventDefault();
-              handleDragOver(curriculumModule.id);
-            }}
+            {...drag.itemProps(curriculumModule.id)}
             className={cn(
               "flex items-start gap-3",
-              draggingId === curriculumModule.id && "opacity-50",
+              drag.draggingId === curriculumModule.id && "opacity-50",
             )}
           >
             <button
               type="button"
-              draggable
+              {...drag.handleProps(curriculumModule.id)}
               aria-label={`Drag to reorder ${curriculumModule.title}`}
-              onDragStart={(event) => {
-                event.dataTransfer.effectAllowed = "move";
-                const row = event.currentTarget.parentElement;
-                if (row) event.dataTransfer.setDragImage(row, 16, 16);
-                setDraggingId(curriculumModule.id);
-              }}
-              onDragEnd={handleDragEnd}
               className="mt-5 cursor-grab text-neutral-800 active:cursor-grabbing"
             >
               <GripVertical className="h-5 w-5" />
