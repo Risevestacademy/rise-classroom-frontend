@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  controlTowerWeeks,
   daysLeftIn,
+  formatShortWeekRange,
   formatWeekRange,
   isSameWeek,
   mentorDisplay,
   saveWeeklyMetric,
   weekRangeFor,
+  type WeeklyMetric,
 } from "@/lib/control-tower";
 
 describe("weekRangeFor", () => {
@@ -133,5 +136,62 @@ describe("saveWeeklyMetric", () => {
       priorities: "Ship the navbar",
       status: "DRAFT",
     });
+  });
+});
+
+describe("formatShortWeekRange", () => {
+  it("drops the repeated month within one month", () => {
+    expect(
+      formatShortWeekRange("2026-09-21T00:00:00.000Z", "2026-09-27T23:59:59.999Z")
+    ).toBe("Sep 21–27");
+  });
+
+  it("names both months across a month boundary", () => {
+    expect(
+      formatShortWeekRange("2027-01-25T00:00:00.000Z", "2027-01-31T23:59:59.999Z")
+    ).toBe("Jan 25–31");
+    expect(
+      formatShortWeekRange("2026-09-28T00:00:00.000Z", "2026-10-04T23:59:59.999Z")
+    ).toBe("Sep 28–Oct 4");
+  });
+});
+
+describe("controlTowerWeeks", () => {
+  const now = new Date("2026-10-14T12:00:00Z"); // a Wednesday
+  const metric = (weekStart: string, status: WeeklyMetric["status"]) =>
+    ({ id: weekStart, weekStart, status }) as WeeklyMetric;
+
+  it("numbers weeks from the cohort start and lists earlier weeks oldest first", () => {
+    const saved = metric("2026-09-28T00:00:00.000Z", "SUBMITTED");
+    const { current, previous } = controlTowerWeeks(
+      [saved],
+      "2026-09-23T09:00:00.000Z",
+      now
+    );
+
+    expect(current).toMatchObject({ number: 4, weekStart: "2026-10-12T00:00:00.000Z" });
+    expect(previous.map((week) => [week.number, week.weekStart, week.metric])).toEqual([
+      [1, "2026-09-21T00:00:00.000Z", undefined],
+      [2, "2026-09-28T00:00:00.000Z", saved],
+      [3, "2026-10-05T00:00:00.000Z", undefined],
+    ]);
+  });
+
+  it("starts from the first saved week when the cohort start is unknown", () => {
+    const { current, previous } = controlTowerWeeks(
+      [metric("2026-10-05T00:00:00.000Z", "DRAFT")],
+      undefined,
+      now
+    );
+
+    expect(current.number).toBe(2);
+    expect(previous).toHaveLength(1);
+  });
+
+  it("treats this week as week 1 with nothing to go on", () => {
+    const { current, previous } = controlTowerWeeks([], undefined, now);
+
+    expect(current.number).toBe(1);
+    expect(previous).toEqual([]);
   });
 });

@@ -3,8 +3,9 @@ import { queryOptions } from "@tanstack/react-query";
 import { api, type Envelope } from "@/lib/api";
 
 /**
- * DRAFT is a week still being written. SUBMITTED hands it to the mentor, who
- * moves it on to REVIEWED / COMPLETED — the student can't edit it after that.
+ * DRAFT is a week still being written. Saving from the student's Control Tower
+ * sends SUBMITTED; the mentor may move it on to REVIEWED / COMPLETED. The
+ * student sees any of the last three as "Completed".
  */
 export type WeeklyMetricStatus = "DRAFT" | "SUBMITTED" | "REVIEWED" | "COMPLETED";
 
@@ -21,7 +22,7 @@ export type WeeklyMetric = {
   // kpis: string | null; // PENDING-BACKEND(kpis)
   whatWentWell?: string | null;
   whatIWillDoDifferently?: string | null;
-  /** Written by the mentor when they review the week. */
+  /** The student's notes from their mentor check-in. */
   mentorMeetingOutcome: string | null;
   mentorFeedback: string | null;
   status: WeeklyMetricStatus;
@@ -36,9 +37,10 @@ export type SaveWeeklyMetricInput = {
   progress?: string;
   challenges?: string;
   priorities?: string;
+  mentorMeetingOutcome?: string;
   // kpis?: string; // PENDING-BACKEND(kpis)
-  // wentWell?: string; // PENDING-BACKEND(wentWell)
-  // doDifferently?: string; // PENDING-BACKEND(doDifferently)
+  whatWentWell?: string;
+  whatIWillDoDifferently?: string;
   status: "DRAFT" | "SUBMITTED";
 };
 
@@ -64,7 +66,8 @@ export type StudentControlTower = {
     userId: string;
     cohortId: string;
     user: { id: string; name: string; email: string };
-    cohort: { id: string; name: string };
+    /** Start and end dates aren't confirmed in this response; read them defensively. */
+    cohort: { id: string; name: string; startDate?: string; endDate?: string };
   };
   mentor: ControlTowerMentor | null;
   goals: unknown[];
@@ -148,7 +151,7 @@ export function daysLeftIn(weekEnd: string, now = new Date()) {
 /** "Sep 28 – Oct 4". Formatted in UTC so the dates match the stored week. */
 export function formatWeekRange(weekStart: string, weekEnd: string) {
   const format = (value: string) =>
-    new Date(value).toLocaleDateString(undefined, {
+    new Date(value).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       timeZone: "UTC",
@@ -177,4 +180,70 @@ export function mentorDisplay(mentor: ControlTowerMentor) {
     .toUpperCase();
 
   return { name, initials, email: person.email };
+}
+
+/** "Sep 21–27", or "Jan 28–Feb 3" across months. In UTC to match the stored week. */
+export function formatShortWeekRange(weekStart: string, weekEnd: string) {
+  const start = new Date(weekStart);
+  const end = new Date(weekEnd);
+  const month = (date: Date) =>
+    date.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+
+  const endLabel =
+    month(start) === month(end)
+      ? String(end.getUTCDate())
+      : `${month(end)} ${end.getUTCDate()}`;
+
+  return `${month(start)} ${start.getUTCDate()}–${endLabel}`;
+}
+
+/** A saved week the student can still change but no longer needs to finish. */
+export function isWeekCompleted(metric?: WeeklyMetric) {
+  return metric !== undefined && metric.status !== "DRAFT";
+}
+
+export type ControlTowerWeek = {
+  /** 1 for the cohort's first week. */
+  number: number;
+  weekStart: string;
+  weekEnd: string;
+  metric?: WeeklyMetric;
+};
+
+const WEEK_MS = 7 * DAY_MS;
+
+/**
+ * This week, plus every earlier week since the cohort started (oldest first),
+ * each with whatever the student saved for it. A past week with nothing saved
+ * is still listed so it can show as Missed. Without a cohort start date the
+ * count starts from the student's first saved week.
+ */
+export function controlTowerWeeks(
+  metrics: WeeklyMetric[],
+  cohortStart?: string,
+  now = new Date()
+): { current: ControlTowerWeek; previous: ControlTowerWeek[] } {
+  const weekOf = (date: string | Date) =>
+    Date.parse(weekRangeFor(new Date(date)).weekStart);
+
+  const byWeek = new Map(metrics.map((metric) => [weekOf(metric.weekStart), metric]));
+  const thisWeek = weekOf(now);
+  const first = Math.min(
+    thisWeek,
+    cohortStart ? weekOf(cohortStart) : Math.min(thisWeek, ...byWeek.keys())
+  );
+
+  const weekAt = (start: number): ControlTowerWeek => ({
+    number: Math.round((start - first) / WEEK_MS) + 1,
+    weekStart: new Date(start).toISOString(),
+    weekEnd: new Date(start + WEEK_MS - 1).toISOString(),
+    metric: byWeek.get(start),
+  });
+
+  const previous: ControlTowerWeek[] = [];
+  for (let start = first; start < thisWeek; start += WEEK_MS) {
+    previous.push(weekAt(start));
+  }
+
+  return { current: weekAt(thisWeek), previous };
 }
