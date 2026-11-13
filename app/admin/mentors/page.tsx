@@ -145,16 +145,23 @@ export default function MentorsPage() {
   const isNarrowed =
     debouncedSearch.length > 0 || Boolean(pickedStatus || pickedTrack);
 
+  // Scoped to the cohort and track like the list, so it's only used when no
+  // track is picked.
+  const summary = pickedTrack ? undefined : mentorsQuery.data?.summary;
   const stats = [
-    { title: "Total mentors", value: totalQuery.data ?? "--" },
+    {
+      title: "Total mentors",
+      value: summary?.totalMentors ?? totalQuery.data ?? "--",
+    },
     { title: "Active mentors", value: activeQuery.data ?? "--" },
     // PENDING-BACKEND: admins can't list mentorships yet, so mentors without
     // students can't be counted.
     { title: "Unassigned mentors", value: "--" },
     {
       title: "Students assigned",
-      value:
-        controlTower.data?.metricsOverview.totalActiveMentorships ?? "--",
+      value: summary
+        ? summary.activeStudents - summary.unassignedStudents
+        : (controlTower.data?.metricsOverview.totalActiveMentorships ?? "--"),
     },
   ];
 

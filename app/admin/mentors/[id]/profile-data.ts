@@ -8,7 +8,7 @@ export type AssignedStudent = {
   email: string;
   image?: string | null;
   status: "active" | "pending" | "inactive";
-  /** `null` while the API has no student progress. */
+  /** `null` until it loads, or when it can't be worked out. */
   progress: number | null;
 };
 

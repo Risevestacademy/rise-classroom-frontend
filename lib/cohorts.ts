@@ -105,8 +105,9 @@ function daysUntil(date: string, now = new Date()) {
 }
 
 /**
- * PENDING-BACKEND: the API has no completion data, so progress is the share of
- * the cohort's time that has passed.
+ * PENDING-BACKEND: completion is only listed per student, and the users list
+ * has no student profile id to ask with, so progress is the share of the
+ * cohort's time that has passed.
  */
 function timeProgress(cohort: Cohort, now = new Date()) {
   if (cohort.status === "COMPLETED") return 100;
