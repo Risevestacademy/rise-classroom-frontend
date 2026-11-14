@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, CloudUpload, File, X } from "lucide-react";
+import { CheckCircle2, CloudUpload, File, Link2, X } from "lucide-react";
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ export type UploadedFile = {
   name: string;
   /** `null` when unknown, e.g. a resource saved as a link. */
   sizeBytes: number | null;
+  /* Set for a saved link rather than a picked file. */
+  url?: string;
 };
 
 /** Splits picked files into ones that pass the type/size rules and the names that don't. */
@@ -31,13 +33,38 @@ export function acceptFiles(
   return { accepted, rejected };
 }
 
+/* "drive.google.com" for a link, or the link itself if it can't be read. */
+function linkHost(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+/* A saved link shows a link icon, since its name may not be a file name at all. */
 export function FileTypeIcon({
   name,
+  url,
   className,
 }: {
   name: string;
+  url?: string;
   className?: string;
 }) {
+  if (url) {
+    return (
+      <span
+        className={cn(
+          "inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-neutral-100 text-neutral-600",
+          className
+        )}
+      >
+        <Link2 className="size-4" />
+      </span>
+    );
+  }
+
   const extension = name.split(".").pop()?.toUpperCase() ?? "FILE";
 
   return (
@@ -51,6 +78,23 @@ export function FileTypeIcon({
 }
 
 export function FileChip({ file }: { file: UploadedFile }) {
+  if (file.url) {
+    return (
+      <a
+        href={file.url}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex max-w-full items-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-xs hover:border-neutral-300"
+      >
+        <FileTypeIcon name={file.name} url={file.url} />
+        <span className="truncate text-sm text-neutral-800">{file.name}</span>
+        <span className="shrink-0 text-xs text-neutral-400">
+          {linkHost(file.url)}
+        </span>
+      </a>
+    );
+  }
+
   return (
     <span className="inline-flex items-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-xs">
       <FileTypeIcon name={file.name} />

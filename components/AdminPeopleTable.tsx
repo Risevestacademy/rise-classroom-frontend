@@ -3,11 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { Filter, MoreHorizontal, Search01 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import {
+  PeopleSelectionBar,
+  ResendInvitesAction,
+} from "@/components/PeopleSelectionBar";
 import { UserRowActions } from "@/components/UserRowActions";
 import {
   PeopleFilterDialog,
@@ -15,20 +18,23 @@ import {
   type PeopleFilterValues,
 } from "@/components/cohorts/PeopleFilterDialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Pagination } from "@/components/ui/pagination";
+import { usePageParams } from "@/lib/use-page-params";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   adminQueries,
   assignmentsFor,
+  staffAssignments,
+  toUserFilters,
   type AdminUser,
-  type UserFilters,
 } from "@/lib/admin";
 import { useSelectedCohort } from "@/lib/selected-cohort";
+import { useDebounced } from "@/lib/use-debounced";
+import { useRowSelection } from "@/lib/use-row-selection";
 import {
   formatJoined,
   getStudentStatus,
 } from "@/app/admin/students/student-display";
-
-const pageSize = 20;
 
 /** Status pills sit on the brand surface; only the text is coloured. */
 const statusText = {
@@ -37,22 +43,10 @@ const statusText = {
   error: "text-text-error",
 } as const;
 
-/** Delays a value so typing in the search box doesn't fire a request per key. */
-function useDebounced<T>(value: T, delay = 350) {
-  const [debounced, setDebounced] = React.useState(value);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-
-  return debounced;
-}
-
 /** Track ids a user is assigned to (instructors) or enrolled on (students). */
 function trackIdsFor(user: AdminUser) {
   const ids = new Set<string>();
-  for (const assignment of user.instructorTrack ?? []) {
+  for (const assignment of staffAssignments(user)) {
     if (assignment.track?.id) ids.add(assignment.track.id);
   }
   for (const membership of user.studentProfile ?? []) {
@@ -111,15 +105,6 @@ function peopleFilters(
   return filters;
 }
 
-/** The API takes one value per filter, so each section holds at most one. */
-function toUserFilters(values: PeopleFilterValues): UserFilters {
-  return Object.fromEntries(
-    Object.entries(values)
-      .filter(([, picked]) => picked.length > 0)
-      .map(([key, picked]) => [key, picked[0]]),
-  );
-}
-
 /** The program-wide Students / Instructors page body under People. */
 export function AdminPeopleTable({
   role,
@@ -145,12 +130,12 @@ export function AdminPeopleTable({
 }) {
   const router = useRouter();
   const [search, setSearch] = React.useState("");
-  const [page, setPage] = React.useState(1);
+  const { page, setPage, pageSize, setPageSize } = usePageParams();
   const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
     {},
   );
   const [filterOpen, setFilterOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const selection = useRowSelection((user: AdminUser) => user.id);
   const debouncedSearch = useDebounced(search);
   const userFilters = toUserFilters(filterValues);
   const { cohortId, isReady } = useSelectedCohort();
@@ -159,8 +144,9 @@ export function AdminPeopleTable({
   const [listedCohortId, setListedCohortId] = React.useState(cohortId);
   if (listedCohortId !== cohortId) {
     setListedCohortId(cohortId);
-    setPage(1);
-    setSelected(new Set());
+    // Not on the first load, so a page from the URL is kept.
+    if (listedCohortId !== undefined) setPage(1);
+    selection.clear();
   }
 
   const usersQuery = useQuery({
@@ -173,6 +159,8 @@ export function AdminPeopleTable({
       limit: pageSize,
     }),
     enabled: isReady,
+    // Keeps the rows and pagination on screen while the next page loads.
+    placeholderData: keepPreviousData,
   });
   const activeQuery = useQuery({
     ...adminQueries.userCount({
@@ -193,33 +181,14 @@ export function AdminPeopleTable({
   const totalPages = usersQuery.data?.totalPages ?? 1;
   const filters = peopleFilters(role, tracksQuery.data ?? []);
 
+  // Removing the last row of the last page leaves this page empty.
+  if (totalPages > 0 && page > totalPages) setPage(totalPages);
+
   const isNarrowed =
     debouncedSearch.length > 0 || Object.keys(userFilters).length > 0;
   const showEmptyState = !usersQuery.isPending && total === 0 && !isNarrowed;
 
-  const allSelected =
-    users.length > 0 && users.every((user) => selected.has(user.id));
-  const someSelected = users.some((user) => selected.has(user.id));
-
-  function toggleAll() {
-    setSelected((current) => {
-      const next = new Set(current);
-      for (const user of users) {
-        if (allSelected) next.delete(user.id);
-        else next.add(user.id);
-      }
-      return next;
-    });
-  }
-
-  function toggleOne(id: string, checked: boolean) {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
+  const headerCheckbox = selection.headerState(users);
 
   if (usersQuery.isError) {
     return (
@@ -300,14 +269,13 @@ export function AdminPeopleTable({
           scroll area; without it they widen the whole page on mobile. */}
         <div className="relative overflow-x-auto">
           <table className="w-full min-w-[960px] table-fixed text-left">
-            <thead className="bg-neutral-100 text-sm font-medium text-text-primary uppercase">
+            <thead className="bg-neutral-100 text-sm font-medium text-text-primary">
               <tr className="h-11">
                 <th className="w-[69px] border-r border-neutral-200 pl-3.5">
                   <Checkbox
                     aria-label={`Select all ${label.plural} on this page`}
-                    checked={allSelected}
-                    indeterminate={someSelected && !allSelected}
-                    onCheckedChange={toggleAll}
+                    {...headerCheckbox}
+                    onCheckedChange={() => selection.toggleAll(users)}
                     className="size-4 border-icon-secondary"
                   />
                 </th>
@@ -369,7 +337,7 @@ export function AdminPeopleTable({
                 : users.map((user) => {
                     const { tracks, cohorts } = assignmentsFor(user);
                     const status = getStudentStatus(user);
-                    const name = user.displayName ?? user.name;
+                    const name = user.name;
                     const href = rowHref?.(user);
 
                     return (
@@ -388,16 +356,21 @@ export function AdminPeopleTable({
                         >
                           <Checkbox
                             aria-label={`Select ${name}`}
-                            checked={selected.has(user.id)}
+                            checked={selection.isSelected(user)}
                             onCheckedChange={(checked) =>
-                              toggleOne(user.id, checked)
+                              selection.toggle(user, checked)
                             }
                             className="size-4 border-icon-secondary"
                           />
                         </td>
                         <td className="px-3">
                           <div className="flex items-center gap-3">
-                            <PersonAvatar name={user.name} colorKey={user.id} size={44} />
+                            <PersonAvatar
+                              name={user.name}
+                              src={user.image}
+                              colorKey={user.id}
+                              size={44}
+                            />
                             <div className="min-w-0">
                               {href ? (
                                 <Link
@@ -452,34 +425,6 @@ export function AdminPeopleTable({
           </p>
         )}
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between gap-4 px-4 py-4 sm:px-6">
-            <p className="font-work text-sm text-text-secondary">
-              Page {page} of {totalPages}
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((current) => current - 1)}
-                disabled={page <= 1 || usersQuery.isFetching}
-                className="flex h-9 items-center gap-1 rounded-lg border border-neutral-200 px-3 font-work text-sm text-text-primary disabled:opacity-40"
-              >
-                <ChevronLeft className="size-4" />
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((current) => current + 1)}
-                disabled={page >= totalPages || usersQuery.isFetching}
-                className="flex h-9 items-center gap-1 rounded-lg border border-neutral-200 px-3 font-work text-sm text-text-primary disabled:opacity-40"
-              >
-                Next
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
         <PeopleFilterDialog
           open={filterOpen}
           onOpenChange={setFilterOpen}
@@ -493,6 +438,40 @@ export function AdminPeopleTable({
           }}
         />
       </section>
+
+      {users.length > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          disabled={usersQuery.isFetching}
+          className="mt-4"
+        />
+      )}
+
+      <PeopleSelectionBar
+        items={selection.items}
+        noun={{ singular: label.singular, plural: label.plural }}
+        onClear={selection.clear}
+        exportFileName={label.plural}
+        exportColumns={[
+          { header: "Name", value: (user) => user.name },
+          { header: "Email", value: (user) => user.email },
+          { header: "Track", value: (user) => assignmentsFor(user).tracks.join("; ") },
+          { header: "Cohort", value: (user) => assignmentsFor(user).cohorts.join("; ") },
+          { header: "Status", value: (user) => getStudentStatus(user).label },
+          { header: "Joined", value: (user) => formatJoined(user) },
+        ]}
+        actions={(notify) => (
+          <ResendInvitesAction users={selection.items} onResult={notify} />
+        )}
+      />
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 
 import { SettingsTab } from "@/features/curriculum/components/SettingsTab";
 import { CurriculumScopeProvider } from "@/features/curriculum/scope";
@@ -10,7 +10,7 @@ import type {
   TopicRecord,
 } from "@/features/curriculum/types";
 import { makeTrack } from "@/test/fixtures";
-import { envelope, mockApi, renderWithClient, reply } from "@/test/utils";
+import { curriculumTreeRoutes, envelope, mockApi, renderWithClient, reply } from "@/test/utils";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -47,7 +47,8 @@ const curriculumRecord: CurriculumRecord = {
   totalLessons: 1,
   totalAssignments: 0,
   cohort: { id: "cohort-1", name: "Cohort 4" },
-  assignedInstructors: [],
+  creatorId: null,
+  creatorType: null,
 };
 
 const topic: TopicRecord = {
@@ -64,18 +65,22 @@ const topic: TopicRecord = {
 const lesson: LessonRecord = { ...timestamps, id: "l1", topicId: "t1", title: "Grids", position: 0 };
 
 /* One curriculum with one module, which has one lesson and nothing else yet. */
-function curriculumRoutes(extra: Record<string, unknown> = {}) {
+function curriculumRoutes(
+  extra: Record<string, unknown> = {},
+  assignments: unknown[] = [],
+) {
   return {
     "GET /admin/curriculums/c1": envelope(curriculumRecord),
     "GET /admin/tracks/track-1": envelope(makeTrack()),
     "GET /admin/users": envelope({ items: [], page: 1, limit: 1, total: 12, totalPages: 12 }),
-    "GET /admin/curriculums/c1/topics": envelope([topic]),
-    "GET /admin/topics/t1/lessons": envelope([lesson]),
-    "GET /admin/topics/t1/resources": envelope([]),
-    "GET /admin/topics/t1/assignments": envelope([]),
-    "GET /admin/lessons/l1/resources": envelope([]),
-    "GET /admin/lessons/l1/assignments": envelope([]),
-    "GET /admin/lessons/l1/recordings": envelope([]),
+    ...curriculumTreeRoutes("admin", "c1", [
+      {
+        ...topic,
+        resources: [],
+        assignments,
+        lessons: [{ ...lesson, resources: [], recordings: [] }],
+      },
+    ]),
     ...extra,
   };
 }
@@ -92,6 +97,16 @@ async function choose(
 ) {
   await user.click(screen.getByRole("combobox", { name: label }));
   await user.click(await screen.findByRole("option", { name: option }));
+}
+
+/* Opens the due date picker, clicks a day in the month it opens on, then Apply. */
+async function pickDueDate(
+  user: ReturnType<typeof renderWithClient>["user"],
+  date: Date,
+) {
+  await user.click(screen.getByRole("button", { name: /^Due date/ }));
+  await user.click(await screen.findByRole("button", { name: date.toDateString() }));
+  await user.click(screen.getByRole("button", { name: "Apply" }));
 }
 
 describe("NewResourceScreen", () => {
@@ -200,8 +215,10 @@ describe("NewAssignmentScreen", () => {
 
   const description = () =>
     screen.getByPlaceholderText("Redesign a simple landing page using hierarchy and contrast");
+  const instructions = () =>
+    screen.getByPlaceholderText("Use typography, spacing, and color to guide the viewer through the page.");
 
-  it("needs a title and a description", async () => {
+  it("needs a title, a description and instructions", async () => {
     const { user } = await renderScreen();
     const create = screen.getByRole("button", { name: "Create Assignment" });
 
@@ -211,18 +228,23 @@ describe("NewAssignmentScreen", () => {
     await user.type(description(), "   ");
     expect(create).toBeDisabled();
     await user.type(description(), "Lay out a page on a grid");
+    expect(create).toBeDisabled();
+    await user.type(instructions(), "Use 12 columns");
     expect(create).toBeEnabled();
   });
 
-  it("saves a draft on the whole module, with links as attachments", async () => {
+  /* PENDING-BACKEND: the API has no file uploads, so picked files aren't sent. */
+  it("saves a draft on the whole module, keeping picked files local", async () => {
     const { user, api } = await renderScreen();
 
     await user.type(screen.getByRole("textbox", { name: /Assignment title/ }), " Grid study ");
     await user.type(description(), "Lay out a page on a grid");
-    await user.type(
-      screen.getByPlaceholderText("https://drive.google.com/…"),
-      "https://www.figma.com/file/brief{Enter}",
+    await user.type(instructions(), "Use 12 columns");
+    await user.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(["x"], "brief.pdf", { type: "application/pdf" }),
     );
+    expect(screen.getByText("brief.pdf")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create Assignment" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
@@ -230,9 +252,10 @@ describe("NewAssignmentScreen", () => {
       {
         title: "Grid study",
         description: "Lay out a page on a grid",
+        instructions: { description: "Use 12 columns", guidelines: [] },
         submissionType: "FILE_UPLOAD",
+        maxScore: 100,
         publishStatus: "DRAFT",
-        attachments: ["https://www.figma.com/file/brief"],
       },
     ]);
     expect(push.mock.calls[0][0]).toBe(
@@ -245,7 +268,8 @@ describe("NewAssignmentScreen", () => {
 
     await user.type(screen.getByRole("textbox", { name: /Assignment title/ }), "Grid study");
     await user.type(description(), "Lay out a page on a grid");
-    await choose(user, /Due relative to lesson/, "After lesson 1");
+    await user.type(instructions(), "Use 12 columns");
+    await choose(user, /Attach to lesson/, "After lesson 1");
     await choose(user, /Assignment type/, "Link");
     await user.click(screen.getByRole("button", { name: "Create Assignment" }));
 
@@ -255,29 +279,34 @@ describe("NewAssignmentScreen", () => {
     ]);
   });
 
-  it("has no file upload for resources", async () => {
+  it("offers a file drop zone for resources and points out of 100", async () => {
     await renderScreen();
-    expect(screen.getByRole("button", { name: "Add link" })).toBeInTheDocument();
-    expect(screen.queryByText(/Drag|drop|Browse/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Browse File" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Maximum points/)).toHaveValue("100");
   });
 
   it("sends the picked due date and time", async () => {
     const { user, api } = await renderScreen();
-    const time = screen.getByLabelText("Due time");
+    const time = screen.getByRole("combobox", { name: "Due time" });
+    /* The picker opens on the current month, so pick a day in it. */
+    const today = new Date();
+    const day = new Date(today.getFullYear(), today.getMonth(), 20);
 
     /* The time only matters once there's a date, and defaults to 11:59 PM. */
-    expect(time).toBeDisabled();
-    expect(time).toHaveValue("23:59");
+    expect(time).toHaveAttribute("data-disabled");
+    expect(time).toHaveTextContent("11:59PM");
 
     await user.type(screen.getByRole("textbox", { name: /Assignment title/ }), "Grid study");
     await user.type(description(), "Lay out a page on a grid");
-    fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "2026-11-20" } });
-    fireEvent.change(time, { target: { value: "14:30" } });
+    await user.type(instructions(), "Use 12 columns");
+    await pickDueDate(user, day);
+    await choose(user, /Due time/, "2:30PM");
     await user.click(screen.getByRole("button", { name: "Create Assignment" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
+    day.setHours(14, 30);
     expect(api.bodies("POST /admin/topics/t1/assignments")).toMatchObject([
-      { dueAt: new Date("2026-11-20T14:30:00").toISOString() },
+      { dueAt: day.toISOString() },
     ]);
   });
 });
@@ -291,19 +320,25 @@ describe("EditAssignmentScreen", () => {
     lessonId: null,
     title: "Grid study",
     description: "Lay out a page on a grid",
-    instructions: "Use 12 columns",
+    instructions: { description: "Use 12 columns", guidelines: [] },
     dueAt,
     submissionType: "LINK",
+    maxScore: 50,
     publishStatus: "PUBLISHED",
-    attachments: [],
+    attachments: [
+      {
+        id: "att-1",
+        title: "Brief",
+        mimeType: "application/pdf",
+        sizeBytes: 2048,
+        downloadUrl: "https://example.com/brief.pdf",
+      },
+    ],
   };
 
   async function renderScreen() {
     const api = mockApi(
-      curriculumRoutes({
-        "GET /admin/topics/t1/assignments": envelope([saved]),
-        "PATCH /admin/assignments/a1": envelope(saved),
-      }),
+      curriculumRoutes({ "PATCH /admin/assignments/a1": envelope(saved) }, [saved]),
     );
     const view = renderAsAdmin(<EditAssignmentScreen id="c1" assignmentId="a1" />);
     await screen.findByDisplayValue("Grid study");
@@ -316,15 +351,16 @@ describe("EditAssignmentScreen", () => {
     expect(screen.getByRole("heading", { name: "Edit Assignment" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("Lay out a page on a grid")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Use 12 columns")).toBeInTheDocument();
-    expect(screen.getByLabelText("Due date")).toHaveValue("2026-11-20");
-    expect(screen.getByLabelText("Due time")).toHaveValue("17:00");
+    expect(screen.getByLabelText(/^Maximum points/)).toHaveValue("50");
+    expect(screen.getByRole("button", { name: "Due date, Nov 20, 2026" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Due time" })).toHaveTextContent("5:00PM");
   });
 
   it("saves a new due date and returns to the assignments tab", async () => {
     const { user, api } = await renderScreen();
 
-    fireEvent.change(screen.getByLabelText("Due date"), { target: { value: "2026-11-27" } });
-    fireEvent.change(screen.getByLabelText("Due time"), { target: { value: "09:00" } });
+    await pickDueDate(user, new Date(2026, 10, 27));
+    await choose(user, /Due time/, "9:00AM");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
@@ -333,7 +369,17 @@ describe("EditAssignmentScreen", () => {
         title: "Grid study",
         dueAt: new Date("2026-11-27T09:00:00").toISOString(),
         lessonId: null,
+        instructions: { description: "Use 12 columns", guidelines: [] },
         submissionType: "LINK",
+        maxScore: 50,
+        attachments: [
+          {
+            title: "Brief",
+            mimeType: "application/pdf",
+            sizeBytes: 2048,
+            downloadUrl: "https://example.com/brief.pdf",
+          },
+        ],
       },
     ]);
     expect(push.mock.calls[0][0]).toBe("/admin/curriculum/c1?tab=assignments");
@@ -352,7 +398,7 @@ describe("EditAssignmentScreen", () => {
   it("moves it onto a lesson in the same module", async () => {
     const { user, api } = await renderScreen();
 
-    await choose(user, /Due relative to lesson/, "After lesson 1");
+    await choose(user, /Attach to lesson/, "After lesson 1");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());

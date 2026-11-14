@@ -15,30 +15,43 @@ vi.mock("@/components/AdminTopNav", () => ({ AdminTopNav: () => null }));
 
 const { default: CreateCohortPage } = await import("@/app/admin/cohorts/create/page");
 
+type User = ReturnType<typeof renderWithClient>["user"];
+
+/* Opens a date field's picker on this month, steps to the date's month, picks it and applies. */
+async function pickDate(user: User, field: RegExp, date: Date) {
+  const now = new Date();
+  await user.click(screen.getByLabelText(field));
+  const months =
+    (date.getFullYear() - now.getFullYear()) * 12 + date.getMonth() - now.getMonth();
+  for (let i = 0; i < months; i++) {
+    await user.click(await screen.findByRole("button", { name: "Next month" }));
+  }
+  await user.click(await screen.findByRole("button", { name: date.toDateString() }));
+  await user.click(screen.getByRole("button", { name: "Apply" }));
+}
+
 async function fillForm(
-  user: ReturnType<typeof renderWithClient>["user"],
-  { name = "Cohort 5", start = "01/02/2027", end = "31/07/2027" } = {}
+  user: User,
+  { name = "Cohort 5", start = new Date(2027, 1, 1), end = new Date(2027, 6, 31) } = {}
 ) {
   await user.clear(screen.getByLabelText(/Cohort name/));
   await user.type(screen.getByLabelText(/Cohort name/), name);
-  await user.type(screen.getByLabelText(/Start date/), start);
-  await user.type(screen.getByLabelText(/End date/), end);
+  await pickDate(user, /Start date/, start);
+  await pickDate(user, /End date/, end);
 }
 
 describe("Create cohort", () => {
-  it("only allows creating once the name and both dates are valid", async () => {
+  it("only allows creating once the name and both dates are set", async () => {
     mockApi({});
     const { user } = renderWithClient(<CreateCohortPage />);
     const submit = screen.getByRole("button", { name: "Create cohort" });
 
     expect(submit).toBeDisabled();
 
-    await user.type(screen.getByLabelText(/Start date/), "31/02/2027");
-    await user.type(screen.getByLabelText(/End date/), "31/07/2027");
+    await pickDate(user, /Start date/, new Date(2027, 1, 1));
     expect(submit).toBeDisabled();
 
-    await user.clear(screen.getByLabelText(/Start date/));
-    await user.type(screen.getByLabelText(/Start date/), "01/02/2027");
+    await pickDate(user, /End date/, new Date(2027, 6, 31));
     expect(submit).toBeEnabled();
 
     await user.clear(screen.getByLabelText(/Cohort name/));

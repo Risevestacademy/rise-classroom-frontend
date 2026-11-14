@@ -43,5 +43,5 @@ export type Person = {
   id?: string;
   name: string;
   email: string;
-  avatar?: string;
+  avatar?: string | null;
 };

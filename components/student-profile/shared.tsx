@@ -4,7 +4,7 @@ import * as React from "react";
 import { Popover } from "@base-ui/react/popover";
 
 import { ArrowDown01, Message01 } from "@/assets/icons";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { SelectInput } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -138,13 +138,16 @@ export function BrandBadge({
   );
 }
 
-export function MessageButton() {
-  // PENDING-BACKEND: there's no messaging yet.
+/** Opens the user's mail app to write to `email`. */
+export function MessageButton({ email }: { email: string }) {
   return (
-    <Button variant="tertiary" size="medium">
+    <a
+      href={`mailto:${email}`}
+      className={buttonVariants({ variant: "tertiary", size: "medium" })}
+    >
       <Message01 className="size-[18px]" />
       Message
-    </Button>
+    </a>
   );
 }
 
@@ -167,17 +170,24 @@ export function DetailItem({
 }
 
 export type TimelineGroup = {
-  label: string;
-  items: { time: string; title: string; detail: string }[];
+  /** The day, e.g. "Today"; left out for a single undated list. */
+  label?: string;
+  items: readonly { time: string; title: string; detail: string }[];
 };
 
 /** Days of events on a vertical line, as in the Activity tabs. */
-export function ActivityTimeline({ groups }: { groups: TimelineGroup[] }) {
+export function ActivityTimeline({
+  groups,
+}: {
+  groups: readonly TimelineGroup[];
+}) {
   return (
     <div className="flex flex-col gap-4 p-2.5">
-      {groups.map((group) => (
-        <div key={group.label} className="flex flex-col gap-8">
-          <p className="text-sm font-medium text-black">{group.label}</p>
+      {groups.map((group, index) => (
+        <div key={group.label ?? index} className="flex flex-col gap-8">
+          {group.label && (
+            <p className="text-sm font-medium text-black">{group.label}</p>
+          )}
           <ol className="relative ml-[22px] flex flex-col gap-[38px] border-l-2 border-border-strong pl-4">
             {group.items.map((item) => (
               <li key={item.time + item.title} className="relative">

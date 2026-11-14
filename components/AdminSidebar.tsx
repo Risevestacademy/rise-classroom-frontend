@@ -1,6 +1,5 @@
 "use client";
 
-import { Blocks } from "lucide-react";
 import {
   DashboardSquare01,
   Video02,
@@ -16,13 +15,9 @@ import {
   Message01,
   Notification02,
   Marketing,
-  Settings01,
 } from "@/assets/icons";
-import {
-  AppSidebar,
-  type NavItem,
-  type NavSectionConfig,
-} from "@/components/AppSidebar";
+import { AdminCohortSelect } from "@/components/AdminCohortSelect";
+import { AppSidebar, type NavSectionConfig } from "@/components/AppSidebar";
 
 const sections: NavSectionConfig[] = [
   {
@@ -71,17 +66,12 @@ const sections: NavSectionConfig[] = [
   },
 ];
 
-const accountItems: NavItem[] = [
-  { title: "Settings", href: "/admin/settings", icon: Settings01 },
-  { title: "Integration", href: "/admin/integration", icon: Blocks },
-];
-
 export function AdminSidebar() {
   return (
     <AppSidebar
       homeHref="/admin/dashboard"
       sections={sections}
-      accountItems={accountItems}
+      mobileTop={<AdminCohortSelect className="w-full max-w-none" />}
     />
   );
 }

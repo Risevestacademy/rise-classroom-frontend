@@ -1,17 +1,19 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { Dialog } from "@base-ui/react/dialog";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellOff, X } from "lucide-react";
 
 import {
   adminDashboardKeys,
   adminDashboardQueries,
-  type AdminNotification,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type AdminNotifications,
 } from "@/lib/admin-dashboard";
-import { cn } from "@/lib/utils";
+import { PersonAvatar } from "@/components/PersonAvatar";
+import { cn, timeAgo } from "@/lib/utils";
 
 type Filter = "all" | "unread";
 
@@ -19,22 +21,39 @@ type Filter = "all" | "unread";
 export function useAdminNotifications() {
   const queryClient = useQueryClient();
   const query = useQuery(adminDashboardQueries.notifications());
-  const notifications = query.data ?? [];
+  const notifications = query.data?.items ?? [];
+  const queryKey = adminDashboardKeys.notifications();
 
-  // PENDING-BACKEND: no endpoint to save read state, so it's kept in the cache.
+  /* Marks them read straight away; a failed save reloads the real state. */
+  const mutation = useMutation({
+    mutationFn: (id?: string) =>
+      id ? markNotificationRead(id) : markAllNotificationsRead(),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.setQueryData<AdminNotifications>(
+        queryKey,
+        (current) =>
+          current && {
+            items: current.items.map((item) =>
+              id === undefined || item.id === id
+                ? { ...item, isRead: true }
+                : item,
+            ),
+            unreadCount: id ? Math.max(0, current.unreadCount - 1) : 0,
+          },
+      );
+    },
+    onError: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
   function markRead(id?: string) {
-    queryClient.setQueryData<AdminNotification[]>(
-      adminDashboardKeys.notifications(),
-      (current) =>
-        current?.map((item) =>
-          id === undefined || item.id === id ? { ...item, unread: false } : item,
-        ),
-    );
+    if (id && notifications.find((item) => item.id === id)?.isRead) return;
+    mutation.mutate(id);
   }
 
   return {
     notifications,
-    unreadCount: notifications.filter((item) => item.unread).length,
+    unreadCount: query.data?.unreadCount ?? 0,
     isPending: query.isPending,
     markRead,
   };
@@ -52,7 +71,7 @@ export function AdminNotificationsPanel({
   const { notifications, unreadCount, markRead } = useAdminNotifications();
   const visible =
     filter === "unread"
-      ? notifications.filter((item) => item.unread)
+      ? notifications.filter((item) => !item.isRead)
       : notifications;
 
   return (
@@ -130,25 +149,21 @@ export function AdminNotificationsPanel({
                       onClick={() => markRead(item.id)}
                       className="flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-neutral-50"
                     >
-                      <Image
-                        src={item.avatar ?? "/default-avatar.png"}
-                        alt=""
-                        width={40}
-                        height={40}
-                        className="size-10 shrink-0 rounded-full object-cover"
-                      />
+                      {/* PENDING-BACKEND: notifications have no sender, so the
+                        avatar and bold name show the title. */}
+                      <PersonAvatar name={item.title} size={40} />
                       <span className="min-w-0 flex-1">
                         <span className="block font-work text-sm text-neutral-600">
                           <span className="font-medium text-neutral-800">
-                            {item.actor}
+                            {item.title}
                           </span>{" "}
-                          {item.message}
+                          {item.body}
                         </span>
                         <span className="mt-1 block font-work text-xs text-neutral-400">
-                          {item.time}
+                          {timeAgo(item.createdAt)}
                         </span>
                       </span>
-                      {item.unread && (
+                      {!item.isRead && (
                         <span
                           aria-label="Unread"
                           className="mt-1.5 size-2 shrink-0 rounded-full bg-text-error"

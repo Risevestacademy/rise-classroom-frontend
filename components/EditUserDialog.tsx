@@ -120,7 +120,7 @@ function EditUserForm({ user, onOpenChange, isSelf }: EditUserDialogProps) {
       <DialogHeader>
         <DialogTitle>Edit user</DialogTitle>
         <DialogDescription>
-          Update {user.displayName ?? user.name}&apos;s name, email or status.
+          Update {user.name}&apos;s name, email or status.
         </DialogDescription>
       </DialogHeader>
 

@@ -13,10 +13,17 @@ const assignment = {
   lessonId: "l1",
   title: "Grid study",
   description: "Lay out a landing page on a 12-column grid",
-  instructions: "Share a view-only Figma link",
+  instructions: { description: "Share a view-only Figma link", guidelines: [] },
   dueAt: "2099-01-15T17:00:00.000Z",
   submissionType: "LINK",
-  attachments: ["https://example.com/briefs/grid-brief.pdf"],
+  attachments: [
+    {
+      id: "f1",
+      title: "Grid brief",
+      mimeType: "application/pdf",
+      downloadUrl: "https://example.com/briefs/grid-brief.pdf",
+    },
+  ],
 };
 
 function submission(overrides: Record<string, unknown> = {}) {
@@ -27,7 +34,6 @@ function submission(overrides: Record<string, unknown> = {}) {
     submissionType: "LINK",
     linkUrl: "https://figma.com/file/draft",
     status: "DRAFT",
-    isLate: false,
     updatedAt: "2026-10-01T10:00:00.000Z",
     ...overrides,
   };
@@ -51,7 +57,7 @@ describe("student assignment page", () => {
 
     expect(await screen.findByRole("heading", { name: "Grid study" })).toBeInTheDocument();
     expect(screen.getByText("Share a view-only Figma link")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /grid-brief\.pdf/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Grid brief/ })).toHaveAttribute(
       "href",
       "https://example.com/briefs/grid-brief.pdf",
     );
@@ -86,6 +92,31 @@ describe("student assignment page", () => {
     );
     /* Nothing changed since the draft was saved, so it isn't sent again. */
     expect(saved).toHaveLength(1);
+  });
+
+  it("sends changed work with the submit, without saving a draft first", async () => {
+    const submitted: unknown[] = [];
+    const { user, api } = renderPage({
+      "POST /student/assignments/a1/submit": (body: unknown) => {
+        submitted.push(body);
+        return envelope(submission({ status: "SUBMITTED" }));
+      },
+    });
+
+    await user.type(await screen.findByPlaceholderText("https://"), "https://figma.com/file/grid");
+    await user.click(screen.getByRole("button", { name: "Submit assignment" }));
+
+    await vi.waitFor(() =>
+      expect(submitted).toEqual([{ linkUrl: "https://figma.com/file/grid" }]),
+    );
+    expect(api.urls("POST /student/assignments/a1/submission")).toEqual([]);
+  });
+
+  it("lets the student still work on a missed assignment", async () => {
+    renderPage({}, submission({ status: "MISSED", linkUrl: null }));
+
+    expect(await screen.findByText("Missed")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("https://")).toBeInTheDocument();
   });
 
   it("won't submit a link that isn't a web address", async () => {
@@ -128,13 +159,18 @@ describe("student assignment page", () => {
       {},
       submission({
         status: "GRADED",
-        grade: 88,
+        score: 88,
+        submittedAt: "2026-10-02T09:00:00.000Z",
+        missedAt: "2026-10-01T17:00:00.000Z",
+        assignment: { id: "a1", title: "Grid study", submissionType: "LINK", maxScore: 100 },
         feedback: "Strong hierarchy",
         reviewer: { name: "Tolu Ade" },
       }),
     );
 
     expect(await screen.findByText("88")).toBeInTheDocument();
+    expect(screen.getByText("/100")).toBeInTheDocument();
+    expect(screen.getByText("Late")).toBeInTheDocument();
     expect(screen.getByText("Feedback from Tolu Ade")).toBeInTheDocument();
     expect(screen.getByText("Strong hierarchy")).toBeInTheDocument();
   });

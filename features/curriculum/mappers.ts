@@ -11,7 +11,9 @@ import {
   progressModes,
   resourceKinds,
   type AssignmentExtras,
+  type AssignmentInstructions,
   type AssignmentRecord,
+  type AttachmentRecord,
   type AssignmentSubmission,
   type AssignmentSubmissionRecord,
   type Curriculum,
@@ -120,6 +122,9 @@ export function isHttpsLink(value: string) {
   }
 }
 
+/** What an assignment is marked out of until it's given its own maximum. */
+export const defaultMaxPoints = 100;
+
 export function emptyAssignment(id: string = crypto.randomUUID()): ModuleAssignment {
   return {
     id,
@@ -132,6 +137,7 @@ export function emptyAssignment(id: string = crypto.randomUUID()): ModuleAssignm
     submissionType: "FILE_UPLOAD",
     dueAt: null,
     afterLesson: null,
+    maxPoints: defaultMaxPoints,
     status: "DRAFT",
   };
 }
@@ -159,9 +165,50 @@ function fileNameFromUrl(url: string) {
   }
 }
 
+const mimeTypes: Record<string, string> = {
+  pdf: "application/pdf",
+  mp4: "video/mp4",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+};
+
+/** Guessed from the file extension; other links are treated as web pages. */
+function mimeTypeOf(name: string) {
+  const extension = name.split(".").pop()?.toLowerCase() ?? "";
+  return mimeTypes[extension] ?? "text/html";
+}
+
 /** Links to send as attachments; picked files have no link and stay local. */
 export function attachmentLinks(resources: ResourceFile[]) {
-  return resources.flatMap((r) => (r.url ? [r.url] : []));
+  return resources.flatMap((r) =>
+    r.url
+      ? [
+          {
+            title: r.title || r.name,
+            mimeType: mimeTypeOf(r.name),
+            sizeBytes: r.sizeBytes ?? 0,
+            downloadUrl: r.url,
+          },
+        ]
+      : [],
+  );
+}
+
+/** The API keeps instructions as a description plus a list of guidelines; the form has one box. */
+export function toApiInstructions(text: string): AssignmentInstructions {
+  return { description: text, guidelines: [] };
+}
+
+export function instructionsText(instructions?: AssignmentInstructions | string | null) {
+  if (!instructions) return "";
+  // Records saved before the API changed hold a plain string.
+  if (typeof instructions === "string") return instructions;
+  return [instructions.description, ...(instructions.guidelines ?? [])]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function toIsoDate(value: string | null) {
@@ -206,11 +253,18 @@ export function toSubmission(record: AssignmentSubmissionRecord): AssignmentSubm
   };
 }
 
-/** An assignment attachment, which the API stores as a bare link. */
-function attachmentFile(url: string): ResourceFile {
+function attachmentFile(attachment: AttachmentRecord | string): ResourceFile {
+  // Records saved before the API changed hold a bare link.
+  if (typeof attachment === "string") {
+    return newResourceFile(
+      { name: fileNameFromUrl(attachment), sizeBytes: null },
+      { id: attachment, url: attachment, uploadedBy: "--" }
+    );
+  }
+  const { id, title, sizeBytes, downloadUrl } = attachment;
   return newResourceFile(
-    { name: fileNameFromUrl(url), sizeBytes: null },
-    { id: url, url, uploadedBy: "--" }
+    { name: fileNameFromUrl(downloadUrl), sizeBytes: sizeBytes || null },
+    { id, title, url: downloadUrl, uploadedBy: "--" }
   );
 }
 
@@ -225,9 +279,10 @@ function toAssignment(
     ...extras,
     title: record.title,
     description: record.description ?? "",
-    instructions: record.instructions ?? "",
+    instructions: instructionsText(record.instructions),
     resources: [...(record.attachments ?? []).map(attachmentFile), ...files],
     submissionType: record.submissionType,
+    maxPoints: record.maxScore ?? defaultMaxPoints,
     dueAt: record.dueAt ?? null,
     afterLesson: lessonPosition,
     status: record.publishStatus,
@@ -245,7 +300,6 @@ export function toModule(
     description: topic.description,
     status: topic.publishStatus,
     outcomes: topic.outcomes ?? [],
-    recordingLink: topic.lessons.flatMap((l) => l.recordings)[0]?.url ?? "",
     resources: [
       ...topic.resources.map(toResourceFile),
       ...(local.moduleFiles.get(topic.id) ?? []),
@@ -257,6 +311,7 @@ export function toModule(
         topic: lessonExtras?.topic ?? "",
         title: lesson.title,
         description: lesson.description ?? "",
+        recordingLink: lesson.recordings[0]?.url ?? "",
         resources: [
           ...lesson.resources.map(toResourceFile),
           ...(lessonExtras?.files ?? []),
@@ -271,6 +326,7 @@ export function toModule(
       ),
       ...topic.assignments.map((a) => toAssignment(a, null, local.assignments.get(a.id))),
     ],
+    unlocked: topic.instructorUnlocked,
     // PENDING-BACKEND: no cover images or recording thumbnails in the API.
     coverImage: null,
     liveClassRecordings: [],
@@ -281,10 +337,9 @@ export function toCurriculum(
   record: CurriculumRecord,
   track: Track,
   studentCount: number,
-  history: CurriculumHistoryEntry[]
+  history: CurriculumHistoryEntry[],
+  instructor?: { name: string; email: string }
 ): Curriculum {
-  const instructor = record.assignedInstructors[0];
-
   return {
     id: record.id,
     title: record.title,

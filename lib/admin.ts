@@ -27,7 +27,10 @@ export type AdminUser = {
   firstName: string;
   lastName: string;
   displayName?: string | null;
+  phoneNumber?: string | null;
+  location?: string | null;
   email: string;
+  image?: string | null;
   role: Role;
   status: UserStatus;
   onboardingStatus: OnboardingStatus;
@@ -35,8 +38,42 @@ export type AdminUser = {
   createdAt: string;
   emailVerified?: boolean;
   instructorTrack?: InstructorAssignment[];
+  /** Mentors get this in place of `instructorTrack`. */
+  mentorTrack?: InstructorAssignment[];
   studentProfile?: StudentMembership[];
+  /**
+   * A student's active mentor, or null if they have none. Only on
+   * `GET /admin/users/{id}`.
+   */
+  mentor?: AssignedMentor | null;
 };
+
+export type AssignedMentor = {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string | null;
+  email: string;
+  phoneNumber?: string | null;
+  image?: string | null;
+  status: UserStatus;
+  mentorshipId: string;
+  assignedAt: string;
+};
+
+type Named = { name: string; displayName?: string | null };
+
+/** "Full Name (Display Name)", or just the full name when they match. */
+export function nameWithDisplayName({ name, displayName }: Named) {
+  const display = displayName?.trim();
+  return display && display !== name ? `${name} (${display})` : name;
+}
+
+/** The cohorts and tracks an instructor teaches or a mentor mentors in. */
+export function staffAssignments(user: AdminUser) {
+  return [...(user.instructorTrack ?? []), ...(user.mentorTrack ?? [])];
+}
 
 /** Payload for `POST /admin/users` — every field is required by the API. */
 export type InviteUserInput = {
@@ -102,8 +139,28 @@ export type UserFilters = {
   limit?: number;
 };
 
+/** The API takes one value per filter, so each section holds at most one. */
+export function toUserFilters(values: Record<string, string[]>): UserFilters {
+  return Object.fromEntries(
+    Object.entries(values)
+      .filter(([, picked]) => picked.length > 0)
+      .map(([key, picked]) => [key, picked[0]]),
+  );
+}
+
+/** Sent with `role: "MENTOR"`, scoped by cohort and track but no other filter. */
+export type MentorSummary = {
+  totalMentors: number;
+  /** Students whose account is active. */
+  activeStudents: number;
+  /** Active students with no active mentor. */
+  unassignedStudents: number;
+};
+
 async function listUsers(filters: UserFilters = {}) {
-  const { data } = await api.get<Envelope<Paginated<AdminUser>>>(
+  const { data } = await api.get<
+    Envelope<Paginated<AdminUser> & { summary?: MentorSummary }>
+  >(
     "/admin/users",
     { query: filters },
   );
@@ -386,7 +443,7 @@ export function assignmentsFor(user: AdminUser) {
   const tracks = new Set<string>();
   const cohorts = new Set<string>();
 
-  for (const assignment of user.instructorTrack ?? []) {
+  for (const assignment of staffAssignments(user)) {
     if (assignment.track?.name) tracks.add(assignment.track.name);
     if (assignment.cohort?.name) cohorts.add(assignment.cohort.name);
   }

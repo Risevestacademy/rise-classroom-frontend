@@ -1,33 +1,101 @@
 "use client";
 
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { cn } from "@/lib/utils";
+import { File01 } from "@/assets/icons";
+import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
+import { adminQueries, type AdminUser } from "@/lib/admin";
+import { controlTowerQueries } from "@/lib/control-tower";
 import {
+  answeredCount,
   checkInQuestions,
-  checkIns,
+  studentCheckIns,
+  type CheckIn,
   type CheckInStatus,
-} from "@/app/admin/students/[id]/profile-data";
+} from "@/lib/student-check-ins";
+import { useStudentProfileId } from "@/lib/student-profile";
+import { cn } from "@/lib/utils";
 import { BrandBadge, Card, CardHeader } from "./shared";
+import { ControlTowerTabSkeleton } from "./skeletons";
 
 const checkInStatus: Record<
   CheckInStatus,
   { label: string; text: string }
 > = {
   ongoing: { label: "Ongoing", text: "text-text-info" },
-  pending: { label: "Pending", text: "text-text-warning" },
   overdue: { label: "Overdue", text: "text-text-error" },
   submitted: { label: "Submitted", text: "text-text-success" },
 };
 
-function answeredCount(answers: Record<string, string | undefined>) {
-  return Object.values(answers).filter(Boolean).length;
-}
-
 export function ControlTowerTab({
+  student,
   firstName,
   cohort,
 }: {
+  student: AdminUser;
+  firstName: string;
+  cohort?: string;
+}) {
+  const profile = useStudentProfileId(student);
+  const { profileId } = profile;
+
+  const cohortId = student.studentProfile?.[0]?.cohort?.id ?? "";
+  const cohortQuery = useQuery({
+    ...adminQueries.cohort(cohortId),
+    enabled: cohortId.length > 0,
+  });
+  const metrics = useQuery(controlTowerQueries.weeklyMetrics(profileId));
+
+  if (
+    profile.isPending ||
+    (cohortId && cohortQuery.isPending) ||
+    (profileId && metrics.isPending)
+  ) {
+    return <ControlTowerTabSkeleton />;
+  }
+
+  const error = profile.error ?? cohortQuery.error ?? metrics.error;
+  if (error) {
+    return (
+      <CohortEmptyState
+        icon={File01}
+        title="Couldn't load check-ins"
+        description={error.message}
+      />
+    );
+  }
+
+  if (!profileId) {
+    return (
+      <CohortEmptyState
+        icon={File01}
+        title="No check-ins to show"
+        description={`${firstName}’s check-ins show here once they have a mentor.`}
+      />
+    );
+  }
+
+  const checkIns = studentCheckIns(metrics.data ?? [], cohortQuery.data);
+  if (checkIns.length === 0) {
+    return (
+      <CohortEmptyState
+        icon={File01}
+        title="No check-ins yet"
+        description={`${firstName}’s weekly check-ins show here once their cohort starts.`}
+      />
+    );
+  }
+
+  return <CheckIns checkIns={checkIns} firstName={firstName} cohort={cohort} />;
+}
+
+function CheckIns({
+  checkIns,
+  firstName,
+  cohort,
+}: {
+  checkIns: CheckIn[];
   firstName: string;
   cohort?: string;
 }) {

@@ -62,6 +62,8 @@ export type ModuleLesson = {
   topic: string;
   title: string;
   description: string;
+  /** The lesson's class video. Saved as its recording; "" when there is none. */
+  recordingLink: string;
   resources: ResourceFile[];
 };
 
@@ -74,22 +76,30 @@ export const submissionTypes = {
 export type SubmissionType = keyof typeof submissionTypes;
 
 export type SubmissionStatus =
+  | "ASSIGNED"
   | "DRAFT"
+  | "MISSED"
+  | "ON_HOLD"
   | "SUBMITTED"
   | "UNDER_REVIEW"
   | "CHANGES_REQUESTED"
-  | "GRADED";
+  | "GRADED"
+  | "REVIEWED";
 
 /* How each submission status is labelled and coloured, for students and instructors alike. */
 export const submissionBadges: Record<
   SubmissionStatus,
   { label: string; status: "neutral" | "info" | "warning" | "error" | "success" }
 > = {
+  ASSIGNED: { label: "Not started", status: "neutral" },
   DRAFT: { label: "Draft", status: "neutral" },
+  MISSED: { label: "Missed", status: "error" },
+  ON_HOLD: { label: "On hold", status: "warning" },
   SUBMITTED: { label: "Submitted", status: "info" },
   UNDER_REVIEW: { label: "Under review", status: "warning" },
   CHANGES_REQUESTED: { label: "Changes requested", status: "error" },
   GRADED: { label: "Graded", status: "success" },
+  REVIEWED: { label: "Reviewed", status: "success" },
 };
 
 /* The work a student hands in. Which field is filled depends on `submissionType`. */
@@ -125,6 +135,8 @@ export type ModuleAssignment = {
   dueAt: string | null;
   /** The lesson the assignment is attached to in the API (1-based). */
   afterLesson: number | null;
+  /** The score a submission is marked out of. */
+  maxPoints: number;
   status: ModuleStatus;
 };
 
@@ -137,6 +149,7 @@ export type CreateAssignmentInput = Pick<
   | "submissionType"
   | "dueAt"
   | "afterLesson"
+  | "maxPoints"
 >;
 
 /** An assignment together with the module it belongs to. */
@@ -153,10 +166,11 @@ export type CurriculumModule = {
   description: string;
   status: ModuleStatus;
   outcomes: string[];
-  recordingLink: string;
   resources: ResourceFile[];
   lessons: ModuleLesson[];
   assignments: ModuleAssignment[];
+  /** Whether the module is unlocked for its cohort, when the API says. */
+  unlocked?: boolean;
   coverImage: string | null;
   liveClassRecordings: { title: string; thumbnail: string }[];
 };
@@ -254,7 +268,8 @@ export type CurriculumRecord = Timestamps & {
   totalLessons: number;
   totalAssignments: number;
   cohort?: { id: string; name: string } | null;
-  assignedInstructors: { id: string; name: string; email: string }[];
+  creatorId?: string | null;
+  creatorType?: "INSTRUCTOR" | "ADMIN" | null;
 };
 
 export type TopicRecord = Timestamps & {
@@ -264,6 +279,8 @@ export type TopicRecord = Timestamps & {
   description: string;
   position: number;
   publishStatus: ModuleStatus;
+  /** Whether the module is unlocked for its cohort. */
+  instructorUnlocked?: boolean;
   outcomes: string[];
 };
 
@@ -273,6 +290,8 @@ export type LessonRecord = Timestamps & {
   title: string;
   description?: string | null;
   position?: number | null;
+  publishStatus?: ModuleStatus;
+  instructorUnlocked?: boolean;
 };
 
 export type ResourceRecord = Timestamps & {
@@ -297,11 +316,25 @@ export type AssignmentRecord = Timestamps & {
   topicId?: string | null;
   title: string;
   description?: string | null;
-  instructions?: string | null;
+  instructions?: AssignmentInstructions | null;
   dueAt?: string | null;
   submissionType: SubmissionType;
+  maxScore?: number | null;
   publishStatus: ModuleStatus;
-  attachments: string[];
+  attachments: AttachmentRecord[];
+};
+
+export type AssignmentInstructions = {
+  description: string;
+  guidelines?: string[];
+};
+
+export type AttachmentRecord = {
+  id: string;
+  title: string;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  downloadUrl: string;
 };
 
 export type NoteRecord = Timestamps & {
@@ -369,12 +402,12 @@ export type ModuleAccessRecord = {
   statuses: TopicLockStatus[];
 };
 
-/* What the last unlock or lock did. The API only reports this when access changes. */
+/* Whether a module is unlocked. The counts only come back when access changes. */
 export type ModuleAccess = {
   unlocked: boolean;
-  studentCount: number;
+  studentCount?: number;
   /* Students who can open the module now, after prerequisites. */
-  openCount: number;
+  openCount?: number;
 };
 
 export type RecordingRecord = Timestamps & {
@@ -398,6 +431,17 @@ export type TopicTree = TopicRecord & {
   assignments: AssignmentRecord[];
 };
 
+/** A topic as the `/tree` endpoints return it, with its lessons and items nested. */
+export type TopicTreeRecord = TopicRecord & {
+  resources?: ResourceRecord[];
+  assignments?: AssignmentRecord[];
+  lessons?: (LessonRecord & Partial<Omit<LessonTree, keyof LessonRecord>>)[];
+};
+
+export type CurriculumTreeRecord = CurriculumRecord & {
+  topics: TopicTreeRecord[];
+};
+
 // ---- Session-only fields the API doesn't have ----------------------------------
 
 /**
@@ -405,7 +449,9 @@ export type TopicTree = TopicRecord & {
  * upload, so picked files stay in the session.
  */
 export type AssignmentExtras = Partial<
-  Pick<ModuleAssignment, "type" | "mode"> & { files: ResourceFile[] }
+  Pick<ModuleAssignment, "type" | "mode"> & {
+    files: ResourceFile[];
+  }
 >;
 
 /** The in-memory store in `api.ts`; it resets on a full page reload. */

@@ -6,6 +6,7 @@ import {
   type AdminUser,
 } from "@/lib/admin";
 import { api, ApiError, type Envelope, type Paginated } from "@/lib/api";
+import type { AssignedStudent } from "@/app/admin/mentors/[id]/profile-data";
 import { formatJoined } from "@/app/admin/students/student-display";
 
 export type MentorStatus = "active" | "pending" | "inactive";
@@ -16,8 +17,8 @@ export type Mentor = {
   email: string;
   track: string;
   /**
-   * PENDING-BACKEND: admins can't list mentorships yet, so this is always
-   * null until there's an endpoint for a mentor's students.
+   * PENDING-BACKEND: the users list has no mentee count, and fetching each
+   * mentor's mentees would be a request per row, so this stays null.
    */
   studentsAssigned: number | null;
   status: MentorStatus;
@@ -25,7 +26,8 @@ export type Mentor = {
   user: AdminUser;
 };
 
-function mentorStatus(user: AdminUser): MentorStatus {
+/** Active, pending (still invited) or inactive (suspended). */
+export function mentorStatus(user: AdminUser): MentorStatus {
   if (user.status === "SUSPENDED") return "inactive";
   if (user.onboardingStatus === "INVITED") return "pending";
   return "active";
@@ -34,7 +36,7 @@ function mentorStatus(user: AdminUser): MentorStatus {
 export function toMentor(user: AdminUser): Mentor {
   return {
     id: user.id,
-    name: user.displayName ?? user.name,
+    name: user.name,
     email: user.email,
     track: assignmentsFor(user).tracks.join(", ") || "--",
     studentsAssigned: null,
@@ -63,10 +65,63 @@ async function listMentors(cohortId?: string) {
   return [first, ...rest].flatMap((page) => page.items).map(toMentor);
 }
 
+/** One of a mentor's active mentees, from `GET /admin/users/{id}/mentees`. */
+export type MentorStudent = {
+  mentorshipId: string;
+  assignedAt: string;
+  studentProfileId: string;
+  cohort: { id: string; name: string; year?: string };
+  enrollment: { status: string; track?: { id: string; name: string } }[];
+  user: {
+    id: string;
+    name: string;
+    firstName: string;
+    lastName: string;
+    displayName?: string | null;
+    email: string;
+    phoneNumber?: string | null;
+    image?: string | null;
+    status: AdminUser["status"];
+  };
+};
+
+export async function listMentees(mentorId: string) {
+  const { data } = await api.get<Envelope<MentorStudent[]>>(
+    `/admin/users/${mentorId}/mentees`,
+  );
+  return data;
+}
+
+/** A mentee as the mentor profile lists them, with progress once it loads. */
+export function toAssignedStudent(
+  mentee: MentorStudent,
+  progress: number | null = null,
+): AssignedStudent {
+  return {
+    id: mentee.user.id,
+    name: mentee.user.name,
+    email: mentee.user.email,
+    image: mentee.user.image,
+    status: mentee.user.status === "SUSPENDED" ? "inactive" : "active",
+    progress,
+  };
+}
+
+/** What a mentee's progress is worked out from. */
+export function menteeProgressTarget(mentee: MentorStudent) {
+  return {
+    profileId: mentee.studentProfileId,
+    cohortId: mentee.cohort.id,
+    trackId: mentee.enrollment[0]?.track?.id ?? "",
+  };
+}
+
 export const mentorKeys = {
   // Under the users key, so inviting or editing a user refreshes it.
   list: (cohortId?: string) =>
     ["admin", "users", "mentors", cohortId] as const,
+  mentees: (mentorId: string) =>
+    ["admin", "users", "mentees", mentorId] as const,
 };
 
 export const mentorQueries = {
@@ -74,6 +129,12 @@ export const mentorQueries = {
     queryOptions({
       queryKey: mentorKeys.list(cohortId),
       queryFn: () => listMentors(cohortId),
+    }),
+
+  mentees: (mentorId: string) =>
+    queryOptions({
+      queryKey: mentorKeys.mentees(mentorId),
+      queryFn: () => listMentees(mentorId),
     }),
 };
 
@@ -85,6 +146,9 @@ export type MentorshipRecord = {
   assignedAt: string;
   endedAt?: string | null;
 };
+
+/** The most active mentees a mentor can have. */
+export const maxMentees = 4;
 
 /**
  * Gives a student this mentor, replacing any mentor they had, so it both

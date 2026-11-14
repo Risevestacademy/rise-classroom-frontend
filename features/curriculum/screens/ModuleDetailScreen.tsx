@@ -11,8 +11,8 @@ import { Menu } from "@base-ui/react/menu";
 import { CirclePlay, MoreHorizontal, Pencil } from "lucide-react";
 /* PENDING-BACKEND: used by the commented-out live classes card.
 import { Calendar, Plus, Video } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 */
+import { Badge } from "@/components/ui/badge";
 
 import { CurriculumSummaryCard } from "@/features/curriculum/components/CurriculumSummaryCard";
 import { ModuleAccessCard } from "@/features/curriculum/components/ModuleAccessCard";
@@ -24,6 +24,7 @@ import { StatusBadge } from "@/features/curriculum/components/ContentTable";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api";
 import { useCurriculumScope } from "@/features/curriculum/scope";
+import { formatDate, formatTime } from "@/features/curriculum/mappers";
 import type {
   CurriculumModule,
   ModuleLesson,
@@ -91,19 +92,23 @@ export function ModuleDetailSkeleton() {
   );
 }
 
+/** One module. With `loading` it only shows the skeleton, while the server loads it. */
 export function ModuleDetailScreen({
   id,
   moduleId,
+  loading = false,
 }: {
   id: string;
   moduleId: string;
+  loading?: boolean;
 }) {
   const { api, paths, permissions, TopNav, breadcrumbRoot } =
     useCurriculumScope();
   const queryClient = useQueryClient();
-  const curriculumQuery = useQuery(api.queries.detail(id));
-  const modulesQuery = useQuery(api.queries.modules(id));
-  const moduleQuery = useQuery(api.queries.module(moduleId));
+  const enabled = !loading;
+  const curriculumQuery = useQuery({ ...api.queries.detail(id), enabled });
+  const modulesQuery = useQuery({ ...api.queries.modules(id), enabled });
+  const moduleQuery = useQuery({ ...api.queries.module(id, moduleId), enabled });
   const [removeTarget, setRemoveTarget] = React.useState<{
     name: string;
     changes: Partial<CurriculumModule>;
@@ -112,18 +117,17 @@ export function ModuleDetailScreen({
   const updateMutation = useMutation({
     mutationFn: (changes: Partial<CurriculumModule>) =>
       api.updateModule(moduleId, changes),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: api.keys.module(moduleId),
-      });
-      queryClient.invalidateQueries({ queryKey: api.keys.modules(id) });
+    onSuccess: async () => {
+      await api.refreshModule(queryClient, id, moduleId);
       setRemoveTarget(null);
     },
   });
 
-  const isNotFound = [curriculumQuery.error, moduleQuery.error].some(
-    (error) => error instanceof ApiError && error.status === 404,
-  );
+  const isNotFound =
+    moduleQuery.data === null ||
+    [curriculumQuery.error, moduleQuery.error].some(
+      (error) => error instanceof ApiError && error.status === 404,
+    );
   if (isNotFound) notFound();
 
   const curriculum = curriculumQuery.data;
@@ -290,6 +294,7 @@ export function ModuleDetailScreen({
                     .filter(Boolean)
                     .join(" · ")}
                   item={lesson}
+                  videoLink={lesson.recordingLink}
                   editHref={editHref}
                   onRemove={() =>
                     setRemoveTarget({
@@ -319,7 +324,20 @@ export function ModuleDetailScreen({
                        `· ${assignment.type} · ${assignment.mode}` once it does. */
                     eyebrow={`Assignment ${index + 1}`}
                     item={assignment}
-                    editHref={editHref}
+                    /* Opens the assignment's own editor, which has the due date and submission type. */
+                    editHref={paths.editAssignment(id, assignment.id)}
+                    badge={
+                      assignment.afterLesson && (
+                        <Badge variant="light" status="info">
+                          Attached to lesson {assignment.afterLesson}
+                        </Badge>
+                      )
+                    }
+                    detail={
+                      assignment.dueAt
+                        ? `Due ${formatDate(assignment.dueAt)} · ${formatTime(assignment.dueAt)}`
+                        : "No due date"
+                    }
                     onRemove={() =>
                       setRemoveTarget({
                         name: `assignment ${index + 1}`,
@@ -351,28 +369,6 @@ export function ModuleDetailScreen({
             >
               <div>
                 <p className="text-sm font-medium text-neutral-800">
-                  Class recording link
-                </p>
-                {curriculumModule.recordingLink ? (
-                  <a
-                    href={curriculumModule.recordingLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-2 flex items-center gap-3 rounded-lg bg-neutral-100 px-4 py-3 text-sm text-brand-primary hover:underline"
-                  >
-                    <CirclePlay className="h-4 w-4 shrink-0 text-neutral-300" />
-                    <span className="truncate">
-                      {curriculumModule.recordingLink}
-                    </span>
-                  </a>
-                ) : (
-                  <p className="mt-2 text-sm text-neutral-400">
-                    No recording added yet.
-                  </p>
-                )}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-neutral-800">
                   Supporting resources
                 </p>
                 {curriculumModule.resources.length > 0 ? (
@@ -402,6 +398,7 @@ export function ModuleDetailScreen({
               <ModuleAccessCard
                 moduleId={moduleId}
                 moduleStatus={curriculumModule.status}
+                unlocked={curriculumModule.unlocked}
               />
             )}
 
@@ -460,6 +457,20 @@ export function ModuleDetailScreen({
               </Button>
             </section>
             */}
+
+            {curriculumModule.status === "PUBLISHED" && (
+              <InfoNote title="This module is now live for students">
+                <p>
+                  Students can now access the module. Feel free to update or add
+                  resources anytime.
+                </p>
+                {/* PENDING-DESIGN: there's no student preview yet.
+                <Button variant="secondary" size="sm" className="mt-2 w-full">
+                  Preview as student
+                </Button>
+                */}
+              </InfoNote>
+            )}
 
             {curriculumModule.status === "DRAFT" && (
               <InfoNote title="Not visible to students yet">
@@ -526,12 +537,21 @@ function ContentCard({
 function ItemCard({
   eyebrow,
   item,
+  videoLink,
   editHref,
+  badge,
+  detail,
   onRemove,
 }: {
   eyebrow: string;
   item: Pick<ModuleLesson, "title" | "description" | "resources">;
+  /* Lessons only: the class video, or "" when none was added. */
+  videoLink?: string;
   editHref: string;
+  /* Beside the actions, like the lesson an assignment is attached to. */
+  badge?: React.ReactNode;
+  /* A line under the title, like an assignment's due date. */
+  detail?: string;
   onRemove: () => void;
 }) {
   return (
@@ -540,39 +560,60 @@ function ItemCard({
         <div className="min-w-0">
           <p className="text-xs text-neutral-500">{eyebrow}</p>
           <p className="mt-0.5 font-medium text-neutral-800">{item.title}</p>
+          {detail && (
+            <p className="mt-0.5 text-xs text-neutral-500">{detail}</p>
+          )}
         </div>
 
-        <Menu.Root>
-          <Menu.Trigger
-            aria-label={`${eyebrow} actions`}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white text-neutral-800 hover:bg-neutral-200"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </Menu.Trigger>
-          <Menu.Portal>
-            <Menu.Positioner align="end" sideOffset={6} className="z-50">
-              <Menu.Popup className="w-36 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg outline-none">
-                <Menu.Item
-                  render={<Link href={editHref} />}
-                  className="flex cursor-pointer rounded-md px-3 py-2 text-neutral-700 outline-none data-highlighted:bg-neutral-100"
-                >
-                  Edit
-                </Menu.Item>
-                <Menu.Item
-                  onClick={onRemove}
-                  className="flex cursor-pointer rounded-md px-3 py-2 text-text-error outline-none data-highlighted:bg-surface-error-badge"
-                >
-                  Delete
-                </Menu.Item>
-              </Menu.Popup>
-            </Menu.Positioner>
-          </Menu.Portal>
-        </Menu.Root>
+        <div className="flex shrink-0 items-center gap-2">
+          {badge}
+          <Menu.Root>
+            <Menu.Trigger
+              aria-label={`${eyebrow} actions`}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white text-neutral-800 hover:bg-neutral-200"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Menu.Trigger>
+            <Menu.Portal>
+              <Menu.Positioner align="end" sideOffset={6} className="z-50">
+                <Menu.Popup className="w-36 rounded-lg border border-neutral-200 bg-white p-1 text-sm shadow-lg outline-none">
+                  <Menu.Item
+                    render={<Link href={editHref} />}
+                    className="flex cursor-pointer rounded-md px-3 py-2 text-neutral-700 outline-none data-highlighted:bg-neutral-100"
+                  >
+                    Edit
+                  </Menu.Item>
+                  <Menu.Item
+                    onClick={onRemove}
+                    className="flex cursor-pointer rounded-md px-3 py-2 text-text-error outline-none data-highlighted:bg-surface-error-badge"
+                  >
+                    Delete
+                  </Menu.Item>
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
+        </div>
       </div>
 
       {item.description && (
         <p className="mt-3 text-sm text-neutral-600">{item.description}</p>
       )}
+
+      {videoLink !== undefined &&
+        (videoLink ? (
+          <a
+            href={videoLink}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 flex items-center gap-3 rounded-lg bg-white px-4 py-3 text-sm text-brand-primary hover:underline"
+          >
+            <CirclePlay className="h-4 w-4 shrink-0 text-neutral-300" />
+            <span className="truncate">{videoLink}</span>
+          </a>
+        ) : (
+          <p className="mt-3 text-sm text-neutral-400">No lesson video added yet.</p>
+        ))}
 
       {item.resources.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">

@@ -1,16 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { X } from "lucide-react";
+import { CircleAlert, CircleCheck, X } from "lucide-react";
 
 export function SuccessToast({
   title,
   message,
   onDismiss,
+  tone,
 }: {
   title: string;
   message: React.ReactNode;
   onDismiss: () => void;
+  /** Adds a status icon beside the title. */
+  tone?: "success" | "error";
 }) {
   React.useEffect(() => {
     const timeout = setTimeout(onDismiss, 5000);
@@ -19,7 +22,7 @@ export function SuccessToast({
 
   return (
     <div
-      role="status"
+      role={tone === "error" ? "alert" : "status"}
       className="fixed top-20 right-4 z-50 w-[calc(100%-2rem)] max-w-sm rounded-xl bg-white p-4 shadow-lg sm:right-8"
     >
       <button
@@ -30,8 +33,18 @@ export function SuccessToast({
       >
         <X className="h-3.5 w-3.5" />
       </button>
-      <p className="text-sm font-semibold text-neutral-800">{title}</p>
-      <p className="mt-1 text-sm text-neutral-500">{message}</p>
+      <p className="flex items-center gap-1.5 text-sm font-semibold text-neutral-800">
+        {tone === "success" && (
+          <CircleCheck className="h-4 w-4 shrink-0 text-text-success" />
+        )}
+        {tone === "error" && (
+          <CircleAlert className="h-4 w-4 shrink-0 text-text-error" />
+        )}
+        {title}
+      </p>
+      <p className={tone ? "mt-1 pl-5.5 text-sm text-neutral-500" : "mt-1 text-sm text-neutral-500"}>
+        {message}
+      </p>
     </div>
   );
 }

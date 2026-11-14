@@ -4,8 +4,15 @@ import * as React from "react";
 
 import { Filter, MoreHorizontal, Search01 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import {
+  PeopleSelectionBar,
+  ResendInvitesAction,
+} from "@/components/PeopleSelectionBar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Pagination } from "@/components/ui/pagination";
+import { usePageParams } from "@/lib/use-page-params";
+import { PeopleRowsSkeleton } from "@/components/cohorts/CohortSkeletons";
 import {
   matchesPeopleFilters,
   PeopleFilterDialog,
@@ -13,6 +20,8 @@ import {
   type PeopleFilterValues,
 } from "@/components/cohorts/PeopleFilterDialog";
 import type { Person } from "@/app/admin/cohorts/cohort-data";
+import type { AdminUser } from "@/lib/admin";
+import { useRowSelection } from "@/lib/use-row-selection";
 import { cn } from "@/lib/utils";
 
 export type PeopleColumn<T> = {
@@ -22,49 +31,80 @@ export type PeopleColumn<T> = {
   cell: (row: T) => React.ReactNode;
 };
 
-/** The searchable people table used by the Students, Instructors and Mentors tabs. */
-export function CohortPeopleTable<T extends Person>({
-  title,
-  personHeader,
-  rows,
-  columns,
-  actionHeader,
-  filters = [],
-}: {
+type PeopleTableColumns<T> = {
   title: string;
+  /** What the rows are, for the selection bar. */
+  noun: { singular: string; plural: string };
   personHeader: string;
-  rows: T[];
   columns: PeopleColumn<T>[];
   actionHeader?: string;
   filters?: PeopleFilter<T>[];
+  /** The menu in each row's last cell. */
+  rowActions?: (row: T) => React.ReactNode;
+  /** The account behind a row, which lets ticked rows be re-invited. */
+  rowUser?: (row: T) => AdminUser | undefined;
+};
+
+/** The words in a cell, for the CSV export; pills and other markup are dropped. */
+function textOf(node: React.ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  if (React.isValidElement<{ children?: React.ReactNode }>(node))
+    return textOf(node.props.children);
+  return "";
+}
+
+/**
+ * The table the Students, Instructors and Mentors tabs share. Whoever renders it
+ * owns the search, filters and page, as some lists come from the API a page at
+ * a time and others are already in memory.
+ */
+export function PeopleTableView<T extends Person & { id: string }>({
+  title,
+  noun,
+  personHeader,
+  columns,
+  actionHeader,
+  filters = [],
+  rowActions,
+  rowUser,
+  rows,
+  loading = false,
+  error,
+  search,
+  onSearchChange,
+  filterValues,
+  onFilterValuesChange,
+  singleSelectFilters = false,
+  page,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  paginationDisabled = false,
+}: PeopleTableColumns<T> & {
+  rows: T[];
+  loading?: boolean;
+  error?: string;
+  search: string;
+  onSearchChange: (search: string) => void;
+  filterValues: PeopleFilterValues;
+  onFilterValuesChange: (values: PeopleFilterValues) => void;
+  singleSelectFilters?: boolean;
+  page: number;
+  totalPages: number;
+  /** Rows across every page, after search and filters. */
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  paginationDisabled?: boolean;
 }) {
-  const [search, setSearch] = React.useState("");
-  const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
-    {},
-  );
   const [filterOpen, setFilterOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<Set<number>>(new Set());
-
-  const query = search.trim().toLowerCase();
-  const visible = rows
-    .map((row, index) => ({ row, index }))
-    .filter(
-      ({ row }) =>
-        (row.name.toLowerCase().includes(query) ||
-          row.email.toLowerCase().includes(query)) &&
-        matchesPeopleFilters(row, filters, filterValues),
-    );
-  const allSelected =
-    visible.length > 0 && visible.every(({ index }) => selected.has(index));
-
-  function toggle(index: number, checked: boolean) {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (checked) next.add(index);
-      else next.delete(index);
-      return next;
-    });
-  }
+  const selection = useRowSelection((row: T) => row.id);
+  const headerCheckbox = selection.headerState(rows);
 
   return (
     <section className="relative mt-6">
@@ -79,7 +119,7 @@ export function CohortPeopleTable<T extends Person>({
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => onSearchChange(event.target.value)}
               placeholder="Search by name or email"
               className="w-full min-w-0 bg-transparent font-work text-sm text-text-primary outline-none placeholder:text-text-muted"
             />
@@ -100,15 +140,13 @@ export function CohortPeopleTable<T extends Person>({
           whole page on mobile. */}
       <div className="relative overflow-x-auto">
         <table className="w-full min-w-[960px] table-fixed text-left">
-          <thead className="bg-neutral-100 text-sm font-medium text-text-primary uppercase">
+          <thead className="bg-neutral-100 text-sm font-medium text-text-primary">
             <tr className="h-11">
               <th className="w-[69px] border-r border-neutral-200 pl-3.5">
                 <Checkbox
                   aria-label="Select all"
-                  checked={allSelected}
-                  onCheckedChange={(checked) =>
-                    visible.forEach(({ index }) => toggle(index, checked))
-                  }
+                  {...headerCheckbox}
+                  onCheckedChange={() => selection.toggleAll(rows)}
                   className="size-4"
                 />
               </th>
@@ -133,13 +171,14 @@ export function CohortPeopleTable<T extends Person>({
             </tr>
           </thead>
           <tbody>
-            {visible.map(({ row, index }) => (
-              <tr key={index} className="h-[85px] border-b border-neutral-200">
+            {loading && <PeopleRowsSkeleton columns={columns.length} />}
+            {rows.map((row) => (
+              <tr key={row.id} className="h-[85px] border-b border-neutral-200">
                 <td className="pl-3.5">
                   <Checkbox
                     aria-label={`Select ${row.name}`}
-                    checked={selected.has(index)}
-                    onCheckedChange={(checked) => toggle(index, checked)}
+                    checked={selection.isSelected(row)}
+                    onCheckedChange={(checked) => selection.toggle(row, checked)}
                     className="size-4"
                   />
                 </td>
@@ -169,24 +208,29 @@ export function CohortPeopleTable<T extends Person>({
                     {column.cell(row)}
                   </td>
                 ))}
-                <td className="px-3">
-                  <button
-                    type="button"
-                    aria-label={`${row.name} options`}
-                    className="flex size-8 items-center justify-center text-text-primary"
-                  >
-                    <MoreHorizontal className="size-5" />
-                  </button>
-                </td>
+                <td className="px-3">{rowActions?.(row)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {visible.length === 0 && (
+      {!loading && rows.length === 0 && (
         <p className="bg-white px-6 py-10 text-center font-work text-sm text-text-muted">
-          No one matches your search or filters.
+          {error ?? "No one matches your search or filters."}
         </p>
+      )}
+
+      {rows.length > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          disabled={paginationDisabled}
+          className="mt-4"
+        />
       )}
 
       <PeopleFilterDialog
@@ -194,9 +238,84 @@ export function CohortPeopleTable<T extends Person>({
         onOpenChange={setFilterOpen}
         filters={filters}
         value={filterValues}
-        onApply={setFilterValues}
+        singleSelect={singleSelectFilters}
+        onApply={onFilterValuesChange}
+      />
+
+      <PeopleSelectionBar
+        items={selection.items}
+        noun={noun}
+        onClear={selection.clear}
+        exportFileName={noun.plural}
+        exportColumns={[
+          { header: "Name", value: (row) => row.name },
+          { header: "Email", value: (row) => row.email },
+          ...columns.map((column) => ({
+            header: column.header,
+            value: (row: T) => textOf(column.cell(row)),
+          })),
+        ]}
+        actions={
+          rowUser &&
+          ((notify) => (
+            <ResendInvitesAction
+              users={selection.items.flatMap((row) => rowUser(row) ?? [])}
+              onResult={notify}
+            />
+          ))
+        }
       />
     </section>
+  );
+}
+
+/** For lists the API returns whole: searches, filters and pages them here. */
+export function CohortPeopleTable<T extends Person & { id: string }>({
+  rows,
+  filters = [],
+  ...table
+}: PeopleTableColumns<T> & { rows: T[] }) {
+  const [search, setSearch] = React.useState("");
+  const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
+    {},
+  );
+  const { page, setPage, pageSize, setPageSize } = usePageParams();
+
+  const query = search.trim().toLowerCase();
+  const visible = rows.filter(
+    (row) =>
+      (row.name.toLowerCase().includes(query) ||
+        row.email.toLowerCase().includes(query)) &&
+      matchesPeopleFilters(row, filters, filterValues),
+  );
+  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  return (
+    <PeopleTableView
+      {...table}
+      filters={filters}
+      rows={visible.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
+      search={search}
+      onSearchChange={(next) => {
+        setSearch(next);
+        setPage(1);
+      }}
+      filterValues={filterValues}
+      onFilterValuesChange={(next) => {
+        setFilterValues(next);
+        setPage(1);
+      }}
+      page={currentPage}
+      totalPages={totalPages}
+      totalItems={visible.length}
+      pageSize={pageSize}
+      onPageChange={setPage}
+      onPageSizeChange={(size) => {
+        setPageSize(size);
+        setPage(1);
+      }}
+    />
   );
 }
 

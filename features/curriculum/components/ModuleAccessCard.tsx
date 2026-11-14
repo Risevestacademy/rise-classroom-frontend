@@ -4,7 +4,6 @@ import * as React from "react";
 import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lock, LockOpen } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,26 +21,51 @@ function plural(count: number, word: string) {
 
 /* The sentence under the heading, from the last unlock or lock. */
 function accessSummary(access: ModuleAccess) {
+  if (access.studentCount === undefined)
+    return access.unlocked ? "Unlocked for the cohort." : "Locked for the cohort.";
   if (access.studentCount === 0) return "No students are enrolled on this track yet.";
   if (!access.unlocked) return `Locked for all ${plural(access.studentCount, "student")}.`;
 
-  const waiting = access.studentCount - access.openCount;
+  const waiting = access.studentCount - (access.openCount ?? 0);
   return waiting === 0
     ? `Unlocked for all ${plural(access.studentCount, "student")}.`
     : `Unlocked for ${plural(access.studentCount, "student")}. ${waiting} will get in once they finish the modules before this one.`;
 }
 
+/* The last access change for a module, kept in this browser so a reload still shows it. */
+const storageKey = (moduleId: string) => `module-access:${moduleId}`;
+
+function readSavedAccess(moduleId: string): ModuleAccess | undefined {
+  try {
+    const saved = window.localStorage.getItem(storageKey(moduleId));
+    return saved ? (JSON.parse(saved) as ModuleAccess) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function saveAccess(moduleId: string, access: ModuleAccess) {
+  try {
+    window.localStorage.setItem(storageKey(moduleId), JSON.stringify(access));
+  } catch {
+    /* Storage can be blocked; the card still works for this visit. */
+  }
+}
+
 /*
- * Lets an instructor open a module to every student on the track, or close it again.
- * The API can't be asked whether a module is unlocked, so the card shows what the
- * last change did and offers both actions until then.
+ * Lets an instructor open a module to every student on the track, or close it again,
+ * with one button that shows the current state. `unlocked` comes from the API; the
+ * student counts only come back from an unlock or lock, so the last one made from this
+ * browser is kept while it still matches.
  */
 export function ModuleAccessCard({
   moduleId,
   moduleStatus,
+  unlocked: apiUnlocked,
 }: {
   moduleId: string;
   moduleStatus: ModuleStatus;
+  unlocked?: boolean;
 }) {
   const { api } = useCurriculumScope();
   const queryClient = useQueryClient();
@@ -49,6 +73,11 @@ export function ModuleAccessCard({
   const { data: access } = useQuery<ModuleAccess>({
     queryKey: accessKey,
     queryFn: skipToken,
+    initialData: () => {
+      const saved = readSavedAccess(moduleId);
+      if (apiUnlocked === undefined || saved?.unlocked === apiUnlocked) return saved;
+      return { unlocked: apiUnlocked };
+    },
     staleTime: Infinity,
   });
   const [confirmLock, setConfirmLock] = React.useState(false);
@@ -57,38 +86,48 @@ export function ModuleAccessCard({
     mutationFn: (unlocked: boolean) => api.setModuleAccess(moduleId, unlocked),
     onSuccess: (result) => {
       queryClient.setQueryData(accessKey, result);
+      saveAccess(moduleId, result);
       setConfirmLock(false);
     },
   });
 
+  const unlocked = access?.unlocked ?? false;
   const isPending = accessMutation.isPending;
-  const pendingUnlock = isPending && accessMutation.variables === true;
 
   return (
     <section className="rounded-xl border border-neutral-200 bg-white p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="flex items-center gap-2 text-sm font-medium text-neutral-800">
-          {access?.unlocked ? (
-            <LockOpen className="h-4 w-4" />
-          ) : (
-            <Lock className="h-4 w-4" />
-          )}
-          Student access
-        </p>
-        {access && (
-          <Badge variant="light" status={access.unlocked ? "success" : "neutral"}>
-            {access.unlocked ? "Unlocked" : "Locked"}
-          </Badge>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium text-neutral-800">Student access</p>
+        <Button
+          variant="secondary"
+          size="medium"
+          aria-pressed={unlocked}
+          aria-label={unlocked ? "Unlocked. Lock this module" : "Locked. Unlock this module"}
+          title={unlocked ? "Click to lock" : "Click to unlock"}
+          disabled={isPending}
+          onClick={() => (unlocked ? setConfirmLock(true) : accessMutation.mutate(true))}
+          className={
+            unlocked
+              ? "border-transparent bg-surface-success-badge text-text-success"
+              : "border-neutral-200 text-neutral-800"
+          }
+        >
+          {unlocked ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+          {isPending && accessMutation.variables
+            ? "Unlocking…"
+            : unlocked
+              ? "Unlocked"
+              : "Locked"}
+        </Button>
       </div>
 
       <p className="mt-2 text-sm text-neutral-500">
         {access
           ? accessSummary(access)
-          : "Unlock this module to let every student on the track open its lessons. You can lock it again at any time."}
+          : "Locked. Click the button to let every student on the track open its lessons. You can lock it again at any time."}
       </p>
 
-      {access?.unlocked && access.studentCount > 0 && (
+      {access?.unlocked && (access.studentCount ?? 1) > 0 && (
         <p className="mt-2 text-xs text-neutral-500">
           Lessons you add later stay locked until you unlock the module again.
         </p>
@@ -106,31 +145,6 @@ export function ModuleAccessCard({
           {accessMutation.error.message}
         </p>
       )}
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {!access?.unlocked && (
-          <Button
-            size="medium"
-            disabled={isPending}
-            onClick={() => accessMutation.mutate(true)}
-          >
-            <LockOpen className="h-4 w-4" />
-            {pendingUnlock ? "Unlocking…" : "Unlock for students"}
-          </Button>
-        )}
-        {access?.unlocked !== false && (
-          <Button
-            variant="secondary"
-            size="medium"
-            disabled={isPending}
-            onClick={() => setConfirmLock(true)}
-            className="border-neutral-200 text-neutral-800"
-          >
-            <Lock className="h-4 w-4" />
-            Lock
-          </Button>
-        )}
-      </div>
 
       <Dialog open={confirmLock} onOpenChange={(open) => !open && setConfirmLock(false)}>
         <DialogContent

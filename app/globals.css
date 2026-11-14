@@ -163,7 +163,7 @@
   --color-interactive-destructive-text: #ffffff; /* neutral-0 */
 
   /* Font */
-  --font-tomato: var(--font-tomato-grotesk), system-ui, sans-serif;
+  --font-lato: var(--font-lato-family), system-ui, sans-serif;
   --font-work: var(--font-work-sans), system-ui, sans-serif;
 
   /* Radius */
@@ -214,7 +214,7 @@
 }
 
 body {
-  font-family: var(--font-tomato);
+  font-family: var(--font-lato);
 }
 
 /* ---------------------------------------------------------------------------

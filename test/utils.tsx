@@ -15,7 +15,31 @@ export function reply(status: number, body: unknown = {}): Reply {
   return { status, body };
 }
 
-type Handler = unknown | Reply | ((body: unknown) => unknown);
+type Handler = unknown | Reply | ((body: unknown, url: URL) => unknown);
+
+type TreeTopic = { id: string } & Record<string, unknown>;
+
+/**
+ * The curriculum and topic `/tree` replies for one role, with each topic's
+ * lessons and items nested in it. Pass a function to read the latest state on
+ * every request.
+ */
+export function curriculumTreeRoutes(
+  role: string,
+  curriculumId: string,
+  topics: TreeTopic[] | (() => TreeTopic[]),
+) {
+  const read = typeof topics === "function" ? topics : () => topics;
+  const routes: Record<string, Handler> = {
+    [`GET /${role}/curriculums/${curriculumId}/tree`]: () =>
+      envelope({ id: curriculumId, topics: read() }),
+  };
+  for (const { id } of read()) {
+    routes[`GET /${role}/topics/${id}/tree`] = () =>
+      envelope(read().find((topic) => topic.id === id));
+  }
+  return routes;
+}
 
 function isReply(value: unknown): value is Reply {
   return (
@@ -45,7 +69,7 @@ export function mockApi(routes: Record<string, Handler>) {
     if (!(key in routes)) throw new TypeError(`Unmocked request: ${key}`);
 
     const handler = routes[key];
-    const result = typeof handler === "function" ? await handler(body) : handler;
+    const result = typeof handler === "function" ? await handler(body, url) : handler;
     const { status, body: payload } = isReply(result)
       ? result
       : { status: 200, body: result };

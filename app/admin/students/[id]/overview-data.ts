@@ -1,25 +1,8 @@
-// PENDING-BACKEND: the API has no mentor, progress, deadline, activity, note
-// or attendance data for a student yet, so the Overview tab shows the
-// design's sample content until it does.
+// PENDING-BACKEND: the API has no deadline, activity, note or
+// attendance data for a student yet, so the Overview tab shows the design's
+// sample content until it does.
 
 export type AttendanceStatus = "attended" | "absent" | "none";
-
-export const mentor = {
-  name: "David Orobosa",
-  role: "Senior Product Designer",
-  nextSession: "Sep 30, 2026 · 6:00 PM -7:00 PM",
-};
-
-export const overallProgress = 84;
-
-export const moduleProgress = [
-  { label: "Design System", value: 91, tone: "brand" },
-  { label: "Visual identity", value: 82, tone: "info" },
-  { label: "UX Research", value: 74, tone: "success" },
-  { label: "Prototyping", value: 88, tone: "accent" },
-] as const;
-
-export const moduleFilters = [{ value: "all", label: "All modules" }] as const;
 
 export const deadlines = [
   {

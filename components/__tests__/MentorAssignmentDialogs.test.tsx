@@ -27,9 +27,11 @@ function studentsPage() {
   return envelope({ items: students, page: 1, limit: 100, total: 2, totalPages: 1 });
 }
 
+const noMentees = { "GET /admin/users/mentor-1/mentees": envelope([]) };
+
 describe("AssignStudentsDialog", () => {
   it("lists students from the mentor's cohort and track", async () => {
-    const api = mockApi({ "GET /admin/users": studentsPage() });
+    const api = mockApi({ ...noMentees, "GET /admin/users": studentsPage() });
     renderWithClient(
       <AssignStudentsDialog mentor={mentor} open onOpenChange={() => {}} />,
     );
@@ -41,21 +43,116 @@ describe("AssignStudentsDialog", () => {
     expect(url.searchParams.get("trackId")).toBe("track-1");
   });
 
-  it("filters by name or email", async () => {
-    mockApi({ "GET /admin/users": studentsPage() });
+  it("reads the cohort and track from a mentor's mentorTrack", async () => {
+    const api = mockApi({
+      "GET /admin/users/mentor-2/mentees": envelope([]),
+      "GET /admin/users": studentsPage(),
+    });
+    const mentorOnMentorTrack = makeUser({
+      id: "mentor-2",
+      role: "MENTOR",
+      mentorTrack: [
+        { cohort: { id: "cohort-2", name: "Cohort 2027" }, track: { id: "track-2", name: "Backend" } },
+      ],
+    });
+    renderWithClient(
+      <AssignStudentsDialog
+        mentor={mentorOnMentorTrack}
+        open
+        onOpenChange={() => {}}
+      />,
+    );
+
+    expect(await screen.findByText("Tobi Adeyemi")).toBeInTheDocument();
+    const [url] = api.urls("GET /admin/users");
+    expect(url.searchParams.get("cohortId")).toBe("cohort-2");
+    expect(url.searchParams.get("trackId")).toBe("track-2");
+  });
+
+  it("searches through the API", async () => {
+    const api = mockApi({ ...noMentees, "GET /admin/users": studentsPage() });
     const { user } = renderWithClient(
       <AssignStudentsDialog mentor={mentor} open onOpenChange={() => {}} />,
     );
 
     await screen.findByText("Tobi Adeyemi");
     await user.type(screen.getByPlaceholderText(/Search students/), "grace@");
+    await vi.waitFor(() =>
+      expect(api.urls("GET /admin/users").at(-1)?.searchParams.get("search")).toBe(
+        "grace@",
+      ),
+    );
+  });
+
+  it("leaves out current mentees and stops at the mentor's free places", async () => {
+    const mentee = (id: string) => ({ mentorshipId: id, user: { id } });
+    mockApi({
+      "GET /admin/users/mentor-1/mentees": envelope([
+        mentee("student-1"),
+        mentee("m-2"),
+        mentee("m-3"),
+      ]),
+      "GET /admin/users": studentsPage(),
+    });
+    const { user } = renderWithClient(
+      <AssignStudentsDialog mentor={mentor} open onOpenChange={() => {}} />,
+    );
+
+    expect(await screen.findByText("Grace Williams")).toBeInTheDocument();
     expect(screen.queryByText("Tobi Adeyemi")).not.toBeInTheDocument();
-    expect(screen.getByText("Grace Williams")).toBeInTheDocument();
+    expect(screen.getByText(/1 of 4 places left/)).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: /Grace Williams/ }));
+    expect(screen.getByRole("checkbox", { name: /Grace Williams/ })).toBeChecked();
+  });
+
+  it("leaves out students another mentor on the cohort and track has", async () => {
+    const otherMentor = makeUser({
+      id: "mentor-3",
+      role: "MENTOR",
+      mentorTrack: [
+        { cohort: { id: "cohort-1", name: "Cohort 2026" }, track: { id: "track-1", name: "Design" } },
+      ],
+    });
+    mockApi({
+      ...noMentees,
+      "GET /admin/users/mentor-3/mentees": envelope([
+        { mentorshipId: "ms-9", user: { id: "student-1" } },
+      ]),
+      "GET /admin/users": (_body: unknown, url: URL) =>
+        url.searchParams.get("role") === "MENTOR"
+          ? envelope({ items: [mentor, otherMentor], page: 1, limit: 20, total: 2, totalPages: 1 })
+          : studentsPage(),
+    });
+    renderWithClient(
+      <AssignStudentsDialog mentor={mentor} open onOpenChange={() => {}} />,
+    );
+
+    expect(await screen.findByText("Grace Williams")).toBeInTheDocument();
+    expect(screen.queryByText("Tobi Adeyemi")).not.toBeInTheDocument();
+    expect(screen.getByText(/4 of 4 places left/)).toBeInTheDocument();
+  });
+
+  it("says when the mentor is already full", async () => {
+    const mentee = (id: string) => ({ mentorshipId: id, user: { id } });
+    mockApi({
+      "GET /admin/users/mentor-1/mentees": envelope(
+        ["m-1", "m-2", "m-3", "m-4"].map(mentee),
+      ),
+      "GET /admin/users": studentsPage(),
+    });
+    renderWithClient(
+      <AssignStudentsDialog mentor={mentor} open onOpenChange={() => {}} />,
+    );
+
+    expect(
+      await screen.findByText(/already has 4 students/),
+    ).toBeInTheDocument();
   });
 
   it("assigns every selected student, then closes", async () => {
     const onOpenChange = vi.fn();
     const api = mockApi({
+      ...noMentees,
       "GET /admin/users": studentsPage(),
       "POST /mentors/assign": envelope({ id: "m-1" }),
     });
@@ -82,6 +179,7 @@ describe("AssignStudentsDialog", () => {
   it("shows the API's reason when the mentor is full", async () => {
     const onOpenChange = vi.fn();
     mockApi({
+      ...noMentees,
       "GET /admin/users": studentsPage(),
       "POST /mentors/assign": reply(400, { message: "Mentor has reached the maximum of 4 mentees" }),
     });

@@ -35,16 +35,66 @@ export type Paginated<T> = {
   totalPages: number;
 };
 
+/** What was sent, kept on an `ApiError` so a failure can be traced. */
+export type ApiRequestInfo = {
+  method: string;
+  url: string;
+  body?: unknown;
+  /** Ids the backend's host logs the request under (Render, Cloudflare). */
+  requestIds?: Record<string, string>;
+};
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
+  request?: ApiRequestInfo;
 
-  constructor(status: number, message: string, body: unknown) {
+  constructor(
+    status: number,
+    message: string,
+    body: unknown,
+    request?: ApiRequestInfo,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.body = body;
+    this.request = request;
   }
+}
+
+/**
+ * Everything known about a failed request: route, status, message, what was
+ * sent, what came back, and the ids to look it up in the backend's logs.
+ */
+export function apiErrorDetails(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return {
+      message: error instanceof Error ? error.message : String(error),
+      error,
+    };
+  }
+  const { request } = error;
+  return {
+    route: request ? `${request.method} ${request.url}` : undefined,
+    status: error.status,
+    message: error.message,
+    requestBody: request?.body,
+    responseBody: error.body,
+    requestIds: request?.requestIds,
+    at: new Date().toISOString(),
+  };
+}
+
+const requestIdHeaders = ["rndr-id", "cf-ray", "x-request-id"];
+
+function requestIdsOf(response: Response) {
+  const ids: Record<string, string> = {};
+  for (const name of requestIdHeaders) {
+    const value = response.headers.get(name);
+    if (value) ids[name] = value;
+  }
+  return ids;
 }
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -98,15 +148,49 @@ function extractMessage(
   return response.statusText || `Request failed with status ${response.status}`;
 }
 
+/**
+ * Set by `lib/query.server.ts`: reads the incoming request's cookies, so
+ * server-rendered pages call the API as the signed-in user. This file is
+ * shared with the browser, so it can't import `next/headers` itself.
+ */
+let readServerCookie: (() => Promise<string | null>) | undefined;
+
+export function setServerCookieReader(read: () => Promise<string | null>) {
+  readServerCookie = read;
+}
+
+/**
+ * A server render waits on the API, so a slow or cold backend is cut off
+ * here and the browser loads the data instead.
+ */
+const SERVER_TIMEOUT_MS = 8_000;
+
+async function serverDefaults(
+  headers: HeadersInit | undefined,
+  signal: RequestInit["signal"],
+): Promise<{ cookie: Record<string, string>; signal?: AbortSignal | null }> {
+  if (typeof window !== "undefined" || !readServerCookie) return { cookie: {} };
+
+  const hasCookie = new Headers(headers).has("cookie");
+  const cookie = hasCookie ? null : await readServerCookie();
+  return {
+    cookie: cookie ? { cookie } : {},
+    signal: signal ?? AbortSignal.timeout(SERVER_TIMEOUT_MS),
+  };
+}
+
 async function request<T>(
   method: string,
   path: string,
   { body, query, headers, ...init }: RequestOptions = {}
 ): Promise<T> {
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const server = await serverDefaults(headers, init.signal);
 
-  const response = await fetch(buildUrl(path, query), {
+  const url = buildUrl(path, query);
+  const response = await fetch(url, {
     ...init,
+    signal: server.signal ?? init.signal,
     method,
     // Auth is the backend's HttpOnly session cookie, so nothing is attached by
     // hand here. The backend ignores `Authorization: Bearer` entirely.
@@ -114,6 +198,7 @@ async function request<T>(
     headers: {
       Accept: "application/json",
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...server.cookie,
       ...headers,
     },
     body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
@@ -126,11 +211,22 @@ async function request<T>(
     : await response.text().catch(() => null);
 
   if (!response.ok) {
-    throw new ApiError(
+    const error = new ApiError(
       response.status,
       extractMessage(isJson, data, response),
-      data
+      data,
+      {
+        method,
+        url,
+        body: isFormData ? "[FormData]" : body,
+        requestIds: requestIdsOf(response),
+      },
     );
+    // Server errors are logged in development with everything needed to report them.
+    if (response.status >= 500 && process.env.NODE_ENV === "development") {
+      console.error(`[api] ${method} ${url} failed`, apiErrorDetails(error));
+    }
+    throw error;
   }
 
   return data as T;

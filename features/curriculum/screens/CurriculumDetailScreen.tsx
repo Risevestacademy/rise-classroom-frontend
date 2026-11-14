@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu } from "@base-ui/react/menu";
 import {
@@ -36,6 +36,7 @@ import {
   ResourcesTab,
 } from "@/features/curriculum/components/Resources";
 import { SettingsTab } from "@/features/curriculum/components/SettingsTab";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
@@ -43,6 +44,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SuccessToast } from "@/components/ui/toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError } from "@/lib/api";
+import { useDragReorder } from "@/lib/use-drag-reorder";
 import {
   trackDetails,
   formatModuleNumber,
@@ -78,7 +80,32 @@ export type CurriculumDetailSearchParams = {
  * The page's shape while the curriculum loads. Also the route's loading.tsx, so it
  * shows straight away instead of a blank page while the server answers.
  */
-export function CurriculumDetailSkeleton() {
+/** The Modules tab's cards while they load. */
+function ModuleRowsSkeleton() {
+  return (
+    <div className="flex max-w-4xl flex-col gap-3">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="flex items-start gap-3">
+          <Skeleton className="mt-5 h-5 w-5" />
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-6 w-56" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+            <Skeleton className="h-9 w-9 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** `tab` is the tab being opened; the route's loading screen has no tab yet. */
+export function CurriculumDetailSkeleton({
+  tab = "overview",
+}: {
+  tab?: TabKey;
+}) {
   const { TopNav, breadcrumbRoot } = useCurriculumScope();
 
   return (
@@ -102,47 +129,86 @@ export function CurriculumDetailSkeleton() {
             <Skeleton className="h-4 w-36" />
           </div>
         </div>
-        <Skeleton className="mt-8 h-10 w-full max-w-2xl rounded-full" />
-        <div className="mt-6 flex max-w-2xl flex-col gap-2">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-        </div>
+        <Tabs value={tab} className="mt-8 gap-6">
+          <div className="max-w-full overflow-x-auto">
+            <TabsList variant="pill">
+              {(Object.keys(tabLabels) as TabKey[]).map((key) => (
+                <TabsTrigger key={key} value={key}>
+                  {tabLabels[key]}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
+          {tab === "overview" ? (
+            <div className="flex flex-col gap-8">
+              <section className="flex max-w-2xl flex-col gap-2">
+                <h2 className="text-lg font-bold text-neutral-800">
+                  About this curriculum
+                </h2>
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </section>
+              <section className="w-full max-w-sm rounded-xl bg-neutral-100 p-5">
+                <h2 className="text-lg font-bold text-neutral-800">Usage</h2>
+                <div className="mt-4 flex items-center gap-3">
+                  <Skeleton className="size-10 shrink-0 rounded-lg bg-white" />
+                  <div className="flex flex-col gap-1.5">
+                    <Skeleton className="h-5 w-44 bg-white" />
+                    <Skeleton className="h-4 w-24 bg-white" />
+                  </div>
+                </div>
+              </section>
+            </div>
+          ) : (
+            // The other tabs load their own lists once the curriculum is in.
+            tab === "modules" && <ModuleRowsSkeleton />
+          )}
+        </Tabs>
       </main>
     </>
   );
 }
 
+/**
+ * One curriculum. Its tab, open sheet and toast live in the URL. With
+ * `loading` it only shows the skeleton, while the server loads the
+ * curriculum.
+ */
 export function CurriculumDetailScreen({
   id,
-  searchParams,
+  loading = false,
 }: {
   id: string;
-  searchParams: CurriculumDetailSearchParams;
+  loading?: boolean;
 }) {
-  const {
-    tab,
-    assignment: openAssignmentId,
-    resource: openResourceId,
-    note: openNoteId,
-    created: createdTitle,
-    module: createdInModule,
-  } = searchParams;
+  const searchParams = useSearchParams();
+  const param = (key: keyof CurriculumDetailSearchParams) =>
+    searchParams.get(key) ?? undefined;
+  const tab = param("tab");
+  const openAssignmentId = param("assignment");
+  const openResourceId = param("resource");
+  const openNoteId = param("note");
+  const createdTitle = param("created");
+  const createdInModule = param("module");
   const { api, paths, permissions, TopNav, breadcrumbRoot } =
     useCurriculumScope();
   const activeTab: TabKey = isTabKey(tab) ? tab : "overview";
   const router = useRouter();
   const queryClient = useQueryClient();
-  const curriculumQuery = useQuery(api.queries.detail(id));
-  const assignmentsQuery = useQuery(api.queries.assignments(id));
-  const resourcesQuery = useQuery(api.queries.resources(id));
-  const notesQuery = useQuery(api.queries.notes(id));
+  const enabled = !loading;
+  const curriculumQuery = useQuery({ ...api.queries.detail(id), enabled });
+  const assignmentsQuery = useQuery({ ...api.queries.assignments(id), enabled });
+  const resourcesQuery = useQuery({ ...api.queries.resources(id), enabled });
+  const notesQuery = useQuery({ ...api.queries.notes(id), enabled });
   const [confirmDelete, setConfirmDelete] = React.useState(false);
 
+  // Updates the URL in place, so opening a sheet or switching tabs doesn't
+  // ask the server to render the page again.
   const goTo = React.useCallback(
     (query: Record<string, string>) =>
-      router.replace(paths.detail(id, query), { scroll: false }),
-    [id, router, paths],
+      window.history.replaceState(null, "", paths.detail(id, query)),
+    [id, paths],
   );
   // Closes a sheet or toast while staying on the current tab.
   const clearOverlay = React.useCallback(
@@ -168,7 +234,9 @@ export function CurriculumDetailScreen({
 
   const curriculum = curriculumQuery.data;
   if (!curriculum) {
-    if (!curriculumQuery.isError) return <CurriculumDetailSkeleton />;
+    if (!curriculumQuery.isError) {
+      return <CurriculumDetailSkeleton tab={activeTab} />;
+    }
     return (
       <>
         <TopNav breadcrumb={breadcrumbRoot} />
@@ -225,12 +293,10 @@ export function CurriculumDetailScreen({
           </div>
 
           <div className="flex flex-col gap-2 sm:items-end sm:text-right">
-            <Image
-              src="/default-avatar.png"
-              alt=""
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded-full object-cover"
+            <PersonAvatar
+              name={curriculum.instructor.name}
+              colorKey={curriculum.instructor.email}
+              size={40}
             />
             <p className="text-sm text-neutral-600">
               Instructor:{" "}
@@ -447,8 +513,6 @@ function ModulesTab({ curriculumId }: { curriculumId: string }) {
   const [expandedIds, setExpandedIds] = React.useState<Set<string> | null>(
     null,
   );
-  const [dragOrder, setDragOrder] = React.useState<string[] | null>(null);
-  const [draggingId, setDraggingId] = React.useState<string | null>(null);
 
   const reorderMutation = useMutation({
     mutationFn: (orderedIds: string[]) =>
@@ -478,28 +542,10 @@ function ModulesTab({ curriculumId }: { curriculumId: string }) {
     setExpandedIds(next);
   }
 
-  function handleDragOver(overId: string) {
-    if (!draggingId || draggingId === overId) return;
-    const order = dragOrder ?? modules.map((m) => m.id);
-    const from = order.indexOf(draggingId);
-    const to = order.indexOf(overId);
-    const next = [...order];
-    next.splice(from, 1);
-    next.splice(to, 0, draggingId);
-    setDragOrder(next);
-  }
-
-  function handleDragEnd() {
-    if (dragOrder) reorderMutation.mutate(dragOrder);
-    setDraggingId(null);
-    setDragOrder(null);
-  }
-
-  const ordered = dragOrder
-    ? dragOrder
-        .map((moduleId) => modules.find((m) => m.id === moduleId))
-        .filter((m): m is CurriculumModule => m !== undefined)
-    : modules;
+  const drag = useDragReorder({
+    items: modules,
+    onReorder: (next) => reorderMutation.mutate(next.map((m) => m.id)),
+  });
 
   if (modulesQuery.isSuccess && modules.length === 0) {
     return (
@@ -509,52 +555,25 @@ function ModulesTab({ curriculumId }: { curriculumId: string }) {
     );
   }
 
-  if (modulesQuery.isPending) {
-    return (
-      <div className="flex max-w-4xl flex-col gap-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="flex items-start gap-3">
-            <Skeleton className="mt-5 h-5 w-5" />
-            <div className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl bg-white p-5 shadow-sm sm:p-6">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-6 w-56" />
-                <Skeleton className="h-6 w-20 rounded-full" />
-              </div>
-              <Skeleton className="h-9 w-9 rounded-full" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (modulesQuery.isPending) return <ModuleRowsSkeleton />;
 
   return (
     <div className="flex max-w-4xl flex-col gap-3">
-      {ordered.map((curriculumModule, index) => {
+      {drag.ordered.map((curriculumModule, index) => {
         const isExpanded = expanded.has(curriculumModule.id);
         return (
           <div
             key={curriculumModule.id}
-            onDragOver={(event) => {
-              event.preventDefault();
-              handleDragOver(curriculumModule.id);
-            }}
+            {...drag.itemProps(curriculumModule.id)}
             className={cn(
               "flex items-start gap-3",
-              draggingId === curriculumModule.id && "opacity-50",
+              drag.draggingId === curriculumModule.id && "opacity-50",
             )}
           >
             <button
               type="button"
-              draggable
+              {...drag.handleProps(curriculumModule.id)}
               aria-label={`Drag to reorder ${curriculumModule.title}`}
-              onDragStart={(event) => {
-                event.dataTransfer.effectAllowed = "move";
-                const row = event.currentTarget.parentElement;
-                if (row) event.dataTransfer.setDragImage(row, 16, 16);
-                setDraggingId(curriculumModule.id);
-              }}
-              onDragEnd={handleDragEnd}
               className="mt-5 cursor-grab text-neutral-800 active:cursor-grabbing"
             >
               <GripVertical className="h-5 w-5" />
@@ -605,10 +624,14 @@ function ModuleSummary({
 }) {
   const lessonCount = curriculumModule.lessons.length;
   const assignmentCount = curriculumModule.assignments.length;
+  const videoCount = curriculumModule.lessons.filter((l) => l.recordingLink).length;
   const included = [
-    curriculumModule.recordingLink && {
+    videoCount > 0 && {
       icon: Video,
-      label: "Live class recording",
+      label:
+        videoCount === 1
+          ? "Live class recording"
+          : `${videoCount} live class recordings`,
     },
     lessonCount > 0 && {
       icon: GraduationCap,

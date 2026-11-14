@@ -1,15 +1,18 @@
-// PENDING-BACKEND: admins can't list a mentor's students, sessions or
-// activity yet, so the mentor profile shows this sample data from the design.
+// PENDING-BACKEND: there are no mentor or instructor sessions or activity yet,
+// so their profiles show this sample data from the design. The mentor dashboard still
+// uses the sample students, as mentors can't list their own students yet.
 
 export type AssignedStudent = {
   id: string;
   name: string;
   email: string;
+  image?: string | null;
   status: "active" | "pending" | "inactive";
-  progress: number;
+  /** `null` until it loads, or when it can't be worked out. */
+  progress: number | null;
 };
 
-export const assignedStudents: AssignedStudent[] = [
+export const assignedStudents: (AssignedStudent & { progress: number })[] = [
   { id: "1", name: "Seyi Wakil", email: "seyiwawa@gmail.com", status: "active", progress: 84 },
   { id: "2", name: "Tola Adebayo", email: "tobayo123@gmail.com", status: "active", progress: 72 },
   { id: "3", name: "James Okafor", email: "jammiefor123@gmail.com", status: "active", progress: 68 },
@@ -33,6 +36,38 @@ export const mentorActivityFilters = [
   { value: "session", label: "Sessions" },
   { value: "note", label: "Notes" },
 ] as const;
+
+/** The instructor Overview's recent activities. */
+export const instructorRecentActivity: ReturnType<typeof mentorActivity> = [
+  {
+    label: "Today · Oct 18, 2026",
+    items: [
+      {
+        time: "10:24 AM",
+        title: "Created an assignment",
+        detail: "Module 1",
+        kind: "session",
+      },
+      {
+        time: "09:14 AM",
+        title: "Graded student submissions",
+        detail: "4 students",
+        kind: "student",
+      },
+    ],
+  },
+  {
+    label: "Yesterday · Oct 17, 2026",
+    items: [
+      {
+        time: "06:04 PM",
+        title: "Note added",
+        detail: "Added a note to Seyi Wakil's profile.",
+        kind: "note",
+      },
+    ],
+  },
+];
 
 export const mentorActivity = (
   mentorName: string,

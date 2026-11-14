@@ -8,6 +8,7 @@ import {
   CardHeader,
   ProgressBar,
 } from "@/components/student-profile/shared";
+import { MenteeRowsSkeleton } from "@/components/student-profile/skeletons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -29,7 +30,11 @@ export const studentStatusPill = {
 } as const;
 
 export function needsAttention(student: AssignedStudent) {
-  return student.progress < attentionThreshold;
+  return student.progress !== null && student.progress < attentionThreshold;
+}
+
+export function progressLabel(student: AssignedStudent) {
+  return student.progress === null ? "--" : `${student.progress}%`;
 }
 
 export function progressTone(student: AssignedStudent) {
@@ -66,21 +71,35 @@ export function StudentsProgressCard({
   title,
   students,
   studentHref,
+  emptyMessage,
+  loading = false,
+  onViewAll,
 }: {
   title: string;
   students: AssignedStudent[];
   studentHref: (student: AssignedStudent) => string;
+  /** Shown in place of the list when there are no students. */
+  emptyMessage?: string;
+  /** Shows skeleton rows while the students load. */
+  loading?: boolean;
+  onViewAll?: () => void;
 }) {
   return (
     <Card>
       <CardHeader
         title={title}
         action={
-          <Button variant="tertiary" size="sm">
+          <Button variant="tertiary" size="sm" onClick={onViewAll}>
             View all
           </Button>
         }
       />
+      {loading && <MenteeRowsSkeleton />}
+      {!loading && students.length === 0 && emptyMessage && (
+        <p className="py-6 text-center font-work text-sm text-text-muted">
+          {emptyMessage}
+        </p>
+      )}
       <ul className="flex flex-col gap-3">
         {students.map((student) => {
           const tone = progressTone(student);
@@ -92,6 +111,7 @@ export function StudentsProgressCard({
               <div className="flex min-w-0 items-center gap-3">
                 <PersonAvatar
                   name={student.name}
+                  src={student.image}
                   colorKey={student.id}
                   size={40}
                 />
@@ -109,14 +129,14 @@ export function StudentsProgressCard({
                 <div className="flex w-[152px] flex-col gap-2">
                   <div>
                     <p className={cn("text-lg/6 font-semibold", tone.text)}>
-                      {student.progress}%
+                      {progressLabel(student)}
                     </p>
                     <p className="font-work text-[13px]/[18px] text-text-muted">
                       Overall progress
                     </p>
                   </div>
                   <ProgressBar
-                    value={student.progress}
+                    value={student.progress ?? 0}
                     fillClassName={tone.bar}
                   />
                 </div>
@@ -131,8 +151,10 @@ export function StudentsProgressCard({
 
 export function UpcomingSessionsCard({
   sessions,
+  onViewAll,
 }: {
   sessions: UpcomingSession[];
+  onViewAll?: () => void;
 }) {
   return (
     <Card className="gap-3">
@@ -140,7 +162,7 @@ export function UpcomingSessionsCard({
         size="h4"
         title="Upcoming sessions"
         action={
-          <Button variant="tertiary" size="sm">
+          <Button variant="tertiary" size="sm" onClick={onViewAll}>
             View all
           </Button>
         }

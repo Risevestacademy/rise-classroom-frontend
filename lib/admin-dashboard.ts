@@ -3,21 +3,31 @@ import { queryOptions } from "@tanstack/react-query";
 import { api, type Envelope } from "@/lib/api";
 import type { TrackKey } from "@/app/admin/cohorts/cohort-data";
 
-/** Platform-wide figures from the admin control tower. */
+/**
+ * Figures from the admin control tower, as the live API returns them (the
+ * API docs describe an older shape). `cohortId` only narrows totalStudents;
+ * the rest are platform-wide and all-time.
+ */
 export type AdminControlTower = {
-  overview: {
+  metricsOverview: {
     totalStudents: number;
-    totalMentors: number;
+    totalActiveMentorships: number;
     totalGoals: number;
+    completedGoals: number;
+    goalCompletionRate: number;
     totalKpis: number;
-    metricsSubmittedThisWeek: number;
+    achievedKpis: number;
+    inProgressKpis: number;
+    kpiAchievementRate: number;
+    totalWeeklyMetrics: number;
+    submittedMetrics: number;
+    reviewedMetrics: number;
   };
   cohorts: {
     id: string;
     name: string;
-    studentCount: number;
-    metricsSubmissionRate?: number;
-    kpiAchievementRate?: number;
+    year: string;
+    _count: { students: number };
   }[];
 };
 
@@ -135,55 +145,39 @@ export const dashboardMock = {
   ] satisfies UpcomingActivity[],
 };
 
+/** A notification as `/notifications` returns it. */
 export type AdminNotification = {
   id: string;
-  actor: string;
-  avatar?: string;
-  message: string;
-  time: string;
-  unread: boolean;
+  title: string;
+  body: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
 };
 
-// PENDING-BACKEND: the API has no notifications endpoint.
-const mockNotifications: AdminNotification[] = [
-  {
-    id: "n1",
-    actor: "Sarah Okafor",
-    message: "submitted Assignment 4 in Design",
-    time: "10 minutes ago",
-    unread: true,
-  },
-  {
-    id: "n2",
-    actor: "Femi Adeyemi",
-    message: "accepted the invite and finished onboarding",
-    time: "1 hour ago",
-    unread: true,
-  },
-  {
-    id: "n3",
-    actor: "Amina Bello",
-    message: "was flagged as at risk in Frontend",
-    time: "3 hours ago",
-    unread: true,
-  },
-  {
-    id: "n4",
-    actor: "Francis Eze",
-    message: "booked a mentorship session for Friday",
-    time: "Yesterday",
-    unread: false,
-  },
-  {
-    id: "n5",
-    actor: "Tobi Lawal",
-    message: "filled in this week's control tower",
-    time: "2 days ago",
-    unread: false,
-  },
-];
+export type AdminNotifications = {
+  items: AdminNotification[];
+  unreadCount: number;
+};
+
+/** The latest notifications; the panel has no paging, so it shows one page. */
+async function getNotifications(): Promise<AdminNotifications> {
+  const { data, metadata } = await api.get<
+    Envelope<AdminNotification[]> & { metadata: { unreadCount: number } }
+  >("/notifications", { query: { limit: 50 } });
+  return { items: data, unreadCount: metadata.unreadCount };
+}
+
+export function markNotificationRead(id: string) {
+  return api.patch(`/notifications/${id}/read`);
+}
+
+export function markAllNotificationsRead() {
+  return api.patch("/notifications/read-all");
+}
 
 export const adminDashboardKeys = {
+  allControlTowers: () => ["admin", "control-tower"] as const,
   controlTower: (cohortId?: string) =>
     ["admin", "control-tower", cohortId] as const,
   notifications: () => ["admin", "notifications"] as const,
@@ -199,10 +193,7 @@ export const adminDashboardQueries = {
   notifications: () =>
     queryOptions({
       queryKey: adminDashboardKeys.notifications(),
-      queryFn: async () => mockNotifications,
-      // Read state lives in the cache until there's an API to save it, so a
-      // refetch must not reset it.
-      staleTime: Infinity,
-      gcTime: Infinity,
+      queryFn: getNotifications,
+      staleTime: 60_000,
     }),
 };

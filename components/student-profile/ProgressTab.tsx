@@ -3,17 +3,18 @@
 import * as React from "react";
 import { Menu } from "@base-ui/react/menu";
 
-import { MoreHorizontal } from "@/assets/icons";
+import { File01, MoreHorizontal } from "@/assets/icons";
+import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
 import { Button } from "@/components/ui/button";
+import type { AdminUser } from "@/lib/admin";
+import { useStudentProgress, type ModuleProgress } from "@/lib/student-profile";
 import { cn } from "@/lib/utils";
-import {
-  learningItems,
-  modules,
-  trackProgress,
-  type LearningItem,
-  type LearningItemStatus,
+import type {
+  LearningItem,
+  LearningItemStatus,
 } from "@/app/admin/students/[id]/profile-data";
 import { BrandBadge, Card, CardHeader, ProgressBar } from "./shared";
+import { ProgressTabSkeleton } from "./skeletons";
 
 const itemStatus: Record<
   LearningItemStatus,
@@ -32,15 +33,66 @@ const noteTone = {
 };
 
 export function ProgressTab({
+  student,
   track,
   cohort,
 }: {
+  student: AdminUser;
+  track?: string;
+  cohort?: string;
+}) {
+  const { isPending, error, progress } = useStudentProgress(student);
+
+  if (isPending) return <ProgressTabSkeleton />;
+  if (error) {
+    return (
+      <CohortEmptyState
+        icon={File01}
+        title="Couldn't load progress"
+        description={error.message}
+      />
+    );
+  }
+  if (!progress || progress.modules.length === 0) {
+    return (
+      <CohortEmptyState
+        icon={File01}
+        title="No modules yet"
+        description="Progress shows here once the track's curriculum has published modules."
+      />
+    );
+  }
+
+  return (
+    <Modules
+      modules={progress.modules}
+      overall={progress.overall}
+      track={track}
+      cohort={cohort}
+    />
+  );
+}
+
+const percentLabel = (value: number | null) =>
+  value === null ? "--" : `${value}%`;
+
+function Modules({
+  modules,
+  overall,
+  track,
+  cohort,
+}: {
+  modules: ModuleProgress[];
+  overall: number | null;
   track?: string;
   cohort?: string;
 }) {
   const [moduleId, setModuleId] = React.useState(modules[0].id);
   const current = modules.find((item) => item.id === moduleId) ?? modules[0];
-  const items = learningItems[current.id] ?? [];
+  // PENDING-BACKEND: there are no live classes, and a student's assignment
+  // grades are only listed per assignment, so no learning items show yet.
+  const items: LearningItem[] = [];
+  const trackName = track ? `${track} Track` : "Track";
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,309fr)_minmax(0,811fr)]">
@@ -48,10 +100,10 @@ export function ProgressTab({
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
             <h2
-              title={track ? `${track} Track` : trackProgress.name}
+              title={trackName}
               className="truncate text-lg/6 font-semibold text-text-primary"
             >
-              {track ? `${track} Track` : trackProgress.name}
+              {trackName}
             </h2>
             {cohort && (
               <p className="truncate font-work text-[13px]/[18px] text-text-secondary">
@@ -61,14 +113,14 @@ export function ProgressTab({
           </div>
           <div className="flex shrink-0 flex-col gap-1 text-right">
             <p className="text-lg/6 font-semibold text-text-primary">
-              {trackProgress.value}%
+              {percentLabel(overall)}
             </p>
             <p className="font-work text-[13px]/[18px] text-text-secondary">
               Overall progress
             </p>
           </div>
         </div>
-        <ProgressBar value={trackProgress.value} />
+        <ProgressBar value={overall ?? 0} />
 
         <ul className="flex flex-col">
           {modules.map((item) => {
@@ -100,7 +152,7 @@ export function ProgressTab({
                     </span>
                   </span>
                   <span className="shrink-0 font-work text-sm font-medium tracking-[-0.01em] text-text-primary">
-                    {item.progress === null ? "--" : `${item.progress}%`}
+                    {percentLabel(item.progress)}
                   </span>
                 </button>
               </li>
@@ -130,11 +182,11 @@ export function ProgressTab({
             <div className="flex w-full shrink-0 flex-col gap-1 md:w-[191px]">
               <div className="flex items-center gap-3">
                 <span className="text-base font-medium text-black">
-                  {current.progress === null ? "--" : `${current.progress}%`}
+                  {percentLabel(current.progress)}
                 </span>
                 <ProgressBar value={current.progress ?? 0} className="flex-1" />
               </div>
-              {current.total !== undefined && (
+              {current.progress !== null && (
                 <p className="font-work text-sm text-text-secondary">
                   {current.completed} of {current.total} learning items
                   completed

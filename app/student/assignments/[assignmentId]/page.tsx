@@ -24,13 +24,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { SubmittedWork } from "@/components/assignments/SubmittedWork";
 import { Notice } from "@/components/lessons/Notice";
 import { ResourceRow } from "@/components/lessons/ResourceRow";
-import { formatDate, formatTime } from "@/features/curriculum/mappers";
+import {
+  formatDate,
+  formatTime,
+  instructionsText,
+} from "@/features/curriculum/mappers";
 import {
   submissionBadges,
   submissionTypes,
 } from "@/features/curriculum/types";
 import {
   canEditSubmission,
+  isLateSubmission,
   saveSubmissionDraft,
   studentAssignmentKeys,
   studentAssignmentQueries,
@@ -47,16 +52,6 @@ const listHref = "/student/assignments";
 
 function formatDue(value: string) {
   return `${formatDate(value)} · ${formatTime(value)}`;
-}
-
-/* The API stores attachments as bare URLs, so the last path segment stands in for a title. */
-function attachmentTitle(url: string) {
-  try {
-    const name = new URL(url).pathname.split("/").filter(Boolean).pop();
-    return name ? decodeURIComponent(name) : url;
-  } catch {
-    return url;
-  }
 }
 
 function isPastDue(dueAt: string | null | undefined) {
@@ -125,13 +120,13 @@ function SubmissionForm({
   });
 
   const submit = useMutation({
-    mutationFn: async () => {
+    mutationFn: () => {
       const next = draft();
-      /* Only send the draft again when it changed; a saved file needs no re-upload. */
-      if (next && (changed || !submission)) {
-        await saveSubmissionDraft(assignment.id, next);
-      }
-      return submitAssignment(assignment.id);
+      /* Only send the work when it changed; a saved file needs no re-upload. */
+      return submitAssignment(
+        assignment.id,
+        next && (changed || !submission) ? next : null,
+      );
     },
     onSuccess: async () => {
       setFiles([]);
@@ -262,8 +257,12 @@ function ResultCard({ submission }: { submission: StudentSubmission }) {
     <section className="rounded-2xl bg-white p-5 shadow-sm">
       <p className="text-xs font-medium text-neutral-500">Your grade</p>
       <p className="mt-1 text-3xl font-medium text-neutral-800">
-        {submission.grade ?? "--"}
-        <span className="text-base text-neutral-400">/100</span>
+        {submission.score ?? "--"}
+        {submission.assignment?.maxScore ? (
+          <span className="text-base text-neutral-400">
+            /{submission.assignment.maxScore}
+          </span>
+        ) : null}
       </p>
       {submission.feedback && (
         <div className="mt-4 rounded-2xl bg-surface-brand p-4">
@@ -293,6 +292,7 @@ function AssignmentView({
 }) {
   const editable = canEditSubmission(submission);
   const badge = submission ? submissionBadges[submission.status] : null;
+  const instructions = instructionsText(assignment.instructions);
 
   return (
     <div className="flex flex-col gap-6">
@@ -335,7 +335,7 @@ function AssignmentView({
                   Not started
                 </Badge>
               )}
-              {submission?.isLate && (
+              {submission && isLateSubmission(submission) && (
                 <Badge variant="light" status="warning">
                   Late
                 </Badge>
@@ -352,13 +352,13 @@ function AssignmentView({
             </section>
           )}
 
-          {assignment.instructions && (
+          {instructions && (
             <div className="rounded-2xl bg-surface-brand p-4">
               <p className="text-xs font-medium text-brand-700">
                 Instructions from your instructor
               </p>
               <p className="mt-1 text-sm whitespace-pre-wrap text-neutral-600">
-                {assignment.instructions}
+                {instructions}
               </p>
             </div>
           )}
@@ -367,10 +367,10 @@ function AssignmentView({
             <section>
               <h2 className="text-sm font-medium text-neutral-800">Resources</h2>
               <div className="mt-3 flex flex-col gap-1 rounded-2xl bg-neutral-100 p-2">
-                {assignment.attachments.map((url) => (
+                {assignment.attachments.map((attachment) => (
                   <ResourceRow
-                    key={url}
-                    resource={{ title: attachmentTitle(url), url }}
+                    key={attachment.id}
+                    resource={{ title: attachment.title, url: attachment.downloadUrl }}
                   />
                 ))}
               </div>
@@ -379,7 +379,9 @@ function AssignmentView({
         </div>
 
         <aside className="flex min-w-0 flex-col gap-4">
-          {submission?.status === "GRADED" && <ResultCard submission={submission} />}
+          {(submission?.status === "GRADED" || submission?.status === "REVIEWED") && (
+            <ResultCard submission={submission} />
+          )}
 
           {submission?.status === "CHANGES_REQUESTED" && (
             <div className="flex items-start gap-3 rounded-2xl bg-surface-error-badge p-4">
@@ -415,11 +417,19 @@ function AssignmentView({
                         Submitted {formatDue(submission.submittedAt)}
                       </p>
                     )}
-                    {submission.status !== "GRADED" && (
+                    {submission.status === "ON_HOLD" ? (
                       <p className="text-xs text-neutral-500">
-                        Your instructor will review it and you&apos;ll see your
-                        grade here.
+                        This assignment is on hold. Your instructor will let you
+                        know when it opens again.
                       </p>
+                    ) : (
+                      submission.status !== "GRADED" &&
+                      submission.status !== "REVIEWED" && (
+                        <p className="text-xs text-neutral-500">
+                          Your instructor will review it and you&apos;ll see your
+                          grade here.
+                        </p>
+                      )
                     )}
                   </div>
                 )

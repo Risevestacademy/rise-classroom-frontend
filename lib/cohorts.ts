@@ -9,6 +9,7 @@ import {
   type CohortStatus as ApiCohortStatus,
 } from "@/lib/admin";
 import { api, type Envelope, type Paginated } from "@/lib/api";
+import { listMentees, type MentorStudent } from "@/lib/mentors";
 import type { OnboardingStatus, UserStatus } from "@/lib/auth";
 import type {
   CohortStatus,
@@ -56,6 +57,7 @@ export type CohortStudent = Person & {
   // PENDING-BACKEND: no student health or activity data yet.
   status: StudentStatus | null;
   lastActive: string;
+  user: AdminUser;
 };
 
 export type CohortStaff = Person & {
@@ -64,7 +66,10 @@ export type CohortStaff = Person & {
   trackId: string;
   /** `null` when the user record couldn't be loaded. */
   accountStatus: UserStatus | null;
-  students: number;
+  /** Missing when the user record couldn't be loaded. */
+  user?: AdminUser;
+  /** `null` when it isn't known, as for mentors. */
+  students: number | null;
   // PENDING-BACKEND: no activity data yet.
   lastActive: string;
 };
@@ -75,7 +80,6 @@ export type CohortDetail = CohortSummary & {
   trackList: CohortTrack[];
   studentList: CohortStudent[];
   instructorList: CohortStaff[];
-  // PENDING-BACKEND: the API has no mentor role or mentor-cohort link.
   mentorList: CohortStaff[];
 };
 
@@ -101,8 +105,9 @@ function daysUntil(date: string, now = new Date()) {
 }
 
 /**
- * PENDING-BACKEND: the API has no completion data, so progress is the share of
- * the cohort's time that has passed.
+ * PENDING-BACKEND: completion is only listed per student, and the users list
+ * has no student profile id to ask with, so progress is the share of the
+ * cohort's time that has passed.
  */
 function timeProgress(cohort: Cohort, now = new Date()) {
   if (cohort.status === "COMPLETED") return 100;
@@ -135,8 +140,13 @@ export function trackKeyFor(name: string, index = 0): TrackKey {
   );
 }
 
-function personFor(id: string, name: string, email: string): Person {
-  return { id, name, email };
+function personFor(
+  id: string,
+  name: string,
+  email: string,
+  avatar?: string | null,
+): Person {
+  return { id, name, email, avatar };
 }
 
 function studentTracks(user: AdminUser, cohortId: string) {
@@ -144,6 +154,24 @@ function studentTracks(user: AdminUser, cohortId: string) {
     .filter((membership) => membership.cohort?.id === cohortId)
     .flatMap((membership) => membership.enrollment ?? [])
     .flatMap((enrollment) => (enrollment.track ? [enrollment.track] : []));
+}
+
+export function toCohortStudent(
+  user: AdminUser,
+  cohortId: string,
+): CohortStudent {
+  const tracks = studentTracks(user, cohortId);
+  return {
+    ...personFor(user.id, user.name, user.email, user.image),
+    id: user.id,
+    track: tracks.map((track) => track.name).join(", ") || "--",
+    trackIds: tracks.map((track) => track.id),
+    accountStatus: user.status,
+    onboardingStatus: user.onboardingStatus,
+    status: null,
+    lastActive: "--",
+    user,
+  };
 }
 
 async function listInstructorTracks(cohortId?: string) {
@@ -169,12 +197,12 @@ function listStudentsPage(cohortId: string, page: number) {
   return listUsersPage({ role: "STUDENT", cohortId }, page);
 }
 
-/** Instructor-track records only carry a name and email, not account status. */
-async function listAllInstructors() {
-  const first = await listUsersPage({ role: "INSTRUCTOR" }, 1);
+/** Every user with this role. Instructor-track records carry no role or status. */
+async function listAllStaff(role: "INSTRUCTOR" | "MENTOR") {
+  const first = await listUsersPage({ role }, 1);
   const rest = await Promise.all(
     Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, i) =>
-      listUsersPage({ role: "INSTRUCTOR" }, i + 2),
+      listUsersPage({ role }, i + 2),
     ),
   );
   return [first, ...rest].flatMap((page) => page.items);
@@ -259,18 +287,61 @@ async function listCohortTrackIds(cohortId: string) {
   return Array.from(cohortTrackNames(cohortId, assignments, students).keys());
 }
 
+/** Each mentor on the cohort's mentees, or null where the list failed. */
+async function listCohortMentees(
+  cohortId: string,
+  assignments: InstructorTrack[],
+  mentorIds: Set<string>,
+) {
+  const ids = new Set(
+    assignments
+      .filter((a) => a.cohortId === cohortId && mentorIds.has(a.instructorId))
+      .map((a) => a.instructorId),
+  );
+  return new Map(
+    await Promise.all(
+      [...ids].map(
+        async (mentorId) =>
+          [mentorId, await listMentees(mentorId).catch(() => null)] as const,
+      ),
+    ),
+  );
+}
+
+/** A mentor's mentees on one cohort track. */
+function countMentees(
+  mentees: MentorStudent[] | null | undefined,
+  cohortId: string,
+  trackId: string,
+) {
+  if (!mentees) return null;
+  return mentees.filter(
+    (mentee) =>
+      mentee.cohort.id === cohortId &&
+      mentee.enrollment.some((enrollment) => enrollment.track?.id === trackId),
+  ).length;
+}
+
 async function getCohortDetail(id: string): Promise<CohortDetail> {
-  const [{ data: cohort }, assignments, students, instructors] =
+  const [{ data: cohort }, assignments, students, instructors, mentors] =
     await Promise.all([
       api.get<Envelope<Cohort>>(`/admin/cohorts/${id}`),
       listInstructorTracks(id),
       listAllStudents(id),
-      // Only needed for the status filter, so a failure shouldn't hide the page.
-      listAllInstructors().catch(() => [] as AdminUser[]),
+      // Only needed for statuses, roles and row actions, so a failure
+      // shouldn't hide the page.
+      listAllStaff("INSTRUCTOR").catch(() => [] as AdminUser[]),
+      listAllStaff("MENTOR").catch(() => [] as AdminUser[]),
     ]);
-  const instructorStatus = new Map(
-    instructors.map((user) => [user.id, user.status]),
+  const staffUsers = new Map(
+    [...instructors, ...mentors].map((user) => [user.id, user]),
   );
+  const staffStatus = new Map(
+    [...staffUsers].map(([userId, user]) => [userId, user.status]),
+  );
+  // Mentors are assigned to a cohort and track the same way instructors are.
+  const mentorIds = new Set(mentors.map((user) => user.id));
+  const menteesByMentor = await listCohortMentees(id, assignments, mentorIds);
 
   const tracks = cohortTrackNames(id, assignments, students);
   const studentsPerTrack = new Map<string, number>();
@@ -292,48 +363,56 @@ async function getCohortDetail(id: string): Promise<CohortDetail> {
     progress: 0,
   }));
 
-  const studentList = students.map((student) => ({
-    ...personFor(student.id, student.name, student.email),
-    id: student.id,
-    track:
-      studentTracks(student, id)
-        .map((track) => track.name)
-        .join(", ") || "--",
-    trackIds: studentTracks(student, id).map((track) => track.id),
-    accountStatus: student.status,
-    onboardingStatus: student.onboardingStatus,
-    status: null,
-    lastActive: "--",
-  }));
+  const studentList = students.map((student) =>
+    toCohortStudent(student, id),
+  );
 
-  const instructorList = assignments
+  const staffList = assignments
     .filter((assignment) => assignment.cohortId === id)
     .map((assignment) => {
-      const instructor = assignment.instructor;
-      const name = instructor
-        ? `${instructor.firstName} ${instructor.lastName}`.trim()
-        : "Unknown instructor";
+      const isMentor = mentorIds.has(assignment.instructorId);
+      const person = assignment.instructor;
+      const name = person
+        ? `${person.firstName} ${person.lastName}`.trim()
+        : isMentor
+          ? "Unknown mentor"
+          : "Unknown instructor";
       return {
-        ...personFor(assignment.id, name, instructor?.email ?? ""),
+        ...personFor(
+          assignment.id,
+          name,
+          person?.email ?? "",
+          staffUsers.get(assignment.instructorId)?.image,
+        ),
         id: assignment.id,
+        isMentor,
         track: assignment.track?.name ?? "--",
         trackId: assignment.trackId,
-        accountStatus: instructorStatus.get(assignment.instructorId) ?? null,
-        students: studentsPerTrack.get(assignment.trackId) ?? 0,
+        accountStatus: staffStatus.get(assignment.instructorId) ?? null,
+        user: staffUsers.get(assignment.instructorId),
+        students: isMentor
+          ? countMentees(
+              menteesByMentor.get(assignment.instructorId),
+              id,
+              assignment.trackId,
+            )
+          : (studentsPerTrack.get(assignment.trackId) ?? 0),
         lastActive: "--",
       };
     });
+  const instructorList = staffList.filter((row) => !row.isMentor);
+  const mentorList = staffList.filter((row) => row.isMentor);
 
   return {
     ...toSummary(cohort, students.length, tracks.size),
     trackNames: trackList.map((track) => track.name),
     instructorsAndMentors: new Set(
-      instructorList.map((row) => row.email || row.id),
+      staffList.map((row) => row.email || row.id),
     ).size,
     trackList,
     studentList,
     instructorList,
-    mentorList: [],
+    mentorList,
   };
 }
 

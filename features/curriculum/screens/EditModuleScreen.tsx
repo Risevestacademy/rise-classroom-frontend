@@ -25,22 +25,21 @@ export function EditModuleScreen({
   const queryClient = useQueryClient();
   const curriculumQuery = useQuery(api.queries.detail(id));
   const modulesQuery = useQuery(api.queries.modules(id));
-  const moduleQuery = useQuery(api.queries.module(moduleId));
+  const moduleQuery = useQuery(api.queries.module(id, moduleId));
 
   const updateMutation = useMutation({
     mutationFn: (input: SaveModuleInput) => api.updateModule(moduleId, input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: api.keys.modules(id) });
-      queryClient.invalidateQueries({
-        queryKey: api.keys.module(moduleId),
-      });
+    onSuccess: async () => {
+      await api.refreshModule(queryClient, id, moduleId);
       router.push(paths.module(id, moduleId));
     },
   });
 
-  const isNotFound = [curriculumQuery.error, moduleQuery.error].some(
-    (error) => error instanceof ApiError && error.status === 404,
-  );
+  const isNotFound =
+    moduleQuery.data === null ||
+    [curriculumQuery.error, moduleQuery.error].some(
+      (error) => error instanceof ApiError && error.status === 404,
+    );
   if (isNotFound) notFound();
 
   const curriculum = curriculumQuery.data;

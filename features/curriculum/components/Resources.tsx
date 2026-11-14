@@ -67,21 +67,28 @@ export function ResourcesTab({
   const [deleteTarget, setDeleteTarget] =
     React.useState<CurriculumResource | null>(null);
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: api.keys.modules(curriculumId),
-    });
+  /* Reloads only the module the resource is on. */
+  const refresh = (resourceId: string) => {
+    const item = resourcesQuery.data?.find(
+      ({ resource }) => resource.id === resourceId,
+    );
+    return item
+      ? api.refreshModule(queryClient, curriculumId, item.module.id)
+      : queryClient.invalidateQueries({
+          queryKey: api.keys.modules(curriculumId),
+        });
+  };
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: ModuleStatus }) =>
       api.updateResource(id, { status }),
-    onSuccess: invalidate,
+    onSuccess: (_, { id }) => refresh(id),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.deleteResource(id),
-    onSuccess: () => {
-      invalidate();
+    onSuccess: (_, id) => {
+      refresh(id);
       setDeleteTarget(null);
     },
   });
@@ -292,7 +299,11 @@ export function ResourceSheet({
             <section className="rounded-xl border border-neutral-100 p-5 shadow-sm">
               <h3 className="text-lg font-bold text-neutral-800">Preview</h3>
               <div className="mt-4 flex aspect-video flex-col items-center justify-center gap-3 rounded-2xl bg-warning-surface">
-                <FileTypeIcon name={item.resource.name} className="scale-150" />
+                <FileTypeIcon
+                  name={item.resource.name}
+                  url={item.resource.url}
+                  className="scale-150"
+                />
                 <p className="mt-2 text-sm text-neutral-600">
                   {item.resource.name}
                 </p>

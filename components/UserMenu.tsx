@@ -5,13 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronsUpDown, LogOut } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { UserAvatar } from "@/components/UserAvatar";
+import { PersonAvatar } from "@/components/PersonAvatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sessionQuery } from "@/lib/session-query";
 import { useSignOut } from "@/lib/use-sign-out";
 import type { Role } from "@/lib/auth";
 
 const roleLabels: Record<Role, string> = {
+  PLATFORM_ADMIN: "Program Admin",
   SUPERADMIN: "Super Admin",
   INSTRUCTOR: "Instructor",
   MENTOR: "Mentor",
@@ -43,13 +44,16 @@ export function UserMenu({
 
   const details = (
     <>
-      <UserAvatar
-        user={{
-          name: user?.name ?? "Account",
-          avatar: user?.image ?? "/default-avatar.png",
-        }}
-        isLoading={isPending}
-      />
+      {isPending ? (
+        <Skeleton className="size-9 shrink-0 rounded-full" />
+      ) : (
+        <PersonAvatar
+          name={user?.displayName ?? user?.name ?? "Account"}
+          src={user?.image}
+          colorKey={user?.id}
+          size={36}
+        />
+      )}
       <div className="flex min-w-0 flex-1 flex-col">
         {isPending ? (
           <>
