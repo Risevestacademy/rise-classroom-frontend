@@ -121,16 +121,19 @@ export const lessonQueries = {
     }),
 };
 
-/* Marks one lesson done or not done. Lesson ids go through the module's progress endpoint. */
+/*
+ * Marks one lesson done or not done. The module endpoint (`topics/{id}/progress`)
+ * answers 200 but leaves the lesson as it was, so this goes through the lesson's own.
+ * The API marks the lesson whatever activity id it's given; the lesson's id is sent.
+ */
 export async function setLessonCompleted(
   enrollmentId: string,
-  topicId: string,
   lessonId: string,
   completed: boolean,
 ) {
   await api.patch(
-    `/student/enrollments/${enrollmentId}/topics/${topicId}/progress`,
-    { lessons: [{ id: lessonId, completed }] },
+    `/student/enrollments/${enrollmentId}/lessons/${lessonId}/progress`,
+    { activities: [{ id: lessonId, completed }] },
   );
 }
 
@@ -212,6 +215,13 @@ export function moduleNumber(number: number) {
 }
 
 /** A module and its 1-based number in the ordered list. */
+/** The lesson after this one across the whole curriculum, if the student can open it. */
+export function nextLesson(topics: CurriculumTopic[], lessonId: string) {
+  const lessons = topics.flatMap((topic) => topic.lessons);
+  const next = lessons[lessons.findIndex((item) => item.id === lessonId) + 1];
+  return next && isUnlocked(next) ? next : null;
+}
+
 export function findTopic(topics: CurriculumTopic[], topicId: string) {
   const index = topics.findIndex((topic) => topic.id === topicId);
   return index === -1 ? null : { topic: topics[index], number: index + 1 };
@@ -322,6 +332,14 @@ export function describeResource(value: string, type?: LessonResource["type"]) {
   return { kind: isVideo ? "Video" : "Link", host, isFile: false };
 }
 
+/** Where in a video file its preview frame is taken from, as the mobile app does. */
+export const PREVIEW_SECONDS = 3;
+
+/** A video file's URL set to open on its preview frame. */
+export function previewFrameUrl(src: string) {
+  return `${src.split("#")[0]}#t=${PREVIEW_SECONDS}`;
+}
+
 /** A still for the recording, when the host gives one (YouTube only). */
 export function videoThumbnail(value: string): string | null {
   const source = getVideoSource(value);
@@ -337,6 +355,11 @@ export type VideoSource =
   | { type: "file"; src: string }
   | { type: "link"; src: string };
 
+/* `enablejsapi` lets the page hear when the video ends. */
+function youtubeEmbed(id: string) {
+  return `https://www.youtube.com/embed/${id}?enablejsapi=1`;
+}
+
 /** Picks how to play a recording URL: an embed, a plain video file, or a link out. */
 export function getVideoSource(value: string): VideoSource {
   const href = toHttpUrl(value);
@@ -347,12 +370,15 @@ export function getVideoSource(value: string): VideoSource {
 
   if (host === "youtu.be") {
     const id = url.pathname.split("/").filter(Boolean)[0];
-    if (id) return { type: "iframe", src: `https://www.youtube.com/embed/${id}` };
+    if (id) return { type: "iframe", src: youtubeEmbed(id) };
   }
   if (host.endsWith("youtube.com")) {
     const id = url.searchParams.get("v");
-    if (id) return { type: "iframe", src: `https://www.youtube.com/embed/${id}` };
-    if (url.pathname.startsWith("/embed/")) return { type: "iframe", src: href };
+    if (id) return { type: "iframe", src: youtubeEmbed(id) };
+    if (url.pathname.startsWith("/embed/")) {
+      url.searchParams.set("enablejsapi", "1");
+      return { type: "iframe", src: url.toString() };
+    }
   }
   if (host === "vimeo.com") {
     const id = url.pathname.split("/").filter(Boolean)[0];

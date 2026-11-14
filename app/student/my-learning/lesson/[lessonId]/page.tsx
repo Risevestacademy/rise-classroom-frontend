@@ -30,8 +30,10 @@ import {
   lessonHref,
   lessonQueries,
   moduleHref,
+  nextLesson,
   setLessonCompleted,
   useStudentCurriculum,
+  type CurriculumLesson,
   type CurriculumTopic,
   type LessonAssignment,
   type LessonDetail,
@@ -166,21 +168,11 @@ function ModuleLessons({
   );
 }
 
-function CompleteButton({
-  enrollmentId,
-  topicId,
-  lessonId,
-  completed,
-}: {
-  enrollmentId: string;
-  topicId: string;
-  lessonId: string;
-  completed: boolean;
-}) {
+function useLessonCompletion(enrollmentId: string, lessonId: string) {
   const queryClient = useQueryClient();
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: (next: boolean) =>
-      setLessonCompleted(enrollmentId, topicId, lessonId, next),
+      setLessonCompleted(enrollmentId, lessonId, next),
     onSuccess: () =>
       Promise.all([
         queryClient.invalidateQueries({
@@ -189,24 +181,45 @@ function CompleteButton({
         queryClient.invalidateQueries({ queryKey: ["student", "progress"] }),
       ]),
   });
+}
 
+/* Once the lesson is done, the button moves the student on to the next one. */
+function CompleteButton({
+  mutation,
+  completed,
+  next,
+}: {
+  mutation: ReturnType<typeof useLessonCompletion>;
+  completed: boolean;
+  next: CurriculumLesson | null;
+}) {
   return (
     <div className="flex shrink-0 flex-col items-end gap-1">
-      <Button
-        variant={completed ? "secondary" : "primary"}
-        size="medium"
-        aria-pressed={completed}
-        title={completed ? "Mark as not completed" : undefined}
-        disabled={mutation.isPending}
-        onClick={() => mutation.mutate(!completed)}
-      >
-        <Check />
-        {mutation.isPending
-          ? "Saving…"
-          : completed
-            ? "Completed"
-            : "Mark as completed"}
-      </Button>
+      {completed && next ? (
+        <Link
+          href={lessonHref(next.id)}
+          className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-brand-primary-hover"
+        >
+          Next lesson
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      ) : (
+        <Button
+          variant={completed ? "secondary" : "primary"}
+          size="medium"
+          aria-pressed={completed}
+          title={completed ? "Mark as not completed" : undefined}
+          disabled={mutation.isPending}
+          onClick={() => mutation.mutate(!completed)}
+        >
+          <Check />
+          {mutation.isPending
+            ? "Saving…"
+            : completed
+              ? "Completed"
+              : "Mark as completed"}
+        </Button>
+      )}
       {mutation.error && (
         <p role="alert" className="text-xs text-text-error">
           {mutation.error.message}
@@ -222,17 +235,20 @@ function LessonView({
   topic,
   week,
   number,
+  next,
 }: {
   enrollmentId: string;
   lesson: LessonDetail;
   topic: CurriculumTopic;
   week: number;
   number: number;
+  next: CurriculumLesson | null;
 }) {
   const [tab, setTab] = useState<Tab>("overview");
   const resources = lesson.resources ?? [];
   const assignments = lesson.assignments ?? [];
   const completed = isCompleted(lesson);
+  const completion = useLessonCompletion(enrollmentId, lesson.id);
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: "overview", label: "Overview" },
@@ -265,7 +281,13 @@ function LessonView({
 
       <div className="grid grid-cols-1 gap-x-6 gap-y-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
         <div className="flex min-w-0 flex-col gap-6">
-          <LessonVideo key={lesson.id} recordings={lesson.recordings ?? []} />
+          <LessonVideo
+            key={lesson.id}
+            recordings={lesson.recordings ?? []}
+            onWatched={() => {
+              if (!completed && !completion.isPending) completion.mutate(true);
+            }}
+          />
 
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -276,12 +298,7 @@ function LessonView({
                 Module {week} · Lesson {number}
               </p>
             </div>
-            <CompleteButton
-              enrollmentId={enrollmentId}
-              topicId={topic.id}
-              lessonId={lesson.id}
-              completed={completed}
-            />
+            <CompleteButton mutation={completion} completed={completed} next={next} />
           </div>
 
           <div>
@@ -458,6 +475,7 @@ export default function LessonPage() {
       topic={located.topic}
       week={located.week}
       number={located.number}
+      next={nextLesson(curriculum.topics, lessonId)}
     />
   );
 }
