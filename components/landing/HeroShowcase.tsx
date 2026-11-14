@@ -291,8 +291,11 @@ export function HeroShowcase() {
                 aria-hidden={index !== active}
                 width={1208}
                 height={861}
-                unoptimized
-                fetchPriority={index === FIRST_TAB ? "high" : undefined}
+                sizes="(min-width: 832px) 800px, calc(100vw - 32px)"
+                // The first screen is the page's largest paint; the others
+                // only show after a tab change.
+                loading={index === FIRST_TAB ? "eager" : "lazy"}
+                fetchPriority={index === FIRST_TAB ? "high" : "low"}
                 className={cn(
                   "col-start-1 row-start-1 h-auto w-full",
                   index === active
