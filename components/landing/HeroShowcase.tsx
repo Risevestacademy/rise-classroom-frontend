@@ -61,9 +61,8 @@ export function HeroShowcase() {
   // The screen being replaced by the current change.
   const previousTab = useRef(FIRST_TAB);
 
+  // The WebGL renderer is created on the first tab change, not on load.
   useEffect(() => {
-    if (rollCanvas.current)
-      roll.current = createRollRenderer(rollCanvas.current);
     return () => {
       roll.current?.dispose();
       roll.current = null;
@@ -116,6 +115,8 @@ export function HeroShowcase() {
       const from = screens[previousTab.current];
       const to = screens[active];
       const canvas = rollCanvas.current;
+      if (!isFirstRun && canvas && roll.current === null)
+        roll.current = createRollRenderer(canvas);
       const renderer = roll.current;
       const canRoll =
         renderer && canvas && from?.naturalWidth && to?.naturalWidth;
@@ -197,12 +198,14 @@ export function HeroShowcase() {
         data-hero-tabs
         className="group/tabs sticky top-3 z-20 -mx-4 mt-[33px] w-[calc(100%+2rem)] overflow-x-auto px-4 py-3 [scrollbar-width:none] lg:top-4 lg:mx-0 lg:mt-[74px] lg:w-auto lg:overflow-visible lg:px-0 lg:py-0 [&::-webkit-scrollbar]:hidden"
       >
-        <div
-          role="tablist"
-          aria-label="Product areas"
-          onKeyDown={onKeyDown}
-          className="mx-auto flex h-[50px] w-max items-center gap-2 rounded-full border border-border-strong bg-white p-1 transition-shadow duration-500 group-data-[stuck=true]/tabs:shadow-[0_12px_32px_rgb(16_22_79/0.16)]"
-        >
+        <div className="mx-auto flex h-[50px] w-max items-center gap-2 rounded-full border border-border-strong bg-white p-1 transition-shadow duration-500 group-data-[stuck=true]/tabs:shadow-[0_12px_32px_rgb(16_22_79/0.16)]">
+          {/* A tablist may only hold tabs, so the pause button sits beside it. */}
+          <div
+            role="tablist"
+            aria-label="Product areas"
+            onKeyDown={onKeyDown}
+            className="flex items-center gap-2"
+          >
           {PRODUCT_TABS.map((tab, index) => {
             const isActive = index === active;
             return (
@@ -242,6 +245,7 @@ export function HeroShowcase() {
               </button>
             );
           })}
+          </div>
           {/* Pauses and resumes the auto-advance. Hidden with reduced motion,
               where the tabs never advance on their own. */}
           <button

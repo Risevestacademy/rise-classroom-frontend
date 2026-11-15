@@ -28,14 +28,14 @@ export function ValuePropSection() {
   return (
     <section data-bg="#FFFFFF">
       <GridRow innerClassName="py-12 lg:px-[18px] lg:pt-[74px] lg:pb-[58px]">
-        <p
+        <h2
           data-reveal="up"
           className="max-w-[560px] text-[20px] leading-6 font-medium text-[#1E1E1E]"
         >
           <span className="text-[#8C8C8C]">Learning deserves better systems.</span>{" "}
           Rise Classroom brings people, tools, and learning experiences together
           to make education more connected, structured, and impactful.
-        </p>
+        </h2>
       </GridRow>
 
       <GridRow data-value-section>

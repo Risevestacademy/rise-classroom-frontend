@@ -8,6 +8,9 @@ const LOOP_MS = 20_000;
 const FRAME_WIDTH = 1440;
 /** The canvas draws at a fraction of the hero's size; it's all soft light. */
 const RESOLUTION = 0.35;
+/** Phones draw smaller and at half the frame rate to keep the main thread free. */
+const MOBILE_RESOLUTION = 0.25;
+const MOBILE_FRAME_MS = 1000 / 30;
 /** On load the beams sweep round once before the swirl and halftone fade in. */
 const INTRO_SPIN_MS = 2400;
 const REVEAL_DELAY_MS = 1800;
@@ -67,16 +70,18 @@ export function HeroBackground() {
     if (!canvas || !screen || !ctx) return;
 
     const swirl = new Image();
-    swirl.src = "/landing/hero-swirl.webp";
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const mobile = window.matchMedia("(max-width: 1023px)").matches;
+    const resolution = mobile ? MOBILE_RESOLUTION : RESOLUTION;
+    const frameMs = mobile ? MOBILE_FRAME_MS : 0;
 
     let width = 0;
     let height = 0;
     const resize = () => {
       width = canvas.clientWidth;
       height = canvas.clientHeight;
-      canvas.width = Math.max(1, Math.round(width * RESOLUTION));
-      canvas.height = Math.max(1, Math.round(height * RESOLUTION));
+      canvas.width = Math.max(1, Math.round(width * resolution));
+      canvas.height = Math.max(1, Math.round(height * resolution));
     };
 
     /** One frame, `elapsed` ms after the page opened. */
@@ -94,7 +99,7 @@ export function HeroBackground() {
       // On the same clock as the canvas, which only starts once React has.
       if (screen.style.opacity !== "1") screen.style.opacity = String(reveal);
 
-      ctx.setTransform(RESOLUTION, 0, 0, RESOLUTION, 0, 0);
+      ctx.setTransform(resolution, 0, 0, resolution, 0, 0);
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;
       ctx.fillStyle = "#04040B";
@@ -229,23 +234,28 @@ export function HeroBackground() {
     };
 
     resize();
-    const start = performance.now();
+    let start = 0;
+    let started = false;
     let frame = 0;
+    let lastDraw = -Infinity;
     let visible = true;
 
     const loop = (now: number) => {
-      draw(now - start);
+      if (now - lastDraw >= frameMs) {
+        lastDraw = now;
+        draw(now - start);
+      }
       frame = visible ? requestAnimationFrame(loop) : 0;
     };
     const render = () => {
+      if (!started) return;
       if (still) draw(0);
       else if (!frame) frame = requestAnimationFrame(loop);
     };
 
-    swirl.onload = render;
     const resizeObserver = new ResizeObserver(() => {
       resize();
-      if (still) draw(0);
+      if (still) render();
     });
     resizeObserver.observe(canvas);
     // Stop drawing once the hero has scrolled out of view.
@@ -254,9 +264,21 @@ export function HeroBackground() {
       if (visible) render();
     });
     visibility.observe(canvas);
-    render();
+
+    // Wait for the page to finish loading so the swirl and the drawing don't
+    // compete with the content above the fold.
+    const begin = () => {
+      started = true;
+      start = performance.now();
+      swirl.onload = render;
+      swirl.src = "/landing/hero-swirl.webp";
+      render();
+    };
+    if (document.readyState === "complete") begin();
+    else window.addEventListener("load", begin, { once: true });
 
     return () => {
+      window.removeEventListener("load", begin);
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
       visibility.disconnect();
