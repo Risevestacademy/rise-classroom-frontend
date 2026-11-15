@@ -53,7 +53,7 @@ function saveAccess(moduleId: string, access: ModuleAccess) {
 }
 
 /*
- * Lets an instructor open a module to every student on the track, or close it again,
+ * Lets an admin or instructor open a module to every student on the track, or close it again,
  * with one button that shows the current state. `unlocked` comes from the API; the
  * student counts only come back from an unlock or lock, so the last one made from this
  * browser is kept while it still matches.

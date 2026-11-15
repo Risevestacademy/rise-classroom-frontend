@@ -46,6 +46,15 @@ export type AdminUser = {
    * `GET /admin/users/{id}`.
    */
   mentor?: AssignedMentor | null;
+  /**
+   * Published lessons completed across all a student's enrollments. Only on
+   * `GET /admin/users/{id}` for students.
+   */
+  learningProgress?: {
+    completedLessons: number;
+    totalLessons: number;
+    percentage: number;
+  };
 };
 
 export type AssignedMentor = {

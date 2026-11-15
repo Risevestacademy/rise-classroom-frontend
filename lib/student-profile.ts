@@ -126,6 +126,12 @@ export function studentProgress(
   };
 }
 
+/** The API's overall figure, which counts every enrollment. */
+function withOverall(student: AdminUser, progress: StudentProgress) {
+  const overall = student.learningProgress?.percentage;
+  return overall === undefined ? progress : { ...progress, overall };
+}
+
 /** The student's progress through their first track's curriculum. */
 export function useStudentProgress(student: AdminUser) {
   const membership = student.studentProfile?.[0];
@@ -156,7 +162,10 @@ export function useStudentProgress(student: AdminUser) {
     error: profile.error ?? curriculum.error ?? modules.error ?? completed.error,
     progress: isPending
       ? undefined
-      : studentProgress(modules.data ?? [], completed.data),
+      : withOverall(
+          student,
+          studentProgress(modules.data ?? [], completed.data),
+        ),
   };
 }
 

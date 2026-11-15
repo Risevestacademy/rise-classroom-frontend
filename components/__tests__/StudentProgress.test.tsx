@@ -170,6 +170,22 @@ describe("ProgressTab", () => {
     expect(screen.getByText("1 of 2 learning items completed")).toBeInTheDocument();
   });
 
+  it("shows the API's overall figure, even without a mentor", async () => {
+    routes();
+    renderWithClient(
+      <ProgressTab
+        student={{
+          ...student,
+          mentor: null,
+          learningProgress: { completedLessons: 2, totalLessons: 14, percentage: 14 },
+        }}
+        track="Design"
+      />,
+    );
+
+    expect(await screen.findByText("14%")).toBeInTheDocument();
+  });
+
   it("lists the modules without progress when the student has no mentor", async () => {
     routes();
     renderWithClient(

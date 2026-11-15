@@ -149,13 +149,16 @@ export function AdminNotificationsPanel({
                       onClick={() => markRead(item.id)}
                       className="flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-neutral-50"
                     >
-                      {/* PENDING-BACKEND: notifications have no sender, so the
-                        avatar and bold name show the title. */}
-                      <PersonAvatar name={item.title} size={40} />
+                      {/* System notifications have no sender, so they show the title. */}
+                      <PersonAvatar
+                        name={item.actor?.name ?? item.title}
+                        src={item.actor?.image}
+                        size={40}
+                      />
                       <span className="min-w-0 flex-1">
                         <span className="block font-work text-sm text-neutral-600">
                           <span className="font-medium text-neutral-800">
-                            {item.title}
+                            {item.actor?.name ?? item.title}
                           </span>{" "}
                           {item.body}
                         </span>
