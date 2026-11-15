@@ -1,9 +1,15 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+
 import { DashboardSquare01, Mortarboard, UserChat, UserQuestion } from "@/assets/icons";
 import { AppSidebar, type NavSectionConfig } from "@/components/AppSidebar";
+import { platformQueries } from "@/lib/platform";
 
-const sections: NavSectionConfig[] = [
+const requestsHref = "/platform-admin/onboarding-requests";
+
+/* `newRequests` is the count shown beside Onboarding Requests. */
+const sectionsWith = (newRequests: number): NavSectionConfig[] => [
   {
     label: "Overview",
     items: [
@@ -14,8 +20,9 @@ const sections: NavSectionConfig[] = [
       },
       {
         title: "Onboarding Requests",
-        href: "/platform-admin/onboarding-requests",
+        href: requestsHref,
         icon: UserQuestion,
+        badge: newRequests || undefined,
       },
       {
         title: "Academies",
@@ -32,10 +39,15 @@ const sections: NavSectionConfig[] = [
 ];
 
 export function PlatformAdminSidebar() {
+  const { data: applications = [] } = useQuery(platformQueries.applications());
+  const newRequests = applications.filter(
+    ({ status }) => status === "NEW",
+  ).length;
+
   return (
     <AppSidebar
       homeHref="/platform-admin/dashboard"
-      sections={sections}
+      sections={sectionsWith(newRequests)}
       showUserMenu={false}
     />
   );

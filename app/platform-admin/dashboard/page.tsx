@@ -17,7 +17,10 @@ export default function PlatformAdminDashboardPage() {
 }
 
 async function LoadedDashboard() {
-  await prefetch(platformQueries.academies());
+  await Promise.all([
+    prefetch(platformQueries.academies()),
+    prefetch(platformQueries.applications()),
+  ]);
 
   return (
     <HydrationBoundary state={dehydrateServerQueries()}>

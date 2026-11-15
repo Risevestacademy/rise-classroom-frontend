@@ -22,30 +22,42 @@ import { Button } from "@/components/ui/button";
 import { Pagination, pageSizes } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { shortDate } from "@/lib/calendar";
-import { platformQueries, setupAdmin, type Academy } from "@/lib/platform";
+import {
+  isActiveAcademy,
+  isAwaitingSetup,
+  platformQueries,
+  type Academy,
+} from "@/lib/platform";
 import { usePageParams } from "@/lib/use-page-params";
 
 const figure = (count: number) => count || "--";
+
+/* The status shown in the table: an active academy counts as awaiting set-up
+   until its super admin finishes onboarding. */
+function displayStatus(academy: Academy) {
+  return isAwaitingSetup(academy) ? "AWAITING_SETUP" : academy.status;
+}
 
 const filters: PeopleFilter<Academy>[] = [
   {
     key: "status",
     title: "Status",
-    description: "Find academies that are active or suspended.",
+    description: "Find academies that are active, awaiting set-up or suspended.",
     allLabel: "All",
     options: [
       { value: "ACTIVE", label: "Active" },
+      { value: "AWAITING_SETUP", label: "Awaiting set-up" },
       { value: "SUSPENDED", label: "Suspended" },
     ],
-    values: (academy) => [academy.status],
+    values: (academy) => [displayStatus(academy)],
   },
 ];
 
 function matchesSearch(academy: Academy, query: string) {
   if (!query) return true;
-  const admin = setupAdmin(academy);
-  return [academy.name, admin?.email, admin && `${admin.firstName} ${admin.lastName}`]
-    .some((value) => value?.toLowerCase().includes(query));
+  return [academy.name, academy.admin?.email, academy.admin?.name].some((value) =>
+    value?.toLowerCase().includes(query),
+  );
 }
 
 export function Academies() {
@@ -104,8 +116,9 @@ function AcademiesView({
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const { page, setPage, pageSize, setPageSize } = pagination;
 
-  const listed = academies.filter(setupAdmin);
-  const activeCount = listed.filter((academy) => academy.status === "ACTIVE").length;
+  const listed = academies;
+  const activeCount = listed.filter(isActiveAcademy).length;
+  const suspendedCount = listed.filter((academy) => academy.status === "SUSPENDED").length;
   const query = search.trim().toLowerCase();
   const matching = listed.filter(
     (academy) =>
@@ -135,7 +148,7 @@ function AcademiesView({
             <StatCard title="Active Academies" value={stat(activeCount)} loading={isPending} />
             <StatCard
               title="Suspended Academies"
-              value={stat(listed.length - activeCount)}
+              value={stat(suspendedCount)}
               loading={isPending}
             />
           </div>
@@ -143,7 +156,7 @@ function AcademiesView({
           {isEmpty ? (
             <AllClearState
               title="Nothing to see here yet!"
-              description="Once an approved applicant completes their academy setup, their account will appear here. You can then view and manage academy access from this page."
+              description="Once you approve an application, its academy will appear here. You can then view and manage academy access from this page."
             />
           ) : (
             <section className="rounded-xl bg-surface-default p-4 shadow-[0_1px_3px_0_rgb(0_0_0/0.15)] sm:p-6">
@@ -231,7 +244,7 @@ function AcademiesView({
                       </tr>
                     ) : (
                       rows.map((academy) => {
-                        const admin = setupAdmin(academy);
+                        const admin = academy.admin;
                         return (
                           <tr key={academy.id} className="h-[52px]">
                             <td className="border-r border-neutral-200 px-3 text-base text-text-primary">
@@ -244,7 +257,7 @@ function AcademiesView({
                               </button>
                             </td>
                             <td className="border-r border-neutral-200 px-3 text-base text-text-secondary">
-                              {admin?.firstName} {admin?.lastName}
+                              {admin?.name}
                             </td>
                             <td className="border-r border-neutral-200 px-3 text-text-secondary">
                               {admin?.email}

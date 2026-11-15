@@ -13,8 +13,10 @@ import { Label } from "@/components/ui/label";
 import { SelectInput } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
+  hasFirstAndLastName,
   learnerCounts,
   learningSpaceTypes,
+  signUpErrorMessage,
   submitSignUpApplication,
   type LearnerCount,
   type LearningSpaceType,
@@ -32,6 +34,7 @@ export default function SignUpPage() {
   const [step, setStep] = useState<"you" | "space" | "submitted">("you");
 
   const [fullName, setFullName] = useState("");
+  const [fullNameError, setFullNameError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
 
@@ -42,13 +45,19 @@ export default function SignUpPage() {
   >("");
   const [learnerCount, setLearnerCount] = useState<LearnerCount | "">("");
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   function handleContinue(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!emailSchema.safeParse(email).success) {
-      setEmailError("Please enter a valid email address");
-      return;
-    }
+    const nameError = hasFirstAndLastName(fullName)
+      ? null
+      : "Please enter your first and last name";
+    const addressError = emailSchema.safeParse(email).success
+      ? null
+      : "Please enter a valid email address";
+    setFullNameError(nameError);
+    setEmailError(addressError);
+    if (nameError || addressError) return;
     setStep("space");
   }
 
@@ -57,6 +66,7 @@ export default function SignUpPage() {
     if (!learningSpaceType || !learnerCount) return;
 
     setSubmitting(true);
+    setSubmitError(null);
     try {
       await submitSignUpApplication({
         fullName: fullName.trim(),
@@ -67,6 +77,8 @@ export default function SignUpPage() {
         learnerCount,
       });
       setStep("submitted");
+    } catch (error) {
+      setSubmitError(signUpErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -113,7 +125,7 @@ export default function SignUpPage() {
               subtitle="Tell us about yourself and your academy. We’ll review your request and help you get started."
             />
             <div className="mt-8 flex flex-col gap-4">
-              <SignUpField label="Full Name" required>
+              <SignUpField label="Full Name" required error={fullNameError}>
                 <Input
                   size="medium"
                   leadingIcon={null}
@@ -121,9 +133,10 @@ export default function SignUpPage() {
                   placeholder="e.g Ada Okafor"
                   autoComplete="name"
                   value={fullName}
-                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                    setFullName(event.target.value)
-                  }
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                    setFullName(event.target.value);
+                    setFullNameError(null);
+                  }}
                 />
               </SignUpField>
               <SignUpField
@@ -207,6 +220,14 @@ export default function SignUpPage() {
                 />
               </SignUpField>
             </div>
+            {submitError && (
+              <p
+                role="alert"
+                className="mt-6 font-work text-[13px]/[18px] text-text-error"
+              >
+                {submitError}
+              </p>
+            )}
             <Button
               type="submit"
               variant="primary"
@@ -217,7 +238,7 @@ export default function SignUpPage() {
                 !learnerCount ||
                 submitting
               }
-              className={cn(buttonClass, "mt-11")}
+              className={cn(buttonClass, submitError ? "mt-4" : "mt-11")}
             >
               Submit application
             </Button>
