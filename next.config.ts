@@ -24,6 +24,30 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  /* The push notifications service worker must never be served stale, and
+     may only run this origin's code. */
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; script-src 'self'",
+          },
+        ],
+      },
+    ];
+  },
+
   // The per-role sign-in pages were merged into a single /sign-in.
   async redirects() {
     return [
