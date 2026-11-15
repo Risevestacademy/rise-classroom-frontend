@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 
 import type { AdminUser } from "@/lib/admin";
-import { cohortQueries } from "@/lib/cohorts";
-import { cohort, makeUser, tracks } from "@/test/fixtures";
+import { cohortQueries, timeProgress } from "@/lib/cohorts";
+import { cohort, makeCohort, makeUser, tracks } from "@/test/fixtures";
 import { envelope, mockApi } from "@/test/utils";
 
 const instructor = makeUser({
@@ -80,6 +80,45 @@ function mockUsersByRole(users: Record<string, AdminUser[] | null>) {
 
 const loadDetail = () =>
   new QueryClient().fetchQuery(cohortQueries.detail(cohort.id));
+
+describe("timeProgress", () => {
+  const startDate = "2026-01-01T00:00:00.000Z";
+  const endDate = "2026-01-11T00:00:00.000Z";
+
+  it("calculates elapsed time as a percentage of the cohort duration", () => {
+    const activeCohort = makeCohort({ startDate, endDate });
+
+    expect(timeProgress(activeCohort, new Date("2026-01-06T00:00:00.000Z"))).toBe(
+      50,
+    );
+  });
+
+  it("clamps the percentage before the start and after the end", () => {
+    const activeCohort = makeCohort({ startDate, endDate });
+
+    expect(timeProgress(activeCohort, new Date("2025-12-31T00:00:00.000Z"))).toBe(
+      0,
+    );
+    expect(timeProgress(activeCohort, new Date("2026-01-12T00:00:00.000Z"))).toBe(
+      100,
+    );
+  });
+
+  it("returns zero for invalid or reversed cohort dates", () => {
+    expect(
+      timeProgress(
+        makeCohort({ startDate: "invalid", endDate }),
+        new Date("2026-01-06T00:00:00.000Z"),
+      ),
+    ).toBe(0);
+    expect(
+      timeProgress(
+        makeCohort({ startDate: endDate, endDate: startDate }),
+        new Date("2026-01-06T00:00:00.000Z"),
+      ),
+    ).toBe(0);
+  });
+});
 
 describe("cohort detail", () => {
   it("lists mentors under mentors, not instructors", async () => {

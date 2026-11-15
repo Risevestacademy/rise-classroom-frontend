@@ -109,14 +109,21 @@ function daysUntil(date: string, now = new Date()) {
  * has no student profile id to ask with, so progress is the share of the
  * cohort's time that has passed.
  */
-function timeProgress(cohort: Cohort, now = new Date()) {
+export function timeProgress(cohort: Cohort, now = new Date()) {
   if (cohort.status === "COMPLETED") return 100;
   // A terminated cohort stops where it was when it was terminated.
   if (cohort.status === "TERMINATED") now = new Date(cohort.updatedAt);
   const start = new Date(cohort.startDate).getTime();
   const end = new Date(cohort.endDate).getTime();
-  if (end <= start) return 0;
-  const share = (now.getTime() - start) / (end - start);
+  const current = now.getTime();
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    !Number.isFinite(current) ||
+    end <= start
+  )
+    return 0;
+  const share = (current - start) / (end - start);
   return Math.round(Math.min(1, Math.max(0, share)) * 100);
 }
 
