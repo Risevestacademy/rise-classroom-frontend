@@ -31,9 +31,13 @@ function startUnlocked() {
   );
 }
 
-function renderCard(status: ModuleStatus = "PUBLISHED", unlocked?: boolean) {
+function renderCard(
+  status: ModuleStatus = "PUBLISHED",
+  unlocked?: boolean,
+  role: "admin" | "instructor" = "instructor",
+) {
   return renderWithClient(
-    <CurriculumScopeProvider role="instructor">
+    <CurriculumScopeProvider role={role}>
       <ModuleAccessCard moduleId="m1" moduleStatus={status} unlocked={unlocked} />
     </CurriculumScopeProvider>,
   );
@@ -86,6 +90,18 @@ describe("ModuleAccessCard", () => {
     expect(screen.getByRole("button", { name: lockButton })).toHaveTextContent("Unlocked");
     expect(api.fetchMock).toHaveBeenCalledOnce();
     expect(screen.queryByRole("button", { name: unlockButton })).not.toBeInTheDocument();
+  });
+
+  it("unlocks through the admin API for admins", async () => {
+    const api = mockApi({
+      "POST /admin/topics/m1/unlock": envelope(accessReply(true, 3)),
+    });
+    const { user } = renderCard("PUBLISHED", undefined, "admin");
+
+    await user.click(screen.getByRole("button", { name: unlockButton }));
+
+    expect(await screen.findByText("Unlocked for all 3 students.")).toBeInTheDocument();
+    expect(api.fetchMock).toHaveBeenCalledOnce();
   });
 
   it("locks the module in one request", async () => {

@@ -816,7 +816,7 @@ function createCurriculumApi(role: CurriculumRole) {
 
   /*
    * Unlocks or locks a module for its cohort. Unlocking also opens the module's published
-   * lessons. The API only has this for instructors.
+   * lessons, and locking puts its assignments on hold.
    */
   async function setModuleAccess(
     moduleId: string,

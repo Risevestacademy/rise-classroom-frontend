@@ -18,6 +18,7 @@ import {
 } from "@/assets/icons";
 import { AdminCohortSelect } from "@/components/AdminCohortSelect";
 import { AppSidebar, type NavSectionConfig } from "@/components/AppSidebar";
+import { SidebarOrganization } from "@/components/SidebarOrganization";
 
 const sections: NavSectionConfig[] = [
   {
@@ -72,6 +73,7 @@ export function AdminSidebar() {
       homeHref="/admin/dashboard"
       sections={sections}
       mobileTop={<AdminCohortSelect className="w-full max-w-none" />}
+      footer={<SidebarOrganization />}
     />
   );
 }
