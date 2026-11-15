@@ -149,28 +149,40 @@ function routes() {
 }
 
 describe("ProgressTab", () => {
-  it("shows the student's progress through their track's curriculum", async () => {
+  it("shows the API's figure for the track and lists its modules", async () => {
     const api = routes();
     renderWithClient(
-      <ProgressTab student={student} track="Design" cohort="Cohort 2026" />,
+      <ProgressTab
+        student={{
+          ...student,
+          learningProgress: { completedLessons: 3, totalLessons: 10, percentage: 30 },
+          studentProfile: [
+            {
+              ...student.studentProfile[0],
+              enrollment: [
+                {
+                  ...student.studentProfile[0].enrollment[0],
+                  progress: { completedLessons: 3, totalLessons: 4, percentage: 75 },
+                },
+              ],
+            },
+          ],
+        }}
+        track="Design"
+        cohort="Cohort 2026"
+      />,
     );
 
     expect(await screen.findByText("75%")).toBeInTheDocument();
     expect(screen.getByText("Design Track")).toBeInTheDocument();
-    expect(screen.getAllByText("100%")).toHaveLength(2);
-    expect(screen.getByText("2 of 2 learning items completed")).toBeInTheDocument();
     expect(api.urls("GET /admin/curriculums")[0].searchParams.get("trackId")).toBe("t1");
-    expect(api.urls("GET /admin/progress")[0].searchParams.get("studentProfileId")).toBe(
-      "sp1",
-    );
 
     await userEvent.click(screen.getByRole("button", { name: /Module 2/ }));
 
     expect(screen.getByRole("heading", { name: "Figma" })).toBeInTheDocument();
-    expect(screen.getByText("1 of 2 learning items completed")).toBeInTheDocument();
   });
 
-  it("shows the API's overall figure, even without a mentor", async () => {
+  it("falls back to the student's overall figure", async () => {
     routes();
     renderWithClient(
       <ProgressTab
@@ -184,15 +196,6 @@ describe("ProgressTab", () => {
     );
 
     expect(await screen.findByText("14%")).toBeInTheDocument();
-  });
-
-  it("lists the modules without progress when the student has no mentor", async () => {
-    routes();
-    renderWithClient(
-      <ProgressTab student={{ ...student, mentor: null }} track="Design" />,
-    );
-
-    expect(await screen.findAllByText("Design basics")).toHaveLength(2);
     expect(screen.queryByText(/learning items completed/)).not.toBeInTheDocument();
   });
 });

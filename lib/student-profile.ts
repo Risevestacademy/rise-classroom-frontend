@@ -126,19 +126,18 @@ export function studentProgress(
   };
 }
 
-/** The API's overall figure, which counts every enrollment. */
-function withOverall(student: AdminUser, progress: StudentProgress) {
-  const overall = student.learningProgress?.percentage;
-  return overall === undefined ? progress : { ...progress, overall };
-}
-
-/** The student's progress through their first track's curriculum. */
+/**
+ * The student's progress through their first track's curriculum. The overall
+ * figure is the API's for that enrollment. PENDING-BACKEND: admins can't read
+ * which lessons a student has completed (`/admin/progress` stays empty), so the
+ * modules are listed without progress.
+ */
 export function useStudentProgress(student: AdminUser) {
   const membership = student.studentProfile?.[0];
+  const enrollment = membership?.enrollment?.[0];
   const cohortId = membership?.cohort?.id ?? "";
-  const trackId = membership?.enrollment?.[0]?.track?.id ?? "";
+  const trackId = enrollment?.track?.id ?? "";
 
-  const profile = useStudentProfileId(student);
   const curriculum = useQuery(
     studentProfileQueries.curriculumId(cohortId, trackId),
   );
@@ -147,25 +146,21 @@ export function useStudentProgress(student: AdminUser) {
     ...curriculumApis.admin.queries.modules(curriculumId),
     enabled: curriculumId.length > 0,
   });
-  const completed = useQuery(
-    studentProfileQueries.completedLessons(profile.profileId),
-  );
 
   const isPending =
-    profile.isPending ||
     (cohortId.length > 0 && trackId.length > 0 && curriculum.isPending) ||
-    (curriculumId.length > 0 && modules.isPending) ||
-    (profile.profileId.length > 0 && completed.isPending);
+    (curriculumId.length > 0 && modules.isPending);
+  const overall =
+    enrollment?.progress?.percentage ??
+    student.learningProgress?.percentage ??
+    null;
 
   return {
     isPending,
-    error: profile.error ?? curriculum.error ?? modules.error ?? completed.error,
+    error: curriculum.error ?? modules.error,
     progress: isPending
       ? undefined
-      : withOverall(
-          student,
-          studentProgress(modules.data ?? [], completed.data),
-        ),
+      : { ...studentProgress(modules.data ?? []), overall },
   };
 }
 

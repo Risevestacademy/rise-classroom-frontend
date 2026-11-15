@@ -16,9 +16,20 @@ export type InstructorAssignment = {
 };
 
 /** A student's cohort membership and the tracks they're enrolled on. */
+/** Published lessons completed, from `GET /admin/users/{id}` for students. */
+export type LearningProgress = {
+  completedLessons: number;
+  totalLessons: number;
+  percentage: number;
+};
+
 export type StudentMembership = {
   cohort?: NamedRef & { year?: string };
-  enrollment?: { status: string; track?: NamedRef }[];
+  enrollment?: {
+    status: string;
+    track?: NamedRef;
+    progress?: LearningProgress;
+  }[];
 };
 
 export type AdminUser = {
@@ -46,15 +57,8 @@ export type AdminUser = {
    * `GET /admin/users/{id}`.
    */
   mentor?: AssignedMentor | null;
-  /**
-   * Published lessons completed across all a student's enrollments. Only on
-   * `GET /admin/users/{id}` for students.
-   */
-  learningProgress?: {
-    completedLessons: number;
-    totalLessons: number;
-    percentage: number;
-  };
+  /** Across all a student's enrollments. */
+  learningProgress?: LearningProgress;
 };
 
 export type AssignedMentor = {
