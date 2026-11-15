@@ -14,7 +14,10 @@ export default function OnboardingRequestsPage() {
 }
 
 async function LoadedRequests() {
-  await prefetch(platformQueries.academies());
+  await Promise.all([
+    prefetch(platformQueries.academies()),
+    prefetch(platformQueries.applications()),
+  ]);
 
   return (
     <HydrationBoundary state={dehydrateServerQueries()}>
