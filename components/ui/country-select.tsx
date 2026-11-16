@@ -122,10 +122,12 @@ function CountrySelect({
       </Popover.Trigger>
 
       <Popover.Portal>
+        {/* Above dialogs, so the list works inside one. */}
         <Popover.Positioner
           side="bottom"
           align="start"
           sideOffset={6}
+          className="z-[60]"
         >
           <Popover.Popup className="w-64 overflow-hidden rounded-lg border border-neutral-100 bg-white shadow-lg">
             <div className="flex items-center gap-2 border-b border-neutral-100 p-2">
