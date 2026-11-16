@@ -120,7 +120,7 @@ export type AssignmentSubmission = {
   submittedAt: string | null;
   status: SubmissionStatus;
   isLate: boolean;
-  grade: number | null;
+  score: number | null;
 };
 
 export type ModuleAssignment = {
@@ -354,7 +354,7 @@ export type SubmissionDetail = SubmittedWork & {
   status: SubmissionStatus;
   submittedAt?: string | null;
   isLate: boolean;
-  grade?: number | null;
+  score?: number | null;
   feedback?: string | null;
   reviewedAt?: string | null;
   changesRequestedReason?: string | null;
@@ -370,7 +370,7 @@ export type SubmissionDetail = SubmittedWork & {
 export type SubmissionReview =
   | { status: "UNDER_REVIEW" }
   | { status: "CHANGES_REQUESTED"; changesRequestedReason: string }
-  | { status: "GRADED"; grade: number; feedback?: string };
+  | { status: "GRADED"; score: number; feedback?: string };
 
 /* A row from GET /instructor/assignments/{id}/submissions; only the fields the UI reads. */
 export type AssignmentSubmissionRecord = Timestamps & {
@@ -379,7 +379,7 @@ export type AssignmentSubmissionRecord = Timestamps & {
   status: SubmissionStatus;
   submittedAt?: string | null;
   isLate: boolean;
-  grade?: number | null;
+  score?: number | null;
   studentProfile?: {
     id: string;
     user: { id: string; name: string; email: string };
