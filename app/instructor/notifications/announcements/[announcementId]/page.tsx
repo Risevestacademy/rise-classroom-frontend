@@ -15,7 +15,7 @@ import { PersonAvatar } from "@/components/PersonAvatar";
 import {
   instructorAnnouncements,
   instructorNotificationRoleLabels,
-  markInstructorItemRead,
+  markInstructorAnnouncementRead,
 } from "@/lib/instructor-notifications";
 import { formatFileSize } from "@/lib/utils";
 
@@ -29,7 +29,7 @@ export default function InstructorAnnouncementPage() {
 
   React.useEffect(() => {
     if (instructorAnnouncements.some((item) => item.id === announcementId)) {
-      markInstructorItemRead(announcementId);
+      markInstructorAnnouncementRead(announcementId);
     }
   }, [announcementId]);
 

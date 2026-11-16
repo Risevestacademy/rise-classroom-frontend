@@ -1,19 +1,3 @@
-export type InstructorNotificationKind =
-  | "assignment"
-  | "announcement"
-  | "live-class"
-  | "calendar";
-
-export type InstructorNotification = {
-  id: string;
-  title: string;
-  body: string;
-  kind: InstructorNotificationKind;
-  createdAt: string;
-  isRead: boolean;
-  announcementId?: string;
-};
-
 export type InstructorAnnouncementRole =
   | "PROGRAM_COORDINATOR"
   | "INSTRUCTOR";
@@ -57,6 +41,7 @@ const instructor = {
 } as const;
 
 /** Temporary instructor-only fixtures until the notifications API is available. */
+/** Instructor announcement fixtures until an announcements API is available. */
 export const instructorAnnouncements: InstructorAnnouncement[] = [
   {
     id: "welcome-to-cohort",
@@ -145,58 +130,6 @@ export const instructorAnnouncements: InstructorAnnouncement[] = [
   },
 ];
 
-export const instructorNotifications: InstructorNotification[] = [
-  {
-    id: "submission-user-persona",
-    title: "Michael Chen submitted “User Persona Report”",
-    body: "Module 2 · Ready to grade",
-    kind: "assignment",
-    createdAt: ago(2 * HOUR),
-    isRead: false,
-  },
-  {
-    id: "announcement-demo-day",
-    title: "Product Design demo day",
-    body: "Your cohort · Fri, Dec 18 · 2:00 PM",
-    kind: "announcement",
-    createdAt: ago(4 * HOUR),
-    isRead: false,
-    announcementId: "product-design-demo-day",
-  },
-  {
-    id: "live-class-reminder",
-    title: "Live class starts in 1 hour",
-    body: "Rise Academy Live Class · 6:00 PM",
-    kind: "live-class",
-    createdAt: ago(5 * HOUR),
-    isRead: false,
-  },
-  {
-    id: "session-scheduled",
-    title: "Admin scheduled “Design Systems Review”",
-    body: "Today · 4:00 PM · Zoom · 24 students",
-    kind: "calendar",
-    createdAt: ago(26 * HOUR),
-    isRead: true,
-  },
-  {
-    id: "session-reminder",
-    title: "“Design Systems Review” starts in 1 hour",
-    body: "4:00 PM · Zoom · Tap to start",
-    kind: "calendar",
-    createdAt: ago(28 * HOUR),
-    isRead: true,
-  },
-  {
-    id: "change-request-approved",
-    title: "Admin approved your change request",
-    body: "“Ideation Workshop” now starts at 5:00 PM on Oct 8",
-    kind: "calendar",
-    createdAt: ago(4 * DAY),
-    isRead: true,
-  },
-];
-
 export const instructorNotificationRoleLabels: Record<
   InstructorAnnouncementRole,
   string
@@ -207,15 +140,14 @@ export const instructorNotificationRoleLabels: Record<
 
 const locallyReadIds = new Set<string>();
 
-export function isInstructorItemRead(id: string, initialRead: boolean) {
+export function isInstructorAnnouncementRead(id: string, initialRead: boolean) {
   return initialRead || locallyReadIds.has(id);
 }
 
-export function markInstructorItemRead(id: string) {
+export function markInstructorAnnouncementRead(id: string) {
   locallyReadIds.add(id);
 }
 
-export function markAllInstructorItemsRead() {
-  for (const item of instructorNotifications) locallyReadIds.add(item.id);
+export function markAllInstructorAnnouncementsRead() {
   for (const item of instructorAnnouncements) locallyReadIds.add(item.id);
 }

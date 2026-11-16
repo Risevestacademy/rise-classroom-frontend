@@ -27,16 +27,17 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   instructorAnnouncements,
-  instructorNotifications,
   instructorNotificationRoleLabels,
-  isInstructorItemRead,
-  markAllInstructorItemsRead,
-  markInstructorItemRead,
+  isInstructorAnnouncementRead,
+  markAllInstructorAnnouncementsRead,
+  markInstructorAnnouncementRead,
   type InstructorAnnouncement,
-  type InstructorNotification,
-  type InstructorNotificationKind,
   type InstructorAnnouncementRole,
 } from "@/lib/instructor-notifications";
+import {
+  useInstructorNotifications,
+  type NotificationRecord,
+} from "@/lib/instructor";
 import { cn } from "@/lib/utils";
 
 const NOTIFICATIONS_PATH = "/instructor/notifications";
@@ -56,13 +57,6 @@ const senderFilters: { value: SenderFilter; label: string }[] = [
   { value: "INSTRUCTOR", label: "Instructors" },
 ];
 
-const notificationIcons: Record<InstructorNotificationKind, LucideIcon> = {
-  assignment: ClipboardList,
-  announcement: Megaphone,
-  "live-class": Video,
-  calendar: CalendarDays,
-};
-
 export default function NotificationsPage() {
   return (
     <>
@@ -79,35 +73,50 @@ export default function NotificationsPage() {
   );
 }
 
+function NotificationsLoading() {
+  return (
+    <div
+      className="flex flex-col gap-2"
+      aria-busy="true"
+      aria-label="Loading notifications"
+    >
+      {[1, 2, 3].map((item) => (
+        <div
+          key={item}
+          className="h-16 animate-pulse rounded-xl border border-neutral-200 bg-white"
+        />
+      ))}
+    </div>
+  );
+}
+
 function Notifications() {
   const [tab, setTab] = React.useState<Tab>("all");
   const [unreadOnly, setUnreadOnly] = React.useState(false);
   const [sender, setSender] = React.useState<SenderFilter>("all");
   const [, setReadRevision] = React.useState(0);
+  const notifications = useInstructorNotifications();
 
-  const isNotificationUnread = (item: InstructorNotification) =>
-    !isInstructorItemRead(item.id, item.isRead);
+  const isNotificationUnread = (item: NotificationRecord) => !item.isRead;
   const isAnnouncementUnread = (item: InstructorAnnouncement) =>
-    !isInstructorItemRead(item.id, item.isRead);
+    !isInstructorAnnouncementRead(item.id, item.isRead);
 
   const unreadCount =
-    instructorNotifications.filter(isNotificationUnread).length +
+    notifications.unreadCount +
     instructorAnnouncements.filter(isAnnouncementUnread).length;
   const announcementUnreadCount =
     instructorAnnouncements.filter(isAnnouncementUnread).length;
 
   function markRead(id: string) {
-    markInstructorItemRead(id);
+    markInstructorAnnouncementRead(id);
     setReadRevision((revision) => revision + 1);
   }
 
   function markAllRead() {
-    markAllInstructorItemsRead();
+    notifications.markRead();
+    markAllInstructorAnnouncementsRead();
     setReadRevision((revision) => revision + 1);
   }
-
-  const isEmpty =
-    instructorNotifications.length === 0 && instructorAnnouncements.length === 0;
 
   return (
     <div className="mx-auto flex w-full max-w-[650px] flex-col gap-6">
@@ -120,32 +129,23 @@ function Notifications() {
             Updates about your classes, students, and activities
           </p>
         </div>
-        {!isEmpty && (
-          <Button
-            variant="secondary"
-            size="medium"
-            onClick={markAllRead}
-            disabled={unreadCount === 0}
-            className="shrink-0 bg-white"
-          >
-            <CircleCheck />
-            <span className="hidden sm:inline">Mark all as read</span>
-          </Button>
-        )}
+        <Button
+          variant="secondary"
+          size="medium"
+          onClick={markAllRead}
+          disabled={unreadCount === 0}
+          className="shrink-0 bg-white"
+        >
+          <CircleCheck />
+          <span className="hidden sm:inline">Mark all as read</span>
+        </Button>
       </div>
 
-      {isEmpty ? (
-        <NoticePanel
-          icon={Bell}
-          title="No notifications yet"
-          description="Updates about your classes, students, and activities will appear here."
-        />
-      ) : (
-        <Tabs
-          value={tab}
-          onValueChange={(value) => setTab(value as Tab)}
-          className="flex flex-col gap-6"
-        >
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setTab(value as Tab)}
+        className="flex flex-col gap-6"
+      >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <TabsList
               aria-label="Notification type"
@@ -185,13 +185,33 @@ function Notifications() {
           </div>
 
           <TabsContent value="all" className="mt-0">
-            <NotificationList
-              tab="all"
-              unreadOnly={unreadOnly}
-              isUnread={isNotificationUnread}
-              onRead={markRead}
-              onShowAll={() => setUnreadOnly(false)}
-            />
+            {notifications.isPending ? (
+              <NotificationsLoading />
+            ) : notifications.isError ? (
+              <NoticePanel
+                icon={Bell}
+                title="Couldn't load notifications"
+                description="Check your internet connection and try again."
+                action={
+                  <Button
+                    variant="secondary"
+                    className="bg-white"
+                    onClick={() => notifications.refetch()}
+                  >
+                    Try again
+                  </Button>
+                }
+              />
+            ) : (
+              <NotificationList
+                tab="all"
+                notifications={notifications.notifications}
+                unreadOnly={unreadOnly}
+                isUnread={isNotificationUnread}
+                onRead={notifications.markRead}
+                onShowAll={() => setUnreadOnly(false)}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="announcements" className="mt-0">
@@ -205,15 +225,39 @@ function Notifications() {
           </TabsContent>
 
           <TabsContent value="activity" className="mt-0">
-            <NotificationList
-              tab="activity"
-              unreadOnly={unreadOnly}
-              isUnread={isNotificationUnread}
-              onRead={markRead}
-              onShowAll={() => setUnreadOnly(false)}
-            />
+            {notifications.isPending ? (
+              <NotificationsLoading />
+            ) : notifications.isError ? (
+              <NoticePanel
+                icon={Bell}
+                title="Couldn't load notifications"
+                description="Check your internet connection and try again."
+                action={
+                  <Button
+                    variant="secondary"
+                    className="bg-white"
+                    onClick={() => notifications.refetch()}
+                  >
+                    Try again
+                  </Button>
+                }
+              />
+            ) : (
+              <NotificationList
+                tab="activity"
+                notifications={notifications.notifications}
+                unreadOnly={unreadOnly}
+                isUnread={isNotificationUnread}
+                onRead={notifications.markRead}
+                onShowAll={() => setUnreadOnly(false)}
+              />
+            )}
           </TabsContent>
-        </Tabs>
+      </Tabs>
+      {notifications.isMarkReadError && (
+        <p role="alert" className="text-sm text-text-error">
+          Couldn&apos;t update notification status. Try again.
+        </p>
       )}
     </div>
   );
@@ -221,21 +265,23 @@ function Notifications() {
 
 function NotificationList({
   tab,
+  notifications,
   unreadOnly,
   isUnread,
   onRead,
   onShowAll,
 }: {
   tab: Exclude<Tab, "announcements">;
+  notifications: NotificationRecord[];
   unreadOnly: boolean;
-  isUnread: (item: InstructorNotification) => boolean;
-  onRead: (id: string) => void;
+  isUnread: (item: NotificationRecord) => boolean;
+  onRead: (id?: string) => void;
   onShowAll: () => void;
 }) {
   const inTab =
     tab === "activity"
-      ? instructorNotifications.filter((item) => item.kind !== "announcement")
-      : instructorNotifications;
+      ? notifications.filter((item) => !isAnnouncementNotification(item))
+      : notifications;
   const visible = unreadOnly ? inTab.filter(isUnread) : inTab;
 
   if (visible.length === 0) {
@@ -251,7 +297,7 @@ function NotificationList({
     );
   }
 
-  const groups = groupByDay(visible);
+  const groups = groupNotificationsByDay(visible);
   return (
     <div className="flex flex-col gap-6">
       {groups.map((group) => (
@@ -279,15 +325,17 @@ function NotificationItem({
   unread,
   onRead,
 }: {
-  item: InstructorNotification;
+  item: NotificationRecord;
   unread: boolean;
   onRead: () => void;
 }) {
-  const Icon = notificationIcons[item.kind];
-  const className =
-    "flex w-full items-center gap-4 rounded-xl border border-neutral-200 bg-white px-4 py-4 text-left hover:bg-neutral-50";
-  const content = (
-    <>
+  const Icon = notificationIcon(item.type);
+  return (
+    <button
+      type="button"
+      onClick={onRead}
+      className="flex w-full items-center gap-4 rounded-xl border border-neutral-200 bg-white px-4 py-4 text-left hover:bg-neutral-50"
+    >
       <UnreadDot unread={unread} />
       <NotificationIcon icon={Icon} />
       <span className="min-w-0 flex-1">
@@ -295,26 +343,12 @@ function NotificationItem({
           {item.title}
         </span>
         <span className="mt-0.5 block truncate font-work text-xs text-neutral-500">
-          {item.body}
+          {item.body ?? item.message ?? ""}
         </span>
       </span>
       <span className="shrink-0 font-work text-xs text-neutral-500">
         {timeAgo(item.createdAt)}
       </span>
-    </>
-  );
-
-  return item.announcementId ? (
-    <Link
-      href={`${NOTIFICATIONS_PATH}/announcements/${item.announcementId}`}
-      onClick={onRead}
-      className={className}
-    >
-      {content}
-    </Link>
-  ) : (
-    <button type="button" onClick={onRead} className={className}>
-      {content}
     </button>
   );
 }
@@ -569,8 +603,21 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
-function groupByDay(items: InstructorNotification[]) {
-  const groups = new Map<string, InstructorNotification[]>();
+function notificationIcon(type?: string): LucideIcon {
+  const value = type?.toUpperCase() ?? "";
+  if (/ASSIGN|SUBMISSION|GRADE|REVIEW/.test(value)) return ClipboardList;
+  if (/ANNOUNCEMENT/.test(value)) return Megaphone;
+  if (/LIVE|CLASS|SESSION|RECORDING/.test(value)) return Video;
+  if (/CALENDAR|EVENT|SCHEDULE/.test(value)) return CalendarDays;
+  return Bell;
+}
+
+function isAnnouncementNotification(notification: NotificationRecord) {
+  return notification.type?.toUpperCase().includes("ANNOUNCEMENT") ?? false;
+}
+
+function groupNotificationsByDay(items: NotificationRecord[]) {
+  const groups = new Map<string, NotificationRecord[]>();
   for (const item of items) {
     const label = dayGroup(item.createdAt);
     const group = groups.get(label) ?? [];

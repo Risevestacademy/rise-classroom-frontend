@@ -1,4 +1,9 @@
-import { queryOptions } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import type { Cohort, Track } from "@/lib/admin";
 import { api, type Envelope, type Paginated } from "@/lib/api";
@@ -176,8 +181,9 @@ export const instructorKeys = {
   weeklyTaskCount: (filters: WeeklyTaskFilters = {}) =>
     ["instructor", "weekly-tasks", "count", filters] as const,
   notifications: (filters: NotificationFilters = {}) =>
-    ["notifications", filters] as const,
-  notificationDetail: (id: string) => ["notifications", "detail", id] as const,
+    ["instructor", "notifications", filters] as const,
+  notificationDetail: (id: string) =>
+    ["instructor", "notifications", "detail", id] as const,
 };
 
 export const instructorQueries = {
@@ -221,3 +227,67 @@ export const instructorQueries = {
       enabled: Boolean(id),
     }),
 };
+
+const instructorNotificationFilters = { page: 1, limit: 50 };
+
+/** Instructor notifications backed by the notifications API. */
+export function useInstructorNotifications() {
+  const queryClient = useQueryClient();
+  const query = useQuery(
+    instructorQueries.notifications(instructorNotificationFilters),
+  );
+  const queryKey = instructorKeys.notifications(instructorNotificationFilters);
+  const notifications = query.data?.items ?? [];
+
+  const mutation = useMutation({
+    mutationFn: async (id?: string): Promise<void> => {
+      if (id) {
+        await markNotificationAsRead(id);
+      } else {
+        await markAllNotificationsAsRead();
+      }
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.setQueryData<PaginatedNotifications>(
+        queryKey,
+        (current) =>
+          current && {
+            ...current,
+            items: current.items.map((item) =>
+              id === undefined || item.id === id
+                ? { ...item, isRead: true }
+                : item,
+            ),
+            unreadCount:
+              id === undefined
+                ? 0
+                : Math.max(
+                    0,
+                    (current.unreadCount ??
+                      current.items.filter((item) => !item.isRead).length) - 1,
+                  ),
+          },
+      );
+    },
+    onError: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
+  function markRead(id?: string) {
+    if (id && notifications.find((item) => item.id === id)?.isRead) return;
+    mutation.mutate(id);
+  }
+
+  return {
+    notifications,
+    unreadCount:
+      query.data?.unreadCount ??
+      notifications.filter((item) => !item.isRead).length,
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch: query.refetch,
+    markRead,
+    isMarkReadError: mutation.isError,
+  };
+}

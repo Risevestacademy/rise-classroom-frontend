@@ -13,44 +13,31 @@ import {
 } from "lucide-react";
 
 import {
-  instructorAnnouncements,
-  instructorNotifications,
-  isInstructorItemRead,
-  markAllInstructorItemsRead,
-  markInstructorItemRead,
-  type InstructorNotificationKind,
-} from "@/lib/instructor-notifications";
+  useInstructorNotifications,
+  type NotificationRecord,
+} from "@/lib/instructor";
 
-const icons: Record<InstructorNotificationKind, LucideIcon> = {
+const icons = {
   assignment: ClipboardList,
   announcement: Megaphone,
   "live-class": Video,
   calendar: CalendarDays,
-};
+} satisfies Record<string, LucideIcon>;
 
-const preview = instructorNotifications.slice(0, 4);
+const PREVIEW_COUNT = 4;
 
 /** Compact notification preview for the instructor navbar. */
 export function InstructorNotificationsPopover() {
   const [open, setOpen] = React.useState(false);
-  const [, setReadRevision] = React.useState(0);
-  const unreadCount =
-    instructorNotifications.filter(
-      (item) => !isInstructorItemRead(item.id, item.isRead),
-    ).length +
-    instructorAnnouncements.filter(
-      (item) => !isInstructorItemRead(item.id, item.isRead),
-    ).length;
-
-  function markRead(id: string) {
-    markInstructorItemRead(id);
-    setReadRevision((revision) => revision + 1);
-  }
-
-  function markAllRead() {
-    markAllInstructorItemsRead();
-    setReadRevision((revision) => revision + 1);
-  }
+  const {
+    notifications,
+    unreadCount,
+    isPending,
+    isError,
+    isMarkReadError,
+    markRead,
+  } = useInstructorNotifications();
+  const preview = notifications.slice(0, PREVIEW_COUNT);
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -79,7 +66,7 @@ export function InstructorNotificationsPopover() {
               {unreadCount > 0 && (
                 <button
                   type="button"
-                  onClick={markAllRead}
+                  onClick={() => markRead()}
                   className="text-[11px] font-medium text-neutral-800 hover:underline"
                 >
                   Mark all as read
@@ -87,44 +74,71 @@ export function InstructorNotificationsPopover() {
               )}
             </div>
 
-            <ul className="divide-y divide-neutral-200">
-              {preview.map((item) => {
-                const Icon = icons[item.kind];
-                const isRead = isInstructorItemRead(item.id, item.isRead);
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => markRead(item.id)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-neutral-50"
-                    >
-                      {!isRead && (
-                        <span className="flex w-3 shrink-0 justify-center">
-                          <span
-                            aria-label="Unread"
-                            className="size-1.5 rounded-full bg-brand-primary"
-                          />
-                        </span>
-                      )}
-                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-800">
-                        <Icon className="size-3.5" strokeWidth={1.75} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[12px] font-medium text-neutral-800">
-                          {item.title}
-                        </span>
-                        <span className="mt-0.5 block truncate text-[11px] text-neutral-500">
-                          {item.body}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-[11px] text-neutral-500">
-                        {compactTime(item.createdAt)}
-                      </span>
-                    </button>
+            {isPending ? (
+              <ul className="divide-y divide-neutral-200" aria-busy="true">
+                {[1, 2, 3].map((item) => (
+                  <li key={item} className="flex items-center gap-2 px-3 py-3">
+                    <span className="size-6 animate-pulse rounded-full bg-neutral-100" />
+                    <span className="flex-1 space-y-2">
+                      <span className="block h-3 w-2/3 animate-pulse rounded bg-neutral-100" />
+                      <span className="block h-2.5 w-1/2 animate-pulse rounded bg-neutral-100" />
+                    </span>
                   </li>
-                );
-              })}
-            </ul>
+                ))}
+              </ul>
+            ) : isError ? (
+              <p role="alert" className="px-4 py-6 text-center text-xs text-neutral-500">
+                Couldn&apos;t load notifications.
+              </p>
+            ) : preview.length === 0 ? (
+              <p className="px-4 py-6 text-center text-xs text-neutral-500">
+                No notifications yet.
+              </p>
+            ) : (
+              <ul className="divide-y divide-neutral-200">
+                {preview.map((item) => {
+                  const Icon = iconForNotification(item);
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => markRead(item.id)}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-neutral-50"
+                      >
+                        {!item.isRead && (
+                          <span className="flex w-3 shrink-0 justify-center">
+                            <span
+                              aria-label="Unread"
+                              className="size-1.5 rounded-full bg-brand-primary"
+                            />
+                          </span>
+                        )}
+                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-800">
+                          <Icon className="size-3.5" strokeWidth={1.75} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[12px] font-medium text-neutral-800">
+                            {item.title}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[11px] text-neutral-500">
+                            {item.body ?? item.message ?? ""}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-[11px] text-neutral-500">
+                          {compactTime(item.createdAt)}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {isMarkReadError && (
+              <p role="alert" className="px-3 py-2 text-xs text-text-error">
+                Couldn&apos;t update notification status.
+              </p>
+            )}
 
             <div className="p-2">
               <Link
@@ -140,6 +154,15 @@ export function InstructorNotificationsPopover() {
       </Popover.Portal>
     </Popover.Root>
   );
+}
+
+function iconForNotification(item: NotificationRecord) {
+  const type = item.type?.toUpperCase() ?? "";
+  if (/ASSIGN|SUBMISSION|GRADE|REVIEW/.test(type)) return icons.assignment;
+  if (/ANNOUNCEMENT/.test(type)) return icons.announcement;
+  if (/LIVE|CLASS|SESSION|RECORDING/.test(type)) return icons["live-class"];
+  if (/CALENDAR|EVENT|SCHEDULE/.test(type)) return icons.calendar;
+  return Bell;
 }
 
 function compactTime(date: string) {
