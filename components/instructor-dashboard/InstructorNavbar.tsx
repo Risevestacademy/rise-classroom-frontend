@@ -3,11 +3,12 @@
 import Link from "next/link";
 
 import { useQuery } from "@tanstack/react-query";
-import { Bell, ChevronRight, Menu } from "lucide-react";
+import { ChevronRight, Menu } from "lucide-react";
 
 import { Calendar, Search } from "@/assets/icons";
 import { UserAvatar } from "@/components/UserAvatar";
 import { sessionQuery } from "@/lib/session-query";
+import { InstructorNotificationsPopover } from "./InstructorNotificationsPopover";
 import { useInstructorNav } from "./InstructorNavContext";
 
 /** A plain label, or a label that links to its page. */
@@ -79,13 +80,7 @@ export function InstructorNavbar({
           <Calendar />
         </button>
 
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="text-neutral-400 hover:text-neutral-600"
-        >
-          <Bell className="h-5 w-5" />
-        </button>
+        <InstructorNotificationsPopover />
 
         <div className="flex items-center gap-2.5 border-l border-neutral-200 pl-2 sm:pl-4">
           <UserAvatar
