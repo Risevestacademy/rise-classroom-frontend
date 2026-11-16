@@ -19,8 +19,8 @@ import {
 
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
-import { UserMenu } from "@/components/UserMenu";
 import { useStudentNav } from "@/components/StudentNavContext";
+import { SidebarOrganization } from "@/components/SidebarOrganization";
 
 interface NavItem {
   title: string;
@@ -152,11 +152,9 @@ export function StudentSidebar() {
               />
             ))}
           </div>
-
-          <hr className="my-3 text-neutral-200" />
-
-          <UserMenu variant="plain" subtitle="email" />
         </div>
+
+        <SidebarOrganization />
       </aside>
     </>
   );
