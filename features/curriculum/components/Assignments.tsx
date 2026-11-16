@@ -668,7 +668,7 @@ function SubmissionsPanel({
                 </span>
               </td>
               <td className="px-4 py-5 text-neutral-600">
-                {submission.grade ?? "--"}
+                {submission.score ?? "--"}
               </td>
               <td className="px-4 py-5">
                 <Button
