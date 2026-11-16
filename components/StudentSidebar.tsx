@@ -17,6 +17,7 @@ import {
 
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
+import { SidebarOrganization } from "@/components/SidebarOrganization";
 import { useStudentNav } from "@/components/StudentNavContext";
 import { CountBadge } from "@/components/notifications/NotificationParts";
 import { useStudentNotifications } from "@/lib/student-notifications";

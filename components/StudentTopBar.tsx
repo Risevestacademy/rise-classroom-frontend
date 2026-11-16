@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import { Calendar, ChevronRight, Menu, Search } from "lucide-react";
 
 import { Logo } from "@/assets/logo";
-import { UserAvatar } from "@/components/UserAvatar";
+import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useStudentNav } from "@/components/StudentNavContext";
 import { findTopic, useStudentCurriculum } from "@/lib/student-lessons";
 
