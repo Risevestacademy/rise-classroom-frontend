@@ -249,7 +249,7 @@ export function toSubmission(record: AssignmentSubmissionRecord): AssignmentSubm
     submittedAt: record.submittedAt ?? null,
     status: record.status,
     isLate: record.isLate,
-    grade: record.grade ?? null,
+    score: record.score ?? null,
   };
 }
 

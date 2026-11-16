@@ -47,7 +47,7 @@ function submission(overrides: Partial<AssignmentSubmissionRecord>): AssignmentS
     status: "SUBMITTED",
     submittedAt: "2026-09-10T14:30:00.000Z",
     isLate: false,
-    grade: null,
+    score: null,
     studentProfile: { id: "p1", user: { id: "u1", name: "Ada Obi", email: "ada@example.com" } },
     ...overrides,
   };
@@ -87,7 +87,7 @@ describe("assignment submissions for instructors", () => {
       "instructor",
       sheet,
       page([
-        submission({ status: "GRADED", grade: 85 }),
+        submission({ status: "GRADED", score: 85 }),
         submission({
           id: "s2",
           status: "SUBMITTED",
@@ -212,7 +212,7 @@ describe("reviewing a submission", () => {
 
     await vi.waitFor(() =>
       expect(reviews).toEqual([
-        { status: "GRADED", grade: 90, feedback: "Clear grid, tighten the type scale" },
+        { status: "GRADED", score: 90, feedback: "Clear grid, tighten the type scale" },
       ]),
     );
   });
@@ -258,7 +258,7 @@ describe("reviewing a submission", () => {
   });
 
   it("shows the published grade instead of the form", async () => {
-    await openReview({ status: "GRADED", grade: 78, feedback: "Good start" });
+    await openReview({ status: "GRADED", score: 78, feedback: "Good start" });
 
     expect(await screen.findByText("78")).toBeInTheDocument();
     expect(screen.getByText("Good start")).toBeInTheDocument();

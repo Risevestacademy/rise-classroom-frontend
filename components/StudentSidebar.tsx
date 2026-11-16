@@ -9,9 +9,7 @@ import {
   GraduationCap,
   ClipboardList,
   Radar,
-  Megaphone,
   Bell,
-  MessageCircle,
   Settings,
   Blocks,
   X,
@@ -20,12 +18,15 @@ import {
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
 import { useStudentNav } from "@/components/StudentNavContext";
-import { SidebarOrganization } from "@/components/SidebarOrganization";
+import { CountBadge } from "@/components/notifications/NotificationParts";
+import { useStudentNotifications } from "@/lib/student-notifications";
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ElementType;
+  /** Shows a count next to the title. */
+  badge?: "notifications";
 }
 
 const homeNavItems: NavItem[] = [
@@ -53,19 +54,10 @@ const homeNavItems: NavItem[] = [
 
 const communicationNavItems: NavItem[] = [
   {
-    title: "Announcements",
-    href: "/student/announcements",
-    icon: Megaphone,
-  },
-  {
     title: "Notifications",
     href: "/student/notifications",
     icon: Bell,
-  },
-  {
-    title: "Chat",
-    href: "/student/chat",
-    icon: MessageCircle,
+    badge: "notifications",
   },
 ];
 
@@ -221,7 +213,13 @@ function SidebarNavItem({
         />
 
         <span className="truncate">{item.title}</span>
+        {item.badge === "notifications" && <NotificationsCount />}
       </Link>
     </div>
   );
+}
+
+function NotificationsCount() {
+  const { unreadCount } = useStudentNotifications();
+  return <CountBadge count={unreadCount} tone="warning" />;
 }

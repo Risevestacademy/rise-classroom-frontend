@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Calendar, ChevronRight, Menu, Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Calendar, ChevronRight, Menu, Search } from "lucide-react";
 
 import { Logo } from "@/assets/logo";
-import { ProfileMenu } from "@/components/ProfileMenu";
+import { UserAvatar } from "@/components/UserAvatar";
+import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useStudentNav } from "@/components/StudentNavContext";
 import { findTopic, useStudentCurriculum } from "@/lib/student-lessons";
 
@@ -118,13 +121,7 @@ export function StudentTopBar() {
         >
           <Calendar className="h-5 w-5" />
         </button>
-        <Link
-          href="/student/notifications"
-          aria-label="Notifications"
-          className={iconButton}
-        >
-          <Bell className="h-5 w-5" />
-        </Link>
+        <NotificationsPopover className={iconButton} />
 
         <div className="pl-1">
           <ProfileMenu basePath="/student" />

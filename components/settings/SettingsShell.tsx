@@ -19,9 +19,16 @@ import {
 } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
+export type ShellNavItem = {
+  key: string;
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
+
 const navIcons: Record<
   (typeof settingsNavItems)[number]["key"],
-  React.ComponentType<{ className?: string }>
+  ShellNavItem["icon"]
 > = {
   general: Settings01,
   appearance: Palette,
@@ -31,23 +38,34 @@ const navIcons: Record<
   system: Laptop,
 };
 
+const defaultNavItems: ShellNavItem[] = settingsNavItems.map((item) => ({
+  ...item,
+  icon: navIcons[item.key],
+}));
+
+/* The settings layout: title, search, side menu and page. The profile area
+   reuses it with its own title, breadcrumb and menu. */
 export function SettingsShell({
+  title = "Settings",
+  href = settingsBasePath,
+  navItems = defaultNavItems,
   children,
 }: {
+  title?: string;
+  href?: string;
+  navItems?: ShellNavItem[];
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
     <SettingsProvider>
-      <AdminTopNav
-        breadcrumb={["Overview", { label: "Settings", href: settingsBasePath }]}
-      />
+      <AdminTopNav breadcrumb={["Overview", { label: title, href }]} />
       <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
         <div className="grid gap-x-16 gap-y-6 lg:grid-cols-[236px_minmax(0,1fr)] lg:gap-y-10 xl:gap-x-25">
           <h1 className="self-center text-2xl font-semibold text-text-primary">
-            Settings
+            {title}
           </h1>
           <SettingsSearch />
-          <SettingsNav />
+          <SettingsNav label={title} items={navItems} />
           <div className="min-w-0">{children}</div>
         </div>
       </main>
@@ -56,16 +74,22 @@ export function SettingsShell({
   );
 }
 
-function SettingsNav() {
+function SettingsNav({
+  label,
+  items,
+}: {
+  label: string;
+  items: ShellNavItem[];
+}) {
   const pathname = usePathname();
 
   return (
     <nav
-      aria-label="Settings"
+      aria-label={label}
       className="-mx-4 flex gap-1 self-start overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0"
     >
-      {settingsNavItems.map((item) => {
-        const Icon = navIcons[item.key];
+      {items.map((item) => {
+        const Icon = item.icon;
         const isActive =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
