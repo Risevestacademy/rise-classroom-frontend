@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCompanionCheer } from "@/components/mascot/Companion";
 import { HowItWorksDialog } from "@/components/control-tower/ControlTowerDialogs";
 import {
   ControlTowerColumn,
@@ -90,7 +91,10 @@ function CurrentWeek({
   week: ControlTowerWeek;
 }) {
   const router = useRouter();
-  const editor = useWeekEditor(profileId, week);
+  const cheer = useCompanionCheer();
+  const editor = useWeekEditor(profileId, week, () =>
+    cheer(`Week ${week.number} is in. See you next week.`)
+  );
   const leave = useLeaveGuard(editor.isDirty, week.number);
   const [showHowItWorks, setShowHowItWorks] = React.useState(false);
 

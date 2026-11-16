@@ -1,9 +1,16 @@
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import styles from "./mascot.module.css";
-import type { MascotStage } from "./growth";
+import { BLOOM, type MascotStage } from "./growth";
+import type { Scene } from "./life";
 
-export type MascotMood = "happy" | "thinking" | "celebrate" | "sleepy";
+export type MascotMood =
+  | "happy"
+  | "thinking"
+  | "celebrate"
+  | "sleepy"
+  | "worried"
+  | "proud";
 
 export type MascotPalette = {
   pot: string;
@@ -52,9 +59,48 @@ export const BRAND_PALETTE: MascotPalette = {
   accent: "#4F59C7",
 };
 
-const BODY_HEIGHT = [78, 82, 86, 90, 94, 98];
-const STEM_HEIGHT = [0, 22, 34, 52, 72, 76];
+const BODY_HEIGHT = [78, 82, 86, 90, 94, 96, 98];
+const STEM_HEIGHT = [0, 22, 34, 52, 72, 76, 76];
 const CX = 120;
+
+type Leaf = { up: number; length: number; angle: number };
+
+/** Leaf pairs per stage, top pair first, so a pair keeps its place as the plant grows. */
+const LEAVES: Leaf[][] = [
+  [],
+  [{ up: 20, length: 30, angle: -30 }],
+  [{ up: 32, length: 42, angle: -28 }],
+  [
+    { up: 50, length: 40, angle: -34 },
+    { up: 14, length: 40, angle: -14 },
+  ],
+  [
+    { up: 66, length: 32, angle: -42 },
+    { up: 38, length: 42, angle: -26 },
+    { up: 12, length: 44, angle: -10 },
+  ],
+  [
+    { up: 64, length: 32, angle: -42 },
+    { up: 38, length: 42, angle: -26 },
+    { up: 12, length: 44, angle: -10 },
+  ],
+  [
+    { up: 62, length: 32, angle: -42 },
+    { up: 38, length: 42, angle: -26 },
+    { up: 12, length: 44, angle: -10 },
+  ],
+];
+/** A leaf still too small to draw cleanly. */
+const MIN_LEAF = 8;
+
+const lerp = (from: number, to: number, t: number) => from + (to - from) * t;
+
+/** Splits growth (0–6) into its stage and how far it is towards the next. */
+function splitGrowth(growth: number) {
+  const clamped = Math.min(BLOOM, Math.max(0, growth));
+  const stage = Math.min(BLOOM, Math.floor(clamped)) as MascotStage;
+  return { stage, next: Math.min(BLOOM, stage + 1), t: clamped - stage };
+}
 
 function leafPath(length: number) {
   const L = length;
@@ -98,15 +144,27 @@ function LeafPair({
 }
 
 function Plant({
-  stage,
+  growth,
   top,
   palette,
 }: {
-  stage: MascotStage;
+  growth: number;
   top: number;
   palette: MascotPalette;
 }) {
-  const stem = STEM_HEIGHT[stage];
+  const { stage, next, t } = splitGrowth(growth);
+  const stem = lerp(STEM_HEIGHT[stage], STEM_HEIGHT[next], t);
+  // Pairs the next stage adds grow in from nothing; the rest ease into place.
+  const leaves = LEAVES[next].map((to, index) => {
+    const from = LEAVES[stage][index] ?? { ...to, up: to.up * 0.6, length: 0 };
+    return {
+      up: lerp(from.up, to.up, t),
+      length: lerp(from.length, to.length, t),
+      angle: lerp(from.angle, to.angle, t),
+    };
+  });
+  const flowerY = top - stem - 8;
+
   return (
     <g>
       {stem > 0 && (
@@ -119,37 +177,31 @@ function Plant({
           fill={palette.stem}
         />
       )}
-      {stage === 0 && (
+      {stage === 0 && t < 0.5 && (
         <path
           d={`M${CX} ${top + 2} Q${CX + 2} ${top - 10} ${CX + 10} ${top - 12} Q${CX + 8} ${top - 3} ${CX} ${top + 2}Z`}
           fill={palette.leaf}
         />
       )}
-      {stage === 1 && (
-        <LeafPair y={top - 20} length={30} angle={-30} palette={palette} />
-      )}
-      {stage === 2 && (
-        <LeafPair y={top - 32} length={42} angle={-28} palette={palette} />
-      )}
-      {stage === 3 && (
-        <>
-          <LeafPair y={top - 14} length={40} angle={-14} palette={palette} />
-          <LeafPair y={top - 50} length={40} angle={-34} palette={palette} />
-        </>
-      )}
-      {stage >= 4 && (
-        <>
-          <LeafPair y={top - 12} length={44} angle={-10} palette={palette} />
-          <LeafPair y={top - 38} length={42} angle={-26} palette={palette} />
-          <LeafPair
-            y={stage === 4 ? top - 66 : top - 62}
-            length={32}
-            angle={-42}
-            palette={palette}
-          />
-        </>
+      {leaves.map(
+        (leaf, index) =>
+          leaf.length >= MIN_LEAF && (
+            <LeafPair
+              key={index}
+              y={top - leaf.up}
+              length={leaf.length}
+              angle={leaf.angle}
+              palette={palette}
+            />
+          ),
       )}
       {stage === 5 && (
+        <g transform={`translate(${CX} ${flowerY}) scale(${lerp(0.8, 1.25, t)})`}>
+          <ellipse cx={0} cy={-3} rx={9} ry={12} fill={palette.petal} />
+          <path d="M-9 2 Q0 12 9 2 Q4 -2 0 4 Q-4 -2 -9 2Z" fill={palette.leafAlt} />
+        </g>
+      )}
+      {stage === BLOOM && (
         <g>
           {[0, 1, 2, 3, 4].map((k) => {
             const a = ((k * 72 - 90) * Math.PI) / 180;
@@ -157,13 +209,13 @@ function Plant({
               <circle
                 key={k}
                 cx={CX + 13 * Math.cos(a)}
-                cy={top - 84 + 13 * Math.sin(a)}
+                cy={flowerY + 13 * Math.sin(a)}
                 r={11}
                 fill={palette.petal}
               />
             );
           })}
-          <circle cx={CX} cy={top - 84} r={8} fill={palette.petalCenter} />
+          <circle cx={CX} cy={flowerY} r={8} fill={palette.petalCenter} />
         </g>
       )}
     </g>
@@ -187,7 +239,7 @@ function Face({
   const ink = palette.ink;
 
   let eyes;
-  if (mood === "sleepy" || mood === "celebrate") {
+  if (mood === "sleepy" || mood === "celebrate" || mood === "proud") {
     const yBase = mood === "sleepy" ? ey : ey + 4;
     const yCtrl = mood === "sleepy" ? ey + 8 : ey - 10;
     eyes = eyeX.map((x) => (
@@ -201,7 +253,12 @@ function Face({
       />
     ));
   } else {
-    const rest = mood === "thinking" ? { dx: 3, dy: -5 } : { dx: 1, dy: 2 };
+    const rest =
+      mood === "thinking"
+        ? { dx: 3, dy: -5 }
+        : mood === "worried"
+          ? { dx: 0, dy: 4 }
+          : { dx: 1, dy: 2 };
     const gaze = look ? { dx: look.x * 4.5, dy: look.y * 5 } : rest;
     eyes = (
       <g className={styles.eyes}>
@@ -245,6 +302,16 @@ function Face({
         strokeLinecap="round"
       />
     );
+  } else if (mood === "worried") {
+    mouth = (
+      <path
+        d={`M112 ${my + 7} Q120 ${my} 128 ${my + 7}`}
+        stroke={ink}
+        strokeWidth={4}
+        fill="none"
+        strokeLinecap="round"
+      />
+    );
   } else if (mood === "sleepy") {
     mouth = <ellipse cx={120} cy={my + 3} rx={4} ry={5} fill={ink} />;
   } else {
@@ -262,6 +329,16 @@ function Face({
   return (
     <g>
       {eyes}
+      {mood === "worried" &&
+        [-1, 1].map((side) => (
+          <path
+            key={side}
+            d={`M${120 + side * 28} ${ey - 20} L${120 + side * 10} ${ey - 25}`}
+            stroke={ink}
+            strokeWidth={4}
+            strokeLinecap="round"
+          />
+        ))}
       <ellipse cx={86} cy={ey + 17} rx={8} ry={5} fill={palette.cheek} />
       <ellipse cx={154} cy={ey + 17} rx={8} ry={5} fill={palette.cheek} />
       {mouth}
@@ -360,9 +437,62 @@ function Extras({
   return null;
 }
 
+function SceneArt({
+  scene,
+  top,
+  palette,
+}: {
+  scene: Scene;
+  top: number;
+  palette: MascotPalette;
+}) {
+  if (scene === "sun") {
+    return (
+      <g className={styles.sun} transform={`translate(202 ${top - 34})`}>
+        <g className={styles.rays} stroke={palette.petal} strokeWidth={4} strokeLinecap="round">
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+            <path key={angle} d="M0 -17 V-23" transform={`rotate(${angle})`} />
+          ))}
+        </g>
+        <circle r={11} fill={palette.petal} />
+      </g>
+    );
+  }
+  if (scene === "moon") {
+    return (
+      <path
+        transform={`translate(44 ${top - 30})`}
+        d="M12 -14 A16 16 0 1 0 16 12 A12 12 0 1 1 12 -14Z"
+        fill={palette.petal}
+      />
+    );
+  }
+  return (
+    <g fill={palette.leaf}>
+      {[
+        [96, 0],
+        [122, 0.5],
+        [146, 1],
+      ].map(([x, delay]) => (
+        <path
+          key={x}
+          className={styles.drop}
+          style={{ animationDelay: `${delay}s` }}
+          transform={`translate(${x} ${top - 112})`}
+          d="M0 -8 Q6 2 0 6 Q-6 2 0 -8Z"
+        />
+      ))}
+    </g>
+  );
+}
+
 export type MascotProps = {
   stage?: MascotStage;
+  /** Growth from 0 to 6, fractions included; takes over from `stage` for in-between sizes. */
+  growth?: number;
   mood?: MascotMood;
+  /** What's going on around it; left out for the busier moods. */
+  scene?: Scene;
   palette?: MascotPalette;
   size?: number;
   animated?: boolean;
@@ -375,58 +505,75 @@ export type MascotProps = {
   pokeKey?: number;
   /** Freeze looping animations in place (e.g. while off screen). */
   paused?: boolean;
+  /** False shows the empty pot, before the seed goes in. */
+  planted?: boolean;
+  /** Frames just the face in a square, for sizes too small for the whole plant. */
+  closeUp?: boolean;
 };
 
 export function Mascot({
-  stage = 3,
+  stage: stageProp = 3,
+  growth = stageProp,
   mood = "happy",
+  scene,
   palette = TEAL_PALETTE,
   size = 160,
   animated = true,
   className,
   style,
-  label = "Rise Classroom mascot",
+  label = "Leafy",
   look,
   pokeKey = 0,
   paused = false,
+  planted = true,
+  closeUp = false,
 }: MascotProps) {
-  const top = 200 - BODY_HEIGHT[stage];
+  const { stage, next, t } = splitGrowth(growth);
+  const top = 200 - lerp(BODY_HEIGHT[stage], BODY_HEIGHT[next], t);
 
   return (
     <svg
       role="img"
       aria-label={label}
-      viewBox="0 -10 240 310"
+      viewBox={closeUp ? `58 ${top - 22} 124 124` : "0 -10 240 310"}
       width={size}
-      height={(size * 310) / 240}
+      height={closeUp ? size : (size * 310) / 240}
       className={cn(
         styles.root,
         animated && mood === "celebrate" && styles.celebrate,
         animated && mood === "sleepy" && styles.sleepy,
+        animated && scene === "sun" && styles.sunny,
         !animated && styles.static,
         paused && styles.paused,
         className,
       )}
       style={style}
     >
-      {animated && <Extras mood={mood} top={top} palette={palette} />}
+      {animated && planted && <Extras mood={mood} top={top} palette={palette} />}
+      {scene && <SceneArt scene={scene} top={top} palette={palette} />}
       <g
         key={pokeKey}
         className={animated && pokeKey > 0 ? styles.poke : undefined}
       >
         <g className={animated ? styles.hop : undefined}>
-          <g key={stage} className={animated ? styles.grow : undefined}>
-            <g className={animated ? styles.plant : undefined}>
-              <Plant stage={stage} top={top} palette={palette} />
-            </g>
-          </g>
-          <g className={animated ? styles.body : undefined}>
-            <path
-              d={`M70 210 V${top + 50} A50 50 0 0 1 170 ${top + 50} V210Z`}
-              fill={palette.body}
-            />
-            <Face top={top} mood={mood} palette={palette} look={look} />
-          </g>
+          {planted ? (
+            <>
+              <g key={stage} className={animated ? styles.grow : undefined}>
+                <g className={animated ? styles.plant : undefined}>
+                  <Plant growth={growth} top={top} palette={palette} />
+                </g>
+              </g>
+              <g className={animated ? styles.body : undefined}>
+                <path
+                  d={`M70 210 V${top + 50} A50 50 0 0 1 170 ${top + 50} V210Z`}
+                  fill={palette.body}
+                />
+                <Face top={top} mood={mood} palette={palette} look={look} />
+              </g>
+            </>
+          ) : (
+            <ellipse cx={CX} cy={198} rx={56} ry={9} fill={palette.stem} />
+          )}
           <path
             d="M58 210 H182 L172 278 Q170 288 160 288 H80 Q70 288 68 278Z"
             fill={palette.pot}

@@ -205,7 +205,113 @@
   }
 }
 
+.riseIn {
+  animation: riseIn 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.sinkOut {
+  animation: sinkOut 0.35s ease-in both;
+}
+
+.settle {
+  animation: settle 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.sunny .plant {
+  animation: leanToSun 4s ease-in-out infinite;
+}
+
+.rays {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: spin 14s linear infinite;
+}
+
+.drop {
+  animation: drop 1.8s ease-in infinite;
+}
+
+@keyframes leanToSun {
+  0%,
+  100% {
+    transform: rotate(3deg);
+  }
+  50% {
+    transform: rotate(8deg);
+  }
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes drop {
+  0% {
+    translate: 0 -10px;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    translate: 0 46px;
+    opacity: 0;
+  }
+}
+
+.peekIn {
+  animation: peekIn 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) 0.4s both;
+}
+
+@keyframes peekIn {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes riseIn {
+  0% {
+    transform: translateY(110%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes sinkOut {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(110%);
+  }
+}
+
+@keyframes settle {
+  0% {
+    transform: translateY(8px) scale(0.92);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .riseIn,
+  .peekIn,
+  .sinkOut,
+  .settle {
+    animation: none !important;
+  }
+
+
   .root *,
   .root {
     animation: none !important;

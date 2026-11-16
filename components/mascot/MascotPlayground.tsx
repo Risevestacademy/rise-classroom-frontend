@@ -4,9 +4,22 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { BRAND_PALETTE, Mascot, TEAL_PALETTE, type MascotMood } from "./Mascot";
 import { InteractiveMascot } from "./InteractiveMascot";
-import { MASCOT_STAGES, stageFromProgress, type MascotStage } from "./growth";
+import {
+  BLOOM,
+  MASCOT_STAGES,
+  growthFromProgress,
+  stageFromProgress,
+  type MascotStage,
+} from "./growth";
 
-const MOODS: MascotMood[] = ["happy", "thinking", "celebrate", "sleepy"];
+const MOODS: MascotMood[] = [
+  "happy",
+  "thinking",
+  "celebrate",
+  "sleepy",
+  "worried",
+  "proud",
+];
 const PALETTES = { teal: TEAL_PALETTE, brand: BRAND_PALETTE } as const;
 const BACKGROUNDS = {
   light: "bg-surface-background",
@@ -60,7 +73,8 @@ export function MascotPlayground() {
 
   const stage = stageFromProgress(progress / 100);
   const palette = PALETTES[paletteKey];
-  const setStage = (s: MascotStage) => setProgress(s === 5 ? 100 : s * 20 + 10);
+  const setStage = (s: MascotStage) =>
+    setProgress(s === BLOOM ? 100 : Math.round(((s + 0.5) / BLOOM) * 100));
 
   return (
     <main className="min-h-screen bg-white px-6 py-10">
@@ -83,7 +97,7 @@ export function MascotPlayground() {
             )}
           >
             <InteractiveMascot
-              stage={stage}
+              growth={growthFromProgress(progress / 100)}
               mood={mood}
               palette={palette}
               size={240}
@@ -107,7 +121,7 @@ export function MascotPlayground() {
             </div>
             <Segmented
               label="Stage"
-              options={[0, 1, 2, 3, 4, 5] as MascotStage[]}
+              options={[0, 1, 2, 3, 4, 5, 6] as MascotStage[]}
               value={stage}
               onChange={setStage}
               format={(s) => MASCOT_STAGES[s]}

@@ -2,7 +2,7 @@ import { StudentSidebar } from "@/components/StudentSidebar";
 import { StudentTopBar } from "@/components/StudentTopBar";
 import { StudentNavProvider } from "@/components/StudentNavContext";
 import { RoleGate } from "@/components/RoleGate";
-import { StudentAIAssistantProvider } from "@/components/mascot/StudentAIAssistant";
+import { CompanionProvider } from "@/components/mascot/Companion";
 
 export default function StudentLayout({
   children,
@@ -11,7 +11,7 @@ export default function StudentLayout({
 }) {
   return (
     <RoleGate role="STUDENT">
-      <StudentAIAssistantProvider>
+      <CompanionProvider>
         <StudentNavProvider>
           <div className="flex min-h-screen w-full">
             <StudentSidebar />
@@ -21,7 +21,7 @@ export default function StudentLayout({
             </div>
           </div>
         </StudentNavProvider>
-      </StudentAIAssistantProvider>
+      </CompanionProvider>
     </RoleGate>
   );
 }

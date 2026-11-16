@@ -7,6 +7,7 @@ import { Bell, Calendar, ChevronRight, Menu, Search } from "lucide-react";
 
 import { Logo } from "@/assets/logo";
 import { UserAvatar } from "@/components/UserAvatar";
+import { CompanionResident } from "@/components/mascot/Companion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStudentNav } from "@/components/StudentNavContext";
 import { sessionQuery } from "@/lib/session-query";
@@ -137,6 +138,7 @@ export function StudentTopBar() {
         >
           <Bell className="h-5 w-5" />
         </Link>
+        <CompanionResident />
 
         <div className="flex items-center gap-3 pl-1">
           <UserAvatar
