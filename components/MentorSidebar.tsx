@@ -16,6 +16,7 @@ import {
   type NavItem,
   type NavSectionConfig,
 } from "@/components/AppSidebar";
+import { SidebarOrganization } from "@/components/SidebarOrganization";
 
 const sections: NavSectionConfig[] = [
   {
@@ -43,6 +44,7 @@ export function MentorSidebar() {
       homeHref="/mentor/dashboard"
       sections={sections}
       accountItems={accountItems}
+      footer={<SidebarOrganization />}
     />
   );
 }

@@ -17,7 +17,7 @@ import {
 
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
-import { UserMenu } from "@/components/UserMenu";
+import { SidebarOrganization } from "@/components/SidebarOrganization";
 import { useStudentNav } from "@/components/StudentNavContext";
 import { CountBadge } from "@/components/notifications/NotificationParts";
 import { useStudentNotifications } from "@/lib/student-notifications";
@@ -145,11 +145,9 @@ export function StudentSidebar() {
               />
             ))}
           </div>
-
-          <hr className="my-3 text-neutral-200" />
-
-          <UserMenu variant="plain" subtitle="email" />
         </div>
+
+        <SidebarOrganization />
       </aside>
     </>
   );
