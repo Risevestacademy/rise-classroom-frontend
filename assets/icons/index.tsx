@@ -128,3 +128,44 @@ export const UserChat = createIcon(
   },
   "stroke",
 );
+
+// The announcement form's icons, drawn on 16px and 20px grids in Figma.
+export const Image01 = createIcon(
+  "Image01",
+  {
+    stroke: (
+      <g transform="scale(1.5)" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="5" cy="5" r="1" />
+        <path d="M1.66 8c0-2.99 0-4.48.93-5.41.93-.93 2.42-.93 5.41-.93 2.99 0 4.48 0 5.41.93.93.93.93 2.42.93 5.41 0 2.99 0 4.48-.93 5.41-.93.93-2.42.93-5.41.93-2.99 0-4.48 0-5.41-.93C1.66 12.48 1.66 10.99 1.66 8Z" />
+        <path d="M3.34 14c2.91-3.48 6.18-8.08 11-4.97" />
+      </g>
+    ),
+  },
+  "stroke",
+);
+
+export const Rows = createIcon(
+  "Rows",
+  {
+    stroke: (
+      <g transform="scale(1.5)" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M1.66 10.33h12.67M1.66 5.67h12.67" />
+        <path d="M1.66 8c0-2.99 0-4.48.93-5.41.93-.93 2.42-.93 5.41-.93 2.99 0 4.48 0 5.41.93.93.93.93 2.42.93 5.41 0 2.99 0 4.48-.93 5.41-.93.93-2.42.93-5.41.93-2.99 0-4.48 0-5.41-.93C1.66 12.48 1.66 10.99 1.66 8Z" />
+      </g>
+    ),
+  },
+  "stroke",
+);
+
+export const Tie = createIcon(
+  "Tie",
+  {
+    stroke: (
+      <g transform="scale(1.2)" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round">
+        <path d="M10 6.67c.31 0 .7-.09 1.05-.19.36-.1.54-.15.73-.31.19-.15.3-.35.52-.74l.43-.76c.47-.83.7-1.24.56-1.61-.14-.38-.58-.53-1.46-.84l-.75-.27c-.54-.19-.81-.29-1.09-.29s-.55.1-1.09.29l-.75.27c-.88.31-1.32.46-1.46.84-.14.37.1.78.56 1.61l.43.76c.22.39.33.59.52.74.19.16.37.21.73.31.34.1.73.19 1.05.19Z" />
+        <path d="M8.4 6.67 7.01 12.62c-.3 1.29-.45 1.94-.28 2.54.18.61.65 1.07 1.6 1.99.78.76 1.17 1.14 1.65 1.15h.03c.48-.01.87-.39 1.64-1.15.94-.92 1.41-1.38 1.59-1.99.18-.6.03-1.25-.27-2.54L11.6 6.67" />
+      </g>
+    ),
+  },
+  "stroke",
+);
