@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ChevronRight, Menu } from "lucide-react";
 
+import { ChevronRight, Menu } from "lucide-react";
 import { Calendar, Search } from "@/assets/icons";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { useInstructorNav } from "./InstructorNavContext";
+import { InstructorNotificationsPopover } from "./InstructorNotificationsPopover";
 
 /** A plain label, or a label that links to its page. */
 export type Crumb = string | { label: string; href: string };
@@ -73,13 +74,7 @@ export function InstructorNavbar({
           <Calendar />
         </button>
 
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="text-neutral-400 hover:text-neutral-600"
-        >
-          <Bell className="h-5 w-5" />
-        </button>
+        <InstructorNotificationsPopover />
 
         <div className="border-l border-neutral-200 pl-2 sm:pl-4">
           <ProfileMenu basePath="/instructor" />
