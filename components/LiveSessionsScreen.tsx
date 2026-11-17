@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 
 import { Calendar03, MoreHorizontal, Time04, Track } from "@/assets/icons";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
@@ -244,7 +245,7 @@ function SessionPreview({ session }: { session: LiveSession }) {
           size="medium"
           className="mt-6 w-full"
           nativeButton={false}
-          render={<a href={session.link} target="_blank" rel="noopener noreferrer" />}
+          render={<Link href={`/live/${session.id}`} />}
         >
           Join session
         </Button>
