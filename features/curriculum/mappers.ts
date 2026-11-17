@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import type { Track } from "@/lib/admin";
+import { apiFileHref } from "@/lib/api";
 import {
   progressModes,
   resourceKinds,
@@ -102,10 +103,11 @@ export function newResourceFile(
   };
 }
 
-/** Builds a resource record for a file the admin just picked. */
+/** Builds a resource record for a file the admin just picked. It's uploaded when the form is saved. */
 export function resourceFromUpload(file: File) {
-  return newResourceFile({ name: file.name, sizeBytes: file.size });
+  return newResourceFile({ name: file.name, sizeBytes: file.size }, { file });
 }
+
 
 /* Builds a resource for a pasted link. It's sent to the API when the form is saved. */
 export function resourceFromLink(url: string) {
@@ -226,6 +228,7 @@ export function describeChange(input: UpdateCurriculumInput) {
 // ---- Records → view types ----------------------------------------------------
 
 export function toResourceFile(record: ResourceRecord): ResourceFile {
+  const uploaded = record.source === "UPLOAD";
   return {
     id: record.id,
     name: record.fileName || fileNameFromUrl(record.url),
@@ -236,7 +239,8 @@ export function toResourceFile(record: ResourceRecord): ResourceFile {
     // PENDING-BACKEND: the API only gives the uploader's id, not their name.
     uploadedBy: "--",
     status: record.publishStatus,
-    url: record.url,
+    url: uploaded ? apiFileHref(record.downloadUrl ?? record.url) : record.url,
+    uploaded,
   };
 }
 
@@ -300,10 +304,7 @@ export function toModule(
     description: topic.description,
     status: topic.publishStatus,
     outcomes: topic.outcomes ?? [],
-    resources: [
-      ...topic.resources.map(toResourceFile),
-      ...(local.moduleFiles.get(topic.id) ?? []),
-    ],
+    resources: topic.resources.map(toResourceFile),
     lessons: topic.lessons.map((lesson) => {
       const lessonExtras = local.lessons.get(lesson.id);
       return {
@@ -312,10 +313,8 @@ export function toModule(
         title: lesson.title,
         description: lesson.description ?? "",
         recordingLink: lesson.recordings[0]?.url ?? "",
-        resources: [
-          ...lesson.resources.map(toResourceFile),
-          ...(lessonExtras?.files ?? []),
-        ],
+        resources: lesson.resources.map(toResourceFile),
+        unlocked: lesson.instructorUnlocked,
       };
     }),
     assignments: [
