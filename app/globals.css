@@ -104,6 +104,26 @@
   --color-avatar-red-surface: #f8c9d2;
   --color-avatar-red-text: #710e21;
 
+  /* Live session room (dark) */
+  --color-room-canvas: #1e1e1e;
+  --color-room-panel: #202020;
+  --color-room-bar: #222424;
+  --color-room-control: #333638;
+  --color-room-control-hover: #3e4245;
+  --color-room-bubble: #303030;
+  --color-room-bubble-own: #005278;
+  --color-room-bubble-own-text: #d2eaff;
+  --color-room-border: #444747;
+  --color-room-text: #dddddd;
+  --color-room-text-strong: #ededed;
+  --color-room-text-muted: #b9bcbc;
+  --color-room-off: #f2cfcf;
+  --color-room-off-text: #7a241f;
+  --color-room-off-menu: #641612;
+  --color-room-active: #a8c7fa;
+  --color-room-leave: #df3533;
+  --color-room-leave-hover: #c62828;
+
   /* Semantic · Border */
   --color-border-default: #e2e8e8; /* neutral-200 */
   --color-border-strong: #cbd5d6; /* neutral-300 */
@@ -386,4 +406,12 @@ body {
   50% {
     opacity: 0;
   }
+}
+
+/* A reaction drifts up from the bottom of the room and fades out. */
+@keyframes room-reaction {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  12% { transform: translateY(-24px) scale(1); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(-320px) scale(1); opacity: 0; }
 }
