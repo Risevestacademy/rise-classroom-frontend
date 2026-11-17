@@ -1,5 +1,5 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, apiFileHref, isApiFilePath } from "@/lib/api";
 import { studentQueries } from "@/lib/student";
 import type { ResourceRecord } from "@/features/curriculum/types";
 import type { StudentAssignment } from "@/lib/student-assignments";
@@ -302,8 +302,42 @@ const FILE_EXTENSIONS = [
   "zip",
 ];
 
-/** Uses the resource's `type` when the API sends one; otherwise guesses from the URL. */
-export function describeResource(value: string, type?: LessonResource["type"]) {
+/**
+ * Where a resource opens: an external link as it is, or a file uploaded to the
+ * API through the `/api/backend` proxy, which downloads it with the student's
+ * session. The API checks the lesson is unlocked on every download.
+ */
+export function resourceHref(value: string): string | null {
+  return isApiFilePath(value) ? apiFileHref(value) : toHttpUrl(value);
+}
+
+const uploadKinds: Record<NonNullable<LessonResource["type"]>, string> = {
+  PDF: "PDF",
+  VIDEO: "Video",
+  IMAGE: "Image",
+  DOCUMENT: "Document",
+  LINK: "File",
+};
+
+/**
+ * Uses the resource's `type` when the API sends one; otherwise guesses from the URL.
+ * Uploaded files are always files, named by their extension when `fileName` has one.
+ */
+export function describeResource(
+  value: string,
+  type?: LessonResource["type"],
+  fileName?: string | null,
+) {
+  if (isApiFilePath(value)) {
+    const extension = fileName?.split(".").pop()?.toLowerCase() ?? "";
+    const kind = FILE_EXTENSIONS.includes(extension)
+      ? extension.toUpperCase()
+      : type
+        ? uploadKinds[type]
+        : "File";
+    return { kind, host: "", isFile: true };
+  }
+
   const href = toHttpUrl(value);
   if (!href) return { kind: "Link", host: "", isFile: false };
 

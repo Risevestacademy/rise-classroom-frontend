@@ -62,10 +62,13 @@ export function ModuleAccessCard({
   moduleId,
   moduleStatus,
   unlocked: apiUnlocked,
+  onChange,
 }: {
   moduleId: string;
   moduleStatus: ModuleStatus;
   unlocked?: boolean;
+  /* Called after an unlock or lock, which also opens or closes the module's lessons. */
+  onChange?: () => void;
 }) {
   const { api } = useCurriculumScope();
   const queryClient = useQueryClient();
@@ -88,6 +91,7 @@ export function ModuleAccessCard({
       queryClient.setQueryData(accessKey, result);
       saveAccess(moduleId, result);
       setConfirmLock(false);
+      onChange?.();
     },
   });
 

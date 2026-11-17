@@ -12,8 +12,10 @@ export type UploadedFile = {
   name: string;
   /** `null` when unknown, e.g. a resource saved as a link. */
   sizeBytes: number | null;
-  /* Set for a saved link rather than a picked file. */
+  /* Set for a saved link or file rather than a picked file. */
   url?: string;
+  /* A saved file: `url` downloads it rather than opening a page. */
+  uploaded?: boolean;
 };
 
 /** Splits picked files into ones that pass the type/size rules and the names that don't. */
@@ -86,10 +88,10 @@ export function FileChip({ file }: { file: UploadedFile }) {
         rel="noreferrer"
         className="inline-flex max-w-full items-center gap-2.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 shadow-xs hover:border-neutral-300"
       >
-        <FileTypeIcon name={file.name} url={file.url} />
+        <FileTypeIcon name={file.name} url={file.uploaded ? undefined : file.url} />
         <span className="truncate text-sm text-neutral-800">{file.name}</span>
         <span className="shrink-0 text-xs text-neutral-400">
-          {linkHost(file.url)}
+          {file.uploaded ? formatFileSize(file.sizeBytes) : linkHost(file.url)}
         </span>
       </a>
     );

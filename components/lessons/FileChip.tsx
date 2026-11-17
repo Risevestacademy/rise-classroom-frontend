@@ -1,9 +1,11 @@
 import { FileText, Link2 } from "lucide-react";
 
 import { cn, formatFileSize } from "@/lib/utils";
-import { describeResource, toHttpUrl } from "@/lib/student-lessons";
+import { isApiFilePath } from "@/lib/api";
+import { describeResource, resourceHref } from "@/lib/student-lessons";
 
-/* A resource or attachment as a small pill: file name and size, opening in a new tab. */
+/* A resource or attachment as a small pill: file name and size. A link opens in a
+   new tab; a file uploaded to the API downloads. */
 export function FileChip({
   title,
   url,
@@ -17,8 +19,9 @@ export function FileChip({
   sizeBytes?: number | null;
   className?: string;
 }) {
-  const href = toHttpUrl(url);
-  const info = describeResource(url, type);
+  const href = resourceHref(url);
+  const info = describeResource(url, type, title);
+  const isUpload = isApiFilePath(url);
   const Icon = info.isFile ? FileText : Link2;
   const size = sizeBytes ? formatFileSize(sizeBytes) : null;
 
@@ -42,8 +45,9 @@ export function FileChip({
   return href ? (
     <a
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+      {...(isUpload
+        ? { download: title }
+        : { target: "_blank", rel: "noopener noreferrer" })}
       className={cn(base, "hover:bg-neutral-100")}
     >
       {content}
