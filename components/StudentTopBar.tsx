@@ -2,16 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import { Calendar, ChevronRight, Menu, Search } from "lucide-react";
 
 import { Logo } from "@/assets/logo";
-import { UserAvatar } from "@/components/UserAvatar";
+import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useStudentNav } from "@/components/StudentNavContext";
-import { sessionQuery } from "@/lib/session-query";
-import { studentQueries } from "@/lib/student";
 import { findTopic, useStudentCurriculum } from "@/lib/student-lessons";
 
 const pageLabels: Record<string, string> = {
@@ -56,14 +52,6 @@ const iconButton =
 export function StudentTopBar() {
   const { setOpen } = useStudentNav();
   const pathname = usePathname();
-  const session = useQuery(sessionQuery());
-  const progress = useQuery(studentQueries.progress());
-
-  const user = session.data?.user;
-
-  // Prefer the track they're still working through over a finished one.
-  const enrollment =
-    progress.data?.find((item) => !item.trackComplete) ?? progress.data?.[0];
 
   // /student/<page>/... -> label for <page>
   const segments = pathname.split("/").filter(Boolean);
@@ -133,37 +121,8 @@ export function StudentTopBar() {
         </button>
         <NotificationsPopover className={iconButton} />
 
-        <div className="flex items-center gap-3 pl-1">
-          <UserAvatar
-            user={{
-              name: user?.name ?? "Account",
-              avatar: user?.image ?? "/default-avatar.png",
-            }}
-            isLoading={session.isPending}
-          />
-          <div className="hidden min-w-0 sm:block">
-            {session.isPending ? (
-              <>
-                <Skeleton className="h-3.5 w-24" />
-                <Skeleton className="mt-1.5 h-3 w-16" />
-              </>
-            ) : (
-              <>
-                <p className="truncate text-sm font-semibold text-neutral-800">
-                  {user?.displayName ?? user?.name ?? "Student"}
-                </p>
-                {progress.isPending ? (
-                  <Skeleton className="mt-1.5 h-3 w-16" />
-                ) : (
-                  enrollment && (
-                    <p className="truncate text-xs text-neutral-400">
-                      {enrollment.track.name}
-                    </p>
-                  )
-                )}
-              </>
-            )}
-          </div>
+        <div className="pl-1">
+          <ProfileMenu basePath="/student" />
         </div>
       </div>
     </header>

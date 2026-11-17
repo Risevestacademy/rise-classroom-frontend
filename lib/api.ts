@@ -20,6 +20,22 @@ function getApiUrl() {
   return url;
 }
 
+/**
+ * The API gives uploaded files a download path like `/api/v1/resources/{id}/download`.
+ * It's opened through the `/api/backend` proxy so the session cookie goes with it.
+ * Anything else (an external link) is returned as it is.
+ */
+export function apiFileHref(path: string) {
+  if (!isApiFilePath(path)) return path;
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "/api/backend";
+  return `${base}${path.slice("/api/v1".length)}`;
+}
+
+/** True for a file the API stores, as opposed to an external link. */
+export function isApiFilePath(path: string) {
+  return path.startsWith("/api/v1/");
+}
+
 /** Every resource endpoint wraps its payload in `{ success, data }`. */
 export type Envelope<T> = {
   success: boolean;

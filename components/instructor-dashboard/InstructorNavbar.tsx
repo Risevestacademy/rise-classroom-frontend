@@ -2,14 +2,11 @@
 
 import Link from "next/link";
 
-import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, Menu } from "lucide-react";
-
 import { Calendar, Search } from "@/assets/icons";
-import { UserAvatar } from "@/components/UserAvatar";
-import { sessionQuery } from "@/lib/session-query";
-import { InstructorNotificationsPopover } from "./InstructorNotificationsPopover";
+import { ProfileMenu } from "@/components/ProfileMenu";
 import { useInstructorNav } from "./InstructorNavContext";
+import { InstructorNotificationsPopover } from "./InstructorNotificationsPopover";
 
 /** A plain label, or a label that links to its page. */
 export type Crumb = string | { label: string; href: string };
@@ -21,9 +18,6 @@ export function InstructorNavbar({
   breadcrumb?: Crumb[];
 }) {
   const { setOpen } = useInstructorNav();
-
-  const { data: session, isPending } = useQuery(sessionQuery());
-  const user = session?.user;
 
   return (
     <header className="flex h-16 items-center justify-between gap-3 border-b border-border-default bg-surface-background px-4 py-3 sm:px-6">
@@ -82,18 +76,8 @@ export function InstructorNavbar({
 
         <InstructorNotificationsPopover />
 
-        <div className="flex items-center gap-2.5 border-l border-neutral-200 pl-2 sm:pl-4">
-          <UserAvatar
-            user={{
-              name: user?.name ?? "Account",
-              avatar: user?.image ?? "/default-avatar.png",
-            }}
-            isLoading={isPending}
-          />
-          <div className="hidden flex-col sm:flex">
-            <span className="text-sm font-bold text-neutral-800">{user?.name}</span>
-            <span className="text-xs text-neutral-400">{user?.role}</span>
-          </div>
+        <div className="border-l border-neutral-200 pl-2 sm:pl-4">
+          <ProfileMenu basePath="/instructor" />
         </div>
       </div>
     </header>

@@ -26,8 +26,12 @@ export type ResourceFile = {
   uploadedAt: string;
   uploadedBy: string;
   status: ModuleStatus;
-  /** Set for resources saved in the API; local uploads have no link. */
+  /** Set for resources saved in the API: the link, or the uploaded file's download link. */
   url?: string;
+  /** A saved file rather than a link; `url` downloads it. */
+  uploaded?: boolean;
+  /** A picked file that's uploaded when the form is saved. */
+  file?: File;
 };
 
 export const resourceKinds = {
@@ -51,7 +55,7 @@ export type CurriculumResource = {
 
 export type CreateResourceInput = Pick<
   ResourceFile,
-  "name" | "sizeBytes" | "title" | "description" | "url"
+  "name" | "sizeBytes" | "title" | "description" | "url" | "file"
 > & {
   /* What the link points to. Defaults to a plain link. */
   kind?: ResourceKind;
@@ -65,6 +69,8 @@ export type ModuleLesson = {
   /** The lesson's class video. Saved as its recording; "" when there is none. */
   recordingLink: string;
   resources: ResourceFile[];
+  /** Whether the lesson is unlocked for its cohort, when the API says. */
+  unlocked?: boolean;
 };
 
 export const submissionTypes = {
@@ -301,7 +307,11 @@ export type ResourceRecord = Timestamps & {
   topicId?: string | null;
   title: string;
   description?: string | null;
+  /** The link, or for uploads the API's download path. */
   url: string;
+  /** Uploads only: the API's download path. */
+  downloadUrl?: string;
+  source?: "LINK" | "UPLOAD";
   type?: "PDF" | "VIDEO" | "DOCUMENT" | "IMAGE" | "LINK";
   fileName?: string | null;
   sizeBytes?: number | null;
@@ -458,9 +468,7 @@ export type AssignmentExtras = Partial<
 export type SessionExtras = {
   /** PENDING-BACKEND: the API has no version history. */
   history: Map<string, CurriculumHistoryEntry[]>;
-  /** Files uploaded to a whole module. */
-  moduleFiles: Map<string, ResourceFile[]>;
-  /** PENDING-BACKEND: lesson topic labels and lesson file uploads. */
-  lessons: Map<string, { topic?: string; files?: ResourceFile[] }>;
+  /** PENDING-BACKEND: lesson topic labels. */
+  lessons: Map<string, { topic?: string }>;
   assignments: Map<string, AssignmentExtras>;
 };

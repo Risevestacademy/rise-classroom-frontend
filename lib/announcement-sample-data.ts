@@ -1,14 +1,17 @@
 /**
  * SAMPLE DATA — not real.
  *
- * The notifications design has an Announcements tab and an announcement page,
- * but the backend has no announcements endpoint yet. This feeds them so the
- * flow can be built and reviewed against the design.
+ * The student notifications design has an Announcements tab and an
+ * announcement page, and admins have an Announcements page, but the backend
+ * has no announcements endpoint yet. This feeds them so the flows can be
+ * built and reviewed against the design.
  *
  * Only used in local development (process.env.NODE_ENV === "development");
- * deployed builds show the empty state. See `lib/student-notifications.ts`.
+ * deployed builds show the empty state. See `lib/student-notifications.ts`
+ * and `lib/announcements.ts`.
  */
 
+import type { AdminAnnouncement } from "@/lib/announcements";
 import type { Announcement } from "@/lib/student-notifications";
 
 const HOUR = 3_600_000;
@@ -107,6 +110,49 @@ export function sampleAnnouncements(): Announcement[] {
       isRead: true,
       attachments: [],
       createdAt: ago(3 * DAY),
+    },
+  ];
+}
+
+/** The admin Announcements page's list. */
+export function adminSampleAnnouncements(): AdminAnnouncement[] {
+  const design = { id: "sample-design", name: "Design" };
+  return [
+    {
+      id: "welcome-new-cohort",
+      title: "Welcome to the New Cohort!",
+      content:
+        "We're excited to welcome everyone to another exciting learning season at Rise Academy!\nAs we begin this new chapter, we encourage all students, instructors, mentors, and academy members to stay engaged, communicate openly, and make the most of the opportunities ahead.",
+      category: "GENERAL",
+      audience: { type: "EVERYONE" },
+      publishedAt: "2026-11-16T08:00:00",
+    },
+    {
+      id: "ux-case-study-deadline",
+      title: "Assignment Submission Deadline",
+      content:
+        "This is a reminder to all Design track students that the submission deadline for the UX Case Study Assignment is November 20, 2026, at 11:59 PM (WAT)",
+      category: "DEADLINE",
+      audience: { type: "TRACKS", tracks: [design] },
+      publishedAt: "2026-11-12T10:30:00",
+    },
+    {
+      id: "grading-rubric-update",
+      title: "Updated grading rubric",
+      content:
+        "Assignments from Module 3 onwards are graded on the new rubric. Please walk your students through it in your next live class.",
+      category: "ACADEMIC_UPDATE",
+      audience: { type: "ROLES", roles: ["INSTRUCTOR", "MENTOR"] },
+      publishedAt: "2026-11-03T14:15:00",
+    },
+    {
+      id: "demo-day",
+      title: "Demo Day is on December 12",
+      content:
+        "Final projects will be presented live to the academy and invited guests. Sign-up details will follow next week.",
+      category: "EVENT",
+      audience: { type: "ROLES", roles: ["STUDENT"] },
+      publishedAt: "2026-10-05T09:00:00",
     },
   ];
 }
