@@ -1,4 +1,9 @@
-import { queryOptions } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import type { Cohort, Track } from "@/lib/admin";
 import { api, type Envelope, type Paginated } from "@/lib/api";
@@ -8,7 +13,11 @@ import type { OnboardingStatus, UserStatus } from "@/lib/auth";
 // shared with admins.
 
 export type WeeklyTaskStatus =
-  "PENDING" | "IN_PROGRESS" | "SUBMITTED" | "REVIEWED" | "OVERDUE";
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "SUBMITTED"
+  | "REVIEWED"
+  | "OVERDUE";
 
 /** An instructor's assignment to one track within one cohort. */
 export type InstructorTrack = {
@@ -55,6 +64,37 @@ export type WeeklyTaskFilters = {
   limit?: number;
 };
 
+export type NotificationRecord = {
+  id: string;
+  userId?: string;
+  title: string;
+  message?: string;
+  body?: string;
+  type?: string;
+  isRead: boolean;
+  readAt?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+export type NotificationFilters = {
+  page?: number;
+  limit?: number;
+};
+
+export type CreateNotificationPayload = {
+  title: string;
+  message?: string;
+  body?: string;
+  type?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type PaginatedNotifications = Paginated<NotificationRecord> & {
+  unreadCount?: number;
+};
+
 async function listMyTracks() {
   const { data } =
     await api.get<Envelope<InstructorTrack[]>>("/instructor/tracks");
@@ -86,6 +126,52 @@ async function countWeeklyTasks(filters: WeeklyTaskFilters = {}) {
   return total;
 }
 
+async function listNotifications(filters: NotificationFilters = {}) {
+  const { data } = await api.get<Envelope<PaginatedNotifications>>(
+    "/notifications",
+    { query: filters },
+  );
+
+  return data;
+}
+
+async function getNotificationById(id: string) {
+  const { data } = await api.get<Envelope<NotificationRecord>>(
+    `/notifications/${id}`,
+  );
+
+  return data;
+}
+
+export async function createNotification(payload: CreateNotificationPayload) {
+  const { data } = await api.post<Envelope<NotificationRecord>>(
+    "/notifications",
+    payload,
+  );
+
+  return data;
+}
+
+export async function markNotificationAsRead(id: string) {
+  const { data } = await api.patch<Envelope<NotificationRecord>>(
+    `/notifications/${id}/read`,
+  );
+
+  return data;
+}
+
+export async function markAllNotificationsAsRead() {
+  return api.patch<{ success: boolean; message: string }>(
+    "/notifications/read-all",
+  );
+}
+
+export async function deleteNotificationById(id: string) {
+  return api.delete<{ success: boolean; message: string }>(
+    `/notifications/${id}`,
+  );
+}
+
 export const instructorKeys = {
   myTracks: () => ["instructor", "tracks"] as const,
   students: (params: { cohortId?: string; trackId?: string }) =>
@@ -94,6 +180,10 @@ export const instructorKeys = {
     ["instructor", "weekly-tasks", filters] as const,
   weeklyTaskCount: (filters: WeeklyTaskFilters = {}) =>
     ["instructor", "weekly-tasks", "count", filters] as const,
+  notifications: (filters: NotificationFilters = {}) =>
+    ["instructor", "notifications", filters] as const,
+  notificationDetail: (id: string) =>
+    ["instructor", "notifications", "detail", id] as const,
 };
 
 export const instructorQueries = {
@@ -123,4 +213,81 @@ export const instructorQueries = {
       queryKey: instructorKeys.weeklyTaskCount(filters),
       queryFn: () => countWeeklyTasks(filters),
     }),
+
+  notifications: (filters: NotificationFilters = {}) =>
+    queryOptions({
+      queryKey: instructorKeys.notifications(filters),
+      queryFn: () => listNotifications(filters),
+    }),
+
+  notificationDetail: (id: string) =>
+    queryOptions({
+      queryKey: instructorKeys.notificationDetail(id),
+      queryFn: () => getNotificationById(id),
+      enabled: Boolean(id),
+    }),
 };
+
+const instructorNotificationFilters = { page: 1, limit: 50 };
+
+/** Instructor notifications backed by the notifications API. */
+export function useInstructorNotifications() {
+  const queryClient = useQueryClient();
+  const query = useQuery(
+    instructorQueries.notifications(instructorNotificationFilters),
+  );
+  const queryKey = instructorKeys.notifications(instructorNotificationFilters);
+  const notifications = query.data?.items ?? [];
+
+  const mutation = useMutation({
+    mutationFn: async (id?: string): Promise<void> => {
+      if (id) {
+        await markNotificationAsRead(id);
+      } else {
+        await markAllNotificationsAsRead();
+      }
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.setQueryData<PaginatedNotifications>(
+        queryKey,
+        (current) =>
+          current && {
+            ...current,
+            items: current.items.map((item) =>
+              id === undefined || item.id === id
+                ? { ...item, isRead: true }
+                : item,
+            ),
+            unreadCount:
+              id === undefined
+                ? 0
+                : Math.max(
+                    0,
+                    (current.unreadCount ??
+                      current.items.filter((item) => !item.isRead).length) - 1,
+                  ),
+          },
+      );
+    },
+    onError: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
+  function markRead(id?: string) {
+    if (id && notifications.find((item) => item.id === id)?.isRead) return;
+    mutation.mutate(id);
+  }
+
+  return {
+    notifications,
+    unreadCount:
+      query.data?.unreadCount ??
+      notifications.filter((item) => !item.isRead).length,
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch: query.refetch,
+    markRead,
+    isMarkReadError: mutation.isError,
+  };
+}

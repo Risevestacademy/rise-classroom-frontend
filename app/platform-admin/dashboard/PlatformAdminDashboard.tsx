@@ -9,6 +9,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { AcademyActionsMenu } from "@/components/platform-admin/AcademyActionsMenu";
 import { AllClearState } from "@/components/platform-admin/AllClearState";
 import { PlatformTopNav } from "@/components/platform-admin/PlatformTopNav";
+import { RecentRequests } from "@/components/platform-admin/RecentRequests";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,9 +17,11 @@ import { shortDate } from "@/lib/calendar";
 import {
   isActiveAcademy,
   isAwaitingSetup,
+  isOpenApplication,
   platformQueries,
   setupAdmin,
   type Academy,
+  type OrganizationApplication,
 } from "@/lib/platform";
 import { sessionQuery } from "@/lib/session-query";
 import { cn, greeting } from "@/lib/utils";
@@ -33,8 +36,17 @@ const recentAcademiesLimit = 3;
 /* The designs show "--" for a figure with nothing to count yet. */
 const figure = (count: number) => count || "--";
 
+/* The onboarding requests, loaded separately from the academies. */
+type Requests = {
+  applications: OrganizationApplication[];
+  isPending: boolean;
+  isError: boolean;
+  onRetry: () => void;
+};
+
 export function PlatformAdminDashboard() {
   const academiesQuery = useQuery(platformQueries.academies());
+  const applicationsQuery = useQuery(platformQueries.applications());
 
   return (
     <DashboardView
@@ -42,12 +54,33 @@ export function PlatformAdminDashboard() {
       isPending={academiesQuery.isPending}
       isError={academiesQuery.isError}
       onRetry={() => academiesQuery.refetch()}
+      requests={{
+        applications: applicationsQuery.data ?? [],
+        isPending: applicationsQuery.isPending,
+        isError: applicationsQuery.isError,
+        onRetry: () => applicationsQuery.refetch(),
+      }}
     />
   );
 }
 
+const loadingRequests: Requests = {
+  applications: [],
+  isPending: true,
+  isError: false,
+  onRetry: () => {},
+};
+
 export function PlatformAdminDashboardLoading() {
-  return <DashboardView academies={[]} isPending isError={false} onRetry={() => {}} />;
+  return (
+    <DashboardView
+      academies={[]}
+      isPending
+      isError={false}
+      onRetry={() => {}}
+      requests={loadingRequests}
+    />
+  );
 }
 
 function DashboardView({
@@ -55,17 +88,26 @@ function DashboardView({
   isPending,
   isError,
   onRetry,
+  requests,
 }: {
   academies: Academy[];
   isPending: boolean;
   isError: boolean;
   onRetry: () => void;
+  requests: Requests;
 }) {
   const session = useQuery(sessionQuery());
+  const openRequests = requests.applications.filter(isOpenApplication);
   const awaitingSetup = academies.filter(isAwaitingSetup);
   const activeCount = academies.filter(isActiveAcademy).length;
   const recentAcademies = academies.filter(setupAdmin).slice(0, recentAcademiesLimit);
-  const isEmpty = !isPending && !isError && academies.length === 0;
+  const nothingLoading = !isPending && !requests.isPending;
+  const nothingFailed = !isError && !requests.isError;
+  const isEmpty =
+    nothingLoading &&
+    nothingFailed &&
+    academies.length === 0 &&
+    requests.applications.length === 0;
 
   return (
     <>
@@ -89,7 +131,9 @@ function DashboardView({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               title="Pending Request"
-              value="--"
+              value={figure(openRequests.length)}
+              isPending={requests.isPending}
+              isError={requests.isError}
               icon={Clock}
               iconClassName="bg-surface-warning-badge text-text-warning"
               className="min-h-0"
@@ -134,7 +178,18 @@ function DashboardView({
                     subtitle="The latest academy applications that need your attention"
                     action={<ViewAllLink href="/platform-admin/onboarding-requests" />}
                   />
-                  <CardMessage>No onboarding requests to review.</CardMessage>
+                  <AcademyCardBody
+                    isPending={requests.isPending}
+                    isError={requests.isError}
+                    onRetry={requests.onRetry}
+                    isEmpty={openRequests.length === 0}
+                    emptyMessage="No onboarding requests to review."
+                    errorMessage="We couldn't load the onboarding requests."
+                  >
+                    <RecentRequests
+                      applications={openRequests.slice(0, previewLimit)}
+                    />
+                  </AcademyCardBody>
                 </section>
 
                 <section className={cn(cardClass, "flex min-w-0 flex-col gap-4 p-6")}>
@@ -176,7 +231,7 @@ function DashboardView({
                   </AcademyCardBody>
                 </section>
 
-                <section className={cn(cardClass, "flex min-w-0 flex-col gap-3 p-6")}>
+                {/* <section className={cn(cardClass, "flex min-w-0 flex-col gap-3 p-6")}>
                   <CardHeader
                     title="Recent Activity"
                     subtitle="A timeline of important platform activities."
@@ -194,7 +249,7 @@ function DashboardView({
                     }
                   />
                   <CardMessage>No activity to show yet.</CardMessage>
-                </section>
+                </section> */}
               </div>
             </div>
           )}
@@ -215,7 +270,7 @@ function AwaitingSetupRow({ academy }: { academy: Academy }) {
           Approved {shortDate(new Date(academy.createdAt))}
         </p>
       </div>
-      <Button
+      {/* <Button
         variant="secondary"
         size="sm"
         disabled
@@ -223,7 +278,7 @@ function AwaitingSetupRow({ academy }: { academy: Academy }) {
         className="shrink-0 border-neutral-200 text-neutral-800"
       >
         Resend email
-      </Button>
+      </Button> */}
     </li>
   );
 }
@@ -254,9 +309,7 @@ function RecentAcademiesTable({ academies }: { academies: Academy[] }) {
                   {shortDate(new Date(academy.createdAt))}
                 </td>
                 <td className="px-4 py-3">
-                  <p>
-                    {admin?.firstName} {admin?.lastName}
-                  </p>
+                  <p>{admin?.name}</p>
                   <p className="text-xs text-text-secondary">{admin?.email}</p>
                 </td>
                 <td className="px-4 py-3">
@@ -282,6 +335,7 @@ function AcademyCardBody({
   onRetry,
   isEmpty,
   emptyMessage,
+  errorMessage = "We couldn't load the academies.",
   children,
 }: {
   isPending: boolean;
@@ -289,6 +343,7 @@ function AcademyCardBody({
   onRetry: () => void;
   isEmpty: boolean;
   emptyMessage: string;
+  errorMessage?: string;
   children: React.ReactNode;
 }) {
   if (isPending) {
@@ -303,9 +358,7 @@ function AcademyCardBody({
   if (isError) {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
-        <p className="font-work text-sm text-text-secondary">
-          We couldn&apos;t load the academies.
-        </p>
+        <p className="font-work text-sm text-text-secondary">{errorMessage}</p>
         <Button
           variant="secondary"
           size="sm"

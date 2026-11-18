@@ -22,6 +22,8 @@ export type AuthUser = {
   displayName?: string | null;
   onboardingStatus: OnboardingStatus;
   onboardedAt?: string | null;
+  organizationId?: string | null;
+  organizationName?: string | null;
   createdAt: string;
   updatedAt: string;
 };

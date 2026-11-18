@@ -29,7 +29,7 @@ export function AcademyStatusDialog({
     mutationFn: () =>
       updateAcademyStatus(academy.id, suspended ? "ACTIVE" : "SUSPENDED"),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: platformKeys.academies });
+      await queryClient.invalidateQueries({ queryKey: platformKeys.all });
       onOpenChange(false);
     },
   });

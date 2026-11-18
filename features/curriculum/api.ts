@@ -9,7 +9,6 @@ import {
   byPosition,
   describeChange,
   emptyAssignment,
-  newResourceFile,
   toAssignments,
   toCurriculum,
   toIsoDate,
@@ -41,6 +40,7 @@ import {
   type ModuleAccessRecord,
   type ModuleAssignment,
   type ModuleLesson,
+  type ModuleStatus,
   type NoteRecord,
   type ResourceFile,
   type ResourceKind,
@@ -69,7 +69,6 @@ import {
 
 const local: SessionExtras = {
   history: new Map(),
-  moduleFiles: new Map(),
   lessons: new Map(),
   assignments: new Map(),
 };
@@ -87,6 +86,20 @@ async function getData<T>(
 async function postData<T>(path: string, body: unknown) {
   const { data } = await api.post<Envelope<T>>(path, body);
   return data;
+}
+
+/** Sends a picked file to an `/upload` endpoint as multipart form data. */
+async function uploadData<T>(
+  path: string,
+  file: File,
+  fields: { title: string; description?: string; publishStatus: ModuleStatus },
+) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("title", fields.title);
+  if (fields.description) form.append("description", fields.description);
+  form.append("publishStatus", fields.publishStatus);
+  return postData<T>(path, form);
 }
 
 /** Leaves optional text out of create payloads when it's blank. */
@@ -420,8 +433,8 @@ function createCurriculumApi(role: CurriculumRole) {
   }
 
   /**
-   * Saves whichever parts of the module are given. Uploaded files and lesson
-   * topic labels are session only; everything else is synced with the API.
+   * Saves whichever parts of the module are given. Lesson topic labels are
+   * session only; everything else is synced with the API.
    */
   async function updateModule(id: string, input: Partial<SaveModuleInput>) {
     const tree = await getTopicTree(id);
@@ -443,14 +456,10 @@ function createCurriculumApi(role: CurriculumRole) {
 
     if (input.resources) {
       await deleteRemovedResources(tree.resources, input.resources);
-      await createNewLinks(
+      await createNewResources(
         `${base}/topics/${id}/resources`,
         tree.resources,
         input.resources,
-      );
-      local.moduleFiles.set(
-        id,
-        input.resources.filter((r) => !r.url),
       );
     }
 
@@ -475,15 +484,23 @@ function createCurriculumApi(role: CurriculumRole) {
     );
   }
 
-  /* Saves links added in the form that the API doesn't have yet. */
-  async function createNewLinks(
+  /* Saves links and uploads files added in the form that the API doesn't have yet. */
+  async function createNewResources(
     path: string,
     saved: ResourceRecord[],
     resources: ResourceFile[],
   ) {
     const savedIds = new Set(saved.map((r) => r.id));
     for (const resource of resources) {
-      if (!resource.url || savedIds.has(resource.id)) continue;
+      if (savedIds.has(resource.id)) continue;
+      if (resource.file) {
+        await uploadData(`${path}/upload`, resource.file, {
+          title: resource.title || resource.name,
+          publishStatus: "PUBLISHED",
+        });
+        continue;
+      }
+      if (!resource.url) continue;
       assertHttpsLink(resource.url, "Each resource link");
       await postData(path, {
         title: resource.title || resource.name,
@@ -535,18 +552,15 @@ function createCurriculumApi(role: CurriculumRole) {
         }
         await deleteRemovedResources(lesson.resources, draft.resources);
       }
-      await createNewLinks(
+      await createNewResources(
         `${base}/lessons/${lesson.id}/resources`,
         lesson.resources,
         draft.resources,
       );
       await syncRecording(lesson, draft.recordingLink.trim());
 
-      // PENDING-BACKEND: topic labels and uploaded files have no API field.
-      local.lessons.set(lesson.id, {
-        topic: draft.topic,
-        files: draft.resources.filter((r) => !r.url),
-      });
+      // PENDING-BACKEND: topic labels have no API field.
+      local.lessons.set(lesson.id, { topic: draft.topic });
       saved.push(lesson);
     }
     return saved;
@@ -598,7 +612,6 @@ function createCurriculumApi(role: CurriculumRole) {
 
   async function deleteModule(id: string) {
     await api.delete(`${base}/topics/${id}`);
-    local.moduleFiles.delete(id);
   }
 
   /** Saves a new module order as each topic's `position`. */
@@ -721,57 +734,44 @@ function createCurriculumApi(role: CurriculumRole) {
 
   // ---- Resources ---------------------------------------------------------------
 
-  /**
-   * Links are saved to the API. PENDING-BACKEND: it has no upload endpoint, so a
-   * picked file can't be saved there and is kept for the session only.
-   */
+  /** Saves a link, or uploads a picked file (up to 25 MiB). */
   async function createResource(
     moduleId: string,
     lessonId: string | null,
     input: CreateResourceInput,
   ) {
-    if (input.url) {
-      assertHttpsLink(input.url, "The link");
-      const record = await postData<ResourceRecord>(
-        lessonId
-          ? `${base}/lessons/${lessonId}/resources`
-          : `${base}/topics/${moduleId}/resources`,
+    const path = lessonId
+      ? `${base}/lessons/${lessonId}/resources`
+      : `${base}/topics/${moduleId}/resources`;
+
+    if (input.file) {
+      const record = await uploadData<ResourceRecord>(
+        `${path}/upload`,
+        input.file,
         {
           title: input.title,
-          ...optionalText("description", input.description),
-          url: input.url,
-          type: apiResourceTypes[input.kind ?? "Link"],
+          description: input.description,
           publishStatus: "PUBLISHED",
         },
       );
       return toResourceFile(record);
     }
 
-    const created = newResourceFile(input);
-    if (lessonId) {
-      const extras = local.lessons.get(lessonId) ?? {};
-      local.lessons.set(lessonId, {
-        ...extras,
-        files: [...(extras.files ?? []), created],
-      });
-    } else {
-      local.moduleFiles.set(moduleId, [
-        ...(local.moduleFiles.get(moduleId) ?? []),
-        created,
-      ]);
-    }
-    return created;
+    assertHttpsLink(input.url ?? "", "The link");
+    const record = await postData<ResourceRecord>(path, {
+      title: input.title,
+      ...optionalText("description", input.description),
+      url: input.url,
+      type: apiResourceTypes[input.kind ?? "Link"],
+      publishStatus: "PUBLISHED",
+    });
+    return toResourceFile(record);
   }
 
   async function updateResource(
     resourceId: string,
     changes: Partial<ResourceFile>,
   ) {
-    const isLocal = editLocalResources(resourceId, (resources) =>
-      resources.map((r) => (r.id === resourceId ? { ...r, ...changes } : r)),
-    );
-    if (isLocal) return;
-
     const { title, description, status } = changes;
     await api.patch(`${base}/resources/${resourceId}`, {
       title,
@@ -781,10 +781,7 @@ function createCurriculumApi(role: CurriculumRole) {
   }
 
   async function deleteResource(resourceId: string) {
-    const isLocal = editLocalResources(resourceId, (resources) =>
-      resources.filter((r) => r.id !== resourceId),
-    );
-    if (!isLocal) await api.delete(`${base}/resources/${resourceId}`);
+    await api.delete(`${base}/resources/${resourceId}`);
   }
 
   // ---- Submissions -------------------------------------------------------------
@@ -816,7 +813,7 @@ function createCurriculumApi(role: CurriculumRole) {
 
   /*
    * Unlocks or locks a module for its cohort. Unlocking also opens the module's published
-   * lessons. The API only has this for instructors.
+   * lessons, and locking puts its assignments on hold.
    */
   async function setModuleAccess(
     moduleId: string,
@@ -831,6 +828,17 @@ function createCurriculumApi(role: CurriculumRole) {
       studentCount: record.enrollmentCount,
       openCount: record.statuses.filter((status) => status.unlocked).length,
     };
+  }
+
+  /*
+   * Unlocks or locks one lesson for its cohort. The API only unlocks a lesson
+   * once its module is unlocked; locking puts the lesson's assignments on hold.
+   */
+  async function setLessonAccess(lessonId: string, unlocked: boolean) {
+    await postData(
+      `${base}/lessons/${lessonId}/${unlocked ? "unlock" : "lock"}`,
+      {},
+    );
   }
 
   // ---- Query keys + options ----------------------------------------------------
@@ -963,31 +971,9 @@ function createCurriculumApi(role: CurriculumRole) {
     updateResource,
     deleteResource,
     setModuleAccess,
+    setLessonAccess,
     reviewSubmission,
   };
-}
-
-/** Applies `change` to the session-only list holding the resource, if any. */
-function editLocalResources(
-  resourceId: string,
-  change: (resources: ResourceFile[]) => ResourceFile[],
-) {
-  const holds = (list?: ResourceFile[]) =>
-    !!list?.some((r) => r.id === resourceId);
-
-  for (const [id, files] of local.moduleFiles) {
-    if (holds(files)) {
-      local.moduleFiles.set(id, change(files));
-      return true;
-    }
-  }
-  for (const [id, extras] of local.lessons) {
-    if (holds(extras.files)) {
-      local.lessons.set(id, { ...extras, files: change(extras.files!) });
-      return true;
-    }
-  }
-  return false;
 }
 
 export type CurriculumApi = ReturnType<typeof createCurriculumApi>;

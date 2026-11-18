@@ -53,7 +53,7 @@ function saveAccess(moduleId: string, access: ModuleAccess) {
 }
 
 /*
- * Lets an instructor open a module to every student on the track, or close it again,
+ * Lets an admin or instructor open a module to every student on the track, or close it again,
  * with one button that shows the current state. `unlocked` comes from the API; the
  * student counts only come back from an unlock or lock, so the last one made from this
  * browser is kept while it still matches.
@@ -62,10 +62,13 @@ export function ModuleAccessCard({
   moduleId,
   moduleStatus,
   unlocked: apiUnlocked,
+  onChange,
 }: {
   moduleId: string;
   moduleStatus: ModuleStatus;
   unlocked?: boolean;
+  /* Called after an unlock or lock, which also opens or closes the module's lessons. */
+  onChange?: () => void;
 }) {
   const { api } = useCurriculumScope();
   const queryClient = useQueryClient();
@@ -88,6 +91,7 @@ export function ModuleAccessCard({
       queryClient.setQueryData(accessKey, result);
       saveAccess(moduleId, result);
       setConfirmLock(false);
+      onChange?.();
     },
   });
 

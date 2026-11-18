@@ -270,7 +270,7 @@ function OverviewTab({
       <div className="flex min-w-0 flex-col gap-4">
         <ProfileCard student={student} />
         <MentorCard mentor={student.mentor} />
-        <ProgressCard student={student} />
+        <ProgressCard student={student} onTabChange={onTabChange} />
         <DeadlinesCard onTabChange={onTabChange} />
       </div>
       <div className="flex min-w-0 flex-col gap-4">
@@ -440,7 +440,16 @@ function MentorCard({ mentor }: { mentor: AdminUser["mentor"] }) {
   );
 }
 
-function ProgressCard({ student }: { student: AdminUser }) {
+/** How many modules the overview lists before "See all". */
+const overviewModuleCount = 5;
+
+function ProgressCard({
+  student,
+  onTabChange,
+}: {
+  student: AdminUser;
+  onTabChange: (tab: Tab) => void;
+}) {
   const { tracks } = assignmentsFor(student);
   const { progress } = useStudentProgress(student);
   const modules = progress?.modules ?? [];
@@ -451,7 +460,8 @@ function ProgressCard({ student }: { student: AdminUser }) {
   ];
   const shown = modules
     .map((item, index) => ({ ...item, tone: toneOrder[index % toneOrder.length] }))
-    .filter((item) => module === "all" || item.id === module);
+    .filter((item) => module === "all" || item.id === module)
+    .slice(0, overviewModuleCount);
   const overall = progress?.overall ?? null;
   const trackName = tracks[0] ?? "track";
 
@@ -488,34 +498,50 @@ function ProgressCard({ student }: { student: AdminUser }) {
           </div>
         </CircularProgress>
 
-        <ul className="flex w-full min-w-0 flex-1 flex-col gap-2">
-          {shown.map((item) => {
-            const tone = moduleTones[item.tone];
-            const Icon = tone.icon;
-            return (
-              <li
-                key={item.id}
-                className="grid grid-cols-[32px_minmax(0,1fr)_minmax(0,148px)_auto] items-center gap-3"
-              >
-                <span
-                  className={cn(
-                    "flex size-8 items-center justify-center rounded-lg",
-                    tone.box,
-                  )}
-                >
-                  <Icon className="size-5" />
-                </span>
-                <span className="truncate font-work text-sm font-medium text-text-primary">
-                  {item.name}
-                </span>
-                <ProgressBar value={item.progress ?? 0} fillClassName={tone.bar} />
-                <span className="w-[29px] text-right font-work text-sm font-medium text-text-primary">
-                  {item.progress === null ? "--" : `${item.progress}%`}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-4">
+          <ul className="flex flex-col gap-4">
+            {shown.map((item) => {
+              const tone = moduleTones[item.tone];
+              const Icon = tone.icon;
+              return (
+                <li key={item.id} className="flex items-center gap-3">
+                  <span
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                      tone.box,
+                    )}
+                  >
+                    <Icon className="size-5" />
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <span
+                        title={item.name}
+                        className="truncate font-work text-sm font-medium text-text-primary"
+                      >
+                        {item.name}
+                      </span>
+                      <span className="shrink-0 font-work text-sm font-medium text-text-primary">
+                        {item.progress === null ? "--" : `${item.progress}%`}
+                      </span>
+                    </div>
+                    <ProgressBar value={item.progress ?? 0} fillClassName={tone.bar} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {module === "all" && modules.length > overviewModuleCount && (
+            <Button
+              onClick={() => onTabChange("progress")}
+              variant="tertiary"
+              size="sm"
+              className="self-start"
+            >
+              See all {modules.length} modules
+            </Button>
+          )}
+        </div>
       </div>
     </Card>
   );
