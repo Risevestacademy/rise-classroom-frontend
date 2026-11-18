@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { Logo } from "@/assets/logo";
 import { AuthShell } from "@/components/AuthShell";
+import { DashboardPreview } from "@/components/sign-up/DashboardPreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,8 +48,17 @@ export default function SignUpPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function handleContinue(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  /* Which way the last step change went, so the next step slides in from
+     that side. */
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
+
+  /* Step two needs a valid step one; going back never does. */
+  function goToStep(next: 1 | 2) {
+    if (next === 1) {
+      setDirection("back");
+      setStep("you");
+      return;
+    }
     const nameError = hasFirstAndLastName(fullName)
       ? null
       : "Please enter your first and last name";
@@ -58,7 +68,13 @@ export default function SignUpPage() {
     setFullNameError(nameError);
     setEmailError(addressError);
     if (nameError || addressError) return;
+    setDirection("forward");
     setStep("space");
+  }
+
+  function handleContinue(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    goToStep(2);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -84,10 +100,14 @@ export default function SignUpPage() {
     }
   }
 
+  const preview = (
+    <DashboardPreview fullName={fullName} academyName={academyName} />
+  );
+
   if (step === "submitted") {
     return (
-      <AuthShell panel="plain">
-        <div className="flex flex-col items-center text-center">
+      <AuthShell panel="plain" aside={preview}>
+        <div className="flex animate-in flex-col items-center text-center duration-300 fade-in zoom-in-95 motion-reduce:animate-none">
           <SuccessMark />
           <h1 className="mt-4 text-2xl/8 font-semibold text-text-primary">
             Application submitted
@@ -111,15 +131,20 @@ export default function SignUpPage() {
   }
 
   return (
-    <AuthShell panel="plain">
+    <AuthShell panel="plain" aside={preview}>
       <div>
         <div className="flex justify-center">
           <Logo variant="teal" size="lg" />
         </div>
-        <StepBar current={step === "you" ? 1 : 2} />
+        <StepBar current={step === "you" ? 1 : 2} onSelect={goToStep} />
 
         {step === "you" ? (
-          <form onSubmit={handleContinue} noValidate>
+          <form
+            key="you"
+            onSubmit={handleContinue}
+            noValidate
+            className={stepEnterClass(direction)}
+          >
             <FormIntro
               title="Let’s get to know you."
               subtitle="Tell us about yourself and your academy. We’ll review your request and help you get started."
@@ -171,7 +196,12 @@ export default function SignUpPage() {
             </Button>
           </form>
         ) : (
-          <form onSubmit={handleSubmit} noValidate>
+          <form
+            key="space"
+            onSubmit={handleSubmit}
+            noValidate
+            className={stepEnterClass(direction)}
+          >
             <FormIntro
               title="Tell us about your learning space."
               subtitle="Tell us about your learning space before we set up your account."
@@ -249,33 +279,54 @@ export default function SignUpPage() {
   );
 }
 
-/** Two segments: the first fills on step 1, both on step 2. */
-function StepBar({ current }: { current: 1 | 2 }) {
+/* A step slides in from the side the user is heading towards. */
+function stepEnterClass(direction: "forward" | "back"): string {
+  return cn(
+    "animate-in duration-300 ease-out fade-in motion-reduce:animate-none",
+    direction === "forward" ? "slide-in-from-right-6" : "slide-in-from-left-6",
+  );
+}
+
+const stepLabels = ["About you", "Your learning space"] as const;
+
+/* Two segments: the first fills on step 1, both on step 2. Each segment is
+   also a tab for its step; the bars stay 4px, the buttons around them are
+   tall enough to tap. */
+function StepBar({
+  current,
+  onSelect,
+}: {
+  current: 1 | 2;
+  onSelect: (step: 1 | 2) => void;
+}) {
   return (
-    <div
-      role="progressbar"
-      aria-label="Sign-up progress"
-      aria-valuemin={1}
-      aria-valuemax={2}
-      aria-valuenow={current}
-      className="mt-[68px] flex gap-2"
-    >
-      {[1, 2].map((segment) => (
-        <span
+    <nav aria-label="Sign-up steps" className="mt-[62px] flex gap-2">
+      {([1, 2] as const).map((segment) => (
+        <button
           key={segment}
-          className={cn(
-            "h-1 flex-1 rounded-full",
-            segment <= current ? "bg-border-focus" : "bg-border-strong",
-          )}
-        />
+          type="button"
+          aria-label={`Step ${segment} of 2: ${stepLabels[segment - 1]}`}
+          aria-current={segment === current ? "step" : undefined}
+          onClick={() => segment !== current && onSelect(segment)}
+          className="group flex-1 cursor-pointer rounded-full py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-2 aria-[current=step]:cursor-default"
+        >
+          <span className="block h-1 overflow-hidden rounded-full bg-border-strong">
+            <span
+              className={cn(
+                "block h-full origin-left rounded-full bg-border-focus transition-transform duration-500 ease-out motion-reduce:transition-none",
+                segment <= current ? "scale-x-100" : "scale-x-0",
+              )}
+            />
+          </span>
+        </button>
       ))}
-    </div>
+    </nav>
   );
 }
 
 function FormIntro({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <div className="mt-[30px] flex flex-col gap-2">
+    <div className="mt-6 flex flex-col gap-2">
       <h1 className="text-2xl/8 font-semibold text-text-primary">{title}</h1>
       <p className="font-work text-sm text-text-secondary">{subtitle}</p>
     </div>
