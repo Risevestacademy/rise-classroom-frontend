@@ -11,9 +11,12 @@ import { cn } from "@/lib/utils";
  */
 export function AuthShell({
   panel = "branded",
+  aside,
   children,
 }: {
   panel?: "branded" | "plain";
+  /* Centred in the panel; the panel only shows on large screens. */
+  aside?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const plain = panel === "plain";
@@ -36,6 +39,11 @@ export function AuthShell({
               Learn. Practice. Progress.
             </p>
           </>
+        )}
+        {aside && (
+          <div className="absolute inset-0 flex items-center justify-center p-8 xl:p-12">
+            {aside}
+          </div>
         )}
       </div>
 
