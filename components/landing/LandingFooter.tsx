@@ -98,17 +98,14 @@ export function LandingFooter() {
 
         {/* Sizes are in cqw so "Classroom" always spans the full width and the
             copyright stays lined up with the end of it. */}
-        <div
-          data-footer-wordmark
-          className="@container relative w-full"
-        >
+        <div data-footer-wordmark className="@container relative w-full">
           <span className="sr-only">Rise Classroom</span>
           <div aria-hidden className="leading-none font-normal select-none">
             {/* The taller line box keeps the dot on the "i" inside the reveal clip. */}
-            <p className="wordmark-dots w-fit text-[length:7.9cqw] leading-[1.3]">
+            <p className="w-fit text-[length:7.9cqw] text-brand-300 leading-[1.3]">
               rise
             </p>
-            <p className="wordmark-dots -mt-[2.7cqw] w-fit text-[length:20.2cqw]">
+            <p className="-mt-[2.7cqw] w-fit text-[length:20.2cqw] text-brand-300">
               Classroom
             </p>
           </div>

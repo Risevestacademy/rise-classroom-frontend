@@ -123,7 +123,7 @@ function FaceAvatar({ photo, size }: { photo: Photo; size: number }) {
   const width = Math.max(
     size,
     (size * 0.6) / face.w,
-    (size * photo.width) / photo.height
+    (size * photo.width) / photo.height,
   );
   const height = (width * photo.height) / photo.width;
   const clamp = (offset: number, length: number) =>
@@ -191,7 +191,7 @@ export function TestimonialCarousel() {
         },
       });
     },
-    { scope: root }
+    { scope: root },
   );
 
   useGSAP(
@@ -235,7 +235,7 @@ export function TestimonialCarousel() {
           gsap.fromTo(
             card,
             { ...THROWN, autoAlpha: 0 },
-            { ...slot, duration: 0.9, ease: EASE_OUT }
+            { ...slot, duration: 0.9, ease: EASE_OUT },
           );
           return;
         }
@@ -291,7 +291,7 @@ export function TestimonialCarousel() {
           })
           .from(
             incoming.querySelectorAll(
-              "[data-quote-part]:not([data-quote-title])"
+              "[data-quote-part]:not([data-quote-title])",
             ),
             {
               y: 24,
@@ -300,13 +300,13 @@ export function TestimonialCarousel() {
               stagger: 0.08,
               ease: EASE_OUT,
             },
-            0.1
+            0.1,
           );
 
         gsap.fromTo(
           "[data-quote-count]",
           { yPercent: forward ? 100 : -100 },
-          { yPercent: 0, duration: 0.7, ease: EASE_OUT }
+          { yPercent: 0, duration: 0.7, ease: EASE_OUT },
         );
       }
 
@@ -322,11 +322,11 @@ export function TestimonialCarousel() {
           duration: AUTO_ADVANCE_SECONDS,
           ease: "none",
           onComplete: () => go(1),
-        }
+        },
       );
       syncTimer();
     },
-    { scope: root, dependencies: [active] }
+    { scope: root, dependencies: [active] },
   );
 
   const onPointerDown = (event: PointerEvent) => {
@@ -385,7 +385,7 @@ export function TestimonialCarousel() {
               aria-hidden={index !== active}
               className={cn(
                 "col-start-1 row-start-1",
-                index !== 0 && "invisible"
+                index !== 0 && "invisible",
               )}
             >
               <h3
@@ -457,7 +457,7 @@ export function TestimonialCarousel() {
               }}
               className={cn(
                 "absolute inset-0 overflow-hidden rounded-[24px] border-[6px] bg-[#232220] transition-colors duration-500",
-                index === active ? "border-white" : "border-neutral-200"
+                index === active ? "border-white" : "border-neutral-200",
               )}
             >
               <Image

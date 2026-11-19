@@ -1,4 +1,5 @@
 import { FaqAccordion } from "@/components/landing/FaqAccordion";
+import { RiseMark } from "@/components/landing/RiseMark";
 
 const FAQS = [
   {
@@ -35,25 +36,24 @@ const FAQS = [
 
 export function FaqSection() {
   return (
-    <section
-      id="faq"
-      data-bg="#F5F6FF"
-      className="bg-brand-50 px-4 pt-[72px] pb-[44px] lg:pt-[100px]"
-    >
-      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-10 lg:flex-row lg:justify-between lg:gap-0">
-        <div className="lg:w-[328px]">
+    <section id="faq" data-bg="#FFFFFF" className="px-4 py-19 lg:py-[128px]">
+      <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-12 lg:flex-row lg:justify-between lg:gap-14">
+        <div className="lg:sticky lg:top-20 lg:w-[380px] lg:self-start">
+          <RiseMark />
           <h2
-            data-reveal="words"
-            className="text-[32px] leading-[40px] font-semibold text-text-primary lg:text-[40px] lg:leading-[48px]"
+            data-reveal="lines"
+            className="mt-6 text-[36px] leading-[1.08] font-black tracking-[-0.035em] text-brand-950 lg:text-[52px]"
           >
-            Totally fair to ask.
+            Frequently asked questions
           </h2>
-          <p
-            data-reveal="up"
-            className="mt-[12px] max-w-[322px] text-[16px] leading-6 font-medium text-text-secondary"
-          >
-            Everything you need to know about getting started with Rise
-            Classroom
+          <p className="mt-5 text-[16px] leading-7 text-text-secondary">
+            Still curious?{" "}
+            <a
+              href="mailto:contact@riseclassroom.com"
+              className="font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 hover:decoration-brand-700"
+            >
+              Write to us
+            </a>
           </p>
         </div>
 

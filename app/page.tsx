@@ -1,14 +1,15 @@
+import { AudienceSection } from "@/components/landing/AudienceSection";
 import { FaqSection } from "@/components/landing/FaqSection";
+import { FinalCta } from "@/components/landing/FinalCta";
 import { HeroSection } from "@/components/landing/HeroSection";
-import { KeywordMarquee } from "@/components/landing/KeywordMarquee";
+import { HowItWorks } from "@/components/landing/HowItWorks";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LandingMotion } from "@/components/landing/motion/LandingMotion";
 import { PricingSection } from "@/components/landing/PricingSection";
-import { SolutionSection } from "@/components/landing/SolutionSection";
+import { ValueCards } from "@/components/landing/ValueCards";
 // Hidden until we have real testimonials.
 // import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
-import { ValuePropSection } from "@/components/landing/ValuePropSection";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -25,12 +26,13 @@ export default function HomePage() {
         className="relative z-10 overflow-clip rounded-b-[40px]"
       >
         <HeroSection />
-        <KeywordMarquee />
-        <ValuePropSection />
-        <SolutionSection />
+        <ValueCards />
+        <HowItWorks />
+        <AudienceSection />
         {/* <TestimonialsSection /> */}
         <PricingSection />
         <FaqSection />
+        <FinalCta />
       </main>
       <LandingFooter />
       <LandingMotion />

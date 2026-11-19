@@ -14,7 +14,7 @@ gsap.registerPlugin(
   Flip,
   ScrambleTextPlugin,
   ScrollTrigger,
-  SplitText
+  SplitText,
 );
 
 /** Shared motion tokens so every section moves with the same feel. */
