@@ -380,3 +380,10 @@ body {
   background-clip: text;
   color: transparent;
 }
+
+/* Sign-up dashboard preview: the blinking cursor after the text being typed. */
+@keyframes preview-caret {
+  50% {
+    opacity: 0;
+  }
+}

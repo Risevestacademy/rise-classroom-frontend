@@ -51,3 +51,38 @@ describe("sign-up steps", () => {
     );
   });
 });
+
+describe("sign-up dashboard preview", () => {
+  const zoom = () =>
+    document.querySelector("[data-preview-zoom]")?.getAttribute("data-preview-zoom");
+
+  it("zooms towards the greeting while the name is typed, and back out after", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<SignUpPage />);
+    expect(zoom()).toBe("none");
+
+    await user.type(screen.getByPlaceholderText("e.g Ada Okafor"), "Ada Okafor");
+    expect(zoom()).toBe("name");
+    expect(screen.getAllByText("Ada Okafor").length).toBeGreaterThan(0);
+
+    await user.click(screen.getByPlaceholderText("rise@email.com"));
+    expect(zoom()).toBe("none");
+  });
+
+  it("zooms towards the organisation tag for the academy name", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<SignUpPage />);
+    await fillStepOne(user);
+    await user.click(screen.getByRole("button", { name: stepTwo }));
+
+    await user.type(
+      screen.getByPlaceholderText("e.g Bright Future Academy"),
+      "Bright Future",
+    );
+    expect(zoom()).toBe("academy");
+    expect(screen.getByText("Bright Future")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: stepOne }));
+    expect(zoom()).toBe("none");
+  });
+});
