@@ -9,6 +9,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCompanionCheer } from "@/components/mascot/Companion";
 import { HowItWorksDialog } from "@/components/control-tower/ControlTowerDialogs";
 import {
+  ControlTowerTour,
+  useControlTowerTour,
+} from "@/components/control-tower/ControlTowerTour";
+import {
   ControlTowerColumn,
   ControlTowerMenu,
   LoadErrorPanel,
@@ -74,7 +78,7 @@ function Header({
 }) {
   return (
     <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
+      <div className="min-w-0" data-tour="header">
         <h1 className="text-2xl font-semibold text-neutral-800">Control Tower</h1>
         <div className="mt-1 text-sm text-neutral-500">{subtitle}</div>
       </div>
@@ -97,6 +101,7 @@ function CurrentWeek({
   );
   const leave = useLeaveGuard(editor.isDirty, week.number);
   const [showHowItWorks, setShowHowItWorks] = React.useState(false);
+  const tour = useControlTowerTour();
 
   const daysLeft = daysLeftIn(week.weekEnd);
 
@@ -107,6 +112,7 @@ function CurrentWeek({
         actions={
           <>
             <Button
+              data-tour="save"
               size="medium"
               onClick={editor.save}
               disabled={!editor.isDirty || editor.isSaving}
@@ -118,6 +124,7 @@ function CurrentWeek({
                 leave.guard(() => router.push(PREVIOUS_WEEKS_PATH))
               }
               onHowItWorks={() => setShowHowItWorks(true)}
+              onTakeTour={tour.start}
             />
           </>
         }
@@ -137,6 +144,7 @@ function CurrentWeek({
       />
 
       <HowItWorksDialog open={showHowItWorks} onOpenChange={setShowHowItWorks} />
+      {tour.open && <ControlTowerTour onClose={tour.close} />}
       {leave.dialog}
       {editor.toast}
     </ControlTowerColumn>

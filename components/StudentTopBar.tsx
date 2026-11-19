@@ -122,13 +122,13 @@ export function StudentTopBar() {
         >
           <Calendar className="h-5 w-5" />
         </button>
-        <Link
+        {/* <Link
           href="/student/notifications"
           aria-label="Notifications"
           className={iconButton}
         >
           <Bell className="h-5 w-5" />
-        </Link>
+        </Link> */}
         <CompanionResident />
         <NotificationsPopover className={iconButton} />
 
