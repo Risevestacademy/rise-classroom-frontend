@@ -54,9 +54,10 @@ export function toInstructorStudentListItems(
 ): InstructorStudentListItem[] {
   const byId = new Map<string, InstructorStudentListItem>();
 
-  students.forEach(({ user }) => {
+  students.forEach(({ enrollmentId, user }) => {
     byId.set(user.id, {
       id: user.id,
+      enrollmentId,
       name: user.name,
       email: user.email,
       status: user.status === "ACTIVE" ? "Active" : "Inactive",
