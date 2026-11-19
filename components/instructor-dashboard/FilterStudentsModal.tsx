@@ -13,15 +13,14 @@ interface FilterStudentsModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   currentStatusFilter: string;
-  currentSortBy: "name" | "progress" | "grade";
-  onApplyFilters: (status: string, sort: "name" | "progress" | "grade") => void;
+  // currentSortBy: "name" | "progress" | "grade";
+  onApplyFilters: (status: string) => void;
 }
 
 export function FilterStudentsModal({
   isOpen,
   onOpenChange,
   currentStatusFilter,
-  currentSortBy,
   onApplyFilters,
 }: FilterStudentsModalProps) {
   return (
@@ -30,7 +29,7 @@ export function FilterStudentsModal({
         {isOpen && (
           <FilterStudentsForm
             currentStatusFilter={currentStatusFilter}
-            currentSortBy={currentSortBy}
+            // currentSortBy={currentSortBy}
             onApplyFilters={onApplyFilters}
             onOpenChange={onOpenChange}
           />
@@ -42,24 +41,23 @@ export function FilterStudentsModal({
 
 function FilterStudentsForm({
   currentStatusFilter,
-  currentSortBy,
   onApplyFilters,
   onOpenChange,
 }: Pick<
   FilterStudentsModalProps,
-  "currentStatusFilter" | "currentSortBy" | "onApplyFilters" | "onOpenChange"
+  "currentStatusFilter" | "onApplyFilters" | "onOpenChange"
 >) {
   const [statusFilter, setStatusFilter] = useState(currentStatusFilter);
-  const [sortBy, setSortBy] = useState<"name" | "progress" | "grade">(currentSortBy);
+  // const [sortBy, setSortBy] = useState<"name" | "progress" | "grade">(currentSortBy);
 
   const handleApply = () => {
-    onApplyFilters(statusFilter, sortBy);
+    onApplyFilters(statusFilter);
     onOpenChange(false);
   };
 
   const handleReset = () => {
     setStatusFilter("All");
-    setSortBy("name");
+    // setSortBy("name");
   };
 
   return (
@@ -75,8 +73,8 @@ function FilterStudentsForm({
           <label className="text-xs font-semibold text-neutral-800">
             Filter by Status
           </label>
-          <div className="grid grid-cols-4 gap-2">
-            {["All", "Active", "Behind", "At risk"].map((status) => (
+          <div className="grid grid-cols-3 gap-2">
+            {["All", "Active", "Inactive"].map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
@@ -92,6 +90,7 @@ function FilterStudentsForm({
           </div>
         </div>
 
+        {/*
         <div className="space-y-2">
           <label className="text-xs font-semibold text-neutral-800">
             Sort by
@@ -116,6 +115,7 @@ function FilterStudentsForm({
             ))}
           </div>
         </div>
+        */}
 
         <div className="flex items-center justify-between pt-2">
           <button

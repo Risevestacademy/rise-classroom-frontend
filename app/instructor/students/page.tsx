@@ -3,16 +3,31 @@
 import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
 import { useState } from "react";
 import { Search, Download, Filter } from "lucide-react";
+import { useQueries, useQuery } from "@tanstack/react-query";
 
 import StudentsTable from "@/components/instructor-dashboard/StudentsTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { DUMMY_STUDENTS } from "@/components/instructor-dashboard/data";
 import { ExportStudentsModal } from "@/components/instructor-dashboard/ExportStudentsModal";
 import { FilterStudentsModal } from "@/components/instructor-dashboard/FilterStudentsModal";
+import {
+  instructorQueries,
+  toInstructorStudentListItems,
+} from "@/lib/instructor";
 
 export default function StudentsPage() {
+  const tracksQuery = useQuery(instructorQueries.myTracks());
+  const tracks = tracksQuery.data ?? [];
+  const studentQueries = useQueries({
+    queries: tracks.map((track) =>
+      instructorQueries.students({
+        cohortId: track.cohortId,
+        trackId: track.trackId,
+      }),
+    ),
+  });
+
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -21,31 +36,32 @@ export default function StudentsPage() {
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("All");
-  const [sortBy, setSortBy] = useState<"name" | "progress" | "grade">("name");
 
-  const filteredStudents = DUMMY_STUDENTS.filter((student) => {
+  const allStudents = toInstructorStudentListItems(
+    studentQueries.flatMap((query) => query.data ?? []),
+  );
+  const filteredStudents = allStudents.filter((student) => {
     const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.email.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesTab =
-      activeTab === "all" ? true :
-        activeTab === "active" ? student.status === "Active" :
-          activeTab === "behind" ? student.status === "Behind" :
-            activeTab === "at-risk" ? student.status === "At risk" : true;
+      activeTab === "all" ||
+      (activeTab === "active" && student.status === "Active") ||
+      (activeTab === "inactive" && student.status === "Inactive");
 
     const matchesModalFilter =
       statusFilter === "All" ? true : student.status === statusFilter;
 
     return matchesSearch && matchesTab && matchesModalFilter;
-  }).sort((a, b) => {
-    if (sortBy === "name") return a.name.localeCompare(b.name);
-    if (sortBy === "progress") return b.progress - a.progress;
-    if (sortBy === "grade") {
-      return b.averageGrade - a.averageGrade;
-    }
-    return 0;
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name));
+
+  const errorMessage =
+    tracksQuery.isError || studentQueries.some((query) => query.isError)
+      ? "Unable to load students. Please try again."
+      : undefined;
+  const isLoading =
+    tracksQuery.isLoading || studentQueries.some((query) => query.isLoading);
 
   return (
     <>
@@ -81,7 +97,7 @@ export default function StudentsPage() {
                   : "text-neutral-600 hover:text-neutral-900"
                 }`}
             >
-              All {DUMMY_STUDENTS.length}
+              All {allStudents.length}
             </button>
             <button
               onClick={() => setActiveTab("active")}
@@ -90,8 +106,9 @@ export default function StudentsPage() {
                   : "text-neutral-600 hover:text-neutral-900"
                 }`}
             >
-              Active {DUMMY_STUDENTS.filter((s) => s.status === "Active").length}
+              Active {allStudents.filter((student) => student.status === "Active").length}
             </button>
+            {/* listStudents does not provide progress-based student statuses.
             <button
               onClick={() => setActiveTab("behind")}
               className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer ${activeTab === "behind"
@@ -109,6 +126,16 @@ export default function StudentsPage() {
                 }`}
             >
               At risk {DUMMY_STUDENTS.filter((s) => s.status === "At risk").length}
+            </button>
+            */}
+            <button
+              onClick={() => setActiveTab("inactive")}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer ${activeTab === "inactive"
+                  ? "bg-white text-neutral-900 shadow-xs"
+                  : "text-neutral-600 hover:text-neutral-900"
+                }`}
+            >
+              Inactive {allStudents.filter((student) => student.status === "Inactive").length}
             </button>
           </div>
 
@@ -142,6 +169,8 @@ export default function StudentsPage() {
             students={filteredStudents}
             onSelectionChange={setSelectedStudentIds}
             emptyMessage={`No students match "${searchQuery || "your filters"}".`}
+            isLoading={isLoading}
+            errorMessage={errorMessage}
           />
         </div>
 
@@ -149,17 +178,15 @@ export default function StudentsPage() {
           isOpen={isFilterOpen}
           onOpenChange={setIsFilterOpen}
           currentStatusFilter={statusFilter}
-          currentSortBy={sortBy}
-          onApplyFilters={(newStatus, newSort) => {
+          onApplyFilters={(newStatus) => {
             setStatusFilter(newStatus);
-            setSortBy(newSort);
           }}
         />
 
         <ExportStudentsModal
           isOpen={isExportOpen}
           onOpenChange={setIsExportOpen}
-          allStudents={DUMMY_STUDENTS}
+          allStudents={allStudents}
           filteredStudents={filteredStudents}
           selectedStudentIds={selectedStudentIds}
         />

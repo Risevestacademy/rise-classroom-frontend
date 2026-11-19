@@ -31,6 +31,7 @@ export type InstructorTrack = {
 
 export type InstructorStudent = {
   id: string;
+  enrollmentId: string;
   user: {
     id: string;
     name: string;
@@ -39,6 +40,31 @@ export type InstructorStudent = {
     onboardingStatus: OnboardingStatus;
   };
 };
+
+export type InstructorStudentListItem = {
+  id: string;
+  enrollmentId: string;
+  name: string;
+  email: string;
+  status: "Active" | "Inactive";
+};
+
+export function toInstructorStudentListItems(
+  students: InstructorStudent[],
+): InstructorStudentListItem[] {
+  const byId = new Map<string, InstructorStudentListItem>();
+
+  students.forEach(({ user }) => {
+    byId.set(user.id, {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      status: user.status === "ACTIVE" ? "Active" : "Inactive",
+    });
+  });
+
+  return Array.from(byId.values());
+}
 
 export type WeeklyTask = {
   id: string;

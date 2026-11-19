@@ -15,37 +15,44 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import type { Student } from "@/components/instructor-dashboard/data";
+import type { InstructorStudentListItem } from "@/lib/instructor";
 
 interface StudentsTableProps {
-  students: Student[];
+  students: InstructorStudentListItem[];
   variant?: "directory" | "track";
   onSelectionChange?: (selectedIds: string[]) => void;
   emptyMessage?: string;
+  isLoading?: boolean;
+  errorMessage?: string;
 }
 
 const statusClasses: Record<string, string> = {
   Active: "bg-emerald-100/80 text-emerald-700",
-  Behind: "bg-amber-100/80 text-amber-800",
-  "At risk": "bg-red-100/80 text-red-700",
+  Inactive: "bg-neutral-100 text-neutral-700",
 };
 
-function getProgressWidth(progress: Student["progress"]) {
+/*
+function getProgressWidth(progress: number) {
   const value = Number(progress);
 
   if (!Number.isFinite(value)) return "0%";
 
   return `${Math.min(100, Math.max(0, value))}%`;
 }
+*/
 
 export function StudentsTable({
   students,
   onSelectionChange,
   emptyMessage = "No students to display.",
+  isLoading = false,
+  errorMessage,
 }: StudentsTableProps) {
   const router = useRouter();
 
-  const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
+  const [selectedStudents, setSelectedStudents] = useState<
+    InstructorStudentListItem[]
+  >([]);
 
   const selectedStudentIds = useMemo(
     () => selectedStudents.map((student) => student.id),
@@ -62,7 +69,7 @@ export function StudentsTable({
       selectedStudentIds.includes(student.id)
     );
 
-  const toggleSelectRow = (student: Student) => {
+  const toggleSelectRow = (student: InstructorStudentListItem) => {
     setSelectedStudents((current) => {
       const alreadySelected = current.some(
         (selected) => selected.id === student.id
@@ -115,7 +122,7 @@ export function StudentsTable({
           <div
             className="grid grid-cols-12 items-center border-b border-neutral-200 text-[14px] font-semibold text-neutral-500 bg-neutral-50/80 px-6 py-3.5"
           >
-            <div className="col-span-4 flex items-center gap-3">
+            <div className="col-span-7 flex items-center gap-3">
               <input
                 type="checkbox"
                 aria-label="Select all visible students"
@@ -127,6 +134,7 @@ export function StudentsTable({
               <span>Student</span>
             </div>
 
+            {/*
             <div
               className="col-span-3" >
               Progress
@@ -137,20 +145,29 @@ export function StudentsTable({
             >
               Average grade
             </div>
+            */}
 
             <div
-              className="col-span-1"
+              className="col-span-3"
             >
               Status
             </div>
 
-            <div className="col-span-1 flex justify-end">
+            <div className="col-span-2 flex justify-end">
               <MoreVertical className="h-4 w-4" />
             </div>
           </div>
 
           <div className="divide-y divide-neutral-100">
-            {students.length === 0 ? (
+            {errorMessage ? (
+              <div role="alert" className="px-6 py-16 text-center text-sm text-red-700">
+                {errorMessage}
+              </div>
+            ) : isLoading ? (
+              <div role="status" className="px-6 py-16 text-center text-sm text-neutral-500">
+                Loading students...
+              </div>
+            ) : students.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                 <p className="text-sm text-neutral-600">
                   {emptyMessage}
@@ -167,7 +184,7 @@ export function StudentsTable({
                     key={student.id}
                     className="grid grid-cols-12 items-center border-b border-neutral-200 transition-colors hover:bg-neutral-50/60 px-6 py-4"
                   >
-                    <div className="col-span-4 flex min-w-0 items-center gap-3">
+                    <div className="col-span-7 flex min-w-0 items-center gap-3">
                       <input
                         type="checkbox"
                         aria-label={`Select ${student.name}`}
@@ -176,10 +193,13 @@ export function StudentsTable({
                         className="h-4 w-4 shrink-0 cursor-pointer rounded border-neutral-300 accent-neutral-900"
                       />
 
-                      <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-semibold ml-1 text-sm ${student.avatarBg}`}
-                      >
-                        {student.initials}
+                      <div className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-sm font-semibold text-neutral-600">
+                        {student.name
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((part) => part[0])
+                          .join("")
+                          .toUpperCase()}
                       </div>
 
                       <div className="min-w-0">
@@ -193,37 +213,26 @@ export function StudentsTable({
                       </div>
                     </div>
 
+                    {/*
                     <div
                       className="flex min-w-0 items-center gap-2 col-span-3 sm:gap-3"
                     >
-                      <div
-                        className="h-2 overflow-hidden rounded-full bg-neutral-100 w-full max-w-24 sm:max-w-28"
-                      >
-                        <div
-                          className="h-full rounded-full bg-brand-primary"
-                          style={{
-                            width: getProgressWidth(
-                              student.progress
-                            ),
-                          }}
-                        />
-                      </div>
-
-                      <span className="shrink-0 text-[14px] font-medium text-neutral-600">
-                        {student.progress}%
+                      <span className="text-[14px] font-medium text-neutral-500">
+                        —
                       </span>
                     </div>
 
                     <div
                       className="col-span-3 text-center"
                     >
-                      <span className="text-[14px] font-semibold text-neutral-900">
-                        {student.averageGrade}
+                      <span className="text-[14px] font-semibold text-neutral-500">
+                        —
                       </span>
                     </div>
+                    */}
 
                     <div
-                      className="col-span-1"
+                      className="col-span-3"
                     >
                       <Badge
                         variant="light"
@@ -235,7 +244,7 @@ export function StudentsTable({
                       </Badge>
                     </div>
 
-                    <div className="col-span-1 flex justify-end">
+                    <div className="col-span-2 flex justify-end">
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           aria-label={`Actions for ${student.name}`}
@@ -276,8 +285,10 @@ export function StudentsTable({
         exportColumns={[
           { header: "Name", value: (student) => student.name },
           { header: "Email", value: (student) => student.email },
+          /* Progress and average grade are unavailable from listStudents.
           { header: "Progress (%)", value: (student) => student.progress },
           { header: "Average Grade", value: (student) => student.averageGrade },
+          */
           { header: "Status", value: (student) => student.status },
         ]}
       />

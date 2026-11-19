@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   instructorQueries,
+  toInstructorStudentListItems,
   type InstructorTrack,
   type WeeklyTaskStatus,
 } from "@/lib/instructor";
@@ -31,8 +32,6 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from "recharts";
-
-import { DUMMY_STUDENTS } from "@/components/instructor-dashboard/data";
 
 const BADGE_BASE =
   "rounded-full border px-2.5 py-0.5 text-[10px] font-medium shrink-0";
@@ -110,7 +109,6 @@ function TrackDetailsContent({ trackId }: { trackId: string }) {
   const [isExportOpen, setIsExportOpen] = React.useState(false);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [statusFilter, setStatusFilter] = React.useState<string>("All");
-  const [sortBy, setSortBy] = React.useState<"name" | "progress" | "grade">("name");
   const [selectedStudentIds, setSelectedStudentIds] = React.useState<string[]>([]);
   const [searchQuery, setSearchQuery] = React.useState("");
 
@@ -221,29 +219,17 @@ function TrackDetailsContent({ trackId }: { trackId: string }) {
       badgeStyle: TASK_BADGE[task.status],
     })) ?? [];
 
-  const filteredStudents = DUMMY_STUDENTS.filter((student) => {
+  const allStudents = toInstructorStudentListItems(students);
+  const filteredStudents = allStudents.filter((student) => {
     const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.email.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesTab =
-      activeTab === "all" ? true :
-        activeTab === "active" ? student.status === "Active" :
-          activeTab === "behind" ? student.status === "Behind" :
-            activeTab === "at-risk" ? student.status === "At risk" : true;
-
     const matchesModalFilter =
       statusFilter === "All" ? true : student.status === statusFilter;
 
-    return matchesSearch && matchesTab && matchesModalFilter;
-  }).sort((a, b) => {
-    if (sortBy === "name") return a.name.localeCompare(b.name);
-    if (sortBy === "progress") return b.progress - a.progress;
-    if (sortBy === "grade") {
-      return b.averageGrade - a.averageGrade;
-    }
-    return 0;
-  });
+    return matchesSearch && matchesModalFilter;
+  }).sort((a, b) => a.name.localeCompare(b.name));
   const filteredAssignments = trackAssignmentQueries
     .flatMap((query) => query.data ?? [])
     .filter(({ assignment }) => {
@@ -757,6 +743,12 @@ function TrackDetailsContent({ trackId }: { trackId: string }) {
                 <StudentsTable
                   students={filteredStudents}
                   onSelectionChange={setSelectedStudentIds}
+                  isLoading={trackQuery.isLoading || studentsQuery.isLoading}
+                  errorMessage={
+                    trackQuery.isError || studentsQuery.isError
+                      ? "Unable to load students. Please try again."
+                      : undefined
+                  }
                 />
               </div>
             </TabsContent>
@@ -979,17 +971,15 @@ function TrackDetailsContent({ trackId }: { trackId: string }) {
           isOpen={isFilterOpen}
           onOpenChange={setIsFilterOpen}
           currentStatusFilter={statusFilter}
-          currentSortBy={sortBy}
-          onApplyFilters={(newStatus, newSort) => {
+          onApplyFilters={(newStatus) => {
             setStatusFilter(newStatus);
-            setSortBy(newSort);
           }}
         />
 
         <ExportStudentsModal
           isOpen={isExportOpen}
           onOpenChange={setIsExportOpen}
-          allStudents={DUMMY_STUDENTS}
+          allStudents={allStudents}
           filteredStudents={filteredStudents}
           selectedStudentIds={selectedStudentIds}
         />
