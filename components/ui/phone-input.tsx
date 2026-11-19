@@ -1,7 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { AsYouType } from "libphonenumber-js"
+import {
+  AsYouType,
+  parsePhoneNumberFromString,
+  validatePhoneNumberLength,
+} from "libphonenumber-js"
 import { InputWrapper } from "./input"
 import { CountrySelect } from "./country-select"
 import { countries, defaultCountry, type CountryCode } from "@/lib/countries"
@@ -14,6 +18,8 @@ type PhoneInputProps = Omit<
   size?: "large" | "medium" | "small"
   invalid?: boolean
   defaultCountry?: CountryCode
+  /* A saved number in international form, e.g. "+2348031234567". */
+  defaultNumber?: string | null
   onValueChange?: (value: {
     country: CountryCode
     national: string
@@ -27,11 +33,19 @@ function PhoneInput({
   disabled,
   invalid,
   defaultCountry: defaultCountryProp = defaultCountry,
+  defaultNumber,
   onValueChange,
   ...props
 }: PhoneInputProps) {
-  const [country, setCountry] = useState<CountryCode>(defaultCountryProp)
-  const [national, setNational] = useState("")
+  const [initial] = useState(() =>
+    defaultNumber ? parsePhoneNumberFromString(defaultNumber) : undefined
+  )
+  const [country, setCountry] = useState<CountryCode>(
+    initial?.country ?? defaultCountryProp
+  )
+  const [national, setNational] = useState(() =>
+    initial ? new AsYouType(initial.country).input(initial.nationalNumber) : ""
+  )
 
   const selected = countries.find((c) => c.iso2 === country)
 
@@ -48,6 +62,7 @@ function PhoneInput({
           setCountry(next)
           const formatter = new AsYouType(next)
           const formatted = formatter.input(national)
+          setNational(formatted)
           onValueChange?.({
             country: next,
             national: formatted,
@@ -68,10 +83,16 @@ function PhoneInput({
       </span>
 
       <input
+        {...props}
         type="tel"
+        inputMode="tel"
         disabled={disabled}
-        value={national}
+        value={props.value ?? national}
         onChange={(e) => {
+          // Past the country's longest number the formatter gives up and
+          // shows raw digits, so stop accepting digits there.
+          const digits = e.target.value.replace(/\D/g, "")
+          if (validatePhoneNumberLength(digits, country) === "TOO_LONG") return
           const formatter = new AsYouType(country)
           const formatted = formatter.input(e.target.value)
           setNational(formatted)
@@ -86,7 +107,6 @@ function PhoneInput({
           "w-full bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-300",
           "disabled:cursor-not-allowed disabled:text-neutral-300"
         )}
-        {...props}
       />
     </InputWrapper>
   )

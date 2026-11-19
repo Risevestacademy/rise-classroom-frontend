@@ -99,18 +99,19 @@ export function AppSidebar({
 
         <div className="mb-3 px-3.5">
           {accountItems.length > 0 && (
-            <>
-              <div className="space-y-1">
-                {accountItems.map((item) => (
-                  <SidebarNavItem
-                    key={item.href}
-                    item={item}
-                    isActive={isActivePath(pathname, item.href)}
-                  />
-                ))}
-              </div>
-              <hr className="mx-2 text-neutral-200" />
-            </>
+            <div className="space-y-1">
+              {accountItems.map((item) => (
+                <SidebarNavItem
+                  key={item.href}
+                  item={item}
+                  isActive={isActivePath(pathname, item.href)}
+                />
+              ))}
+            </div>
+          )}
+          {/* A footer draws its own top border. */}
+          {!footer && showUserMenu && accountItems.length > 0 && (
+            <hr className="mx-2 text-neutral-200" />
           )}
           {!footer && showUserMenu && (
             <div className="mt-auto p-2">

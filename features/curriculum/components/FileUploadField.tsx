@@ -10,12 +10,12 @@ import { resourceFromUpload } from "@/features/curriculum/mappers";
 import type { ResourceFile } from "@/features/curriculum/types";
 
 const acceptedExtensions = [".pdf", ".pptx", ".docx"];
-const maxFileBytes = 20e6;
+// The API takes files up to 25 MiB.
+const maxFileBytes = 25e6;
 
 /**
- * Supporting resources with an "Upload file" button. PENDING-BACKEND: the API
- * has no file uploads, so picked files stay in the session; saved links still
- * show here and keep saving.
+ * Supporting resources with an "Upload file" button. Picked files are uploaded
+ * when the form is saved; saved links and files show here too.
  */
 export function FileUploadField({
   files,
@@ -34,7 +34,7 @@ export function FileUploadField({
     });
     setError(
       rejected.length
-        ? `${rejected.join(", ")} couldn't be added. Use PDF, PPTX or DOCX files up to 20 MB.`
+        ? `${rejected.join(", ")} couldn't be added. Use PDF, PPTX or DOCX files up to 25 MB.`
         : "",
     );
     onChange([...files, ...accepted.map(resourceFromUpload)]);
@@ -84,7 +84,7 @@ export function FileUploadField({
           error ? "text-text-error" : "text-neutral-400",
         )}
       >
-        {error || "PDF, PPTX or DOCX · Up to 20 MB per file"}
+        {error || "PDF, PPTX or DOCX · Up to 25 MB per file"}
       </p>
     </div>
   );

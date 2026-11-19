@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 
 import { curriculumApis } from "@/features/curriculum/api";
-import { resourceFromLink } from "@/features/curriculum/mappers";
+import { resourceFromLink, toResourceFile } from "@/features/curriculum/mappers";
 import type {
   AssignmentRecord,
   LessonRecord,
@@ -190,5 +190,40 @@ describe("loading modules", () => {
     expect(backend.urls("GET /admin/curriculums/c1/tree")).toHaveLength(1);
     expect(backend.urls("GET /admin/topics/t1/tree")).toHaveLength(1);
     expect(client.getQueryData(api.keys.modules("c1"))).toHaveLength(1);
+  });
+});
+
+describe("uploaded resources", () => {
+  const upload: ResourceRecord = {
+    ...timestamps,
+    id: "r9",
+    lessonId: "l1",
+    title: "Grid notes",
+    url: "/api/v1/resources/r9/download",
+    downloadUrl: "/api/v1/resources/r9/download",
+    source: "UPLOAD",
+    type: "PDF",
+    fileName: "grid-notes.pdf",
+    sizeBytes: 2048,
+    publishStatus: "PUBLISHED",
+  };
+
+  it("downloads through the backend proxy so the session cookie goes along", () => {
+    expect(toResourceFile(upload)).toMatchObject({
+      name: "grid-notes.pdf",
+      sizeBytes: 2048,
+      uploaded: true,
+      url: "/api/backend/resources/r9/download",
+    });
+  });
+
+  it("keeps links as they are", () => {
+    const link = toResourceFile({
+      ...upload,
+      source: "LINK",
+      url: "https://drive.google.com/grid.pdf",
+      downloadUrl: undefined,
+    });
+    expect(link).toMatchObject({ uploaded: false, url: "https://drive.google.com/grid.pdf" });
   });
 });
