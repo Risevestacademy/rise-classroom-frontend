@@ -16,14 +16,16 @@ import {
   WifiOff01,
 } from "@/assets/icons";
 import { fetchJoinCredentials, type JoinBlock, type JoinCredentials } from "@/lib/live-room";
-import { PreJoinScreen, type DeviceChoices } from "./PreJoinScreen";
-import { RoomStage } from "./RoomStage";
+import { cn } from "@/lib/utils";
+import { PreJoinScreen, readSavedChoices, type DeviceChoices } from "./PreJoinScreen";
+import { RoomStage, Spinner } from "./RoomStage";
 import { roomButton, RoomStatus } from "./RoomStatus";
 
 type Ending = "left" | "you_ended" | "host_ended" | "removed" | "elsewhere" | "connection_lost";
 
 type Stage =
   | { name: "prejoin"; joining: boolean }
+  | { name: "connecting" }
   | { name: "room"; credentials: JoinCredentials; choices: DeviceChoices }
   | { name: "ended"; ending: Ending }
   | { name: "error"; message: string };
@@ -50,29 +52,28 @@ export function LiveRoom({
   title,
   when,
   block,
+  autoJoin = false,
   userName,
   userKey,
   homeHref,
 }: {
   sessionId: string;
   title: string;
-  /** "Sat, Nov 14 2026 · 7:00 PM - 8:00 PM" */
+  /** "Wed, September 24 9:00 PM" */
   when: string;
   block?: JoinBlock;
+  /** They've already checked their devices, so skip straight to connecting. */
+  autoJoin?: boolean;
   userName: string;
   userKey: string;
   /** Where Back goes when the room was opened directly, e.g. from a link. */
   homeHref: string;
 }) {
   const router = useRouter();
-  const [stage, setStage] = React.useState<Stage>({ name: "prejoin", joining: false });
+  const [stage, setStage] = React.useState<Stage>(autoJoin && !block ? { name: "connecting" } : { name: "prejoin", joining: false });
   const endedByMe = React.useRef(false);
 
-  const back = () => (window.history.length > 1 ? router.back() : router.push(homeHref));
-  const rejoin = () => setStage({ name: "prejoin", joining: false });
-
-  async function join(choices: DeviceChoices) {
-    setStage({ name: "prejoin", joining: true });
+  async function connect(choices: DeviceChoices) {
     try {
       const credentials = await fetchJoinCredentials(sessionId);
       endedByMe.current = false;
@@ -80,6 +81,31 @@ export function LiveRoom({
     } catch (error) {
       setStage({ name: "error", message: (error as Error).message });
     }
+  }
+
+  React.useEffect(() => {
+    if (!autoJoin || block) return;
+    let cancelled = false;
+    fetchJoinCredentials(sessionId)
+      .then((credentials) => !cancelled && setStage({ name: "room", credentials, choices: readSavedChoices() }))
+      .catch((error: Error) => !cancelled && setStage({ name: "error", message: error.message }));
+    return () => {
+      cancelled = true;
+    };
+  }, [autoJoin, block, sessionId]);
+
+  const back = () => (window.history.length > 1 ? router.back() : router.push(homeHref));
+
+  function join(choices: DeviceChoices) {
+    setStage({ name: "prejoin", joining: true });
+    void connect(choices);
+  }
+
+  // Coming from the device check page, rejoining skips it with the same devices.
+  function rejoin() {
+    if (!autoJoin) return setStage({ name: "prejoin", joining: false });
+    setStage({ name: "connecting" });
+    void connect(readSavedChoices());
   }
 
   const backButton = (
@@ -95,7 +121,15 @@ export function LiveRoom({
 
   return (
     // Chat and names are masked from Clarity's session recordings.
-    <div data-clarity-mask="true" className="flex h-dvh min-w-0 flex-1 flex-col overflow-hidden bg-room-canvas text-room-text">
+    <div
+      data-clarity-mask="true"
+      className={cn(
+        "flex h-dvh min-w-0 flex-1 flex-col overflow-hidden",
+        (stage.name === "room" || stage.name === "connecting") && !block
+          ? "bg-room-canvas text-room-text"
+          : "bg-surface-background text-text-primary",
+      )}
+    >
       {block ? (
         <Blocked block={block} title={title} when={when} actions={backButton} />
       ) : stage.name === "prejoin" ? (
@@ -107,6 +141,11 @@ export function LiveRoom({
           joining={stage.joining}
           onJoin={join}
         />
+      ) : stage.name === "connecting" ? (
+        <div role="status" className="flex flex-1 flex-col items-center justify-center gap-4">
+          <Spinner className="size-8 text-room-active" />
+          <p className="text-base text-room-text">Joining {title}…</p>
+        </div>
       ) : stage.name === "room" ? (
         <LiveKitRoom
           serverUrl={stage.credentials.url}
@@ -169,7 +208,7 @@ function Blocked({
       heading: "This session hasn't started yet",
       body: (
         <>
-          <span className="font-semibold text-room-text-strong">{title}</span> is on {when}. Come back
+          <span className="font-semibold text-text-primary">{title}</span> is on {when}. Come back
           when it starts and you&apos;ll be able to join from here.
         </>
       ),
@@ -180,7 +219,7 @@ function Blocked({
       heading: "This session has ended",
       body: (
         <>
-          <span className="font-semibold text-room-text-strong">{title}</span> is over. The recording
+          <span className="font-semibold text-text-primary">{title}</span> is over. The recording
           will appear in Live sessions once it&apos;s ready.
         </>
       ),
@@ -191,7 +230,7 @@ function Blocked({
       heading: "This session was cancelled",
       body: (
         <>
-          <span className="font-semibold text-room-text-strong">{title}</span> on {when} won&apos;t be
+          <span className="font-semibold text-text-primary">{title}</span> on {when} won&apos;t be
           going ahead. Check your calendar for the next one.
         </>
       ),

@@ -3,6 +3,13 @@ import type { NextRequest } from "next/server";
 
 import { getServerSession } from "@/lib/session.server";
 
+const roleLabels: Record<string, string> = {
+  PLATFORM_ADMIN: "Admin",
+  SUPERADMIN: "Admin",
+  INSTRUCTOR: "Instructor",
+  MENTOR: "Mentor",
+};
+
 // PENDING-BACKEND: stands in for `POST /live-sessions/:id/join` until the
 // backend issues tokens. Never runs in production builds, so the LiveKit
 // secret stays in .env.local and never needs to reach Vercel.
@@ -38,7 +45,7 @@ export async function GET(request: NextRequest) {
   const token = new AccessToken(apiKey, apiSecret, {
     identity: tab ? `${session.user.id}:${tab}` : session.user.id,
     name: session.user.name,
-    attributes: { role: host ? "host" : "participant" },
+    attributes: { role: host ? "host" : "participant", label: roleLabels[session.user.role] ?? "" },
     ttl: "2h",
   });
   token.addGrant({

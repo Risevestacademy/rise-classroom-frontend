@@ -2,9 +2,11 @@ import {
   fieldTime,
   fromDateKey,
   monthNames,
+  toDateKey,
   weekdayNames,
   type CalendarEvent,
 } from "@/lib/calendar";
+import type { JoinBlock } from "@/lib/live-room";
 import type { LessonRecording } from "@/lib/student-lessons";
 
 /** A calendar event run for a track, plus its recording once it's over. */
@@ -28,6 +30,23 @@ export function sessionTime(session: LiveSession) {
   const clock = (time: string) => fieldTime(time).replace(/(AM|PM)$/, " $1");
   return `${clock(session.startTime)} - ${clock(session.endTime)}`;
 }
+
+/** "Wed, September 24 9:00 PM", as on the design's entrance screen. */
+export function sessionWhen(session: LiveSession) {
+  const date = fromDateKey(session.date);
+  const time = fieldTime(session.startTime).replace(/(AM|PM)$/, " $1");
+  return `${weekdayNames[date.getDay()].slice(0, 3)}, ${monthNames[date.getMonth()]} ${date.getDate()} ${time}`;
+}
+
+/** The session's start and end as moments in time. */
+export function sessionSpan(session: LiveSession) {
+  const at = (time: string) => new Date(`${session.date}T${time}`);
+  return { start: at(session.startTime), end: at(session.endTime) };
+}
+
+// PENDING-BACKEND: `canJoin` from `GET /live-sessions/:id` will decide this.
+export const joinBlockFor = (session: LiveSession): JoinBlock | undefined =>
+  session.status === "upcoming" ? "too_early" : session.status === "completed" ? "ended" : undefined;
 
 const people = [
   ["Ozavize Bello", "ozavizenotize123@gmail.com"],
@@ -84,3 +103,26 @@ export const sampleSessions: LiveSession[] = [
   { ...base, id: "s-7", status: "completed", title: liveClass("UI/UX"), trackName: "Backend", date: "2026-10-10", guests: guests(16) },
   { ...base, id: "s-8", status: "completed", title: liveClass("Frontend"), trackName: "Mobile Engineering", date: "2026-10-03", guests: guests(20) },
 ];
+
+const clockTime = (date: Date) =>
+  `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+/**
+ * PENDING-BACKEND: the sample sessions with the live one and the next one
+ * moved to today around `now`, so the join page can show "Live now" and
+ * "In 45 Minutes" until the calendar endpoints exist.
+ */
+export function sampleSessionsAround(now: Date): LiveSession[] {
+  const today = toDateKey(now);
+  const at = (minutes: number) => {
+    const time = new Date(now.getTime() + minutes * 60_000);
+    // Keep the sample inside today so it stays on today's list.
+    return toDateKey(time) === today ? clockTime(time) : "23:59";
+  };
+
+  return sampleSessions.map((session) => {
+    if (session.id === "s-1") return { ...session, date: today, startTime: at(-30), endTime: at(30) };
+    if (session.id === "s-2") return { ...session, date: today, startTime: at(45), endTime: at(105) };
+    return session;
+  });
+}

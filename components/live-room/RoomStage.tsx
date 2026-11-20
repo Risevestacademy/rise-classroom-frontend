@@ -2,38 +2,43 @@
 
 import * as React from "react";
 import {
+  isTrackReference,
   RoomAudioRenderer,
   StartAudio,
   useChat,
   useConnectionQualityIndicator,
   useConnectionState,
   useDataChannel,
+  useIsRecording,
   useLocalParticipant,
   useParticipantAttributes,
   useParticipants,
   useTracks,
   VideoTrack,
-  isTrackReference,
+  type TrackReference,
+  type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import { ConnectionQuality, ConnectionState, Track, type Participant } from "livekit-client";
 
-import { AlertCircle, ComputerScreenShare, UserMultiple, WifiOff01 } from "@/assets/icons";
+import { AlertCircle, Message01, UserMultiple, WifiOff01 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import {
   endSessionForAll,
+  FEEDBACK_ATTRIBUTE,
   HAND_ATTRIBUTE,
-  muteParticipant,
+  muteEveryone,
   REACTIONS_TOPIC,
   removeParticipant,
   ROLE_ATTRIBUTE,
+  setParticipantMuted,
+  setScreenShareAllowed,
+  turnOffAllCameras,
+  type Feedback,
 } from "@/lib/live-room";
 import { cn } from "@/lib/utils";
 import { ControlBar } from "./ControlBar";
 import { displayName, OthersTile, ParticipantTile } from "./ParticipantTile";
-import { SidePanel, type PanelTab } from "./SidePanel";
-
-/** Tiles shown before the rest collapse into "+N Others", as in the design. */
-const MAX_TILES = 9;
+import { ChatPanel, ParticipantsPanel, type PanelTab } from "./SidePanel";
 
 type Notice = { id: number; tone: "info" | "warning" | "error"; message: string };
 type Reaction = { id: number; emoji: string; name: string; left: number };
@@ -61,12 +66,13 @@ export function RoomStage({
   const { attributes } = useParticipantAttributes({ participant: localParticipant });
   const isHost = attributes?.[ROLE_ATTRIBUTE] === "host";
   const handRaised = Boolean(attributes?.[HAND_ATTRIBUTE]);
+  const feedback = (attributes?.[FEEDBACK_ATTRIBUTE] || undefined) as Feedback | undefined;
 
   const cameras = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], { onlySubscribed: false });
-  const screens = useTracks([Track.Source.ScreenShare]).filter(isTrackReference);
-  const screen = screens[0];
+  const screen = useTracks([Track.Source.ScreenShare]).filter(isTrackReference)[0];
 
   const [panel, setPanel] = React.useState<PanelTab | null>(null);
+  const [pinned, setPinned] = React.useState<string | null>(null);
   const [notices, setNotices] = React.useState<Notice[]>([]);
   const [reactions, setReactions] = React.useState<Reaction[]>([]);
   const { chatMessages, send, isSending } = useChat();
@@ -113,6 +119,9 @@ export function RoomStage({
     await sendData(new TextEncoder().encode(emoji), { reliable: false, topic: REACTIONS_TOPIC }).catch(() => {});
   }
 
+  const setOwnAttribute = (key: string, value: string, failure: string) =>
+    localParticipant.setAttributes({ [key]: value }).catch(() => notify("error", failure));
+
   async function hostAction(action: () => Promise<unknown>, failure: string) {
     try {
       await action();
@@ -130,17 +139,22 @@ export function RoomStage({
     );
   }
 
-  const ordered = orderTiles(cameras, screen?.participant);
-  const visible = ordered.length > MAX_TILES + 1 ? ordered.slice(0, MAX_TILES) : ordered;
-  const hidden = ordered.slice(visible.length).map((ref) => ref.participant);
-  const raisedHands = participants.filter((participant) => participant.attributes[HAND_ATTRIBUTE]).length;
+  const host = participants.find((participant) => participant.attributes[ROLE_ATTRIBUTE] === "host");
+  const pinnedRef = pinned ? cameras.find((ref) => ref.participant.identity === pinned) : undefined;
   const weakConnection = quality === ConnectionQuality.Poor || quality === ConnectionQuality.Lost;
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       <RoomAudioRenderer />
 
-      <RoomHeading title={title} participants={participants} onPeople={() => togglePanel("participants")} />
+      <RoomHeading
+        title={title}
+        host={host}
+        count={participants.length}
+        panel={panel}
+        unreadChat={unreadChat}
+        onPanel={togglePanel}
+      />
 
       <div className="absolute inset-x-0 top-4 z-30 flex flex-col items-center gap-2 px-4">
         {connection === ConnectionState.Reconnecting && (
@@ -183,68 +197,46 @@ export function RoomStage({
         ))}
       </div>
 
-      <div className="flex min-h-0 flex-1 gap-4 px-4 sm:px-8">
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-          {screen ? (
-            <>
-              <section aria-label={`${displayName(screen.participant)} is presenting`} className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[21px] bg-black">
-                <VideoTrack trackRef={screen} className="size-full object-contain" />
-                <p className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full bg-white/10 px-2.5 py-2 text-sm font-medium text-white backdrop-blur-md">
-                  <ComputerScreenShare className="size-4" />
-                  {screen.participant.isLocal ? "You are presenting" : `${displayName(screen.participant)} is presenting`}
-                </p>
-                {screen.participant.isLocal && (
-                  <button type="button" onClick={toggleShare} className="absolute right-3 bottom-3 cursor-pointer rounded-full bg-room-leave px-4 py-2 text-sm font-medium text-white hover:bg-room-leave-hover">
-                    Stop presenting
-                  </button>
-                )}
-              </section>
-              <ul className="flex shrink-0 gap-3 overflow-x-auto pb-1">
-                {ordered.map((ref) => (
-                  <li key={ref.participant.identity} className="shrink-0">
-                    <ParticipantTile trackRef={ref} compact className="h-[120px] w-[160px]" />
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <ul className="grid min-h-0 flex-1 auto-rows-[minmax(0,279px)] grid-cols-2 content-start gap-3 overflow-y-auto sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:content-center lg:justify-center lg:grid-cols-[repeat(auto-fit,200px)]">
-              {visible.map((ref) => (
-                <li key={ref.participant.identity} className="min-h-0">
-                  <ParticipantTile trackRef={ref} className="aspect-[200/279] h-full w-full max-sm:aspect-[3/4]" />
-                </li>
-              ))}
-              {hidden.length > 0 && (
-                <li className="min-h-0">
-                  <OthersTile participants={hidden} onClick={() => showPanel("participants")} className="aspect-[200/279] h-full w-full max-sm:aspect-[3/4]" />
-                </li>
-              )}
-            </ul>
-          )}
+      <div className="flex min-h-0 flex-1 gap-6 px-4 sm:px-10">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <Gallery
+            tiles={cameras}
+            screen={screen}
+            pinned={pinnedRef}
+            featured={host?.identity}
+            onOthers={() => showPanel("participants")}
+          />
         </main>
 
-        {panel && (
-          <SidePanel
-            tab={panel}
-            onTabChange={showPanel}
-            onClose={() => showPanel(null)}
-            title={title}
+        {panel === "participants" && (
+          <ParticipantsPanel
             participants={participants}
-            messages={chatMessages}
-            onSend={send}
-            sending={isSending}
             isHost={isHost}
-            onMute={(participant) =>
-              hostAction(() => muteParticipant(sessionId, participant.identity), `Couldn't mute ${displayName(participant)}.`)
+            pinned={pinned}
+            onClose={() => showPanel(null)}
+            onPin={setPinned}
+            onSetMuted={(participant, muted) =>
+              hostAction(
+                () => setParticipantMuted(sessionId, participant.identity, muted),
+                `Couldn't ${muted ? "mute" : "unmute"} ${displayName(participant)}.`,
+              )
             }
             onRemove={(participant) =>
               hostAction(() => removeParticipant(sessionId, participant.identity), `Couldn't remove ${displayName(participant)}.`)
             }
+            onMuteAll={() => hostAction(() => muteEveryone(sessionId), "Couldn't mute everyone.")}
+            onCamerasOff={() => hostAction(() => turnOffAllCameras(sessionId), "Couldn't turn off everyone's camera.")}
+            onDisableScreenShare={() =>
+              hostAction(() => setScreenShareAllowed(sessionId, false), "Couldn't turn off screen sharing.")
+            }
           />
+        )}
+        {panel === "chat" && (
+          <ChatPanel messages={chatMessages} onSend={send} sending={isSending} onClose={() => showPanel(null)} />
         )}
       </div>
 
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-[96px] z-20 h-0">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-[120px] z-20 h-0">
         {reactions.map((reaction) => (
           <span
             key={reaction.id}
@@ -262,27 +254,17 @@ export function RoomStage({
         cameraOn={isCameraEnabled}
         sharing={isScreenShareEnabled}
         handRaised={handRaised}
+        feedback={feedback}
         isHost={isHost}
-        panel={panel}
-        unreadChat={unreadChat}
-        raisedHands={raisedHands}
         canShareScreen={typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia)}
         onToggleMic={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled).catch(() => {})}
         onToggleCamera={() => localParticipant.setCameraEnabled(!isCameraEnabled).catch(() => {})}
         onToggleShare={toggleShare}
         onToggleHand={() =>
-          localParticipant
-            .setAttributes({ [HAND_ATTRIBUTE]: handRaised ? "" : String(Date.now()) })
-            .catch(() => notify("error", "Couldn't raise your hand. Try again."))
+          setOwnAttribute(HAND_ATTRIBUTE, handRaised ? "" : String(Date.now()), "Couldn't raise your hand. Try again.")
         }
         onReact={react}
-        onPanel={togglePanel}
-        onCopyLink={() =>
-          navigator.clipboard
-            .writeText(window.location.href)
-            .then(() => notify("info", "Session link copied."))
-            .catch(() => notify("error", "Couldn't copy the link."))
-        }
+        onFeedback={(next) => setOwnAttribute(FEEDBACK_ATTRIBUTE, next ?? "", "Couldn't send your feedback. Try again.")}
         onLeave={onLeave}
         onEndForAll={() => {
           onEndedForAll();
@@ -293,73 +275,211 @@ export function RoomStage({
   );
 }
 
+/** Cells in the gallery before the rest collapse into "+N Others". */
+const GALLERY_CELLS = 12;
+/** Cells beside the stage when a screen or a pinned person takes the big spot. */
+const SIDE_CELLS = 4;
+
 /**
- * Presenters, then raised hands, then everyone in join order. Once there are
- * more people than tiles, recent speakers move up so they stay visible.
+ * The tiles, laid out as in the design: one row for up to four people, a big
+ * tile beside smaller ones for five or six, then two rows of six. A screen
+ * share or a pinned person takes the big spot, with the rest beside it.
  */
-function orderTiles<T extends { participant: Participant }>(refs: T[], presenter?: Participant) {
-  const overflowing = refs.length > MAX_TILES + 1;
-  const rank = (participant: Participant) =>
-    participant === presenter ? 3 : participant.attributes[HAND_ATTRIBUTE] ? 2 : participant.isLocal ? 1 : 0;
-  return [...refs].sort((a, b) => {
-    const byRank = rank(b.participant) - rank(a.participant);
-    if (byRank || !overflowing) return byRank;
-    return (b.participant.lastSpokeAt?.getTime() ?? 0) - (a.participant.lastSpokeAt?.getTime() ?? 0);
-  });
+function Gallery({
+  tiles,
+  screen,
+  pinned,
+  featured,
+  onOthers,
+}: {
+  tiles: TrackReferenceOrPlaceholder[];
+  screen?: TrackReference;
+  pinned?: TrackReferenceOrPlaceholder;
+  featured?: string;
+  onOthers: () => void;
+}) {
+  const stage = screen ?? pinned;
+
+  if (stage) {
+    const rest = screen ? tiles : tiles.filter((ref) => ref !== pinned);
+    const { shown, hidden } = fit(rest, SIDE_CELLS);
+    return (
+      <ul className="grid min-h-0 flex-1 auto-rows-[minmax(160px,1fr)] grid-cols-2 gap-2 overflow-y-auto lg:grid-cols-6 lg:grid-rows-2 lg:overflow-hidden">
+        <li className={cn("col-span-2 min-h-[220px] lg:row-span-2", rest.length ? "lg:col-span-4" : "lg:col-span-6")}>
+          {screen ? (
+            <section
+              aria-label={`${displayName(screen.participant)} is presenting`}
+              className="relative flex size-full items-center justify-center overflow-hidden rounded-2xl bg-room-screen"
+            >
+              <VideoTrack trackRef={screen} className="size-full object-contain" />
+            </section>
+          ) : (
+            <ParticipantTile trackRef={pinned!} pinned className="size-full" />
+          )}
+        </li>
+        {shown.map((ref) => (
+          <li key={ref.participant.identity} className="min-h-0">
+            <ParticipantTile
+              trackRef={ref}
+              presenting={ref.participant === screen?.participant}
+              className="size-full"
+            />
+          </li>
+        ))}
+        {hidden.length > 0 && (
+          <li className="min-h-0">
+            <OthersTile participants={hidden} onClick={onOthers} className="size-full" />
+          </li>
+        )}
+      </ul>
+    );
+  }
+
+  const ordered = featured
+    ? [...tiles].sort((a, b) => Number(b.participant.identity === featured) - Number(a.participant.identity === featured))
+    : tiles;
+  const { shown, hidden } = fit(ordered, GALLERY_CELLS);
+  const layout = galleryLayout(shown.length + (hidden.length ? 1 : 0));
+
+  return (
+    <ul className={cn("grid min-h-0 flex-1 auto-rows-[minmax(180px,1fr)] grid-cols-2 gap-2 overflow-y-auto lg:overflow-hidden", layout.grid)}>
+      {shown.map((ref, index) => (
+        <li key={ref.participant.identity} className={cn("min-h-0", layout.cell(index), shown.length === 1 && "col-span-2")}>
+          <ParticipantTile trackRef={ref} className="size-full" />
+        </li>
+      ))}
+      {hidden.length > 0 && (
+        <li className="min-h-0">
+          <OthersTile participants={hidden} onClick={onOthers} className="size-full" />
+        </li>
+      )}
+    </ul>
+  );
+}
+
+/** Up to `cells` tiles; past that, one cell goes to "+N Others". */
+function fit<T extends { participant: Participant }>(refs: T[], cells: number) {
+  if (refs.length <= cells) return { shown: refs, hidden: [] as Participant[] };
+  return { shown: refs.slice(0, cells - 1), hidden: refs.slice(cells - 1).map((ref) => ref.participant) };
+}
+
+/** Desktop grid classes for a number of cells; phones always get two columns. */
+function galleryLayout(count: number): { grid: string; cell: (index: number) => string } {
+  const none = () => "";
+  if (count <= 4) return { grid: ["lg:grid-cols-1", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3", "lg:grid-cols-4"][count] + " lg:grid-rows-1", cell: none };
+  if (count === 5) return { grid: "lg:grid-cols-4 lg:grid-rows-2", cell: (index) => (index === 0 ? "col-span-2 lg:row-span-2" : "") };
+  if (count === 6)
+    return {
+      grid: "lg:grid-cols-6 lg:grid-rows-2",
+      cell: (index) => (index === 0 ? "col-span-2 lg:col-span-3 lg:row-span-2" : index === 5 ? "lg:col-span-2" : ""),
+    };
+  return { grid: "lg:grid-cols-6 lg:grid-rows-2", cell: none };
 }
 
 function RoomHeading({
   title,
-  participants,
-  onPeople,
+  host,
+  count,
+  panel,
+  unreadChat,
+  onPanel,
 }: {
   title: string;
-  participants: Participant[];
-  onPeople: () => void;
+  host?: Participant;
+  count: number;
+  panel: PanelTab | null;
+  unreadChat: boolean;
+  onPanel: (tab: PanelTab) => void;
 }) {
   const now = useClock();
+  const recordingFor = useRecordingTime();
 
   return (
-    <header className="flex items-end justify-between gap-4 px-4 pt-6 pb-5 sm:px-8 sm:pt-10 sm:pb-8">
+    <header className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 px-4 pt-6 pb-6 sm:px-10 sm:pt-12 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:pb-10">
       <div className="min-w-0">
         <p className="text-lg/6 font-semibold text-neutral-350">{now && clockFormat.format(now)}</p>
         <h1 className="truncate text-xl/7 font-semibold text-white sm:text-2xl/8">{title}</h1>
       </div>
-      <button
-        type="button"
-        onClick={onPeople}
-        aria-label={`${participants.length} in this session`}
-        className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full bg-room-bar py-1 pr-3 pl-1 text-sm text-white transition-colors hover:bg-room-control"
-      >
-        <span className="flex -space-x-2">
-          {participants.slice(0, 3).map((participant) => (
-            <PersonAvatar
-              key={participant.identity}
-              name={displayName(participant)}
-              colorKey={participant.identity}
-              size={24}
-              className="ring-2 ring-room-bar"
-            />
-          ))}
-        </span>
-        <UserMultiple className="size-4 text-room-text-muted sm:hidden" />
-        {participants.length}
-      </button>
+
+      <div className="hidden items-center gap-3 lg:flex">
+        {host && (
+          <p className="flex h-11 items-center gap-2 rounded-full bg-white/10 py-2 pr-4 pl-2 text-sm font-medium text-white">
+            <PersonAvatar name={displayName(host)} colorKey={host.identity} size={24} className="size-7" />
+            {displayName(host)}
+          </p>
+        )}
+        {recordingFor !== null && (
+          <p role="status" className="flex h-11 items-center gap-2 rounded-full bg-white/10 px-3 text-sm font-medium text-white">
+            <span aria-hidden className="size-4 rounded-full border-[1.5px] border-white bg-text-error" />
+            <span className="sr-only">Recording</span>
+            {formatDuration(recordingFor)}
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center justify-end gap-3">
+        <button
+          type="button"
+          aria-pressed={panel === "participants"}
+          onClick={() => onPanel("participants")}
+          className={cn(
+            "flex h-11 cursor-pointer items-center gap-2 rounded-full px-3 text-sm font-medium text-white transition-colors",
+            panel === "participants" ? "bg-room-tile-blue" : "bg-white/10 hover:bg-white/15",
+          )}
+        >
+          <UserMultiple className="size-4" />
+          {count}
+          <span className="max-sm:sr-only">{count === 1 ? "Participant" : "Participants"}</span>
+        </button>
+        <button
+          type="button"
+          aria-pressed={panel === "chat"}
+          aria-label={unreadChat ? "Chat, new messages" : "Chat"}
+          onClick={() => onPanel("chat")}
+          className={cn(
+            "relative flex h-11 cursor-pointer items-center gap-2 rounded-full px-3 text-sm font-medium text-white transition-colors",
+            panel === "chat" ? "bg-room-tile-blue" : "bg-room-pill hover:bg-white/15",
+          )}
+        >
+          <Message01 className="size-[18px]" />
+          <span className="max-sm:sr-only">Chat</span>
+          {unreadChat && <span className="absolute top-2 right-2 size-2 rounded-full bg-room-active ring-2 ring-room-pill" />}
+        </button>
+      </div>
     </header>
   );
 }
 
-const subscribeToClock = (onChange: () => void) => {
-  const timer = setInterval(onChange, 15_000);
+const subscribeEvery = (ms: number) => (onChange: () => void) => {
+  const timer = setInterval(onChange, ms);
   return () => clearInterval(timer);
 };
+const subscribeToMinutes = subscribeEvery(15_000);
+const subscribeToSeconds = subscribeEvery(1_000);
 const currentMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
+const currentSecond = () => Math.floor(Date.now() / 1_000) * 1_000;
 
 /** The time of day, kept to the minute. `null` on the server so it doesn't render a stale time. */
 function useClock() {
-  const minute = React.useSyncExternalStore(subscribeToClock, currentMinute, () => null);
+  const minute = React.useSyncExternalStore(subscribeToMinutes, currentMinute, () => null);
   return minute === null ? null : new Date(minute);
 }
+
+/** How long the room has been recording, in ms, or `null` when it isn't. */
+function useRecordingTime() {
+  const recording = useIsRecording();
+  const now = React.useSyncExternalStore(subscribeToSeconds, currentSecond, () => 0);
+  const [since, setSince] = React.useState<number | null>(null);
+  if (recording && since === null && now) setSince(now);
+  if (!recording && since !== null) setSince(null);
+  return since === null ? null : Math.max(0, now - since);
+}
+
+const formatDuration = (ms: number) => {
+  const seconds = Math.floor(ms / 1000);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${Math.floor(seconds / 3600)}:${pad(Math.floor(seconds / 60) % 60)}:${pad(seconds % 60)}`;
+};
 
 const bannerTones = {
   info: "bg-info-surface text-text-info border-info-border",

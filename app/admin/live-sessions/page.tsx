@@ -4,6 +4,7 @@ import { LiveSessionsScreen } from "@/components/LiveSessionsScreen";
 export default function AdminLiveSessionsPage() {
   return (
     <LiveSessionsScreen
+      joinPath="/admin/live"
       topNav={
         <AdminTopNav
           breadcrumb={[
