@@ -116,6 +116,45 @@ export function menteeProgressTarget(mentee: MentorStudent) {
   };
 }
 
+/** One of the signed-in mentor's active mentees, from `GET /mentors/my-mentees`. */
+export type MyMentee = {
+  id: string;
+  assignedAt: string;
+  student: {
+    id: string;
+    cohort: { id: string; name: string };
+    user: { id: string; name: string; email: string; image?: string | null };
+  };
+};
+
+export async function listMyMentees() {
+  const { data } = await api.get<Envelope<MyMentee[]>>("/mentors/my-mentees");
+  return data;
+}
+
+/**
+ * The endpoint only returns active mentorships and no account status, so
+ * every mentee shows as active. PENDING-BACKEND: mentors can't read lesson
+ * progress, so progress stays unknown.
+ */
+export function toMyAssignedStudent(mentee: MyMentee): AssignedStudent {
+  const { user } = mentee.student;
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    image: user.image,
+    status: "active",
+    progress: null,
+  };
+}
+
+export const myMenteesQuery = () =>
+  queryOptions({
+    queryKey: ["mentor", "mentees"] as const,
+    queryFn: listMyMentees,
+  });
+
 export const mentorKeys = {
   // Under the users key, so inviting or editing a user refreshes it.
   list: (cohortId?: string) =>

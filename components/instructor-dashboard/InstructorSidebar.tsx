@@ -22,7 +22,7 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { Logo } from "@/assets/logo";
-import { UserMenu } from "@/components/UserMenu";
+import { SidebarOrganization } from "@/components/SidebarOrganization";
 import { cn } from "@/lib/utils";
 import { useInstructorNav } from "./InstructorNavContext";
 
@@ -127,11 +127,9 @@ export function InstructorSidebar() {
               />
             ))}
           </div>
-          <hr className="text-neutral-200 mx-4" />
-          <div className="mt-auto p-4 bg-neutral-50">
-            <UserMenu variant="card" />
-          </div>
         </div>
+
+        <SidebarOrganization />
       </aside>
     </>
   );

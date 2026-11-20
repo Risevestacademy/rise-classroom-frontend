@@ -262,7 +262,7 @@ function ReviewForm({
           {submission.status === "GRADED" && (
             <div className="mt-3 flex flex-col gap-4 text-sm">
               <p className="text-3xl font-medium text-neutral-800">
-                {submission.grade ?? "--"}
+                {submission.score ?? "--"}
                 <span className="text-base text-neutral-400">/{max}</span>
               </p>
               {submission.feedback && (
@@ -447,7 +447,7 @@ function ReviewForm({
                 parsedScore !== null &&
                 review.mutate({
                   status: "GRADED",
-                  grade: parsedScore,
+                  score: parsedScore,
                   ...(feedback.trim() && { feedback: feedback.trim() }),
                 })
               }

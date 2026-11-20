@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 
 import { AuthGuard } from "@/components/AuthGuard";
+import { PushNotifications } from "@/components/PushNotifications";
 import type { Role } from "@/lib/auth";
 import { requireRole } from "@/lib/session.server";
 import { sessionQuery } from "@/lib/session-query";
@@ -28,7 +29,10 @@ export async function RoleGate({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <AuthGuard role={role}>{children}</AuthGuard>
+      <AuthGuard role={role}>
+        {children}
+        <PushNotifications />
+      </AuthGuard>
     </HydrationBoundary>
   );
 }

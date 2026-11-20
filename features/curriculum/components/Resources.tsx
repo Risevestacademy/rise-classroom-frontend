@@ -301,7 +301,7 @@ export function ResourceSheet({
               <div className="mt-4 flex aspect-video flex-col items-center justify-center gap-3 rounded-2xl bg-warning-surface">
                 <FileTypeIcon
                   name={item.resource.name}
-                  url={item.resource.url}
+                  url={item.resource.uploaded ? undefined : item.resource.url}
                   className="scale-150"
                 />
                 <p className="mt-2 text-sm text-neutral-600">

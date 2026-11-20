@@ -53,6 +53,25 @@ describe("AdminNotificationsPanel", () => {
     expect(screen.getAllByLabelText("Unread")).toHaveLength(1);
   });
 
+  it("names the person who sent a notification", async () => {
+    mockApi({
+      "GET /notifications": {
+        success: true,
+        data: [
+          {
+            ...notifications[0],
+            actor: { id: "u1", name: "Sarah Okafor", image: null, role: "STUDENT" },
+          },
+        ],
+        metadata: { unreadCount: 1 },
+      },
+    });
+    renderPanel();
+
+    expect(await screen.findByText("Sarah Okafor")).toBeInTheDocument();
+    expect(screen.queryByText("Assignment submitted")).not.toBeInTheDocument();
+  });
+
   it("shows only unread notifications on the Unread tab", async () => {
     notificationRoutes();
     renderPanel();

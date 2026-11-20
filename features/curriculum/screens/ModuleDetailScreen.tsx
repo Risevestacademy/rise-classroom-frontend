@@ -15,6 +15,7 @@ import { Calendar, Plus, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 import { CurriculumSummaryCard } from "@/features/curriculum/components/CurriculumSummaryCard";
+import { LessonAccessButton } from "@/features/curriculum/components/LessonAccessButton";
 import { ModuleAccessCard } from "@/features/curriculum/components/ModuleAccessCard";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -296,6 +297,18 @@ export function ModuleDetailScreen({
                   item={lesson}
                   videoLink={lesson.recordingLink}
                   editHref={editHref}
+                  badge={
+                    permissions.canUnlockModules && (
+                      <LessonAccessButton
+                        curriculumId={id}
+                        moduleId={moduleId}
+                        lessonId={lesson.id}
+                        lessonName={`lesson ${index + 1}`}
+                        unlocked={lesson.unlocked ?? false}
+                        moduleUnlocked={curriculumModule.unlocked ?? false}
+                      />
+                    )
+                  }
                   onRemove={() =>
                     setRemoveTarget({
                       name: `lesson ${index + 1}`,
@@ -399,6 +412,7 @@ export function ModuleDetailScreen({
                 moduleId={moduleId}
                 moduleStatus={curriculumModule.status}
                 unlocked={curriculumModule.unlocked}
+                onChange={() => api.refreshModule(queryClient, id, moduleId)}
               />
             )}
 
@@ -565,7 +579,7 @@ function ItemCard({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-start gap-2">
           {badge}
           <Menu.Root>
             <Menu.Trigger

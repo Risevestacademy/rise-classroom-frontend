@@ -1,6 +1,5 @@
 // PENDING-BACKEND: there are no mentor or instructor sessions or activity yet,
-// so their profiles show this sample data from the design. The mentor dashboard still
-// uses the sample students, as mentors can't list their own students yet.
+// so their profiles and the mentor dashboard show this sample data from the design.
 
 export type AssignedStudent = {
   id: string;
@@ -11,14 +10,6 @@ export type AssignedStudent = {
   /** `null` until it loads, or when it can't be worked out. */
   progress: number | null;
 };
-
-export const assignedStudents: (AssignedStudent & { progress: number })[] = [
-  { id: "1", name: "Seyi Wakil", email: "seyiwawa@gmail.com", status: "active", progress: 84 },
-  { id: "2", name: "Tola Adebayo", email: "tobayo123@gmail.com", status: "active", progress: 72 },
-  { id: "3", name: "James Okafor", email: "jammiefor123@gmail.com", status: "active", progress: 68 },
-  { id: "4", name: "Peace Jane", email: "warbeforepeace0@gmail.com", status: "active", progress: 92 },
-  { id: "5", name: "Ozavize Bello", email: "ozavizenotize123@gmail.com", status: "active", progress: 49 },
-];
 
 /** Below this overall progress a student is flagged as needing attention. */
 export const attentionThreshold = 50;

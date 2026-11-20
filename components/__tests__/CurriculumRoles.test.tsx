@@ -193,10 +193,9 @@ describe("curriculum detail permissions", () => {
     expect(screen.queryByRole("button", { name: "Curriculum actions" })).not.toBeInTheDocument();
   });
 
-  /* The API only lets instructors unlock modules. */
   it.each([
     ["instructor", true],
-    ["admin", false],
+    ["admin", true],
   ] as const)("shows student access on the module page to %s: %s", async (role, shown) => {
     mockApi({
       ...curriculumRoutes[role],
