@@ -121,6 +121,7 @@ export type SubmittedWork = {
 /* A student's submission as the Submissions tab shows it. */
 export type AssignmentSubmission = {
   id: string;
+  studentProfileId?: string;
   studentName: string;
   studentEmail: string;
   submittedAt: string | null;

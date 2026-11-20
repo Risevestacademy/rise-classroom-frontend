@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, usePathname } from "next/navigation";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { Calendar03, Mail02, UserCircle } from "@/assets/icons";
+import { Call02, Calendar03, Location01, Mail02, UserCircle } from "@/assets/icons";
 
 import { DUMMY_STUDENTS } from "@/components/instructor-dashboard/data";
 import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
@@ -12,7 +12,6 @@ import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNa
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { AddNoteDialog } from "@/components/student-profile/AddNoteDialog";
 import { ActivityTab } from "@/components/student-profile/ActivityTab";
-import { AssignmentsTab } from "@/components/student-profile/AssignmentsTab";
 import { AttendanceTab } from "@/components/student-profile/AttendanceTab";
 import { NotesTab } from "@/components/student-profile/NotesTab";
 import {
@@ -28,11 +27,20 @@ import {
   deadlines,
   notes as overviewNotes,
 } from "@/app/admin/students/[id]/overview-data";
+import { curriculumApis } from "@/features/curriculum/api";
+import {
+  submissionBadges,
+  type AssignmentSubmission,
+  type CurriculumAssignment,
+  type CurriculumModule,
+} from "@/features/curriculum/types";
 import {
   instructorQueries,
+  type InstructorEnrollmentStudent,
   type InstructorStudent,
   type InstructorTrack,
 } from "@/lib/instructor";
+import { nameWithDisplayName } from "@/lib/admin";
 
 const tabs = [
   { value: "overview", label: "Overview" },
@@ -45,8 +53,8 @@ const tabs = [
 
 type Tab = (typeof tabs)[number]["value"];
 
-// The instructor API currently provides identity and enrollment only. Use the
-// existing profile UI sample for the progress and activity details below.
+// The API has aggregate enrollment progress but no per-module details or
+// activity, attendance, or assignment records. Keep sample UI for those gaps.
 const uiDummyStudent = DUMMY_STUDENTS[0];
 
 type StudentEntry = {
@@ -54,10 +62,16 @@ type StudentEntry = {
   track: InstructorTrack;
 };
 
+type InstructorStudentProfile = InstructorStudent &
+  Omit<InstructorEnrollmentStudent, "user"> & {
+    user: InstructorStudent["user"] & InstructorEnrollmentStudent["user"];
+  };
+
 export default function StudentsProfilePage() {
   const { id: studentId } = useParams<{ id: string }>();
   const pathname = usePathname();
   const [tab, setTab] = useState<Tab>("overview");
+  const [now] = useState(() => Date.now());
 
   const tracksQuery = useQuery(instructorQueries.myTracks());
   const tracks = tracksQuery.data ?? [];
@@ -80,21 +94,89 @@ export default function StudentsProfilePage() {
     ({ student }) => student.user.id === studentId,
   );
   const student = memberships[0]?.student;
-  const trackNames = [...new Set(memberships.map(({ track }) => track.track.name))];
+  const enrollmentStudentQuery = useQuery(
+    instructorQueries.enrollmentStudent(student?.enrollmentId ?? ""),
+  );
+  const profileStudent: InstructorStudentProfile | undefined =
+    student && enrollmentStudentQuery.data
+      ? {
+          ...student,
+          ...enrollmentStudentQuery.data,
+          user: {
+            ...student.user,
+            ...enrollmentStudentQuery.data.user,
+            name:
+              `${enrollmentStudentQuery.data.user.firstName} ${enrollmentStudentQuery.data.user.lastName}`.trim() ||
+              student.user.name,
+          },
+        }
+      : undefined;
+  const curriculumQuery = useQuery({
+    ...curriculumApis.instructor.queries.list(
+      {
+        statuses: ["PUBLISHED"],
+        trackIds: profileStudent
+          ? [profileStudent.enrollment.track.id]
+          : [],
+      },
+      profileStudent?.enrollment.cohort.id,
+    ),
+    enabled: Boolean(profileStudent),
+    select: (curricula) =>
+      curricula.find((curriculum) => curriculum.publishStatus === "PUBLISHED") ??
+      curricula[0],
+  });
+  const curriculumId = curriculumQuery.data?.id ?? "";
+  const modulesQuery = useQuery({
+    ...curriculumApis.instructor.queries.modules(curriculumId),
+    enabled: Boolean(curriculumId),
+  });
+  const assignmentsQuery = useQuery({
+    ...curriculumApis.instructor.queries.assignments(curriculumId),
+    enabled: Boolean(curriculumId) && tab === "assignments",
+  });
+  const assignments = assignmentsQuery.data ?? [];
+  const submissionQueries = useQueries({
+    queries:
+      tab === "assignments"
+        ? assignments.map(({ assignment }) => ({
+            ...curriculumApis.instructor.queries.submissions(assignment.id),
+            select: (submissions: AssignmentSubmission[]) =>
+              submissions.find(
+                (submission) =>
+                  submission.studentProfileId ===
+                  profileStudent?.studentProfileId,
+              ),
+          }))
+        : [],
+  });
   const cohortNames = [
     ...new Set(
-      memberships.flatMap(({ track }) => (track.cohort ? [track.cohort.name] : [])),
+      [
+        enrollmentStudentQuery.data?.enrollment.cohort.name,
+        ...memberships.map(({ track }) => track.cohort?.name),
+      ].filter((name): name is string => Boolean(name)),
     ),
+  ];
+  const trackNames = [
+    ...new Set([
+      enrollmentStudentQuery.data?.enrollment.track.name,
+      ...memberships.map(({ track }) => track.track.name),
+    ].filter((name): name is string => Boolean(name))),
   ];
 
   const isLoading =
-    tracksQuery.isLoading || studentQueries.some((query) => query.isLoading);
+    tracksQuery.isLoading ||
+    studentQueries.some((query) => query.isLoading) ||
+    enrollmentStudentQuery.isLoading;
   const error =
-    tracksQuery.error ?? studentQueries.find((query) => query.isError)?.error;
-  const status = student
-    ? student.user.status === "SUSPENDED"
+    tracksQuery.error ??
+    studentQueries.find((query) => query.isError)?.error ??
+    enrollmentStudentQuery.error;
+  const status = profileStudent
+    ? profileStudent.user.status === "SUSPENDED"
       ? { label: "Suspended", className: "text-text-error" }
-      : student.user.onboardingStatus === "INVITED"
+      : profileStudent.user.onboardingStatus === "INVITED"
         ? { label: "Pending", className: "text-text-warning" }
         : { label: "Active", className: "text-text-success" }
     : undefined;
@@ -106,7 +188,9 @@ export default function StudentsProfilePage() {
           "Teaching",
           { label: "Students", href: "/instructor/students" },
           {
-            label: student?.user.name,
+            label: profileStudent
+              ? nameWithDisplayName(profileStudent.user)
+              : studentId,
             href: pathname,
           },
         ]}
@@ -116,9 +200,9 @@ export default function StudentsProfilePage() {
           Students Profile
         </h1>
 
-        {student && tab !== "overview" && status && (
+        {profileStudent && tab !== "overview" && status && (
           <StudentSummary
-            student={student}
+            student={profileStudent}
             status={status}
             trackNames={trackNames}
             cohortNames={cohortNames}
@@ -148,7 +232,7 @@ export default function StudentsProfilePage() {
               title="Couldn't load this student"
               description={error.message}
             />
-          ) : !student || !status ? (
+          ) : !profileStudent || !status ? (
             <CohortEmptyState
               icon={UserCircle}
               title="Student not found"
@@ -156,22 +240,45 @@ export default function StudentsProfilePage() {
             />
           ) : tab === "overview" ? (
             <Overview
-              student={student}
+              student={profileStudent}
               status={status}
               trackNames={trackNames}
               cohortNames={cohortNames}
+              modules={modulesQuery.data ?? []}
+              modulesLoading={
+                curriculumQuery.isLoading || modulesQuery.isLoading
+              }
+              modulesError={curriculumQuery.error ?? modulesQuery.error}
+              hasCurriculum={Boolean(curriculumId)}
             />
           ) : tab === "progress" ? (
-            <DemoProgressTab
-              trackName={trackNames[0]}
-              cohortName={cohortNames[0]}
+            <StudentProgressTab
+              student={profileStudent}
+              modules={modulesQuery.data ?? []}
+              isLoading={curriculumQuery.isLoading || modulesQuery.isLoading}
+              error={curriculumQuery.error ?? modulesQuery.error}
+              hasCurriculum={Boolean(curriculumId)}
             />
           ) : tab === "activity" ? (
-            <ActivityTab firstName={student.user.name.split(/\s+/)[0]} />
+            <ActivityTab firstName={profileStudent.user.name.split(/\s+/)[0]} />
           ) : tab === "attendance" ? (
-            <AttendanceTab firstName={student.user.name.split(/\s+/)[0]} />
+            <AttendanceTab firstName={profileStudent.user.name.split(/\s+/)[0]} />
           ) : tab === "assignments" ? (
-            <AssignmentsTab firstName={student.user.name.split(/\s+/)[0]} />
+            <StudentAssignmentsTab
+              assignments={assignments}
+              submissions={submissionQueries.map((query) => query.data)}
+              isLoading={
+                curriculumQuery.isLoading ||
+                assignmentsQuery.isLoading ||
+                submissionQueries.some((query) => query.isLoading)
+              }
+              error={
+                curriculumQuery.error ??
+                assignmentsQuery.error ??
+                submissionQueries.find((query) => query.isError)?.error
+              }
+              hasCurriculum={Boolean(curriculumId)}
+            />
           ) : (
             <NotesTab />
           )}
@@ -186,7 +293,7 @@ function StudentSummary({
   trackNames,
   cohortNames,
 }: {
-  student: StudentEntry["student"];
+  student: InstructorStudentProfile;
   status: { label: string; className: string };
   trackNames: string[];
   cohortNames: string[];
@@ -195,17 +302,20 @@ function StudentSummary({
     <div className="mt-6 flex w-full max-w-full items-center gap-3 rounded-lg bg-surface-default px-3 py-6 shadow-[0_1px_3px_rgb(0_0_0/0.25)] sm:w-fit">
       <PersonAvatar
         name={student.user.name}
+        src={student.user.image}
         colorKey={student.user.id}
         size={60}
       />
       <div className="flex min-w-0 flex-col gap-2">
         <p className="truncate text-lg/6 font-semibold text-text-primary">
-          {student.user.name}
+          {nameWithDisplayName(student.user)}
         </p>
         <ProfileBadges
           status={status}
           trackNames={trackNames}
           cohortNames={cohortNames}
+          riskStatus={student.riskStatus}
+          enrollmentStatus={student.enrollment.status}
         />
       </div>
     </div>
@@ -217,11 +327,19 @@ function Overview({
   status,
   trackNames,
   cohortNames,
+  modules,
+  modulesLoading,
+  modulesError,
+  hasCurriculum,
 }: {
-  student: StudentEntry["student"];
+  student: InstructorStudentProfile;
   status: { label: string; className: string };
   trackNames: string[];
   cohortNames: string[];
+  modules: CurriculumModule[];
+  modulesLoading: boolean;
+  modulesError: Error | null | undefined;
+  hasCurriculum: boolean;
 }) {
   return (
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,657fr)_minmax(0,463fr)]">
@@ -231,27 +349,51 @@ function Overview({
             <div className="flex min-w-0 items-center gap-3">
               <PersonAvatar
                 name={student.user.name}
+                src={student.user.image}
                 colorKey={student.user.id}
                 size={80}
               />
               <div className="flex min-w-0 flex-col gap-2">
                 <p className="truncate text-2xl font-semibold text-text-primary">
-                  {student.user.name}
+                  {nameWithDisplayName(student.user)}
                 </p>
                 <ProfileBadges
                   status={status}
                   trackNames={trackNames}
                   cohortNames={cohortNames}
+                  riskStatus={student.riskStatus}
+                  enrollmentStatus={student.enrollment.status}
                 />
               </div>
             </div>
             <MessageButton email={student.user.email} />
           </div>
           <div className="grid w-fit max-w-full grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-[auto_auto]">
+            {student.user.phoneNumber && (
+              <DetailItem icon={Call02}>{student.user.phoneNumber}</DetailItem>
+            )}
+            <DetailItem icon={Calendar03}>
+              {formatJoinedDate(student.enrollment.enrolledAt)}
+            </DetailItem>
             <DetailItem icon={Mail02}>{student.user.email}</DetailItem>
+            <DetailItem icon={Location01}>
+              {student.user.location || "--"}
+            </DetailItem>
+            {student.user.description && (
+              <p className="col-span-full px-2 font-work text-sm text-text-secondary">
+                {student.user.description}
+              </p>
+            )}
           </div>
         </Card>
-        <ProgressOverviewCard trackName={trackNames[0]} />
+        <ProgressOverviewCard
+          trackName={student.enrollment.track.name}
+          student={student}
+          modules={modules}
+          modulesLoading={modulesLoading}
+          modulesError={modulesError}
+          hasCurriculum={hasCurriculum}
+        />
         <DeadlinesCard />
       </div>
       <div className="flex min-w-0 flex-col gap-4">
@@ -263,19 +405,62 @@ function Overview({
   );
 }
 
-function DemoProgressTab({
-  trackName,
-  cohortName,
+function formatJoinedDate(value?: string | null) {
+  if (!value) return "--";
+
+  return `Joined ${new Date(value).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })}`;
+}
+
+function StudentProgressTab({
+  student,
+  modules,
+  isLoading,
+  error,
+  hasCurriculum,
 }: {
-  trackName?: string;
-  cohortName?: string;
+  student: InstructorStudentProfile;
+  modules: CurriculumModule[];
+  isLoading: boolean;
+  error: Error | null | undefined;
+  hasCurriculum: boolean;
 }) {
-  const [selectedModule, setSelectedModule] = useState(
-    uiDummyStudent.modules[0]?.name ?? "",
+  const [selectedModuleId, setSelectedModuleId] = useState("");
+  const publishedModules = modules.filter(
+    (module) => module.status === "PUBLISHED",
   );
   const currentModule =
-    uiDummyStudent.modules.find((module) => module.name === selectedModule) ??
-    uiDummyStudent.modules[0];
+    publishedModules.find((module) => module.id === selectedModuleId) ??
+    publishedModules[0];
+
+  if (isLoading) {
+    return (
+      <Card>
+        <div className="h-20 animate-pulse rounded-lg bg-neutral-100" />
+      </Card>
+    );
+  }
+  if (error) {
+    return (
+      <Card>
+        <p role="alert" className="font-work text-sm text-text-error">
+          Couldn&apos;t load curriculum: {error.message}
+        </p>
+      </Card>
+    );
+  }
+  if (!hasCurriculum || publishedModules.length === 0) {
+    return (
+      <Card>
+        <p className="font-work text-sm text-text-secondary">
+          No published curriculum modules are available for this enrollment.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,309fr)_minmax(0,811fr)]">
@@ -283,34 +468,32 @@ function DemoProgressTab({
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
             <h2 className="truncate text-lg/6 font-semibold text-text-primary">
-              {trackName} Track
+              {student.enrollment.track.name} Track
             </h2>
-            {cohortName && (
-              <p className="truncate font-work text-[13px]/[18px] text-text-secondary">
-                {cohortName}
-              </p>
-            )}
+            <p className="truncate font-work text-[13px]/[18px] text-text-secondary">
+              {student.enrollment.cohort.name}
+            </p>
           </div>
           <div className="flex shrink-0 flex-col gap-1 text-right">
             <p className="text-lg/6 font-semibold text-text-primary">
-              {uiDummyStudent.progress}%
+              {student.progress.lessons.percentage}%
             </p>
             <p className="font-work text-[13px]/[18px] text-text-secondary">
               Overall progress
             </p>
           </div>
         </div>
-        <ProgressBar value={uiDummyStudent.progress} />
+        <ProgressBar value={student.progress.lessons.percentage} />
 
         <ul className="flex flex-col">
-          {uiDummyStudent.modules.map((module, index) => (
-            <li key={module.name}>
+          {publishedModules.map((module, index) => (
+            <li key={module.id}>
               <button
                 type="button"
-                aria-pressed={module.name === currentModule?.name}
-                onClick={() => setSelectedModule(module.name)}
+                aria-pressed={module.id === currentModule?.id}
+                onClick={() => setSelectedModuleId(module.id)}
                 className={`flex w-full items-center justify-between gap-3 p-2 text-left ${
-                  module.name === currentModule?.name
+                  module.id === currentModule?.id
                     ? "rounded-lg bg-brand-100"
                     : "border-b border-border-default hover:bg-surface-background"
                 }`}
@@ -320,11 +503,11 @@ function DemoProgressTab({
                     Module {index + 1}
                   </span>
                   <span className="truncate font-work text-sm text-text-primary">
-                    {module.name}
+                    {module.title}
                   </span>
                 </span>
-                <span className="shrink-0 font-work text-sm font-medium text-text-primary">
-                  {module.progress}%
+                <span className="shrink-0 font-work text-xs text-text-secondary">
+                  {module.lessons.length} lessons
                 </span>
               </button>
             </li>
@@ -338,61 +521,84 @@ function DemoProgressTab({
             <div className="flex min-w-0 flex-col gap-3">
               <p className="font-work text-sm font-medium text-text-secondary">
                 Module{" "}
-                {uiDummyStudent.modules.findIndex(
-                  (module) => module.name === currentModule?.name,
+                {publishedModules.findIndex(
+                  (module) => module.id === currentModule?.id,
                 ) + 1}
               </p>
               <h2 className="text-xl font-semibold text-text-primary">
-                {currentModule?.name}
+                {currentModule?.title}
               </h2>
-            </div>
-            <div className="flex w-full shrink-0 items-center gap-3 md:w-[191px]">
-              <span className="text-base font-medium text-black">
-                {currentModule?.progress}%
-              </span>
-              <ProgressBar
-                value={currentModule?.progress ?? 0}
-                className="flex-1"
-              />
+              {currentModule?.description && (
+                <p className="font-work text-sm text-text-secondary">
+                  {currentModule.description}
+                </p>
+              )}
             </div>
           </div>
         </Card>
         <Card className="gap-3">
           <CardHeader
             size="h4"
-            title="Learning items"
-            subtitle="Lessons, assignments and quizzes in this module."
+            title="Lessons"
+            subtitle={`Lessons included in ${currentModule?.title ?? "this module"}.`}
           />
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {uiDummyStudent.assignmentsList.map((assignment) => (
-              <li
-                key={assignment.title}
-                className="flex min-h-40 flex-col justify-between gap-4 rounded-xl bg-surface-subtle p-4"
-              >
-                <div>
-                  <BrandBadge className="text-text-success">
-                    {assignment.status}
-                  </BrandBadge>
-                  <p className="mt-3 text-lg/6 font-semibold text-text-primary">
-                    {assignment.title}
-                  </p>
-                  <p className="text-sm text-text-secondary">
-                    {assignment.module}
-                  </p>
-                </div>
-                <span className="font-work text-sm text-text-secondary">
-                  {assignment.grade}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {currentModule?.lessons.length ? (
+            <ol className="flex flex-col divide-y divide-border-default">
+              {currentModule.lessons.map((lesson, index) => (
+                <li
+                  key={lesson.id}
+                  className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
+                >
+                  <span className="font-work text-sm text-text-secondary">
+                    {index + 1}.
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium text-text-primary">
+                      {lesson.title}
+                    </p>
+                    {lesson.description && (
+                      <p className="mt-1 font-work text-sm text-text-secondary">
+                        {lesson.description}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="font-work text-sm text-text-secondary">
+              No lessons are available in this module.
+            </p>
+          )}
+        </Card>
+        <Card className="gap-3">
+          <CardHeader
+            size="h4"
+            title="Progress summary"
+            subtitle="Completion data from this student's enrollment."
+          />
+          <ProgressCounts student={student} />
         </Card>
       </div>
     </div>
   );
 }
 
-function ProgressOverviewCard({ trackName }: { trackName?: string }) {
+function ProgressOverviewCard({
+  trackName,
+  student,
+  modules,
+  modulesLoading,
+  modulesError,
+  hasCurriculum,
+}: {
+  trackName: string;
+  student: InstructorStudentProfile;
+  modules: CurriculumModule[];
+  modulesLoading: boolean;
+  modulesError: Error | null | undefined;
+  hasCurriculum: boolean;
+}) {
   return (
     <Card>
       <CardHeader
@@ -402,27 +608,208 @@ function ProgressOverviewCard({ trackName }: { trackName?: string }) {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <span className="text-2xl font-semibold text-text-primary">
-            {uiDummyStudent.progress}%
+            {student.progress.lessons.percentage}%
           </span>
           <span className="font-work text-sm text-text-secondary">
             Overall progress
           </span>
         </div>
-        <ProgressBar value={uiDummyStudent.progress} />
-        {uiDummyStudent.modules.slice(0, 4).map((module) => (
-          <div key={module.name} className="flex items-center gap-3">
-            <span className="min-w-0 flex-1 truncate font-work text-sm text-text-primary">
-              {module.name}
-            </span>
-            <ProgressBar
-              value={module.progress}
-              className="w-24 shrink-0"
-            />
-            <span className="w-9 text-right font-work text-xs text-text-secondary">
-              {module.progress}%
-            </span>
+        <ProgressBar value={student.progress.lessons.percentage} />
+        <p className="font-work text-sm text-text-secondary">
+          {student.progress.lessons.completed} of {student.progress.lessons.total} lessons completed
+        </p>
+        {modulesLoading ? (
+          <div className="h-10 animate-pulse rounded-lg bg-neutral-100" />
+        ) : modulesError ? (
+          <p role="alert" className="font-work text-sm text-text-error">
+            Couldn&apos;t load curriculum: {modulesError.message}
+          </p>
+        ) : !hasCurriculum ? (
+          <p className="font-work text-sm text-text-secondary">
+            No published curriculum is available for this enrollment.
+          </p>
+        ) : (
+          modules.filter((module) => module.status === "PUBLISHED").length ===
+          0 ? (
+            <p className="font-work text-sm text-text-secondary">
+              No published modules are available for this curriculum.
+            </p>
+          ) : (
+            modules
+              .filter((module) => module.status === "PUBLISHED")
+              .slice(0, 4)
+              .map((module) => (
+                <div key={module.id} className="flex items-center gap-3">
+                  <span className="min-w-0 flex-1 truncate font-work text-sm text-text-primary">
+                    {module.title}
+                  </span>
+                  <span className="shrink-0 font-work text-xs text-text-secondary">
+                    {module.lessons.length} lessons
+                  </span>
+                </div>
+              ))
+          )
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ProgressCounts({ student }: { student: InstructorStudentProfile }) {
+  const { lessons, assignments, weeklyTasks } = student.progress;
+  const metrics = [
+    {
+      label: "Lessons completed",
+      value: `${lessons.completed}/${lessons.total}`,
+    },
+    {
+      label: "Assignments submitted",
+      value: `${assignments.submitted}/${assignments.total}`,
+    },
+    { label: "Assignments graded", value: assignments.graded },
+    { label: "Assignments pending", value: assignments.pending },
+    { label: "Assignments missed", value: assignments.missed },
+    { label: "Assignments on hold", value: assignments.onHold },
+    { label: "Weekly tasks", value: weeklyTasks.total },
+    { label: "Tasks pending", value: weeklyTasks.pending },
+    { label: "Tasks in progress", value: weeklyTasks.inProgress },
+    { label: "Tasks submitted", value: weeklyTasks.submitted },
+    { label: "Tasks reviewed", value: weeklyTasks.reviewed },
+    { label: "Tasks overdue", value: weeklyTasks.overdue },
+  ];
+
+  return (
+    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {metrics.map((metric) => (
+        <div key={metric.label} className="rounded-lg bg-surface-subtle p-3">
+          <dt className="font-work text-xs text-text-secondary">
+            {metric.label}
+          </dt>
+          <dd className="mt-1 font-semibold text-text-primary">
+            {metric.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function StudentAssignmentsTab({
+  assignments,
+  submissions,
+  isLoading,
+  error,
+  hasCurriculum,
+}: {
+  assignments: CurriculumAssignment[];
+  submissions: (AssignmentSubmission | undefined)[];
+  isLoading: boolean;
+  error: Error | null | undefined;
+  hasCurriculum: boolean;
+}) {
+  const rows = assignments.flatMap((item, index) =>
+    item.assignment.status === "PUBLISHED"
+      ? [{ ...item, submission: submissions[index] }]
+      : [],
+  );
+
+  if (isLoading) {
+    return (
+      <Card>
+        <div className="h-20 animate-pulse rounded-lg bg-neutral-100" />
+      </Card>
+    );
+  }
+  if (error) {
+    return (
+      <Card>
+        <p role="alert" className="font-work text-sm text-text-error">
+          Couldn&apos;t load assignments: {error.message}
+        </p>
+      </Card>
+    );
+  }
+  if (!hasCurriculum || rows.length === 0) {
+    return (
+      <Card>
+        <p className="font-work text-sm text-text-secondary">
+          No published assignments are available for this enrollment.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="gap-5">
+      <CardHeader
+        title="Assignments"
+        subtitle="Assignments and submissions for this student."
+      />
+      <div className="overflow-x-auto">
+        <div className="min-w-[760px]">
+          <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr] rounded-t-lg bg-surface-subtle px-3 py-3 font-work text-sm font-medium text-text-primary">
+            <span>Assignment</span>
+            <span>Module</span>
+            <span>Due</span>
+            <span>Status</span>
+            <span>Grade</span>
           </div>
-        ))}
+          <ul>
+            {rows.map(({ assignment, module, submission }) => {
+              const isOverdue =
+                !submission &&
+                assignment.dueAt !== null &&
+                new Date(assignment.dueAt).getTime() < now;
+
+              return (
+                <li
+                  key={assignment.id}
+                  className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr] items-center gap-2 border-b border-border-default px-3 py-4 font-work text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-text-primary">
+                      {assignment.title}
+                    </p>
+                    <p className="text-text-secondary">
+                      {assignment.type} · {assignment.mode}
+                    </p>
+                  </div>
+                  <span className="truncate text-text-secondary">
+                    {module.title}
+                  </span>
+                  <span className="text-text-secondary">
+                    {assignment.dueAt
+                      ? new Date(assignment.dueAt).toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric", year: "numeric" },
+                        )
+                      : "--"}
+                  </span>
+                  <BrandBadge
+                    className={
+                      tone === "success"
+                        ? "w-fit text-text-success"
+                        : tone === "error"
+                          ? "w-fit text-text-error"
+                          : tone === "warning"
+                            ? "w-fit text-text-warning"
+                            : tone === "info"
+                              ? "w-fit text-text-info"
+                              : "w-fit text-text-secondary"
+                    }
+                  >
+                    {label}
+                  </BrandBadge>
+                  <span className="text-text-secondary">
+                    {submission?.score == null
+                      ? "--"
+                      : `${submission.score}/${assignment.maxPoints}`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
     </Card>
   );
@@ -548,10 +935,14 @@ function ProfileBadges({
   status,
   trackNames,
   cohortNames,
+  riskStatus,
+  enrollmentStatus,
 }: {
   status: { label: string; className: string };
   trackNames: string[];
   cohortNames: string[];
+  riskStatus: string;
+  enrollmentStatus: string;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -568,6 +959,20 @@ function ProfileBadges({
           {cohort}
         </BrandBadge>
       ))}
+      <BrandBadge size="lg" className="text-text-info">
+        {formatStatusLabel(riskStatus)}
+      </BrandBadge>
+      <BrandBadge size="lg" className="text-text-info">
+        {formatStatusLabel(enrollmentStatus)}
+      </BrandBadge>
     </div>
   );
+}
+
+function formatStatusLabel(status: string) {
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
