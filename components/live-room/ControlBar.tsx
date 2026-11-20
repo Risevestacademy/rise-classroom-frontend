@@ -4,16 +4,11 @@ import * as React from "react";
 import { useMediaDeviceSelect } from "@livekit/components-react";
 
 import {
-  ArrowUp01,
-  CallEnd,
   ComputerScreenShare,
-  Link01,
-  Message01,
   Mic02,
   MicOff02,
-  MoreVertical,
+  Settings01,
   Smile,
-  UserMultiple,
   Video,
   VideoOff,
   WavingHand02,
@@ -26,136 +21,138 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { reactionEmojis } from "@/lib/live-room";
+import { feedbackOptions, reactionEmojis, type Feedback } from "@/lib/live-room";
 import { cn } from "@/lib/utils";
 import { RoomMenuContent, RoomMenuItem, RoomMenuLabel, RoomMenuRadioItem, RoomMenuSeparator } from "./RoomMenu";
-import type { PanelTab } from "./SidePanel";
 
 const control =
-  "flex h-[41px] cursor-pointer items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:size-5";
+  "flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50 max-sm:size-10 [&_svg]:size-5";
 const idle = "bg-room-control text-white hover:bg-room-control-hover";
+const active = "bg-room-active text-text-brand";
+const off = "bg-room-off text-room-off-text hover:bg-[#ecc0c0]";
 
 export type ControlBarProps = {
   micOn: boolean;
   cameraOn: boolean;
   sharing: boolean;
   handRaised: boolean;
+  feedback?: Feedback;
   isHost: boolean;
-  panel: PanelTab | null;
-  unreadChat: boolean;
-  raisedHands: number;
   canShareScreen: boolean;
   onToggleMic: () => void;
   onToggleCamera: () => void;
   onToggleShare: () => void;
   onToggleHand: () => void;
   onReact: (emoji: string) => void;
-  onPanel: (tab: PanelTab) => void;
-  onCopyLink: () => void;
+  onFeedback: (feedback: Feedback | null) => void;
   onLeave: () => void;
   onEndForAll: () => void;
 };
 
-/** The call controls along the bottom of the room, and the chat/people toggles beside them. */
+/** The call controls along the bottom of the room. */
 export function ControlBar(props: ControlBarProps) {
-  const { micOn, cameraOn, sharing, handRaised, isHost, panel } = props;
+  const { micOn, cameraOn, sharing, handRaised, feedback, isHost } = props;
 
   return (
-    <div className="flex items-end justify-center gap-3 px-3 pb-4 sm:pb-6 lg:justify-between lg:px-8">
-      <span className="hidden w-[108px] lg:block" />
-
-      <div role="toolbar" aria-label="Call controls" className="flex items-center gap-2 rounded-3xl bg-room-bar p-2.5 sm:gap-3 sm:px-4 sm:py-3">
-        <DeviceToggle
-          kind="audioinput"
+    <div className="flex justify-center px-3 pt-4 pb-4 sm:pt-10 sm:pb-[56px]">
+      <div
+        role="toolbar"
+        aria-label="Call controls"
+        className="flex items-center gap-2 rounded-3xl border border-white/10 bg-room-popover/20 p-2.5 sm:gap-3 sm:p-3"
+      >
+        <ToggleButton
           on={micOn}
           label={micOn ? "Turn off microphone" : "Turn on microphone"}
-          icon={micOn ? <Mic02 /> : <MicOff02 />}
-          onToggle={props.onToggleMic}
-        />
-        <DeviceToggle
-          kind="videoinput"
+          onClick={props.onToggleMic}
+          className={micOn ? idle : off}
+        >
+          {micOn ? <Mic02 /> : <MicOff02 />}
+        </ToggleButton>
+        <ToggleButton
           on={cameraOn}
           label={cameraOn ? "Turn off camera" : "Turn on camera"}
-          icon={cameraOn ? <Video /> : <VideoOff />}
-          onToggle={props.onToggleCamera}
-        />
+          onClick={props.onToggleCamera}
+          className={cameraOn ? idle : off}
+        >
+          {cameraOn ? <Video /> : <VideoOff />}
+        </ToggleButton>
 
         {props.canShareScreen && (
-          <button
-            type="button"
-            aria-pressed={sharing}
-            aria-label={sharing ? "Stop presenting" : "Present your screen"}
-            title={sharing ? "Stop presenting" : "Present your screen"}
+          <ToggleButton
+            on={sharing}
+            label={sharing ? "Stop presenting" : "Present your screen"}
             onClick={props.onToggleShare}
-            className={cn(control, "w-12 max-sm:hidden", sharing ? "bg-room-active text-text-brand" : idle)}
+            className={cn("max-sm:hidden", sharing ? active : idle)}
           >
             <ComputerScreenShare />
-          </button>
+          </ToggleButton>
         )}
 
         <DropdownMenu>
-          <DropdownMenuTrigger aria-label="Send a reaction" title="Send a reaction" className={cn(control, idle, "w-12 data-popup-open:bg-room-active data-popup-open:text-text-brand")}>
+          <DropdownMenuTrigger
+            aria-label="Reactions and feedback"
+            title="Reactions and feedback"
+            className={cn(control, feedback ? active : idle, "data-popup-open:bg-room-active data-popup-open:text-text-brand")}
+          >
             <Smile />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             side="top"
             align="center"
             sideOffset={12}
-            className="flex w-auto min-w-0 gap-0.5 rounded-full bg-[#292b2b] p-1.5 ring-0"
+            className="w-[220px] min-w-0 rounded-2xl bg-room-popover p-0 text-white shadow-[0_8px_24px_rgb(0_0_0/0.5)] ring-0"
           >
-            {reactionEmojis.map((emoji) => (
-              <DropdownMenuItem
-                key={emoji}
-                aria-label={`React ${emoji}`}
-                closeOnClick={false}
-                onClick={() => props.onReact(emoji)}
-                className="size-8 justify-center rounded-full p-0 text-lg transition-transform focus:scale-125 focus:bg-white/10"
-              >
-                {emoji}
-              </DropdownMenuItem>
-            ))}
+            <DropdownMenuGroup aria-label="Reactions" className="grid grid-cols-6 gap-x-2 gap-y-1.5 px-3 py-3">
+              {reactionEmojis.map((emoji) => (
+                <DropdownMenuItem
+                  key={emoji}
+                  aria-label={`React ${emoji}`}
+                  closeOnClick={false}
+                  onClick={() => props.onReact(emoji)}
+                  className="size-7 justify-center rounded-md p-0 text-lg transition-transform focus:scale-125 focus:bg-white/10"
+                >
+                  {emoji}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+            <div className="h-px bg-white/20" />
+            <DropdownMenuGroup aria-label="Feedback" className="py-1">
+              {feedbackOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  aria-checked={feedback === option.value}
+                  role="menuitemcheckbox"
+                  onClick={() => props.onFeedback(feedback === option.value ? null : option.value)}
+                  className={cn(
+                    "gap-3 rounded-none px-4 py-1.5 text-xs text-white focus:bg-white/10 focus:text-white",
+                    feedback === option.value && "bg-white/10",
+                  )}
+                >
+                  <span aria-hidden className="w-5 text-center text-base">
+                    {option.emoji}
+                  </span>
+                  {option.label}
+                  {feedback === option.value && <span className="ml-auto text-[10px] text-room-text-muted">Clear</span>}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <button
-          type="button"
-          aria-pressed={handRaised}
-          aria-label={handRaised ? "Lower hand" : "Raise hand"}
-          title={handRaised ? "Lower hand" : "Raise hand"}
+        <ToggleButton
+          on={handRaised}
+          label={handRaised ? "Lower hand" : "Raise hand"}
           onClick={props.onToggleHand}
-          className={cn(control, "w-12 max-sm:hidden", handRaised ? "bg-brand-700 text-white hover:bg-brand-600" : idle)}
+          className={handRaised ? active : idle}
         >
           <WavingHand02 />
-        </button>
+        </ToggleButton>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger aria-label="More options" title="More options" className={cn(control, idle, "w-[30px]")}>
-            <MoreVertical />
-          </DropdownMenuTrigger>
-          <RoomMenuContent side="top" align="center" sideOffset={12} className="w-[224px]">
-            <DropdownMenuGroup className="sm:hidden">
-              <RoomMenuItem onClick={props.onToggleHand}>
-                <WavingHand02 /> {handRaised ? "Lower hand" : "Raise hand"}
-              </RoomMenuItem>
-              <RoomMenuItem onClick={() => props.onPanel("chat")}>
-                <Message01 /> Chat
-              </RoomMenuItem>
-              <RoomMenuItem onClick={() => props.onPanel("participants")}>
-                <UserMultiple /> Participants
-              </RoomMenuItem>
-              <RoomMenuSeparator />
-            </DropdownMenuGroup>
-            <RoomMenuItem onClick={props.onCopyLink}>
-              <Link01 /> Copy session link
-            </RoomMenuItem>
-          </RoomMenuContent>
-        </DropdownMenu>
+        <SettingsMenu />
 
         {isHost ? (
           <DropdownMenu>
-            <DropdownMenuTrigger aria-label="Leave or end the session" title="Leave" className={cn(control, "w-[62px] bg-room-leave text-white hover:bg-room-leave-hover [&_svg]:size-6")}>
-              <CallEnd />
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger className={leaveButton}>Leave</DropdownMenuTrigger>
             <RoomMenuContent side="top" align="end" sideOffset={12} className="w-[240px]">
               <RoomMenuItem onClick={props.onLeave}>Leave session</RoomMenuItem>
               <RoomMenuItem variant="destructive" onClick={props.onEndForAll}>
@@ -164,135 +161,77 @@ export function ControlBar(props: ControlBarProps) {
             </RoomMenuContent>
           </DropdownMenu>
         ) : (
-          <button
-            type="button"
-            aria-label="Leave session"
-            title="Leave session"
-            onClick={props.onLeave}
-            className={cn(control, "w-[62px] bg-room-leave text-white hover:bg-room-leave-hover [&_svg]:size-6")}
-          >
-            <CallEnd />
+          <button type="button" onClick={props.onLeave} className={leaveButton}>
+            Leave
           </button>
         )}
-      </div>
-
-      <div className="hidden items-center gap-1 rounded-3xl bg-room-bar p-1 sm:flex">
-        <UtilityButton
-          label="Chat"
-          active={panel === "chat"}
-          dot={props.unreadChat}
-          onClick={() => props.onPanel("chat")}
-        >
-          <Message01 />
-        </UtilityButton>
-        <UtilityButton
-          label="Participants"
-          active={panel === "participants"}
-          count={props.raisedHands}
-          onClick={() => props.onPanel("participants")}
-        >
-          <UserMultiple />
-        </UtilityButton>
       </div>
     </div>
   );
 }
 
-function UtilityButton({
+const leaveButton =
+  "flex h-11 shrink-0 cursor-pointer items-center rounded-full bg-room-leave px-5 text-base font-medium text-white transition-colors hover:bg-room-leave-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white max-sm:h-10 max-sm:px-4";
+
+function ToggleButton({
+  on,
   label,
-  active,
-  dot,
-  count,
   onClick,
+  className,
   children,
 }: {
+  on: boolean;
   label: string;
-  active: boolean;
-  dot?: boolean;
-  count?: number;
   onClick: () => void;
+  className: string;
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      aria-label={count ? `${label}, ${count} ${count === 1 ? "hand" : "hands"} raised` : dot ? `${label}, new messages` : label}
-      title={label}
-      onClick={onClick}
-      className={cn(
-        "relative flex size-10 cursor-pointer items-center justify-center rounded-full transition-colors [&_svg]:size-5",
-        active ? "bg-room-active text-text-brand" : "text-white hover:bg-room-control",
-      )}
-    >
+    <button type="button" aria-pressed={on} aria-label={label} title={label} onClick={onClick} className={cn(control, className)}>
       {children}
-      {dot && !active && <span className="absolute top-2 right-2 size-2 rounded-full bg-room-active ring-2 ring-room-bar" />}
-      {!!count && (
-        <span className="absolute -top-1 -right-1 flex min-w-5 items-center justify-center rounded-full bg-brand-700 px-1 text-[11px]/5 font-medium text-white">
-          {count}
-        </span>
-      )}
     </button>
   );
 }
 
-/** Mic or camera: the toggle, plus a menu on its left to pick the device. */
-function DeviceToggle({
-  kind,
-  on,
-  label,
-  icon,
-  onToggle,
-}: {
-  kind: "audioinput" | "videoinput";
-  on: boolean;
-  label: string;
-  icon: React.ReactNode;
-  onToggle: () => void;
-}) {
+/** The gear: pick the microphone, camera and speaker. */
+function SettingsMenu() {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Settings"
+        title="Settings"
+        className={cn(control, idle, "data-popup-open:bg-room-active data-popup-open:text-text-brand")}
+      >
+        <Settings01 />
+      </DropdownMenuTrigger>
+      <RoomMenuContent side="top" align="end" sideOffset={12} className="w-[288px]">
+        <DeviceGroup kind="audioinput" label="Microphone" />
+        <RoomMenuSeparator />
+        <DeviceGroup kind="videoinput" label="Camera" />
+        <RoomMenuSeparator />
+        <DeviceGroup kind="audiooutput" label="Speaker" />
+      </RoomMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function DeviceGroup({ kind, label }: { kind: MediaDeviceKind; label: string }) {
   const { devices, activeDeviceId, setActiveMediaDevice } = useMediaDeviceSelect({ kind });
-  const noun = kind === "audioinput" ? "microphone" : "camera";
 
   return (
-    <div className={cn("flex items-center rounded-[11px] p-0", on ? "bg-room-control" : "bg-room-off-menu")}>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label={`Choose ${noun}`}
-          title={`Choose ${noun}`}
-          className="flex h-[41px] w-6 cursor-pointer items-center justify-center rounded-l-[11px] text-room-text transition-colors hover:bg-white/10 max-sm:hidden [&_svg]:size-3"
-        >
-          <ArrowUp01 />
-        </DropdownMenuTrigger>
-        <RoomMenuContent side="top" align="start" sideOffset={12} className="w-[288px]">
-          <DropdownMenuGroup>
-            <RoomMenuLabel className="capitalize">{noun}</RoomMenuLabel>
-            {devices.length === 0 ? (
-              <RoomMenuItem disabled>No {noun} found</RoomMenuItem>
-            ) : (
-              <DropdownMenuRadioGroup value={activeDeviceId} onValueChange={(id) => setActiveMediaDevice(id as string)}>
-                {devices.map((device, index) => (
-                  <RoomMenuRadioItem key={device.deviceId} value={device.deviceId}>
-                    <span className="truncate">{device.label || `${noun} ${index + 1}`}</span>
-                  </RoomMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            )}
-          </DropdownMenuGroup>
-        </RoomMenuContent>
-      </DropdownMenu>
-      <button
-        type="button"
-        aria-pressed={on}
-        aria-label={label}
-        title={label}
-        onClick={onToggle}
-        className={cn(
-          "flex size-[41px] cursor-pointer items-center justify-center rounded-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-white [&_svg]:size-5",
-          on ? "text-white hover:bg-room-control-hover" : "bg-room-off text-room-off-text hover:bg-[#ecc0c0]",
-        )}
-      >
-        {icon}
-      </button>
-    </div>
+    <DropdownMenuGroup>
+      <RoomMenuLabel>{label}</RoomMenuLabel>
+      {devices.length === 0 ? (
+        <RoomMenuItem disabled>No {label.toLowerCase()} found</RoomMenuItem>
+      ) : (
+        <DropdownMenuRadioGroup value={activeDeviceId} onValueChange={(id) => setActiveMediaDevice(id as string)}>
+          {devices.map((device, index) => (
+            <RoomMenuRadioItem key={device.deviceId} value={device.deviceId}>
+              <span className="truncate">{device.label || `${label} ${index + 1}`}</span>
+            </RoomMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      )}
+    </DropdownMenuGroup>
   );
 }

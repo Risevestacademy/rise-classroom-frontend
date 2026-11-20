@@ -106,10 +106,22 @@
 
   /* Live session room (dark) */
   --color-room-canvas: #1e1e1e;
-  --color-room-panel: #202020;
-  --color-room-bar: #222424;
-  --color-room-control: #333638;
-  --color-room-control-hover: #3e4245;
+  --color-room-panel: #212224;
+  --color-room-panel-raised: #303234;
+  --color-room-panel-border: #56595c;
+  --color-room-menu: #292a2c;
+  --color-room-menu-border: #454649;
+  --color-room-tile-action: #393a3d;
+  --color-room-chip: #343638;
+  --color-room-pill: #353535;
+  --color-room-control: #344043; /* neutral-600 */
+  --color-room-control-hover: #3e4b4f;
+  --color-room-popover: #333638;
+  --color-room-tile-blue: #3540a3; /* brand-700 */
+  --color-room-tile-slate: #344043; /* neutral-600 */
+  --color-room-tile-teal: #00455d;
+  --color-room-tile-others: #514020;
+  --color-room-screen: #1a4f51;
   --color-room-bubble: #303030;
   --color-room-bubble-own: #005278;
   --color-room-bubble-own-text: #d2eaff;
@@ -117,12 +129,12 @@
   --color-room-text: #dddddd;
   --color-room-text-strong: #ededed;
   --color-room-text-muted: #b9bcbc;
+  --color-room-danger: #ff897b;
   --color-room-off: #f2cfcf;
   --color-room-off-text: #7a241f;
-  --color-room-off-menu: #641612;
-  --color-room-active: #a8c7fa;
-  --color-room-leave: #df3533;
-  --color-room-leave-hover: #c62828;
+  --color-room-active: #d5d9ff; /* brand-200 */
+  --color-room-leave: #dc2626;
+  --color-room-leave-hover: #b91c1c;
 
   /* Semantic · Border */
   --color-border-default: #e2e8e8; /* neutral-200 */

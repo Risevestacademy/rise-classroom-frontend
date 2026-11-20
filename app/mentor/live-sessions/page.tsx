@@ -4,6 +4,7 @@ import { LiveSessionsScreen } from "@/components/LiveSessionsScreen";
 export default function MentorLiveSessionsPage() {
   return (
     <LiveSessionsScreen
+      joinPath="/mentor/live"
       topNav={
         <AppTopNav
           basePath="/mentor"

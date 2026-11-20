@@ -4,10 +4,9 @@ import * as React from "react";
 import { useMediaDevices, usePreviewTracks } from "@livekit/components-react";
 import type { LocalAudioTrack, LocalVideoTrack } from "livekit-client";
 
-import { AlertCircle, Mic02, MicOff02, Video, VideoOff } from "@/assets/icons";
+import { AlertCircle, AudioLines, Mic02, MicOff02, Video, VideoOff } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { cn } from "@/lib/utils";
-import { gradientFor } from "./ParticipantTile";
 import { roomButton } from "./RoomStatus";
 import { Spinner } from "./RoomStage";
 
@@ -31,6 +30,11 @@ function parseChoices(saved: string): DeviceChoices {
     return defaultChoices;
   }
 }
+
+/** The devices picked last time on this browser. Only call it in the browser. */
+export const readSavedChoices = () => parseChoices(readSaved());
+
+export const saveChoices = (choices: DeviceChoices) => localStorage.setItem(CHOICES_KEY, JSON.stringify(choices));
 
 /** Check your camera and microphone before going in. */
 export function PreJoinScreen({
@@ -94,107 +98,97 @@ export function PreJoinScreen({
     };
   }, [videoTrack]);
 
-  const microphones = useMediaDevices({ kind: "audioinput" });
   const cameras = useMediaDevices({ kind: "videoinput" });
   const level = useAudioLevel(audioTrack);
+  const name = userName || "You";
 
   return (
-    <div className="flex flex-1 items-center justify-center overflow-y-auto p-4 sm:p-8">
-      <div className="grid w-full max-w-[960px] items-center gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-12">
-        <div className="flex flex-col gap-4">
-          <div
-            className={cn(
-              "relative isolate flex aspect-video items-center justify-center overflow-hidden rounded-[21px] bg-linear-to-b",
-              gradientFor(userKey),
-            )}
-          >
-            {choices?.videoEnabled && videoTrack ? (
-              <video ref={videoRef} muted playsInline className="absolute inset-0 -z-10 size-full -scale-x-100 object-cover" />
-            ) : (
-              <div className="flex flex-col items-center gap-3">
-                <PersonAvatar name={userName || "You"} colorKey={userKey} size={80} />
-                <p className="font-work text-sm text-white/80">
-                  {!choices?.videoEnabled ? "Your camera is off" : cameras.length === 0 ? "No camera found" : "Starting camera…"}
-                </p>
-              </div>
-            )}
-
-            <p className="absolute top-3 left-3 rounded-full bg-white/10 px-2.5 py-2 text-sm/5 font-medium text-white backdrop-blur-md">
-              {userName || "You"}
-            </p>
-
-            <div className="absolute inset-x-0 bottom-4 flex justify-center gap-3">
-              <PreviewToggle
-                on={Boolean(choices?.audioEnabled)}
-                label={choices?.audioEnabled ? "Turn off microphone" : "Turn on microphone"}
-                onClick={() => {
-                  setProblem(null);
-                  update({ audioEnabled: !choices?.audioEnabled });
-                }}
-              >
-                {choices?.audioEnabled ? <Mic02 /> : <MicOff02 />}
-                {choices?.audioEnabled && (
-                  <span aria-hidden className="absolute inset-x-3 bottom-1.5 h-0.5 overflow-hidden rounded-full bg-white/20">
-                    <span className="block h-full bg-room-active transition-[width] duration-100" style={{ width: `${Math.round(level * 100)}%` }} />
-                  </span>
-                )}
-              </PreviewToggle>
-              <PreviewToggle
-                on={Boolean(choices?.videoEnabled)}
-                label={choices?.videoEnabled ? "Turn off camera" : "Turn on camera"}
-                onClick={() => {
-                  setProblem(null);
-                  update({ videoEnabled: !choices?.videoEnabled });
-                }}
-              >
-                {choices?.videoEnabled ? <Video /> : <VideoOff />}
-              </PreviewToggle>
-            </div>
-          </div>
-
-          {problem && (
-            <p role="alert" className="flex items-start gap-2.5 rounded-xl border border-error-border bg-error-surface px-4 py-3 font-work text-sm text-text-error">
-              <AlertCircle className="mt-0.5 size-[18px] shrink-0" />
-              {deviceProblem(problem.kind, problem.error)}
-            </p>
+    <div className="flex flex-1 flex-col items-center justify-center gap-10 overflow-y-auto px-4 py-8">
+      <div className="flex w-full max-w-[600px] flex-col gap-4">
+        <div className="relative isolate flex aspect-[3/2] flex-col items-center overflow-hidden rounded-[32px] bg-room-canvas px-6 pt-10 pb-6 max-sm:aspect-[4/5]">
+          {videoEnabled && videoTrack && (
+            <video ref={videoRef} muted playsInline className="absolute inset-0 -z-10 size-full -scale-x-100 object-cover" />
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <DeviceSelect
-              label="Microphone"
-              devices={microphones}
-              value={choices?.audioDeviceId ?? ""}
-              onChange={(audioDeviceId) => update({ audioDeviceId })}
-            />
-            <DeviceSelect
-              label="Camera"
-              devices={cameras}
-              value={choices?.videoDeviceId ?? ""}
-              onChange={(videoDeviceId) => update({ videoDeviceId })}
-            />
+          <p className="flex items-center gap-3">
+            <span className="rounded-full bg-white/10 px-2 py-2 text-sm/5 font-medium text-white backdrop-blur-md">{name}</span>
+            {audioEnabled && (
+              <span
+                role="img"
+                aria-label={level > 0.15 ? "We can hear you" : "Microphone on"}
+                className={cn(
+                  "flex size-6 items-center justify-center rounded-full border border-info-border bg-info-text text-white transition-transform [&_svg]:size-3",
+                  level > 0.15 && "scale-110",
+                )}
+              >
+                <AudioLines />
+              </span>
+            )}
+          </p>
+
+          <div className="flex flex-1 items-center justify-center">
+            {!(videoEnabled && videoTrack) && (
+              <PersonAvatar name={name} colorKey={userKey} size={80} className="size-[82px]" />
+            )}
+          </div>
+
+          <p className="flex flex-col items-center gap-1 text-sm/5 font-medium text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
+            <span>Microphone is {audioEnabled ? "on" : "off"}</span>
+            <span>
+              {videoEnabled && !videoTrack && cameras.length === 0
+                ? "No camera found"
+                : videoEnabled && !videoTrack
+                  ? "Starting camera…"
+                  : `Camera is ${videoEnabled ? "on" : "off"}`}
+            </span>
+          </p>
+
+          <div className="mt-6 flex justify-center gap-3">
+            <PreviewToggle
+              on={audioEnabled}
+              label={audioEnabled ? "Turn off microphone" : "Turn on microphone"}
+              onClick={() => {
+                setProblem(null);
+                update({ audioEnabled: !audioEnabled });
+              }}
+            >
+              {audioEnabled ? <Mic02 /> : <MicOff02 />}
+            </PreviewToggle>
+            <PreviewToggle
+              on={videoEnabled}
+              label={videoEnabled ? "Turn off camera" : "Turn on camera"}
+              onClick={() => {
+                setProblem(null);
+                update({ videoEnabled: !videoEnabled });
+              }}
+            >
+              {videoEnabled ? <Video /> : <VideoOff />}
+            </PreviewToggle>
           </div>
         </div>
 
-        <div className="flex flex-col gap-6 max-lg:items-center max-lg:text-center">
-          <div className="flex flex-col gap-2">
-            <p className="text-lg/6 font-semibold text-neutral-350">Ready to join?</p>
-            <h1 className="text-2xl/8 font-semibold text-white">{title}</h1>
-            <p className="font-work text-sm text-room-text-muted">{when}</p>
-          </div>
-          <p className="font-work text-sm text-room-text">
-            You&apos;re joining as <span className="font-semibold text-white">{userName || "Guest"}</span>.{" "}
-            {choices && !choices.audioEnabled && "You'll join muted."}
+        {problem && (
+          <p role="alert" className="flex items-start gap-2.5 rounded-xl border border-error-border bg-error-surface px-4 py-3 text-sm text-text-error">
+            <AlertCircle className="mt-0.5 size-[18px] shrink-0" />
+            {deviceProblem(problem.kind, problem.error)}
           </p>
-          <button
-            type="button"
-            disabled={!choices || joining}
-            onClick={() => choices && onJoin(choices)}
-            className={cn(roomButton.primary, "h-11 w-full max-w-[320px] text-base")}
-          >
-            {joining && <Spinner />}
-            {joining ? "Joining…" : "Join session"}
-          </button>
+        )}
+      </div>
+
+      <div className="flex flex-col items-center gap-4 text-center">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl/8 font-semibold text-text-primary">{title}</h1>
+          <p className="text-xl/7 font-semibold text-text-secondary">{when}</p>
         </div>
+        <button
+          type="button"
+          disabled={!choices || joining}
+          onClick={() => choices && onJoin(choices)}
+          className={roomButton.primary}
+        >
+          {joining && <Spinner />}
+          {joining ? "Joining…" : "Join live session"}
+        </button>
       </div>
     </div>
   );
@@ -219,50 +213,12 @@ function PreviewToggle({
       title={label}
       onClick={onClick}
       className={cn(
-        "relative flex size-12 cursor-pointer items-center justify-center rounded-full backdrop-blur-md transition-colors focus-visible:outline-2 focus-visible:outline-white [&_svg]:size-5",
-        on ? "bg-room-control/90 text-white hover:bg-room-control-hover" : "bg-room-off text-room-off-text hover:bg-[#ecc0c0]",
+        "flex size-11 cursor-pointer items-center justify-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white [&_svg]:size-5",
+        on ? "bg-room-control text-white hover:bg-room-control-hover" : "bg-room-off text-room-off-text hover:bg-[#ecc0c0]",
       )}
     >
       {children}
     </button>
-  );
-}
-
-function DeviceSelect({
-  label,
-  devices,
-  value,
-  onChange,
-}: {
-  label: string;
-  devices: MediaDeviceInfo[];
-  value: string;
-  onChange: (deviceId: string) => void;
-}) {
-  const id = React.useId();
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs font-medium text-room-text-muted">
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={devices.length === 0}
-        className="h-10 w-full cursor-pointer truncate rounded-lg border border-room-border bg-room-bar px-3 text-sm text-room-text-strong outline-none focus:border-room-text-muted disabled:cursor-not-allowed disabled:text-room-text-muted"
-      >
-        {devices.length === 0 && <option value="">No {label.toLowerCase()} found</option>}
-        {devices.length > 0 && <option value="">System default</option>}
-        {devices
-          .filter((device) => device.deviceId && device.deviceId !== "default")
-          .map((device, index) => (
-            <option key={device.deviceId} value={device.deviceId}>
-              {device.label || `${label} ${index + 1}`}
-            </option>
-          ))}
-      </select>
-    </div>
   );
 }
 

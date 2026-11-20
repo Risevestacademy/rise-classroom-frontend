@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CardEmptyState } from "@/components/student-dashboard/DashboardParts";
 import { getSampleEvents, type SampleEvent } from "@/lib/dashboard-sample-data";
 import { cn } from "@/lib/utils";
@@ -62,6 +64,11 @@ export function UpcomingEvents() {
                 <Badge variant="light" status="info">
                   Now
                 </Badge>
+              )}
+              {event.live && event.sessionId && (
+                <Button pill nativeButton={false} render={<Link href={`/student/live/${event.sessionId}`} />}>
+                  Join
+                </Button>
               )}
             </li>
           ))}

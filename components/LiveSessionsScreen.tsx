@@ -38,8 +38,17 @@ const inTab = (session: LiveSession, tab: Tab) =>
   tab === "all" ||
   (tab === "upcoming" ? session.status !== "completed" : session.status === tab);
 
-/** The Live Sessions page admins and mentors share; each passes its own top nav. */
-export function LiveSessionsScreen({ topNav }: { topNav: React.ReactNode }) {
+/**
+ * The Live Sessions page admins and mentors share; each passes its own top nav.
+ * Join goes to `${joinPath}/<id>`: the room itself, or a device check first.
+ */
+export function LiveSessionsScreen({
+  topNav,
+  joinPath = "/live",
+}: {
+  topNav: React.ReactNode;
+  joinPath?: string;
+}) {
   const [tab, setTab] = React.useState<Tab>("all");
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
@@ -84,7 +93,7 @@ export function LiveSessionsScreen({ topNav }: { topNav: React.ReactNode }) {
 
         <aside className="border-t border-border-default lg:w-[461px] lg:shrink-0 lg:overflow-y-auto lg:border-t-0 lg:border-l">
           {selected ? (
-            <SessionPreview key={selected.id} session={selected} />
+            <SessionPreview key={selected.id} session={selected} joinPath={joinPath} />
           ) : (
             <p className="flex min-h-[240px] items-center justify-center p-6 font-work text-sm text-text-primary lg:h-full">
               Select a session to preview
@@ -151,7 +160,7 @@ function SessionCard({
   );
 }
 
-function SessionPreview({ session }: { session: LiveSession }) {
+function SessionPreview({ session, joinPath }: { session: LiveSession; joinPath: string }) {
   const [showAll, setShowAll] = React.useState(false);
   const completed = session.status === "completed";
 
@@ -245,7 +254,7 @@ function SessionPreview({ session }: { session: LiveSession }) {
           size="medium"
           className="mt-6 w-full"
           nativeButton={false}
-          render={<Link href={`/live/${session.id}`} />}
+          render={<Link href={`${joinPath}/${session.id}`} />}
         >
           Join session
         </Button>
