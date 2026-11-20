@@ -31,6 +31,7 @@ export type InstructorTrack = {
 
 export type InstructorStudent = {
   id: string;
+  enrollmentId: string;
   user: {
     id: string;
     name: string;
@@ -39,6 +40,85 @@ export type InstructorStudent = {
     onboardingStatus: OnboardingStatus;
   };
 };
+
+export type InstructorEnrollmentStudent = {
+  studentProfileId: string;
+  riskStatus: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    displayName: string;
+    email: string;
+    status: UserStatus;
+    image: string | null;
+    phoneNumber: string | null;
+    location: string | null;
+    description: string | null;
+  };
+  enrollment: {
+    id: string;
+    status: string;
+    enrolledAt: string;
+    cohort: {
+      id: string;
+      name: string;
+    };
+    track: {
+      id: string;
+      name: string;
+    };
+  };
+  progress: {
+    lessons: {
+      completed: number;
+      total: number;
+      percentage: number;
+    };
+    assignments: {
+      total: number;
+      submitted: number;
+      graded: number;
+      pending: number;
+      missed: number;
+      onHold: number;
+    };
+    weeklyTasks: {
+      total: number;
+      pending: number;
+      inProgress: number;
+      submitted: number;
+      reviewed: number;
+      overdue: number;
+    };
+  };
+};
+
+export type InstructorStudentListItem = {
+  id: string;
+  enrollmentId: string;
+  name: string;
+  email: string;
+  status: "Active" | "Inactive";
+};
+
+export function toInstructorStudentListItems(
+  students: InstructorStudent[],
+): InstructorStudentListItem[] {
+  const byId = new Map<string, InstructorStudentListItem>();
+
+  students.forEach(({ enrollmentId, user }) => {
+    byId.set(user.id, {
+      id: user.id,
+      enrollmentId,
+      name: user.name,
+      email: user.email,
+      status: user.status === "ACTIVE" ? "Active" : "Inactive",
+    });
+  });
+
+  return Array.from(byId.values());
+}
 
 export type WeeklyTask = {
   id: string;
@@ -111,6 +191,14 @@ async function listStudents(params: { cohortId?: string; trackId?: string }) {
   return data;
 }
 
+async function getEnrollmentStudent(enrollmentId: string) {
+  const { data } = await api.get<Envelope<InstructorEnrollmentStudent>>(
+    `/instructor/enrollments/${enrollmentId}/student`,
+  );
+
+  return data;
+}
+
 async function listWeeklyTasks(filters: WeeklyTaskFilters = {}) {
   const { data } = await api.get<Envelope<Paginated<WeeklyTask>>>(
     "/instructor/weekly-tasks",
@@ -176,6 +264,8 @@ export const instructorKeys = {
   myTracks: () => ["instructor", "tracks"] as const,
   students: (params: { cohortId?: string; trackId?: string }) =>
     ["instructor", "students", params] as const,
+  enrollmentStudent: (enrollmentId: string) =>
+    ["instructor", "enrollments", enrollmentId, "student"] as const,
   weeklyTasks: (filters: WeeklyTaskFilters = {}) =>
     ["instructor", "weekly-tasks", filters] as const,
   weeklyTaskCount: (filters: WeeklyTaskFilters = {}) =>
@@ -200,6 +290,13 @@ export const instructorQueries = {
       queryKey: instructorKeys.students(params),
       queryFn: () => listStudents(params),
       enabled: Boolean(params.trackId && params.cohortId),
+    }),
+
+  enrollmentStudent: (enrollmentId: string) =>
+    queryOptions({
+      queryKey: instructorKeys.enrollmentStudent(enrollmentId),
+      queryFn: () => getEnrollmentStudent(enrollmentId),
+      enabled: Boolean(enrollmentId),
     }),
 
   weeklyTasks: (filters: WeeklyTaskFilters = {}) =>
