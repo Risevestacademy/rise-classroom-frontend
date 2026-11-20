@@ -71,7 +71,6 @@ export default function StudentsProfilePage() {
   const { id: studentId } = useParams<{ id: string }>();
   const pathname = usePathname();
   const [tab, setTab] = useState<Tab>("overview");
-  const [now] = useState(() => Date.now());
 
   const tracksQuery = useQuery(instructorQueries.myTracks());
   const tracks = tracksQuery.data ?? [];
@@ -756,10 +755,12 @@ function StudentAssignmentsTab({
           </div>
           <ul>
             {rows.map(({ assignment, module, submission }) => {
-              const isOverdue =
-                !submission &&
-                assignment.dueAt !== null &&
-                new Date(assignment.dueAt).getTime() < now;
+              const label = submission
+                ? submissionBadges[submission.status].label
+                : "Not submitted";
+              const tone = submission
+                ? submissionBadges[submission.status].status
+                : "neutral";
 
               return (
                 <li
