@@ -8,9 +8,11 @@ const LOOP_MS = 20_000;
 const FRAME_WIDTH = 1440;
 /** The canvas draws at a fraction of the hero's size; it's all soft light. */
 const RESOLUTION = 0.35;
-/** Phones draw smaller and at half the frame rate to keep the main thread free. */
+/** Phones draw smaller to keep the main thread free. */
 const MOBILE_RESOLUTION = 0.25;
-const MOBILE_FRAME_MS = 1000 / 30;
+/* Every screen draws at 30fps. Each frame costs ~18ms of main thread on
+   desktop, and the 20s loop moves too slowly for 60fps to look different. */
+const FRAME_MS = 1000 / 30;
 /** On load the beams sweep round once before the swirl and halftone fade in. */
 const INTRO_SPIN_MS = 2400;
 const REVEAL_DELAY_MS = 1800;
@@ -73,7 +75,7 @@ export function HeroBackground() {
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const mobile = window.matchMedia("(max-width: 1023px)").matches;
     const resolution = mobile ? MOBILE_RESOLUTION : RESOLUTION;
-    const frameMs = mobile ? MOBILE_FRAME_MS : 0;
+    const frameMs = FRAME_MS;
 
     let width = 0;
     let height = 0;

@@ -104,6 +104,7 @@ export function SolutionSection() {
               alt="Students collaborating on laptops in a classroom"
               width={762}
               height={508}
+              sizes="(min-width: 1024px) 30vw, 100vw"
               className="aspect-[266/275] w-full object-cover"
             />
             <Image
@@ -111,6 +112,7 @@ export function SolutionSection() {
               alt="An instructor planning lessons at her laptop"
               width={762}
               height={508}
+              sizes="(min-width: 1024px) 30vw, 100vw"
               className="absolute inset-0 size-full scale-105 object-cover opacity-0 transition-[opacity,scale] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-has-[[data-audience=instructors]:hover]/audiences:scale-100 group-has-[[data-audience=instructors]:hover]/audiences:opacity-100 motion-reduce:transition-none"
             />
           </div>

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { HoverPrefetchLink } from "@/components/landing/HoverPrefetchLink";
 import { RollText } from "@/components/landing/RollText";
 
 /* Rooted at "/" so they also work from other pages, like the privacy policy. */
@@ -49,18 +50,18 @@ export function LandingNav({ intro = true }: { intro?: boolean }) {
         </ul>
 
         <div className="flex items-center gap-1">
-          <Link
+          <HoverPrefetchLink
             href="/sign-in"
             className="landing-btn flex h-10 items-center rounded-2xl px-4 text-[14px] leading-5 font-medium text-text-brand [--btn-fill:var(--color-brand-50)]"
           >
             <RollText>Sign in</RollText>
-          </Link>
-          <Link
+          </HoverPrefetchLink>
+          <HoverPrefetchLink
             href="/sign-up"
             className="landing-btn flex h-10 items-center rounded-full border-2 border-brand-400 bg-brand-900 px-4 text-[14px] leading-5 font-medium text-white"
           >
             <RollText>Start for free</RollText>
-          </Link>
+          </HoverPrefetchLink>
         </div>
       </nav>
     </header>

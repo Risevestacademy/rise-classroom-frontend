@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { HeroBackground } from "@/components/landing/HeroBackground";
 import { HeroShowcase } from "@/components/landing/HeroShowcase";
+import { HoverPrefetchLink } from "@/components/landing/HoverPrefetchLink";
 import { RollText } from "@/components/landing/RollText";
 
 export function HeroSection() {
@@ -39,13 +40,13 @@ export function HeroSection() {
         >
           <RollText>Explore the platform</RollText>
         </Link>
-        <Link
+        <HoverPrefetchLink
           href="/sign-up"
           data-magnetic
           className="landing-btn flex h-[56px] items-center justify-center rounded-full border-2 border-brand-200 bg-surface-background px-4 text-[14px] leading-5 font-medium text-brand-950 [--btn-fill:var(--color-brand-50)] lg:w-[137px]"
         >
           <RollText>Start for free</RollText>
-        </Link>
+        </HoverPrefetchLink>
       </div>
 
       <HeroShowcase />
