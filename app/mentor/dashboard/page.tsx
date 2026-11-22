@@ -108,7 +108,6 @@ export default function MentorDashboardPage() {
                   ? `Couldn't load your students. ${mentees.error.message}`
                   : "No students assigned yet."
               }
-              studentHref={(student) => `/mentor/students/${student.id}`}
             />
             <div className="flex min-w-0 flex-col gap-4">
               <UpcomingSessionsCard sessions={sessions} />

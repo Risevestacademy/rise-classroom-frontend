@@ -33,9 +33,9 @@ describe("MentorDashboardPage", () => {
     });
     renderWithClient(<MentorDashboardPage />);
 
-    expect(
-      await screen.findByRole("link", { name: "Halima Obi" }),
-    ).toHaveAttribute("href", "/mentor/students/u1");
+    // There's no mentor view of a student's profile yet, so names don't link.
+    expect(await screen.findByText("Halima Obi")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Halima Obi" })).not.toBeInTheDocument();
     expect(screen.getByText("yusuf@example.com")).toBeInTheDocument();
     expect(screen.getByText("My students").parentElement).toHaveTextContent("2");
   });
