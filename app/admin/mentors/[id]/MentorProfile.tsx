@@ -10,28 +10,16 @@ import {
   Add01,
   Calendar03,
   Call02,
-  Filter,
   Location01,
   Mail02,
-  MoreHorizontal,
-  Search01,
   UserCircle,
 } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { CohortEmptyState } from "@/components/cohorts/CohortEmptyState";
-import { StatusPill } from "@/components/cohorts/CohortPeopleTable";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
-import {
-  matchesPeopleFilters,
-  PeopleFilterDialog,
-  type PeopleFilter,
-  type PeopleFilterValues,
-} from "@/components/cohorts/PeopleFilterDialog";
 import { PersonAvatar } from "@/components/PersonAvatar";
-import { PeopleSelectionBar } from "@/components/PeopleSelectionBar";
 import {
   actionsMenuItemClass,
-  actionsMenuPopupClass,
   MentorActionsMenu,
 } from "@/components/MentorActionsMenu";
 import {
@@ -39,15 +27,11 @@ import {
   ReassignStudentDialog,
 } from "@/components/MentorAssignmentDialogs";
 import {
-  needsAttention,
-  progressLabel,
-  progressTone,
-  StudentName,
   StudentsProgressCard,
-  studentStatusPill,
   UpcomingSessionsCard,
 } from "@/components/MentorOverviewCards";
 import { StatCard } from "@/components/StatCard";
+import { StudentsRoster } from "@/components/StudentsRoster";
 import { ActivityCard } from "@/components/student-profile/ActivityTab";
 import {
   ActivityCardSkeleton,
@@ -61,11 +45,9 @@ import {
   CardHeader,
   DetailItem,
   MessageButton,
-  ProgressBar,
 } from "@/components/student-profile/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
 import { instructorStudentsQuery, toTaughtStudents } from "@/lib/instructors";
@@ -85,7 +67,6 @@ import {
   type MentorStatus,
 } from "@/lib/mentors";
 import { useOverallProgress } from "@/lib/student-profile";
-import { useRowSelection } from "@/lib/use-row-selection";
 import { useTabParam } from "@/lib/use-tab-param";
 import { cn } from "@/lib/utils";
 import {
@@ -420,267 +401,59 @@ function ProfileCard({ mentor }: { mentor: Mentor }) {
   );
 }
 
-const studentFilters: PeopleFilter<AssignedStudent>[] = [
-  {
-    key: "status",
-    title: "Status",
-    allLabel: "All",
-    options: [
-      { value: "active", label: "Active" },
-      { value: "pending", label: "Pending" },
-      { value: "inactive", label: "Inactive" },
-    ],
-    values: (student) => [student.status],
-  },
-];
-
-const headerCell =
-  "border-r border-border-default px-2.5 font-work text-sm font-medium tracking-[-0.01em]";
-
 function StudentsTab({ mentor }: { mentor: Mentor }) {
   const queryClient = useQueryClient();
   const mentees = useMentees(mentor);
   const isMentor = mentor.user.role === "MENTOR";
-  const assignedStudents = mentees.students;
-  const [search, setSearch] = React.useState("");
   const [reassigning, setReassigning] = React.useState<AssignedStudent | null>(
     null,
   );
-  const [filterValues, setFilterValues] = React.useState<PeopleFilterValues>(
-    {},
-  );
-  const [filterOpen, setFilterOpen] = React.useState(false);
-  const selection = useRowSelection((student: AssignedStudent) => student.email);
-
-  const query = search.trim().toLowerCase();
-  const rows = assignedStudents.filter(
-    (student) =>
-      (student.name.toLowerCase().includes(query) ||
-        student.email.toLowerCase().includes(query)) &&
-      matchesPeopleFilters(student, studentFilters, filterValues),
-  );
-  const headerCheckbox = selection.headerState(rows);
-
-  const stats = [
-    { title: "Total students", value: mentees.total },
-    {
-      title: "Active students",
-      value: assignedStudents.filter((student) => student.status === "active")
-        .length,
-    },
-    {
-      title: "Students needing attention",
-      // PENDING-BACKEND: instructors' students have no progress, as it would
-      // take a request per student.
-      value: isMentor
-        ? assignedStudents.filter(needsAttention).length
-        : "--",
-    },
-  ];
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(3,minmax(0,272px))]">
-        {stats.map((stat) => (
-          <StatCard
-            key={stat.title}
-            title={stat.title}
-            value={stat.value}
-            loading={mentees.isPending}
-          />
-        ))}
-      </div>
-
-      <section className="mt-6 overflow-hidden rounded-xl bg-surface-default">
-        <div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6">
-          <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-border-default p-2.5 text-text-muted sm:w-[281px] sm:flex-none">
-            <Search01 className="size-4 shrink-0" />
-            <span className="sr-only">Search by name or email</span>
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by name or email"
-              className="w-full min-w-0 bg-transparent font-work text-sm text-text-primary outline-none placeholder:text-text-muted"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => setFilterOpen(true)}
-            className="flex h-10 shrink-0 items-center gap-1 rounded-lg border border-border-default bg-surface-default px-2 py-1 font-work text-sm text-text-muted"
-          >
-            <Filter className="size-4" />
-            Filter
-          </button>
-        </div>
-
-        {/* `relative` keeps the absolutely positioned checkbox inputs inside the
-          scroll area; without it they widen the whole page on mobile. */}
-        <div className="relative overflow-x-auto">
-          <table className="w-full min-w-[960px] table-fixed text-left">
-            <thead className="bg-surface-subtle text-text-primary">
-              <tr className="h-11">
-                <th className="w-[69px] border-r border-border-default pl-3">
-                  <Checkbox
-                    aria-label="Select all students"
-                    {...headerCheckbox}
-                    onCheckedChange={() => selection.toggleAll(rows)}
-                    className="size-4 border-icon-secondary"
-                  />
-                </th>
-                <th className={cn(headerCell, "w-[431px] px-3")}>Student</th>
-                <th className={cn(headerCell, "w-[160px]")}>Status</th>
-                <th className={cn(headerCell, "w-[420px]")}>
-                  Overall progress
-                </th>
-                <th className="w-[56px] px-2.5">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {mentees.isPending && <MenteeTableRowsSkeleton />}
-              {rows.map((student) => {
-                const tone = progressTone(student);
-                const pill = studentStatusPill[student.status];
-                return (
-                  <tr
-                    key={student.email}
-                    className="h-[69px] border-b border-border-default"
-                  >
-                    <td className="pl-3">
-                      <Checkbox
-                        aria-label={`Select ${student.name}`}
-                        checked={selection.isSelected(student)}
-                        onCheckedChange={(checked) =>
-                          selection.toggle(student, checked)
-                        }
-                        className="size-4 border-icon-secondary"
-                      />
-                    </td>
-                    <td className="px-3">
-                      <div className="flex items-center gap-3">
-                        <PersonAvatar
-                          name={student.name}
-                          src={student.image}
-                          colorKey={student.id}
-                          size={40}
-                        />
-                        <div className="min-w-0">
-                          <StudentName
-                            student={student}
-                            href={`/admin/students/${student.id}`}
-                          />
-                          <p className="truncate font-work text-sm text-text-secondary">
-                            {student.email}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-2.5">
-                      <StatusPill status={pill.status}>{pill.label}</StatusPill>
-                    </td>
-                    <td className="px-2.5 py-3">
-                      <div className="flex items-center gap-4">
-                        <span
-                          className={cn(
-                            "w-9 text-lg/6 font-semibold",
-                            tone.text,
-                          )}
-                        >
-                          {progressLabel(student)}
-                        </span>
-                        <ProgressBar
-                          value={student.progress ?? 0}
-                          fillClassName={tone.bar}
-                          className="w-[150px]"
-                        />
-                      </div>
-                    </td>
-                    <td className="px-2.5">
-                      <Menu.Root>
-                        <Menu.Trigger
-                          aria-label={`${student.name} actions`}
-                          className="flex size-8 items-center justify-center text-text-primary"
-                        >
-                          <MoreHorizontal className="size-6" />
-                        </Menu.Trigger>
-                        <Menu.Portal>
-                          <Menu.Positioner align="end" sideOffset={4} className="z-50">
-                            <Menu.Popup className={actionsMenuPopupClass}>
-                              {isMentor ? (
-                                <Menu.Item
-                                  onClick={() => setReassigning(student)}
-                                  className={actionsMenuItemClass}
-                                >
-                                  Reassign student
-                                </Menu.Item>
-                              ) : (
-                                <Menu.LinkItem
-                                  render={
-                                    <Link href={`/admin/students/${student.id}`} />
-                                  }
-                                  className={actionsMenuItemClass}
-                                >
-                                  View profile
-                                </Menu.LinkItem>
-                              )}
-                            </Menu.Popup>
-                          </Menu.Positioner>
-                        </Menu.Portal>
-                      </Menu.Root>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {rows.length === 0 && !mentees.isPending && (
-          <p className="px-6 py-10 text-center font-work text-sm text-text-muted">
-            {assignedStudents.length > 0
-              ? "No one matches your search or filters."
-              : menteesMessage(mentees)}
-          </p>
-        )}
-
-        <PeopleFilterDialog
-          open={filterOpen}
-          onOpenChange={setFilterOpen}
-          filters={studentFilters}
-          value={filterValues}
-          onApply={setFilterValues}
-        />
-
-        {reassigning && (
-          <ReassignStudentDialog
-            student={reassigning}
-            currentMentor={{ id: mentor.id, name: mentor.name }}
-            open
-            onOpenChange={(open) => !open && setReassigning(null)}
-            // Assigning a new mentor replaces the current one.
-            onReassign={async (mentorId) => {
-              await assignMentor({ mentorId, studentUserId: reassigning.id });
-              await queryClient.invalidateQueries({
-                queryKey: ["admin", "users"],
-              });
-            }}
-          />
-        )}
-      </section>
-
-      <PeopleSelectionBar
-        items={selection.items}
-        noun={{ singular: "student", plural: "students" }}
-        onClear={selection.clear}
+      <StudentsRoster
+        students={mentees.students}
+        loading={mentees.isPending}
+        emptyMessage={menteesMessage(mentees)}
+        // PENDING-BACKEND: instructors' students have no progress, as it would
+        // take a request per student.
+        attention={isMentor ? undefined : "--"}
+        studentHref={(student) => `/admin/students/${student.id}`}
         exportFileName={`${mentor.name} students`}
-        exportColumns={[
-          { header: "Name", value: (student) => student.name },
-          { header: "Email", value: (student) => student.email },
-          { header: "Status", value: (student) => studentStatusPill[student.status].label },
-          { header: "Overall progress", value: (student) => progressLabel(student) },
-        ]}
+        actions={(student) =>
+          isMentor ? (
+            <Menu.Item
+              onClick={() => setReassigning(student)}
+              className={actionsMenuItemClass}
+            >
+              Reassign student
+            </Menu.Item>
+          ) : (
+            <Menu.LinkItem
+              render={<Link href={`/admin/students/${student.id}`} />}
+              className={actionsMenuItemClass}
+            >
+              View profile
+            </Menu.LinkItem>
+          )
+        }
       />
+
+      {reassigning && (
+        <ReassignStudentDialog
+          student={reassigning}
+          currentMentor={{ id: mentor.id, name: mentor.name }}
+          open
+          onOpenChange={(open) => !open && setReassigning(null)}
+          // Assigning a new mentor replaces the current one.
+          onReassign={async (mentorId) => {
+            await assignMentor({ mentorId, studentUserId: reassigning.id });
+            await queryClient.invalidateQueries({
+              queryKey: ["admin", "users"],
+            });
+          }}
+        />
+      )}
     </>
   );
 }
