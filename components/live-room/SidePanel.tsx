@@ -1,11 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  useIsMuted,
-  useParticipantAttributes,
-  type ReceivedChatMessage,
-} from "@livekit/components-react";
+import { useIsMuted, useParticipantAttributes } from "@livekit/components-react";
 import { Track, type Participant } from "livekit-client";
 
 import {
@@ -24,6 +20,7 @@ import {
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { feedbackFor, FEEDBACK_ATTRIBUTE, HAND_ATTRIBUTE, LABEL_ATTRIBUTE } from "@/lib/live-room";
+import { personName, type ChatMessage } from "@/lib/live-sessions";
 import { cn } from "@/lib/utils";
 import { displayName } from "./ParticipantTile";
 import { RoomMenuContent, RoomMenuItem } from "./RoomMenu";
@@ -227,16 +224,28 @@ function ParticipantRow({
   );
 }
 
-/** The session chat. It isn't saved anywhere and is gone when the session ends. */
+/** The session chat, kept with the session so it can be read afterwards. */
 export function ChatPanel({
   messages,
+  userId,
   onSend,
   sending,
+  loading = false,
+  canSend = true,
+  blockedReason = "The host has turned off chat",
+  maxLength = 2000,
   onClose,
 }: {
-  messages: ReceivedChatMessage[];
+  messages: ChatMessage[];
+  /** The signed-in user, whose messages sit on the right. */
+  userId: string;
   onSend: (message: string) => Promise<unknown>;
   sending: boolean;
+  loading?: boolean;
+  canSend?: boolean;
+  /** Shown in the message box when they can't send. */
+  blockedReason?: string;
+  maxLength?: number;
   onClose: () => void;
 }) {
   const [draft, setDraft] = React.useState("");
@@ -251,7 +260,12 @@ export function ChatPanel({
     const message = draft.trim();
     if (!message) return;
     setDraft("");
-    await onSend(message);
+    try {
+      await onSend(message);
+    } catch {
+      // Put it back so it isn't lost; the failure itself is announced by the room.
+      setDraft(message);
+    }
   }
 
   return (
@@ -259,28 +273,33 @@ export function ChatPanel({
       <ol ref={listRef} aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {messages.length === 0 && (
           <li className="m-auto max-w-[240px] text-center font-work text-sm text-room-text-muted">
-            Messages are only seen by people in the session and are cleared when it ends.
+            {loading ? "Loading messages…" : "Messages are only seen by people invited to this session."}
           </li>
         )}
         {messages.map((message, index) => {
-          const from = message.from;
-          const own = from?.isLocal ?? false;
+          const sender = message.sender;
+          const own = sender.id === userId;
           const previous = messages[index - 1];
-          const grouped = previous?.from?.identity === from?.identity && message.timestamp - previous.timestamp < 60_000;
-          const name = from ? displayName(from) : "Someone";
+          const sentAt = Date.parse(message.createdAt);
+          const grouped = previous?.sender.id === sender.id && sentAt - Date.parse(previous.createdAt) < 60_000;
+          const name = personName(sender) || "Someone";
 
           return (
             <li key={message.id} className={cn("flex gap-2.5", own && "flex-col items-end", !grouped && "mt-3")}>
               {!own && (
                 <span className="w-7 shrink-0">
-                  {!grouped && <PersonAvatar name={name} colorKey={from?.identity} size={24} className="size-7" />}
+                  {!grouped && (
+                    <PersonAvatar name={name} src={sender.image ?? undefined} colorKey={sender.id} size={24} className="size-7" />
+                  )}
                 </span>
               )}
               <div className={cn("flex min-w-0 flex-col gap-1", own && "items-end")}>
                 {!grouped && (
                   <p className="flex items-baseline gap-2 text-xs/4 text-room-text-strong">
                     {!own && <span className="truncate">{name}</span>}
-                    <time className="text-[10px] text-room-text-muted">{timeFormat.format(message.timestamp)}</time>
+                    <time dateTime={message.createdAt} className="text-[10px] text-room-text-muted">
+                      {timeFormat.format(sentAt)}
+                    </time>
                   </p>
                 )}
                 <p
@@ -289,7 +308,7 @@ export function ChatPanel({
                     own ? "bg-room-bubble-own text-room-bubble-own-text" : "bg-room-bubble text-room-text",
                   )}
                 >
-                  {message.message}
+                  {message.body}
                 </p>
               </div>
             </li>
@@ -302,14 +321,15 @@ export function ChatPanel({
             aria-label="Message"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="Send a message"
-            maxLength={1000}
-            className="h-9 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-room-text-muted"
+            placeholder={canSend ? "Send a message" : blockedReason}
+            disabled={!canSend}
+            maxLength={maxLength}
+            className="h-9 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-room-text-muted disabled:cursor-not-allowed"
           />
           <button
             type="submit"
             aria-label="Send"
-            disabled={!draft.trim() || sending}
+            disabled={!canSend || !draft.trim() || sending}
             className="flex size-8 cursor-pointer items-center justify-center rounded-full text-room-text-muted transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Sent className="size-[18px]" />

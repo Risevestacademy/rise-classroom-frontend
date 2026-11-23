@@ -23,6 +23,11 @@ const contentTypes = [
     hint: "Scheduled classes, meetings and other events",
   },
   { kind: "task", label: "Tasks", hint: "Assignments, deadlines and to-dos" },
+  {
+    kind: "live",
+    label: "Live sessions",
+    hint: "Town halls, track meetings and mentorship sessions",
+  },
 ] as const;
 
 export function CalendarFilterDialog({

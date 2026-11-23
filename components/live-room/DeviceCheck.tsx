@@ -9,12 +9,15 @@ export function DeviceCheck({
   sessionId,
   title,
   when,
+  starts,
   userName,
   userKey,
 }: {
   sessionId: string;
   title: string;
   when: string;
+  /** The host starts the session by going in. */
+  starts: boolean;
   userName: string;
   userKey: string;
 }) {
@@ -27,6 +30,7 @@ export function DeviceCheck({
       userName={userName}
       userKey={userKey}
       joining={false}
+      starts={starts}
       onJoin={(choices) => {
         saveChoices(choices);
         router.push(`/live/${sessionId}?ready=1`);

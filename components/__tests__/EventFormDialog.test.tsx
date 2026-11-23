@@ -67,7 +67,7 @@ describe("EventFormDialog", () => {
     const { user, onSubmit, onOpenChange } = renderForm();
 
     await user.type(screen.getByPlaceholderText("Add title"), "  Demo day ");
-    await user.click(screen.getByRole("radio", { name: "task" }));
+    await user.click(screen.getByRole("radio", { name: "Task" }));
     await user.click(screen.getByRole("button", { name: "Create event" }));
 
     expect(onSubmit).toHaveBeenCalledWith({ ...draft, title: "Demo day", kind: "task" });

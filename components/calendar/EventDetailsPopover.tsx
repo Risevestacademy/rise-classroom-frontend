@@ -93,11 +93,17 @@ function EventDetails({
 }) {
   const [guestsOpen, setGuestsOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
-  const linkLabel = event.link.replace(/^https?:\/\//, "");
+  const live = event.kind === "live";
+  // A live session's link is a path in the app; share the full address.
+  const link =
+    live && typeof window !== "undefined"
+      ? new URL(event.link, window.location.origin).href
+      : event.link;
+  const linkLabel = link.replace(/^https?:\/\//, "");
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(event.link);
+      await navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -108,22 +114,27 @@ function EventDetails({
   return (
     <>
       <div className="flex justify-end pt-3.5 pr-3.5">
-        <button
-          type="button"
-          aria-label="Edit event"
-          onClick={() => onEdit(event)}
-          className={iconButton}
-        >
-          <Edit02 className="size-5" />
-        </button>
-        <button
-          type="button"
-          aria-label="Delete event"
-          onClick={() => onDelete(event)}
-          className={iconButton}
-        >
-          <Delete02 className="size-5" />
-        </button>
+        {/* Editing and cancelling live sessions isn't designed yet. */}
+        {!live && (
+          <>
+            <button
+              type="button"
+              aria-label="Edit event"
+              onClick={() => onEdit(event)}
+              className={iconButton}
+            >
+              <Edit02 className="size-5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Delete event"
+              onClick={() => onDelete(event)}
+              className={iconButton}
+            >
+              <Delete02 className="size-5" />
+            </button>
+          </>
+        )}
         {/* Kept from the design; it has no menu designed yet. */}
         <button type="button" aria-label="More options" className={iconButton}>
           <MoreVertical className="size-5" />
@@ -169,12 +180,12 @@ function EventDetails({
             <div className="col-start-2 mt-[13px] flex items-center justify-between gap-3">
               <a
                 href={event.link}
-                target="_blank"
+                target={live ? undefined : "_blank"}
                 rel="noreferrer"
                 className="flex h-10 items-center gap-2 rounded-full bg-brand-900 px-4 text-sm font-medium text-white hover:bg-brand-800"
               >
                 <Video className="size-[17px]" />
-                Join with Rise Campus
+                Join Live Session
               </a>
               <button
                 type="button"

@@ -15,7 +15,9 @@ import {
   UserRemove01,
   WifiOff01,
 } from "@/assets/icons";
+import { ApiError } from "@/lib/api";
 import { fetchJoinCredentials, type JoinBlock, type JoinCredentials } from "@/lib/live-room";
+import { getSessionEntry, roomAccess, startLiveSession, type RoomAccess } from "@/lib/live-sessions";
 import { cn } from "@/lib/utils";
 import { PreJoinScreen, readSavedChoices, type DeviceChoices } from "./PreJoinScreen";
 import { RoomStage, Spinner } from "./RoomStage";
@@ -26,7 +28,7 @@ type Ending = "left" | "you_ended" | "host_ended" | "removed" | "elsewhere" | "c
 type Stage =
   | { name: "prejoin"; joining: boolean }
   | { name: "connecting" }
-  | { name: "room"; credentials: JoinCredentials; choices: DeviceChoices }
+  | { name: "room"; credentials: JoinCredentials; access: RoomAccess; choices: DeviceChoices }
   | { name: "ended"; ending: Ending }
   | { name: "error"; message: string };
 
@@ -52,6 +54,8 @@ export function LiveRoom({
   title,
   when,
   block,
+  starts = false,
+  access,
   autoJoin = false,
   userName,
   userKey,
@@ -62,6 +66,10 @@ export function LiveRoom({
   /** "Wed, September 24 9:00 PM" */
   when: string;
   block?: JoinBlock;
+  /** The host starts the session for everyone by going in. */
+  starts?: boolean;
+  /** What the backend lets this person do in the room. */
+  access: RoomAccess;
   /** They've already checked their devices, so skip straight to connecting. */
   autoJoin?: boolean;
   userName: string;
@@ -75,9 +83,9 @@ export function LiveRoom({
 
   async function connect(choices: DeviceChoices) {
     try {
-      const credentials = await fetchJoinCredentials(sessionId);
+      const entered = await enter(sessionId, starts, access);
       endedByMe.current = false;
-      setStage({ name: "room", credentials, choices });
+      setStage({ name: "room", ...entered, choices });
     } catch (error) {
       setStage({ name: "error", message: (error as Error).message });
     }
@@ -86,13 +94,13 @@ export function LiveRoom({
   React.useEffect(() => {
     if (!autoJoin || block) return;
     let cancelled = false;
-    fetchJoinCredentials(sessionId)
-      .then((credentials) => !cancelled && setStage({ name: "room", credentials, choices: readSavedChoices() }))
+    enter(sessionId, starts, access)
+      .then((entered) => !cancelled && setStage({ name: "room", ...entered, choices: readSavedChoices() }))
       .catch((error: Error) => !cancelled && setStage({ name: "error", message: error.message }));
     return () => {
       cancelled = true;
     };
-  }, [autoJoin, block, sessionId]);
+  }, [autoJoin, block, sessionId, starts, access]);
 
   const back = () => (window.history.length > 1 ? router.back() : router.push(homeHref));
 
@@ -139,6 +147,7 @@ export function LiveRoom({
           userName={userName}
           userKey={userKey}
           joining={stage.joining}
+          starts={starts}
           onJoin={join}
         />
       ) : stage.name === "connecting" ? (
@@ -163,6 +172,7 @@ export function LiveRoom({
           <RoomStage
             sessionId={sessionId}
             title={title}
+            access={stage.access}
             onLeave={() => setStage({ name: "ended", ending: "left" })}
             onEndedForAll={() => {
               endedByMe.current = true;
@@ -190,7 +200,21 @@ export function LiveRoom({
   );
 }
 
-function Blocked({
+/**
+ * Starts the session first when the host is the one going in (already live is
+ * fine), then gets a token. Permissions are read again once it's live, since
+ * the backend grants none before then.
+ */
+async function enter(sessionId: string, starts: boolean, access: RoomAccess) {
+  if (!starts) return { credentials: await fetchJoinCredentials(sessionId), access };
+  await startLiveSession(sessionId).catch((error) => {
+    if (!(error instanceof ApiError && error.status === 409)) throw new Error("We couldn't start the session.");
+  });
+  const [credentials, entry] = await Promise.all([fetchJoinCredentials(sessionId), getSessionEntry(sessionId)]);
+  return { credentials, access: roomAccess(entry) };
+}
+
+export function Blocked({
   block,
   title,
   when,

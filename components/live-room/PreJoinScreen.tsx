@@ -43,6 +43,7 @@ export function PreJoinScreen({
   userName,
   userKey,
   joining,
+  starts = false,
   onJoin,
 }: {
   title: string;
@@ -50,6 +51,8 @@ export function PreJoinScreen({
   userName: string;
   userKey: string;
   joining: boolean;
+  /** The host is about to start the session for everyone. */
+  starts?: boolean;
   onJoin: (choices: DeviceChoices) => void;
 }) {
   // The last devices used on this browser; `null` on the server, where there's no storage.
@@ -187,7 +190,7 @@ export function PreJoinScreen({
           className={roomButton.primary}
         >
           {joining && <Spinner />}
-          {joining ? "Joining…" : "Join live session"}
+          {joining ? (starts ? "Starting…" : "Joining…") : starts ? "Start live session" : "Join live session"}
         </button>
       </div>
     </div>

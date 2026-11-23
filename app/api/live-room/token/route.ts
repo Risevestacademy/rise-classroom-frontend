@@ -1,6 +1,8 @@
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, TrackSource } from "livekit-server-sdk";
 import type { NextRequest } from "next/server";
 
+import { ApiError } from "@/lib/api";
+import { getLiveSession, getSessionEntry } from "@/lib/live-sessions";
 import { getServerSession } from "@/lib/session.server";
 
 const roleLabels: Record<string, string> = {
@@ -10,9 +12,10 @@ const roleLabels: Record<string, string> = {
   MENTOR: "Mentor",
 };
 
-// PENDING-BACKEND: stands in for `POST /live-sessions/:id/join` until the
-// backend issues tokens. Never runs in production builds, so the LiveKit
-// secret stays in .env.local and never needs to reach Vercel.
+// PENDING-BACKEND: the backend's entry details decide who may join and with
+// what powers, but don't include a LiveKit token yet, so this signs one from
+// them. Never runs in production builds, so the LiveKit secret stays in
+// .env.local and never needs to reach Vercel.
 export async function GET(request: NextRequest) {
   if (process.env.NODE_ENV === "production") {
     return new Response(null, { status: 404 });
@@ -31,14 +34,26 @@ export async function GET(request: NextRequest) {
   const session = await getServerSession().catch(() => null);
   if (!session?.user) return new Response(null, { status: 401 });
 
-  const room = request.nextUrl.searchParams.get("session");
-  if (!room) {
+  const id = request.nextUrl.searchParams.get("session");
+  if (!id) {
     return Response.json({ message: "Missing session." }, { status: 400 });
   }
 
-  // The backend will make the session's assigned instructor or mentor the
-  // host; here anyone who isn't a student is, so host controls can be tried.
-  const host = session.user.role !== "STUDENT";
+  const cookie = request.headers.get("cookie") ?? undefined;
+  let entry, room;
+  try {
+    [entry, { roomName: room }] = await Promise.all([getSessionEntry(id, { cookie }), getLiveSession(id, { cookie })]);
+  } catch (error) {
+    const status = error instanceof ApiError ? error.status : 503;
+    return Response.json({ message: "Couldn't check whether you can join this session." }, { status });
+  }
+  if (!entry.permissions.canJoin) {
+    return Response.json({ message: "This session isn't open to you right now." }, { status: 403 });
+  }
+
+  const host = entry.permissions.canModerate;
+  const sources = [TrackSource.MICROPHONE, TrackSource.CAMERA];
+  if (entry.permissions.canShareScreen) sources.push(TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO);
 
   // A tab-specific suffix lets one account join from two tabs while testing.
   const tab = request.nextUrl.searchParams.get("tab") ?? "";
@@ -52,7 +67,8 @@ export async function GET(request: NextRequest) {
     room,
     roomJoin: true,
     roomAdmin: host,
-    canPublish: true,
+    canPublish: entry.permissions.canPublishMedia,
+    canPublishSources: sources,
     canSubscribe: true,
     canPublishData: true,
     // Lets people raise and lower their hand through their own attributes.

@@ -265,3 +265,12 @@ export const ComputerScreenShareOff = liveIcon(
     <path d="m2.5 2.5 15 15" />
   </g>,
 );
+
+export const RecordCircle = liveIcon(
+  "RecordCircle",
+  1.2,
+  <g strokeWidth="1.25">
+    <circle cx="10" cy="10" r="7.5" />
+    <circle cx="10" cy="10" r="3.33" />
+  </g>,
+);

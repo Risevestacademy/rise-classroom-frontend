@@ -28,11 +28,79 @@ export const feedbackOptions = [
   { value: "faster", label: "Faster", emoji: "🛼" },
 ] as const;
 
+/**
+ * The host's Session settings, shared through the host's own `settings`
+ * attribute so everyone in the room, including late joiners, can follow them.
+ */
+export const SETTINGS_ATTRIBUTE = "settings";
+
+export const videoQualityOptions = [
+  { value: "auto", label: "Auto (Recommended)" },
+  { value: "high", label: "High (720p)" },
+  { value: "standard", label: "Standard (360p)" },
+  { value: "low", label: "Low (180p)" },
+] as const;
+
+export const recordingVisibilityOptions = [
+  { value: "academy", label: "Academy members" },
+  { value: "invited", label: "Invited participants" },
+  { value: "hosts", label: "Hosts only" },
+] as const;
+
+export type SessionSettings = {
+  microphone: boolean;
+  camera: boolean;
+  screenShare: boolean;
+  chat: boolean;
+  reactions: boolean;
+  handRaising: boolean;
+  // PENDING-BACKEND: who may join is decided when the backend signs a join
+  // token, and recording runs on the server, so these four sections only
+  // remember the host's choice for now.
+  locked: boolean;
+  invitedOnly: boolean;
+  waitingRoom: boolean;
+  reentry: boolean;
+  autoRecord: boolean;
+  recordingVisibility: (typeof recordingVisibilityOptions)[number]["value"];
+  muteOnEntry: boolean;
+  camerasOffOnEntry: boolean;
+  videoQuality: (typeof videoQualityOptions)[number]["value"];
+};
+
+export const defaultSessionSettings: SessionSettings = {
+  microphone: true,
+  camera: true,
+  screenShare: true,
+  chat: true,
+  reactions: true,
+  handRaising: true,
+  locked: false,
+  invitedOnly: true,
+  waitingRoom: false,
+  reentry: true,
+  autoRecord: false,
+  recordingVisibility: "academy",
+  muteOnEntry: false,
+  camerasOffOnEntry: false,
+  videoQuality: "auto",
+};
+
+export function parseSessionSettings(value?: string): SessionSettings {
+  if (!value) return defaultSessionSettings;
+  try {
+    return { ...defaultSessionSettings, ...JSON.parse(value) };
+  } catch {
+    return defaultSessionSettings;
+  }
+}
+
 export type Feedback = (typeof feedbackOptions)[number]["value"];
 export const feedbackFor = (value?: string) => feedbackOptions.find((option) => option.value === value);
 
-// PENDING-BACKEND: becomes `POST /live-sessions/:id/join`, which also decides
-// whether the user may join yet. Until then the dev-only token route signs one.
+// PENDING-BACKEND: `GET /live-sessions/:id/entry` says whether someone may
+// join but doesn't give them a LiveKit token yet, so the dev-only token route
+// signs one with the permissions the entry details grant.
 export async function fetchJoinCredentials(sessionId: string): Promise<JoinCredentials> {
   const params = new URLSearchParams({ session: sessionId, tab: crypto.randomUUID().slice(0, 8) });
   const response = await fetch(`/api/live-room/token?${params}`, { cache: "no-store" });

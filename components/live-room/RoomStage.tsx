@@ -5,7 +5,6 @@ import {
   isTrackReference,
   RoomAudioRenderer,
   StartAudio,
-  useChat,
   useConnectionQualityIndicator,
   useConnectionState,
   useDataChannel,
@@ -18,7 +17,7 @@ import {
   type TrackReference,
   type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
-import { ConnectionQuality, ConnectionState, Track, type Participant } from "livekit-client";
+import { ConnectionQuality, ConnectionState, LocalVideoTrack, Track, VideoPresets, type Participant } from "livekit-client";
 
 import { AlertCircle, Message01, UserMultiple, WifiOff01 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
@@ -27,17 +26,23 @@ import {
   FEEDBACK_ATTRIBUTE,
   HAND_ATTRIBUTE,
   muteEveryone,
+  parseSessionSettings,
   REACTIONS_TOPIC,
   removeParticipant,
   ROLE_ATTRIBUTE,
   setParticipantMuted,
   setScreenShareAllowed,
+  SETTINGS_ATTRIBUTE,
   turnOffAllCameras,
   type Feedback,
+  type SessionSettings,
 } from "@/lib/live-room";
+import type { RoomAccess } from "@/lib/live-sessions";
 import { cn } from "@/lib/utils";
 import { ControlBar } from "./ControlBar";
 import { displayName, OthersTile, ParticipantTile } from "./ParticipantTile";
+import { SessionSettingsDialog } from "./SessionSettings";
+import { useSessionChat } from "./useSessionChat";
 import { ChatPanel, ParticipantsPanel, type PanelTab } from "./SidePanel";
 
 type Notice = { id: number; tone: "info" | "warning" | "error"; message: string };
@@ -49,11 +54,13 @@ const clockFormat = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: 
 export function RoomStage({
   sessionId,
   title,
+  access,
   onLeave,
   onEndedForAll,
 }: {
   sessionId: string;
   title: string;
+  access: RoomAccess;
   onLeave: () => void;
   /** Called just before the host ends the session, so the exit screen can say so. */
   onEndedForAll: () => void;
@@ -67,6 +74,8 @@ export function RoomStage({
   const isHost = attributes?.[ROLE_ATTRIBUTE] === "host";
   const handRaised = Boolean(attributes?.[HAND_ATTRIBUTE]);
   const feedback = (attributes?.[FEEDBACK_ATTRIBUTE] || undefined) as Feedback | undefined;
+  const sessionSettings = useSessionSettings(sessionId, isHost);
+  const { settings, setSettings, blocked } = sessionSettings;
 
   const cameras = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], { onlySubscribed: false });
   const screen = useTracks([Track.Source.ScreenShare]).filter(isTrackReference)[0];
@@ -75,7 +84,9 @@ export function RoomStage({
   const [pinned, setPinned] = React.useState<string | null>(null);
   const [notices, setNotices] = React.useState<Notice[]>([]);
   const [reactions, setReactions] = React.useState<Reaction[]>([]);
-  const { chatMessages, send, isSending } = useChat();
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const chat = useSessionChat(sessionId, access.canReadChat);
+  const chatMessages = chat.messages;
   const [seenMessages, setSeenMessages] = React.useState(0);
 
   const notify = React.useCallback((tone: Notice["tone"], message: string) => {
@@ -89,6 +100,8 @@ export function RoomStage({
     setReactions((current) => [...current.slice(-20), { id, emoji, name, left: 4 + Math.random() * 18 }]);
     setTimeout(() => setReactions((current) => current.filter((reaction) => reaction.id !== id)), 4000);
   }, []);
+
+  useEnforcedSettings(sessionSettings, notify);
 
   const { send: sendData } = useDataChannel(REACTIONS_TOPIC, (message) => {
     const emoji = new TextDecoder().decode(message.payload);
@@ -232,7 +245,22 @@ export function RoomStage({
           />
         )}
         {panel === "chat" && (
-          <ChatPanel messages={chatMessages} onSend={send} sending={isSending} onClose={() => showPanel(null)} />
+          <ChatPanel
+            messages={chatMessages}
+            userId={access.userId}
+            loading={chat.loading}
+            onSend={(message) =>
+              chat.send(message).catch((error) => {
+                notify("error", "Couldn't send your message. Try again.");
+                throw error;
+              })
+            }
+            sending={chat.sending}
+            canSend={access.canSendChat && !blocked.chat}
+            blockedReason={blocked.chat ? "The host has turned off chat" : "You can't send messages in this session"}
+            maxLength={access.chatMaxLength}
+            onClose={() => showPanel(null)}
+          />
         )}
       </div>
 
@@ -256,23 +284,137 @@ export function RoomStage({
         handRaised={handRaised}
         feedback={feedback}
         isHost={isHost}
-        canShareScreen={typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia)}
+        canShareScreen={
+          access.canShareScreen && !blocked.screenShare && typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia)
+        }
+        blocked={blocked}
         onToggleMic={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled).catch(() => {})}
-        onToggleCamera={() => localParticipant.setCameraEnabled(!isCameraEnabled).catch(() => {})}
+        onToggleCamera={() =>
+          localParticipant.setCameraEnabled(!isCameraEnabled, cameraCapture(settings.videoQuality)).catch(() => {})
+        }
         onToggleShare={toggleShare}
         onToggleHand={() =>
           setOwnAttribute(HAND_ATTRIBUTE, handRaised ? "" : String(Date.now()), "Couldn't raise your hand. Try again.")
         }
         onReact={react}
         onFeedback={(next) => setOwnAttribute(FEEDBACK_ATTRIBUTE, next ?? "", "Couldn't send your feedback. Try again.")}
+        onOpenSettings={() => setSettingsOpen(true)}
         onLeave={onLeave}
         onEndForAll={() => {
           onEndedForAll();
           hostAction(() => endSessionForAll(sessionId), "Couldn't end the session for everyone.");
         }}
       />
+
+      <SessionSettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        isHost={isHost}
+        settings={settings}
+        onChange={(patch) => setSettings({ ...settings, ...patch })}
+      />
     </div>
   );
+}
+
+const qualityPresets = { high: VideoPresets.h720, standard: VideoPresets.h360, low: VideoPresets.h180 };
+
+/** Capture options for the host's "Default video quality". */
+const cameraCapture = (quality: SessionSettings["videoQuality"]) =>
+  quality === "auto" ? undefined : { resolution: qualityPresets[quality].resolution };
+
+const savedSettingsKey = (sessionId: string) => `rise-live-room-settings:${sessionId}`;
+
+type Blocked = Partial<Record<"microphone" | "camera" | "screenShare" | "chat" | "reactions" | "handRaising", boolean>>;
+
+/**
+ * The host's Session settings. The host keeps them on this browser and shares
+ * them through their `settings` attribute; everyone else reads them from the
+ * host. Hosts aren't held back by their own settings.
+ */
+function useSessionSettings(sessionId: string, isHost: boolean) {
+  const { localParticipant } = useLocalParticipant();
+  const participants = useParticipants();
+  const host = participants.find((participant) => !participant.isLocal && participant.attributes[ROLE_ATTRIBUTE] === "host");
+  const { attributes: hostAttributes } = useParticipantAttributes({ participant: host });
+  const [own, setOwn] = React.useState(() => parseSessionSettings(localStorage.getItem(savedSettingsKey(sessionId)) ?? undefined));
+
+  const shared = JSON.stringify(own);
+  React.useEffect(() => {
+    if (!isHost || localParticipant.attributes[SETTINGS_ATTRIBUTE] === shared) return;
+    localParticipant.setAttributes({ [SETTINGS_ATTRIBUTE]: shared }).catch(() => {});
+  }, [isHost, localParticipant, shared]);
+
+  const hostShared = hostAttributes?.[SETTINGS_ATTRIBUTE];
+  const settings = isHost ? own : parseSessionSettings(hostShared);
+  const blocked: Blocked = isHost
+    ? {}
+    : {
+        microphone: !settings.microphone,
+        camera: !settings.camera,
+        screenShare: !settings.screenShare,
+        chat: !settings.chat,
+        reactions: !settings.reactions,
+        handRaising: !settings.handRaising,
+      };
+
+  const setSettings = (next: SessionSettings) => {
+    setOwn(next);
+    localStorage.setItem(savedSettingsKey(sessionId), JSON.stringify(next));
+  };
+
+  return { settings, setSettings, blocked, hostShared: Boolean(hostShared) };
+}
+
+/**
+ * Applies the host's settings to this person: turns off what the host just
+ * disallowed, follows the "on entry" choices once, and captures the camera at
+ * the chosen quality.
+ */
+function useEnforcedSettings(
+  { settings, blocked, hostShared }: Pick<ReturnType<typeof useSessionSettings>, "settings" | "blocked" | "hostShared">,
+  notify: (tone: Notice["tone"], message: string) => void,
+) {
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const { attributes } = useParticipantAttributes({ participant: localParticipant });
+  const handRaised = Boolean(attributes?.[HAND_ATTRIBUTE]);
+  const entryApplied = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!blocked.microphone || !isMicrophoneEnabled) return;
+    localParticipant.setMicrophoneEnabled(false).catch(() => {});
+    notify("info", "The host has turned off microphones.");
+  }, [blocked.microphone, isMicrophoneEnabled, localParticipant, notify]);
+
+  React.useEffect(() => {
+    if (!blocked.camera || !isCameraEnabled) return;
+    localParticipant.setCameraEnabled(false).catch(() => {});
+    notify("info", "The host has turned off cameras.");
+  }, [blocked.camera, isCameraEnabled, localParticipant, notify]);
+
+  React.useEffect(() => {
+    if (!blocked.screenShare || !isScreenShareEnabled) return;
+    localParticipant.setScreenShareEnabled(false).catch(() => {});
+    notify("info", "The host has turned off screen sharing.");
+  }, [blocked.screenShare, isScreenShareEnabled, localParticipant, notify]);
+
+  React.useEffect(() => {
+    if (blocked.handRaising && handRaised) localParticipant.setAttributes({ [HAND_ATTRIBUTE]: "" }).catch(() => {});
+  }, [blocked.handRaising, handRaised, localParticipant]);
+
+  // The "on entry" choices apply once, when the host's settings first arrive.
+  React.useEffect(() => {
+    if (!hostShared || entryApplied.current) return;
+    entryApplied.current = true;
+    if (settings.muteOnEntry) localParticipant.setMicrophoneEnabled(false).catch(() => {});
+    if (settings.camerasOffOnEntry) localParticipant.setCameraEnabled(false).catch(() => {});
+  }, [hostShared, settings.muteOnEntry, settings.camerasOffOnEntry, localParticipant]);
+
+  React.useEffect(() => {
+    const camera = localParticipant.getTrackPublication(Track.Source.Camera)?.track;
+    if (!isCameraEnabled || !(camera instanceof LocalVideoTrack)) return;
+    camera.restartTrack(cameraCapture(settings.videoQuality)).catch(() => {});
+  }, [settings.videoQuality, isCameraEnabled, localParticipant]);
 }
 
 /** Cells in the gallery before the rest collapse into "+N Others". */

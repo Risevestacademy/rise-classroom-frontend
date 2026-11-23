@@ -3,10 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { addDays, fromDateKey, monthNames, shortDate, toDateKey } from "@/lib/calendar";
-import { sessionSpan, sessionTime, type LiveSession } from "@/lib/live-sessions";
+import { liveSessionQueries, sessionSpan, sessionTime, zonedParts, type LiveSession } from "@/lib/live-sessions";
 import { cn } from "@/lib/utils";
 import { roomButton } from "./RoomStatus";
 
@@ -24,15 +25,30 @@ function weekOf(date: Date) {
   return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
 }
 
-/** Where a session stands right now, for its badge and whether Join works. */
+/** How early the host can go in and start a session. */
+const START_WINDOW_MS = 15 * 60_000;
+
+/**
+ * Where a session stands right now, for its badge and whether Join works.
+ * Join opens shortly before the start too, so the host can start it; anyone
+ * else who's early is told it hasn't started yet.
+ */
 function standing(session: LiveSession, now: number) {
-  const { start, end } = sessionSpan(session);
-  if (now >= end.getTime()) return { live: false, label: "Ended", status: "neutral" } as const;
-  if (now >= start.getTime()) return { live: true, label: "Live now", status: "success" } as const;
+  if (session.status === "live") return { joinable: true, label: "Live now", status: "success" } as const;
+  if (session.status !== "upcoming") return { joinable: false, label: "Ended", status: "neutral" } as const;
+  const { start } = sessionSpan(session);
+  const joinable = start.getTime() - now <= START_WINDOW_MS;
   const minutes = Math.ceil((start.getTime() - now) / 60_000);
+  if (minutes <= 0) return { joinable, label: "Starting soon", status: "info" } as const;
   const label =
     minutes < 60 ? `In ${minutes} ${minutes === 1 ? "Minute" : "Minutes"}` : `In ${Math.round(minutes / 60)} ${minutes < 90 ? "Hour" : "Hours"}`;
-  return { live: false, label, status: "info" } as const;
+  return { joinable, label, status: "info" } as const;
+}
+
+/** The week's sessions, with a day either side so no time zone loses one. */
+function weekRange(week: Date[]) {
+  const iso = (date: Date) => `${toDateKey(date)}T00:00:00Z`;
+  return { from: iso(addDays(week[0], -1)), to: iso(addDays(week[6], 2)) };
 }
 
 /**
@@ -40,23 +56,23 @@ function standing(session: LiveSession, now: number) {
  * week. `serverNow` is when the server rendered, so the first render matches.
  */
 export function JoinHub({
-  sessions,
   serverNow,
   deviceCheckPath,
 }: {
-  sessions: LiveSession[];
   serverNow: number;
   /** Joining goes to `${deviceCheckPath}/${id}`. */
   deviceCheckPath: string;
 }) {
   const router = useRouter();
-  const today = toDateKey(new Date(serverNow));
+  const today = zonedParts(new Date(serverNow).toISOString()).date;
   const [selected, setSelected] = React.useState(today);
   const [link, setLink] = React.useState("");
   const [linkError, setLinkError] = React.useState<string | null>(null);
   const now = React.useSyncExternalStore(subscribeToMinutes, currentMinute, () => serverNow);
 
   const week = weekOf(fromDateKey(selected));
+  const list = useQuery(liveSessionQueries.list(weekRange(week)));
+  const sessions = list.data ?? [];
   const daysWithSessions = new Set(sessions.map((session) => session.date));
   const onDay = sessions
     .filter((session) => session.date === selected)
@@ -66,7 +82,7 @@ export function JoinHub({
   function joinWithLink(event: React.FormEvent) {
     event.preventDefault();
     const id = sessionIdFromLink(link);
-    if (!id || !sessions.some((session) => session.id === id)) {
+    if (!id) {
       setLinkError("That isn't a Rise Classroom session link. Check it and try again.");
       return;
     }
@@ -160,7 +176,18 @@ export function JoinHub({
           <h1 className="text-base font-medium text-black">
             On the calendar {selected === today ? "today" : shortDate(selectedDate)}
           </h1>
-          {onDay.length === 0 ? (
+          {list.isPending ? (
+            <p role="status" className="rounded-[32px] bg-surface-brand px-10 py-12 text-center text-sm text-text-secondary">
+              Loading sessions…
+            </p>
+          ) : list.isError ? (
+            <p className="rounded-[32px] bg-surface-brand px-10 py-12 text-center text-sm text-text-secondary">
+              We couldn&apos;t load your sessions.{" "}
+              <button type="button" onClick={() => list.refetch()} className="cursor-pointer font-medium text-text-brand underline">
+                Try again
+              </button>
+            </p>
+          ) : onDay.length === 0 ? (
             <p className="rounded-[32px] bg-surface-brand px-10 py-12 text-center text-sm text-text-secondary">
               No live sessions on this day.
             </p>
@@ -180,7 +207,7 @@ export function JoinHub({
                       <h2 className="text-2xl/8 font-semibold text-text-primary">{session.title}</h2>
                       <p className="text-sm font-medium text-text-secondary">{sessionTime(session)}</p>
                     </div>
-                    {state.live ? (
+                    {state.joinable ? (
                       <Link href={`${deviceCheckPath}/${session.id}`} className={cn(roomButton.primary, "shrink-0 border-brand-300")}>
                         Join live session
                       </Link>

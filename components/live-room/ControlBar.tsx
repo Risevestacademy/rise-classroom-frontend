@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useMediaDeviceSelect } from "@livekit/components-react";
 
 import {
   ComputerScreenShare,
@@ -18,12 +17,11 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { feedbackOptions, reactionEmojis, type Feedback } from "@/lib/live-room";
 import { cn } from "@/lib/utils";
-import { RoomMenuContent, RoomMenuItem, RoomMenuLabel, RoomMenuRadioItem, RoomMenuSeparator } from "./RoomMenu";
+import { RoomMenuContent, RoomMenuItem } from "./RoomMenu";
 
 const control =
   "flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50 max-sm:size-10 [&_svg]:size-5";
@@ -39,19 +37,22 @@ export type ControlBarProps = {
   feedback?: Feedback;
   isHost: boolean;
   canShareScreen: boolean;
+  /** What the host has turned off for everyone else; hosts get `{}`. */
+  blocked: { microphone?: boolean; camera?: boolean; reactions?: boolean; handRaising?: boolean };
   onToggleMic: () => void;
   onToggleCamera: () => void;
   onToggleShare: () => void;
   onToggleHand: () => void;
   onReact: (emoji: string) => void;
   onFeedback: (feedback: Feedback | null) => void;
+  onOpenSettings: () => void;
   onLeave: () => void;
   onEndForAll: () => void;
 };
 
 /** The call controls along the bottom of the room. */
 export function ControlBar(props: ControlBarProps) {
-  const { micOn, cameraOn, sharing, handRaised, feedback, isHost } = props;
+  const { micOn, cameraOn, sharing, handRaised, feedback, isHost, blocked } = props;
 
   return (
     <div className="flex justify-center px-3 pt-4 pb-4 sm:pt-10 sm:pb-[56px]">
@@ -63,6 +64,7 @@ export function ControlBar(props: ControlBarProps) {
         <ToggleButton
           on={micOn}
           label={micOn ? "Turn off microphone" : "Turn on microphone"}
+          blockedLabel={!micOn && blocked.microphone ? "The host has turned off microphones" : undefined}
           onClick={props.onToggleMic}
           className={micOn ? idle : off}
         >
@@ -71,6 +73,7 @@ export function ControlBar(props: ControlBarProps) {
         <ToggleButton
           on={cameraOn}
           label={cameraOn ? "Turn off camera" : "Turn on camera"}
+          blockedLabel={!cameraOn && blocked.camera ? "The host has turned off cameras" : undefined}
           onClick={props.onToggleCamera}
           className={cameraOn ? idle : off}
         >
@@ -90,8 +93,9 @@ export function ControlBar(props: ControlBarProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            aria-label="Reactions and feedback"
-            title="Reactions and feedback"
+            aria-label={blocked.reactions ? "The host has turned off reactions" : "Reactions and feedback"}
+            title={blocked.reactions ? "The host has turned off reactions" : "Reactions and feedback"}
+            disabled={blocked.reactions}
             className={cn(control, feedback ? active : idle, "data-popup-open:bg-room-active data-popup-open:text-text-brand")}
           >
             <Smile />
@@ -142,13 +146,23 @@ export function ControlBar(props: ControlBarProps) {
         <ToggleButton
           on={handRaised}
           label={handRaised ? "Lower hand" : "Raise hand"}
+          blockedLabel={!handRaised && blocked.handRaising ? "The host has turned off hand raising" : undefined}
           onClick={props.onToggleHand}
           className={handRaised ? active : idle}
         >
           <WavingHand02 />
         </ToggleButton>
 
-        <SettingsMenu />
+        <button
+          type="button"
+          aria-label="Session settings"
+          title="Session settings"
+          aria-haspopup="dialog"
+          onClick={props.onOpenSettings}
+          className={cn(control, idle)}
+        >
+          <Settings01 />
+        </button>
 
         {isHost ? (
           <DropdownMenu>
@@ -176,62 +190,30 @@ const leaveButton =
 function ToggleButton({
   on,
   label,
+  blockedLabel,
   onClick,
   className,
   children,
 }: {
   on: boolean;
   label: string;
+  /** Set when the host doesn't allow turning this on. */
+  blockedLabel?: string;
   onClick: () => void;
   className: string;
   children: React.ReactNode;
 }) {
   return (
-    <button type="button" aria-pressed={on} aria-label={label} title={label} onClick={onClick} className={cn(control, className)}>
+    <button
+      type="button"
+      aria-pressed={on}
+      aria-label={blockedLabel ?? label}
+      title={blockedLabel ?? label}
+      disabled={Boolean(blockedLabel)}
+      onClick={onClick}
+      className={cn(control, className)}
+    >
       {children}
     </button>
-  );
-}
-
-/** The gear: pick the microphone, camera and speaker. */
-function SettingsMenu() {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label="Settings"
-        title="Settings"
-        className={cn(control, idle, "data-popup-open:bg-room-active data-popup-open:text-text-brand")}
-      >
-        <Settings01 />
-      </DropdownMenuTrigger>
-      <RoomMenuContent side="top" align="end" sideOffset={12} className="w-[288px]">
-        <DeviceGroup kind="audioinput" label="Microphone" />
-        <RoomMenuSeparator />
-        <DeviceGroup kind="videoinput" label="Camera" />
-        <RoomMenuSeparator />
-        <DeviceGroup kind="audiooutput" label="Speaker" />
-      </RoomMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function DeviceGroup({ kind, label }: { kind: MediaDeviceKind; label: string }) {
-  const { devices, activeDeviceId, setActiveMediaDevice } = useMediaDeviceSelect({ kind });
-
-  return (
-    <DropdownMenuGroup>
-      <RoomMenuLabel>{label}</RoomMenuLabel>
-      {devices.length === 0 ? (
-        <RoomMenuItem disabled>No {label.toLowerCase()} found</RoomMenuItem>
-      ) : (
-        <DropdownMenuRadioGroup value={activeDeviceId} onValueChange={(id) => setActiveMediaDevice(id as string)}>
-          {devices.map((device, index) => (
-            <RoomMenuRadioItem key={device.deviceId} value={device.deviceId}>
-              <span className="truncate">{device.label || `${label} ${index + 1}`}</span>
-            </RoomMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      )}
-    </DropdownMenuGroup>
   );
 }
