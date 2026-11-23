@@ -23,9 +23,10 @@ export const workSans = localFont({
   variable: '--font-work-sans',
   display: 'swap',
   preload: false,
+  /* Static weights only. The variable files (~128 KB each) overlapped every
+     weight here and won the match, so a page using just Regular downloaded
+     the whole variable font instead of a ~57 KB static. */
   src: [
-    { path: '../public/fonts/static/WorkSans-VariableFont_wght.woff2', weight: '100 900', style: 'normal' },
-    { path: '../public/fonts/static/WorkSans-Italic-VariableFont_wght.woff2', weight: '100 900', style: 'italic' },
     { path: '../public/fonts/static/WorkSans-Thin.woff2', weight: '100', style: 'normal' },
     { path: '../public/fonts/static/WorkSans-ExtraLight.woff2', weight: '200', style: 'normal' },
     { path: '../public/fonts/static/WorkSans-Light.woff2', weight: '300', style: 'normal' },

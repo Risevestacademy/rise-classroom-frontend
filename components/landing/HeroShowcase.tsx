@@ -61,6 +61,21 @@ export function HeroShowcase() {
   // The screen being replaced by the current change.
   const previousTab = useRef(FIRST_TAB);
 
+  /* The hidden screens sit in the viewport under the first one, so
+     loading="lazy" doesn't hold them back: they would download alongside the
+     page's largest paint. They mount once the page has loaded, or as soon as
+     a tab is picked. */
+  const [otherScreens, setOtherScreens] = useState(false);
+  useEffect(() => {
+    const show = () => setOtherScreens(true);
+    if (document.readyState === "complete") {
+      const frame = requestAnimationFrame(show);
+      return () => cancelAnimationFrame(frame);
+    }
+    window.addEventListener("load", show, { once: true });
+    return () => window.removeEventListener("load", show);
+  }, []);
+
   // The WebGL renderer is created on the first tab change, not on load.
   useEffect(() => {
     return () => {
@@ -78,6 +93,7 @@ export function HeroShowcase() {
     pillState.current = Flip.getState("[data-tab-pill]");
     previousTab.current = activeRef.current;
     activeRef.current = index;
+    setOtherScreens(true);
     setActive(index);
   };
 
@@ -111,9 +127,14 @@ export function HeroShowcase() {
         });
       }
 
-      const screens = gsap.utils.toArray<HTMLImageElement>("[data-screen]");
-      const from = screens[previousTab.current];
-      const to = screens[active];
+      /* Looked up by index, not list position: before load only the first
+         screen is mounted. */
+      const screen = (index: number) =>
+        root.current?.querySelector<HTMLImageElement>(
+          `[data-screen="${index}"]`,
+        );
+      const from = screen(previousTab.current);
+      const to = screen(active);
       const canvas = rollCanvas.current;
       if (!isFirstRun && canvas && roll.current === null)
         roll.current = createRollRenderer(canvas);
@@ -286,7 +307,7 @@ export function HeroShowcase() {
           className="relative w-full will-change-transform"
         >
           <div className="grid w-full lg:overflow-hidden lg:rounded-[12px]">
-            {PRODUCT_TABS.map((tab, index) => (
+            {PRODUCT_TABS.map((tab, index) => (index === FIRST_TAB || otherScreens) && (
               <Image
                 key={tab.label}
                 data-screen={index}
