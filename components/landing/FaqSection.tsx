@@ -41,7 +41,7 @@ export function FaqSection() {
       className="bg-brand-50 px-4 pt-[72px] pb-[44px] lg:pt-[100px]"
     >
       <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-10 lg:flex-row lg:justify-between lg:gap-0">
-        <div className="lg:w-[328px]">
+        <div className="font-tomato lg:w-[328px]">
           <h2
             data-reveal="words"
             className="text-[32px] leading-[40px] font-semibold text-text-primary lg:text-[40px] lg:leading-[48px]"
