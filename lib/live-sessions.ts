@@ -68,7 +68,7 @@ export type SessionEntry = {
   join: {
     eligible: boolean;
     canJoinNow: boolean;
-    blockedReason: "NOT_STARTED" | "ENDED" | "CANCELLED" | null;
+    blockedReason: "NOT_STARTED" | "ENDED" | "CANCELLED" | "REMOVED" | null;
     canStart: boolean;
   };
   permissions: {
@@ -259,6 +259,7 @@ export function joinBlockFor(entry: SessionEntry): JoinBlock | undefined {
   if (!entry.join.eligible) return "not_eligible";
   if (entry.join.blockedReason === "ENDED") return "ended";
   if (entry.join.blockedReason === "CANCELLED") return "cancelled";
+  if (entry.join.blockedReason === "REMOVED") return "removed";
   if (entry.join.blockedReason === "NOT_STARTED" && !entry.join.canStart)
     return "too_early";
   return undefined;

@@ -14,7 +14,7 @@ const roleLabels: Record<string, string> = {
 export const roleLabel = (platformRole: string) => roleLabels[platformRole] ?? "";
 
 /** Why someone can't join yet, matching `canJoin.reason` in the proposed API. */
-export type JoinBlock = "too_early" | "not_eligible" | "ended" | "cancelled";
+export type JoinBlock = "too_early" | "not_eligible" | "ended" | "cancelled" | "removed";
 
 /**
  * Participant attributes the room shares. The backend's token doesn't set
@@ -28,6 +28,8 @@ export const HAND_ATTRIBUTE = "hand";
 export const FEEDBACK_ATTRIBUTE = "feedback";
 /** Data channel topic for emoji reactions. */
 export const REACTIONS_TOPIC = "reactions";
+/** Data channel topic the host uses to tell everyone the session has ended. */
+export const SESSION_TOPIC = "rise.session";
 
 /** One-off reactions that float up the room. */
 export const reactionEmojis = ["💖", "😩", "😂", "😍", "😝", "🤒", "😭", "😳", "🤓", "😎", "👏🏾"] as const;
@@ -129,18 +131,25 @@ export async function fetchJoinCredentials(sessionId: string): Promise<JoinCrede
 // PENDING-BACKEND: host controls. A browser can't mute or remove someone else
 // in LiveKit, so these go through the backend, which uses LiveKit's server API.
 // They fail until the endpoints from the API contract exist.
-export const setParticipantMuted = (sessionId: string, identity: string, muted: boolean) =>
-  api.post(`/live-sessions/${sessionId}/participants/${encodeURIComponent(identity)}/mute`, { muted });
+/** Mutes someone's microphone. Only they can unmute it again. */
+export const muteParticipant = (sessionId: string, identity: string) =>
+  api.post(`/live-sessions/${sessionId}/participants/${encodeURIComponent(identity)}/mute`);
 
+/** Removes someone for the rest of the session, until a host readmits them. */
 export const removeParticipant = (sessionId: string, identity: string) =>
   api.delete(`/live-sessions/${sessionId}/participants/${encodeURIComponent(identity)}`);
 
+/** Hosts and moderators keep their microphones and cameras. */
 export const muteEveryone = (sessionId: string) => api.post(`/live-sessions/${sessionId}/mute-all`);
 
 export const turnOffAllCameras = (sessionId: string) => api.post(`/live-sessions/${sessionId}/cameras-off`);
 
-export const setScreenShareAllowed = (sessionId: string, allowed: boolean) =>
-  api.post(`/live-sessions/${sessionId}/screen-share`, { allowed });
+/**
+ * `stop` ends someone's current share; `allow` and `block` decide whether they
+ * may share for the rest of the session, and still apply after they rejoin.
+ */
+export const setScreenShare = (sessionId: string, identity: string, action: "stop" | "allow" | "block") =>
+  api.post(`/live-sessions/${sessionId}/screen-share`, { identity, action });
 
 export const endSessionForAll = (sessionId: string) =>
   api.post(`/live-sessions/${sessionId}/end`);

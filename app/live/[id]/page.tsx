@@ -28,7 +28,11 @@ export default async function LiveRoomPage({ params, searchParams }: Props) {
   // "signed out" sends them to sign-in.
   const auth = await getServerSession().catch(() => undefined);
   if (auth === null) redirect(`/sign-in?${new URLSearchParams({ next: `/live/${id}` })}`);
-  const homeHref = auth ? landingPathFor(auth.user) : "/";
+  // Each role's live sessions lobby; anyone without one goes to their dashboard.
+  const landing = auth ? landingPathFor(auth.user) : "/";
+  const homeHref = /^\/(admin|instructor|mentor|student)\/dashboard$/.test(landing)
+    ? landing.replace(/\/dashboard$/, "/live")
+    : landing;
 
   const entry = await loadSessionEntry(id);
   if (!entry) {

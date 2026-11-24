@@ -102,7 +102,8 @@ export function LiveRoom({
     };
   }, [autoJoin, block, sessionId, starts, access]);
 
-  const back = () => (window.history.length > 1 ? router.back() : router.push(homeHref));
+  // Always the live sessions lobby: going back in history would land on the device check.
+  const back = () => router.push(homeHref);
 
   function join(choices: DeviceChoices) {
     setStage({ name: "prejoin", joining: true });
@@ -176,7 +177,9 @@ export function LiveRoom({
             onLeave={() => setStage({ name: "ended", ending: "left" })}
             onEndedForAll={() => {
               endedByMe.current = true;
+              setStage({ name: "ended", ending: "you_ended" });
             }}
+            onHostEnded={() => setStage({ name: "ended", ending: "host_ended" })}
           />
         </LiveKitRoom>
       ) : stage.name === "ended" ? (
@@ -256,6 +259,17 @@ export function Blocked({
         <>
           <span className="font-semibold text-text-primary">{title}</span> on {when} won&apos;t be
           going ahead. Check your calendar for the next one.
+        </>
+      ),
+    },
+    removed: {
+      icon: <UserRemove01 />,
+      tone: "warning",
+      heading: "You were removed from this session",
+      body: (
+        <>
+          The host removed you from <span className="font-semibold text-text-primary">{title}</span>. If
+          you think that&apos;s a mistake, contact them or your admin.
         </>
       ),
     },
