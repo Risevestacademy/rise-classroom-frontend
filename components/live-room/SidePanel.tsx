@@ -74,7 +74,8 @@ export function ParticipantsPanel({
   pinned,
   onClose,
   onPin,
-  onSetMuted,
+  onMute,
+  onStopShare,
   onRemove,
   onMuteAll,
   onCamerasOff,
@@ -85,7 +86,8 @@ export function ParticipantsPanel({
   pinned: string | null;
   onClose: () => void;
   onPin: (identity: string | null) => void;
-  onSetMuted: (participant: Participant, muted: boolean) => void;
+  onMute: (participant: Participant) => void;
+  onStopShare: (participant: Participant) => void;
   onRemove: (participant: Participant) => void;
   onMuteAll: () => void;
   onCamerasOff: () => void;
@@ -103,7 +105,8 @@ export function ParticipantsPanel({
             isHost={isHost}
             pinned={pinned === participant.identity}
             onPin={() => onPin(pinned === participant.identity ? null : participant.identity)}
-            onSetMuted={(muted) => onSetMuted(participant, muted)}
+            onMute={() => onMute(participant)}
+            onStopShare={() => onStopShare(participant)}
             onRemove={() => onRemove(participant)}
           />
         ))}
@@ -151,18 +154,21 @@ function ParticipantRow({
   isHost,
   pinned,
   onPin,
-  onSetMuted,
+  onMute,
+  onStopShare,
   onRemove,
 }: {
   participant: Participant;
   isHost: boolean;
   pinned: boolean;
   onPin: () => void;
-  onSetMuted: (muted: boolean) => void;
+  onMute: () => void;
+  onStopShare: () => void;
   onRemove: () => void;
 }) {
   const name = displayName(participant);
   const micOff = useIsMuted({ participant, source: Track.Source.Microphone });
+  const sharing = !useIsMuted({ participant, source: Track.Source.ScreenShare });
   const { attributes } = useParticipantAttributes({ participant });
   const handRaised = Boolean(attributes?.[HAND_ATTRIBUTE]);
   const feedback = feedbackFor(attributes?.[FEEDBACK_ATTRIBUTE]);
@@ -202,10 +208,17 @@ function ParticipantRow({
           <MoreHorizontal className="size-6" />
         </DropdownMenuTrigger>
         <RoomMenuContent align="end" className="w-[200px]">
-          {canManage && (
-            <RoomMenuItem onClick={() => onSetMuted(!micOff)}>
-              {micOff ? <Mic02 /> : <MicOff02 />}
-              {micOff ? "Unmute" : "Mute"}
+          {/* Only they can unmute themselves again. */}
+          {canManage && !micOff && (
+            <RoomMenuItem onClick={onMute}>
+              <MicOff02 />
+              Mute
+            </RoomMenuItem>
+          )}
+          {canManage && sharing && (
+            <RoomMenuItem onClick={onStopShare}>
+              <ComputerScreenShareOff />
+              Stop screen share
             </RoomMenuItem>
           )}
           <RoomMenuItem onClick={onPin}>

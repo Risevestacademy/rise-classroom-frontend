@@ -32,8 +32,9 @@ import {
   removeParticipant,
   ROLE_ATTRIBUTE,
   roleLabel,
-  setParticipantMuted,
-  setScreenShareAllowed,
+  muteParticipant,
+  SESSION_TOPIC,
+  setScreenShare,
   SETTINGS_ATTRIBUTE,
   startRecording,
   turnOffAllCameras,
@@ -41,7 +42,7 @@ import {
   type SessionSettings,
 } from "@/lib/live-room";
 import { ApiError } from "@/lib/api";
-import type { RoomAccess } from "@/lib/live-sessions";
+import { getSessionEntry, type RoomAccess } from "@/lib/live-sessions";
 import { cn } from "@/lib/utils";
 import { ControlBar } from "./ControlBar";
 import { displayName, OthersTile, ParticipantTile } from "./ParticipantTile";
@@ -52,6 +53,8 @@ import { ChatPanel, ParticipantsPanel, type PanelTab } from "./SidePanel";
 type Notice = { id: number; tone: "info" | "warning" | "error"; message: string };
 type Reaction = { id: number; emoji: string; name: string; left: number };
 
+const SESSION_ENDED = "ended";
+
 const clockFormat = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit" });
 
 /** Everything inside a connected room. */
@@ -61,13 +64,16 @@ export function RoomStage({
   access,
   onLeave,
   onEndedForAll,
+  onHostEnded,
 }: {
   sessionId: string;
   title: string;
   access: RoomAccess;
   onLeave: () => void;
-  /** Called just before the host ends the session, so the exit screen can say so. */
+  /** The host ended the session for everyone; they leave the room. */
   onEndedForAll: () => void;
+  /** Someone else ended it; everyone else leaves too. */
+  onHostEnded: () => void;
 }) {
   const connection = useConnectionState();
   const participants = useParticipants();
@@ -125,6 +131,29 @@ export function RoomStage({
     showReaction(emoji, message.from ? displayName(message.from) : "Someone");
   });
 
+  // PENDING-BACKEND: ending a session doesn't close the LiveKit room yet, so
+  // the host tells everyone here. Each person checks with the backend before
+  // leaving, so nobody else can end it for the room.
+  const { send: sendSessionSignal } = useDataChannel(SESSION_TOPIC, (message) => {
+    if (new TextDecoder().decode(message.payload) !== SESSION_ENDED) return;
+    getSessionEntry(sessionId)
+      .then((entry) => entry.join.blockedReason === "ENDED" && onHostEnded())
+      .catch(() => {});
+  });
+
+  async function endForEveryone() {
+    try {
+      await endSessionForAll(sessionId);
+    } catch {
+      notify("error", "Couldn't end the session for everyone. Try again.");
+      return;
+    }
+    await sendSessionSignal(new TextEncoder().encode(SESSION_ENDED), { reliable: true, topic: SESSION_TOPIC }).catch(
+      () => {},
+    );
+    onEndedForAll();
+  }
+
   const chatOpen = panel === "chat";
   const unreadChat = !chatOpen && chatMessages.length > seenMessages;
 
@@ -155,8 +184,10 @@ export function RoomStage({
   async function hostAction(action: () => Promise<unknown>, failure: string) {
     try {
       await action();
-    } catch {
-      notify("error", failure);
+    } catch (error) {
+      // The backend says why, e.g. "That participant isn't in the session right now".
+      const reason = error instanceof ApiError && error.status < 500 ? error.message : "";
+      notify("error", reason || failure);
     }
   }
 
@@ -245,10 +276,13 @@ export function RoomStage({
             pinned={pinned}
             onClose={() => showPanel(null)}
             onPin={setPinned}
-            onSetMuted={(participant, muted) =>
+            onMute={(participant) =>
+              hostAction(() => muteParticipant(sessionId, participant.identity), `Couldn't mute ${displayName(participant)}.`)
+            }
+            onStopShare={(participant) =>
               hostAction(
-                () => setParticipantMuted(sessionId, participant.identity, muted),
-                `Couldn't ${muted ? "mute" : "unmute"} ${displayName(participant)}.`,
+                () => setScreenShare(sessionId, participant.identity, "stop"),
+                `Couldn't stop ${displayName(participant)}'s screen share.`,
               )
             }
             onRemove={(participant) =>
@@ -257,7 +291,16 @@ export function RoomStage({
             onMuteAll={() => hostAction(() => muteEveryone(sessionId), "Couldn't mute everyone.")}
             onCamerasOff={() => hostAction(() => turnOffAllCameras(sessionId), "Couldn't turn off everyone's camera.")}
             onDisableScreenShare={() =>
-              hostAction(() => setScreenShareAllowed(sessionId, false), "Couldn't turn off screen sharing.")
+              hostAction(async () => {
+                // Hosts keep theirs; moderators can't act on the host anyway.
+                const others = participants.filter(
+                  (participant) => !participant.isLocal && participant.attributes[ROLE_ATTRIBUTE] !== "host",
+                );
+                const results = await Promise.allSettled(
+                  others.map((participant) => setScreenShare(sessionId, participant.identity, "block")),
+                );
+                if (results.some((result) => result.status === "rejected")) throw new Error("Some failed");
+              }, "Couldn't turn off screen sharing for everyone.")
             }
           />
         )}
@@ -317,10 +360,7 @@ export function RoomStage({
         onFeedback={(next) => setOwnAttribute(FEEDBACK_ATTRIBUTE, next ?? "", "Couldn't send your feedback. Try again.")}
         onOpenSettings={() => setSettingsOpen(true)}
         onLeave={onLeave}
-        onEndForAll={() => {
-          onEndedForAll();
-          hostAction(() => endSessionForAll(sessionId), "Couldn't end the session for everyone.");
-        }}
+        onEndForAll={() => void endForEveryone()}
       />
 
       <SessionSettingsDialog
@@ -505,7 +545,8 @@ function Gallery({
     <ul className={cn("grid min-h-0 flex-1 auto-rows-[minmax(180px,1fr)] grid-cols-2 gap-2 overflow-y-auto lg:overflow-hidden", layout.grid)}>
       {shown.map((ref, index) => (
         <li key={ref.participant.identity} className={cn("min-h-0", layout.cell(index), shown.length === 1 && "col-span-2")}>
-          <ParticipantTile trackRef={ref} className="size-full" />
+          {/* Alone, the tile spans the stage, so show the whole camera picture. */}
+          <ParticipantTile trackRef={ref} fit={shown.length === 1 ? "contain" : "cover"} className="size-full" />
         </li>
       ))}
       {hidden.length > 0 && (

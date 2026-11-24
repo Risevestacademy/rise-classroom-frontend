@@ -36,12 +36,15 @@ export function ParticipantTile({
   trackRef,
   presenting = false,
   pinned = false,
+  fit = "cover",
   className,
 }: {
   trackRef: TrackReferenceOrPlaceholder;
   /** They're sharing their screen, which shows on the stage. */
   presenting?: boolean;
   pinned?: boolean;
+  /** "contain" shows the whole camera picture, for a tile far wider than it. */
+  fit?: "cover" | "contain";
   className?: string;
 }) {
   const { participant } = trackRef;
@@ -68,7 +71,11 @@ export function ParticipantTile({
       {isTrackReference(trackRef) && !cameraOff ? (
         <VideoTrack
           trackRef={trackRef}
-          className={cn("absolute inset-0 -z-10 size-full object-cover", participant.isLocal && "-scale-x-100")}
+          className={cn(
+            "absolute inset-0 -z-10 size-full",
+            fit === "contain" ? "object-contain" : "object-cover",
+            participant.isLocal && "-scale-x-100",
+          )}
         />
       ) : (
         <PersonAvatar
