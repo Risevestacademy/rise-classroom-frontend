@@ -6,7 +6,6 @@ import { Calendar, ChevronRight, Menu, Search, Bell } from "lucide-react";
 
 import { Logo } from "@/assets/logo";
 import { UserAvatar } from "@/components/UserAvatar";
-import { CompanionResident } from "@/components/mascot/Companion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
@@ -129,7 +128,6 @@ export function StudentTopBar() {
         >
           <Bell className="h-5 w-5" />
         </Link> */}
-        <CompanionResident />
         <NotificationsPopover className={iconButton} />
 
         <div className="pl-1">

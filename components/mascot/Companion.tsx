@@ -17,6 +17,7 @@ import { Bell, BellOff, WifiOff, X } from "lucide-react";
 
 import { useControlTowerData } from "@/components/control-tower/hooks";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { SuccessToast } from "@/components/ui/toast";
 import { track } from "@/lib/analytics/track";
 import { sessionQuery } from "@/lib/session-query";
 import { studentQueries } from "@/lib/student";
@@ -43,6 +44,7 @@ const SEEN_KEY = "companion-seen";
 const SKIPS_KEY = "companion-pop-skips";
 const VISITS_KEY = "companion-visits";
 const PLANTED_KEY = "companion-planted";
+const TUCKED_KEY = "companion-tucked";
 /** Daily pop-ups stop by themselves once this many in a row go unanswered. */
 const MAX_SKIPS = 3;
 const POP_MS = 12_000;
@@ -117,6 +119,10 @@ type CompanionValue = {
   celebrateLesson: (celebration: Celebration) => void;
   /** A short pop-up for smaller wins, like handing work in. Skipped in quiet mode. */
   cheer: (message: string) => void;
+  /* True while a pop-up's Leafy is rising from the bottom-right corner. */
+  popping: boolean;
+  /* Called by each pop-up as it mounts; returns its unmount cleanup. */
+  registerPop: () => () => void;
 };
 
 const CompanionContext = createContext<CompanionValue | null>(null);
@@ -323,6 +329,9 @@ function Pop({
   /** The student took the offered action, as opposed to waving it away. */
   onAct?: () => void;
 }) {
+  const registerPop = useContext(CompanionContext)?.registerPop;
+  useEffect(() => registerPop?.(), [registerPop]);
+
   return (
     <div
       className={cn(
@@ -417,6 +426,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const [cheering, setCheering] = useState<string | null>(null);
   const cheerPop = useTimedPop(cheering !== null, CHEER_MS, () => setCheering(null));
+  const [pops, setPops] = useState(0);
+  const registerPop = useCallback(() => {
+    setPops((count) => count + 1);
+    return () => setPops((count) => count - 1);
+  }, []);
 
   const { enrollment, topics } = curriculum;
   const ready =
@@ -463,11 +477,14 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     cheer: (message) => {
       if (!quiet && planted) setCheering(message);
     },
+    popping: pops > 0,
+    registerPop,
   };
 
   return (
     <CompanionContext.Provider value={value}>
       {children}
+      <CompanionResident />
       <LessonCelebration
         celebration={celebration}
         stage={stage}
@@ -643,15 +660,22 @@ export function CompanionPeek({
 const popupClass =
   "w-80 origin-[var(--transform-origin)] rounded-3xl border border-neutral-100 bg-white p-3 shadow-[0_8px_24px_rgba(16,24,40,0.08)] outline-none transition-[transform,opacity] duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0";
 
-/**
- * The companion in the top bar, on every student page. A dot marks pressing
- * things it hasn't shown yet; opening it lists what matters today.
+/*
+ * The companion floating on every student page. It starts in the bottom-right
+ * corner; once its panel is closed it slides to the middle of the right edge
+ * and rests half out of sight, ready to be tapped back out. A dot marks
+ * pressing things it hasn't shown yet; opening it lists what matters today.
  */
-export function CompanionResident({ className }: { className?: string }) {
-  const { nudges, ready, stage, growth, toNextStage, quiet, setQuiet, planted, plantedKnown } =
+export function CompanionResident() {
+  const { nudges, ready, stage, growth, toNextStage, quiet, setQuiet, planted, popping } =
     useCompanion();
   const [seen, setSeen] = useStored(SEEN_KEY);
   const [skips, setSkips] = useStored(SKIPS_KEY);
+  const [storedTucked, setTucked] = useStored(TUCKED_KEY);
+  const [open, setOpen] = useState(false);
+  const [tuckToast, setTuckToast] = useState(false);
+  const hideToast = useCallback(() => setTuckToast(false), []);
+  const tucked = storedTucked === "1";
   const popsPaused = !quiet && (Number(skips) || 0) >= MAX_SKIPS;
   const today = nudges.slice(0, 3);
   const rest = atRest(today[0].mood);
@@ -659,122 +683,158 @@ export function CompanionResident({ className }: { className?: string }) {
   const seenIds = seen ? seen.split("\n") : [];
   const hasNews = ready && urgent.some((id) => !seenIds.includes(id));
 
-  // Until `planted` is known, hold the button's place so the top bar doesn't jump.
-  if (!plantedKnown) {
-    return <span aria-hidden className="h-10 w-10 shrink-0 rounded-xl bg-neutral-100" />;
-  }
   if (!planted) return null;
 
+  /* Resting: half hidden on the right edge. Out: in the corner, or beside the edge while open. */
+  const resting = tucked && !open;
+  /* A daily pop-up brings its own Leafy up from the corner, so this one steps aside. */
+  const makingRoom = popping && !tucked;
+
   return (
-    <Popover.Root
-      onOpenChange={(open) => {
-        if (!open) return;
-        track("leafy_opened");
-        setSeen(urgent.join("\n"));
-      }}
-    >
-      <Popover.Trigger
-        aria-label={hasNews ? "Leafy has something for you" : "Open Leafy, your learning companion"}
-        className={cn(
-          "relative flex h-10 w-10 shrink-0 cursor-pointer items-end justify-center overflow-hidden rounded-xl bg-brand-100 outline-none focus-visible:ring-2 focus-visible:ring-border-focus",
-          className,
-        )}
+    <>
+      <Popover.Root
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (next) {
+            track("leafy_opened");
+            setSeen(urgent.join("\n"));
+            setTuckToast(false);
+            return;
+          }
+          track("leafy_tucked");
+          setTucked("1");
+          setTuckToast(true);
+        }}
       >
-        <span aria-hidden>
-          <Mascot
-            growth={growth}
-            palette={TEAL_PALETTE}
-            size={40}
-            closeUp
-            animated={false}
-            label=""
-          />
-        </span>
-        {hasNews && (
-          <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-text-error" />
-        )}
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Positioner side="bottom" align="end" sideOffset={8} className="z-50">
-          <Popover.Popup className={popupClass}>
-            <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 p-3">
-              <InteractiveMascot
+        <div
+          className={cn(
+            "fixed z-40 transition-[top,right,translate,rotate,opacity,scale] duration-700 ease-[cubic-bezier(0.34,1.3,0.64,1)] motion-reduce:transition-none",
+            tucked ? "top-[calc(50dvh-1.75rem)]" : "top-[calc(100dvh-5rem)]",
+            resting
+              ? "right-0 translate-x-1/2 -rotate-12 hover:translate-x-1/4 focus-within:translate-x-1/4"
+              : "right-4 sm:right-6",
+            makingRoom && "pointer-events-none scale-75 opacity-0",
+          )}
+        >
+          <Popover.Trigger
+            aria-label={
+              hasNews
+                ? "Leafy has something for you"
+                : resting
+                  ? "Bring Leafy back"
+                  : "Open Leafy, your learning companion"
+            }
+            className="relative flex h-14 w-14 cursor-pointer items-end justify-center overflow-hidden rounded-full border-2 border-white bg-brand-100 shadow-lg outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          >
+            {/* Keyed on where Leafy is going, so it hops each time it moves. */}
+            <span key={resting ? "resting" : "out"} aria-hidden className={styles.tuckHop}>
+              <Mascot
                 growth={growth}
-                mood={ready ? rest.mood : "thinking"}
-                scene={ready ? rest.scene : undefined}
                 palette={TEAL_PALETTE}
-                size={72}
-                className="-my-2 shrink-0"
-                label="Leafy. Tap to say hi."
+                size={52}
+                closeUp
+                animated={false}
+                label=""
               />
-              <div className="min-w-0 flex-1">
-                <Popover.Title className="text-sm font-semibold text-neutral-800">
-                  Leafy
-                </Popover.Title>
-                <p className="mt-0.5 truncate text-xs text-neutral-400">
-                  {ambientLife().status}
-                </p>
-                {(toNextStage > 0 || stage === BLOOM) && (
-                  <p className="mt-0.5 truncate text-xs text-neutral-400">
-                    {growthLine(stage, toNextStage)}
-                  </p>
-                )}
-              </div>
-              <Popover.Close
-                aria-label="Close"
-                className="text-neutral-400 hover:text-neutral-700"
-              >
-                <X className="h-4 w-4" />
-              </Popover.Close>
-            </div>
-
-            <p className="px-3 pt-4 pb-1 text-xs font-medium text-neutral-400">Today</p>
-            {ready ? (
-              <ul>
-                {today.map((nudge) => (
-                  <li key={nudge.id} className="flex items-center gap-3 px-3 py-2.5">
-                    <p className="min-w-0 flex-1 text-sm text-neutral-700">{nudge.message}</p>
-                    <SayingAction
-                      saying={nudge}
-                      onClick={() => track(`leafy_today_acted:${nudgeKind(nudge)}`)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="px-3 py-2.5 text-sm text-neutral-400">Checking your week…</p>
+            </span>
+            {hasNews && (
+              <span className="absolute top-1 right-2 h-3 w-3 rounded-full border-2 border-white bg-text-error" />
             )}
-
-            {popsPaused && (
-              <div className="mx-3 mt-2 flex items-center gap-3 rounded-xl bg-neutral-50 px-3 py-2.5">
-                <p className="min-w-0 flex-1 text-xs text-neutral-500">
-                  I stopped popping up on your dashboard since you kept passing.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    track("leafy_pop_resumed");
-                    setSkips("0");
-                  }}
-                  className="shrink-0 text-xs font-medium text-brand-600 hover:underline"
+          </Popover.Trigger>
+        </div>
+        <Popover.Portal>
+          <Popover.Positioner
+            side={tucked ? "left" : "top"}
+            align={tucked ? "center" : "end"}
+            sideOffset={12}
+            className="z-50"
+          >
+            <Popover.Popup className={popupClass}>
+              <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 p-3">
+                <InteractiveMascot
+                  growth={growth}
+                  mood={ready ? rest.mood : "thinking"}
+                  scene={ready ? rest.scene : undefined}
+                  palette={TEAL_PALETTE}
+                  size={72}
+                  className="-my-2 shrink-0"
+                  label="Leafy. Tap to say hi."
+                />
+                <div className="min-w-0 flex-1">
+                  <Popover.Title className="text-sm font-semibold text-neutral-800">
+                    Leafy
+                  </Popover.Title>
+                  <p className="mt-0.5 truncate text-xs text-neutral-400">{ambientLife().status}</p>
+                  {(toNextStage > 0 || stage === BLOOM) && (
+                    <p className="mt-0.5 truncate text-xs text-neutral-400">
+                      {growthLine(stage, toNextStage)}
+                    </p>
+                  )}
+                </div>
+                <Popover.Close
+                  aria-label="Close"
+                  className="text-neutral-400 hover:text-neutral-700"
                 >
-                  Bring back
-                </button>
+                  <X className="h-4 w-4" />
+                </Popover.Close>
               </div>
-            )}
 
-            <button
-              type="button"
-              aria-pressed={quiet}
-              onClick={() => setQuiet(!quiet)}
-              className="mt-2 flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-100"
-            >
-              {quiet ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
-              {quiet ? "Quiet mode is on" : "Turn on quiet mode"}
-            </button>
-          </Popover.Popup>
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
+              <p className="px-3 pt-4 pb-1 text-xs font-medium text-neutral-400">Today</p>
+              {ready ? (
+                <ul>
+                  {today.map((nudge) => (
+                    <li key={nudge.id} className="flex items-center gap-3 px-3 py-2.5">
+                      <p className="min-w-0 flex-1 text-sm text-neutral-700">{nudge.message}</p>
+                      <SayingAction
+                        saying={nudge}
+                        onClick={() => track(`leafy_today_acted:${nudgeKind(nudge)}`)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-3 py-2.5 text-sm text-neutral-400">Checking your week…</p>
+              )}
+
+              {popsPaused && (
+                <div className="mx-3 mt-2 flex items-center gap-3 rounded-xl bg-neutral-50 px-3 py-2.5">
+                  <p className="min-w-0 flex-1 text-xs text-neutral-500">
+                    I stopped popping up on your dashboard since you kept passing.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      track("leafy_pop_resumed");
+                      setSkips("0");
+                    }}
+                    className="shrink-0 text-xs font-medium text-brand-600 hover:underline"
+                  >
+                    Bring back
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                aria-pressed={quiet}
+                onClick={() => setQuiet(!quiet)}
+                className="mt-2 flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-sm font-medium text-neutral-800 transition-colors hover:bg-neutral-100"
+              >
+                {quiet ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+                {quiet ? "Quiet mode is on" : "Turn on quiet mode"}
+              </button>
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
+      {tuckToast && (
+        <SuccessToast
+          title="Leafy is resting"
+          message="Leafy is tucked on the right edge of your screen. Tap it whenever you want it back."
+          onDismiss={hideToast}
+        />
+      )}
+    </>
   );
 }

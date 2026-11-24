@@ -303,7 +303,30 @@
   }
 }
 
+.tuckHop {
+  display: block;
+  transform-origin: 50% 100%;
+  animation: tuckHop 0.7s cubic-bezier(0.3, 0, 0.3, 1);
+}
+
+@keyframes tuckHop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  20% {
+    transform: translateY(0) scale(1.12, 0.86);
+  }
+  50% {
+    transform: translateY(-8px) scale(0.94, 1.08);
+  }
+  75% {
+    transform: translateY(0) scale(1.04, 0.96);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .tuckHop,
   .riseIn,
   .peekIn,
   .sinkOut,
