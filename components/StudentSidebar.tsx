@@ -14,7 +14,7 @@ import {
   Blocks,
   X,
 } from "lucide-react";
-
+import { Video } from "@/assets/icons";
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
 import { SidebarOrganization } from "@/components/SidebarOrganization";
@@ -51,6 +51,11 @@ const homeNavItems: NavItem[] = [
     href: "/student/control-tower",
     icon: Radar,
   },
+  {
+    title: "Live sessions",
+    href: "/student/live",
+    icon: Video,
+  }
 ];
 
 const communicationNavItems: NavItem[] = [

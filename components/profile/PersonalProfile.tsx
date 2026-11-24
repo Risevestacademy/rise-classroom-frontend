@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isValidPhoneNumber } from "libphonenumber-js";
+import { z } from "zod";
 
 import { PersonAvatar } from "@/components/PersonAvatar";
 import {
@@ -20,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { LockedField } from "@/components/ui/locked-field";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getUpdateUserErrorMessage, updateUser, type UpdateUserInput } from "@/lib/admin";
 import { apiErrorDetails } from "@/lib/api";
 import {
   presetAvatarFile,
@@ -109,6 +111,12 @@ function EditPersonalProfileDialog({
 }) {
   const queryClient = useQueryClient();
   const { setToast } = useSettings();
+  const { data: session } = useQuery(sessionQuery());
+  // Only superadmins can change names and email, through the admin API.
+  const canEditAccount = session?.user.role === "SUPERADMIN";
+  const [firstName, setFirstName] = React.useState(me.firstName);
+  const [lastName, setLastName] = React.useState(me.lastName);
+  const [email, setEmail] = React.useState(me.email);
   const [displayName, setDisplayName] = React.useState(me.displayName ?? "");
   const [phone, setPhone] = React.useState({
     national: me.phoneNumber ?? "",
@@ -132,24 +140,64 @@ function EditPersonalProfileDialog({
   const phoneChanged = phone.e164 !== (me.phoneNumber ?? "");
   const phoneInvalid =
     phone.national.trim() !== "" && !isValidPhoneNumber(phone.e164 || "");
+  const profileChanged = nameChanged || phoneChanged || !!image || isPreset;
+
+  const account = {
+    firstName: firstName.trim(),
+    lastName: lastName.trim(),
+    email: email.trim(),
+  };
+  const accountChanges: UpdateUserInput = {};
+  if (account.firstName !== me.firstName) accountChanges.firstName = account.firstName;
+  if (account.lastName !== me.lastName) accountChanges.lastName = account.lastName;
+  if (account.email !== me.email) accountChanges.email = account.email;
+  const accountChanged = Object.keys(accountChanges).length > 0;
+  const firstNameError = account.firstName ? null : "First name is required.";
+  const lastNameError = account.lastName ? null : "Last name is required.";
+  const emailError =
+    accountChanges.email !== undefined && !z.email().safeParse(account.email).success
+      ? "Please enter a valid email address."
+      : null;
+
   const canSubmit =
-    displayName.trim().length > 0 &&
+    (displayName.trim().length > 0 || !nameChanged) &&
     !phoneInvalid &&
-    (nameChanged || phoneChanged || !!image || isPreset);
+    !firstNameError &&
+    !lastNameError &&
+    !emailError &&
+    (profileChanged || accountChanged);
 
   const save = useMutation({
-    mutationFn: async () =>
-      updateMyProfile({
-        displayName: nameChanged ? displayName.trim() : undefined,
-        phoneNumber: phoneChanged ? phone.e164 : undefined,
-        image: isPreset ? await presetAvatarFile(selected) : image,
-      }),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(profileQueries.me().queryKey, updated);
+    mutationFn: async () => {
+      let emailSent = false;
+      if (accountChanged) {
+        try {
+          const { data } = await updateUser(me.id, accountChanges);
+          emailSent = Boolean(data.emailSent);
+        } catch (error) {
+          throw new Error(getUpdateUserErrorMessage(error));
+        }
+      }
+      if (profileChanged) {
+        await updateMyProfile({
+          displayName: nameChanged ? displayName.trim() : undefined,
+          phoneNumber: phoneChanged ? phone.e164 : undefined,
+          image: isPreset ? await presetAvatarFile(selected) : image,
+        });
+      }
+      return emailSent;
+    },
+    onSuccess: (emailSent) => {
+      void queryClient.invalidateQueries({ queryKey: profileQueries.me().queryKey });
       void queryClient.invalidateQueries({ queryKey: sessionQuery().queryKey });
+      if (accountChanged) {
+        void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      }
       setToast({
         title: "Profile updated",
-        message: "Your personal profile has been saved.",
+        message: emailSent
+          ? `We sent a notice to ${account.email}.`
+          : "Your personal profile has been saved.",
       });
       onClose();
     },
@@ -187,10 +235,44 @@ function EditPersonalProfileDialog({
       }
       onSubmit={() => save.mutate()}
     >
-      <LockedField
-        label="Full name"
-        value={`${me.firstName} ${me.lastName}`.trim()}
-      />
+      {canEditAccount ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <AccountInput
+              id="profile-first-name"
+              label="First name"
+              value={firstName}
+              onChange={setFirstName}
+              error={firstNameError}
+            />
+            <AccountInput
+              id="profile-last-name"
+              label="Last name"
+              value={lastName}
+              onChange={setLastName}
+              error={lastNameError}
+            />
+          </div>
+          <AccountInput
+            id="profile-email"
+            label="Email address"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            error={emailError}
+            hint={
+              accountChanges.email !== undefined && !emailError
+                ? "You'll sign in with this address. We'll send a notice there."
+                : undefined
+            }
+          />
+        </>
+      ) : (
+        <LockedField
+          label="Full name"
+          value={`${me.firstName} ${me.lastName}`.trim()}
+        />
+      )}
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="profile-nickname"
@@ -242,5 +324,48 @@ function EditPersonalProfileDialog({
         }}
       />
     </ProfileEditDialog>
+  );
+}
+
+function AccountInput({
+  id,
+  label,
+  type = "basic",
+  value,
+  onChange,
+  error,
+  hint,
+}: {
+  id: string;
+  label: string;
+  type?: "basic" | "email";
+  value: string;
+  onChange: (value: string) => void;
+  error: string | null;
+  hint?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-sm font-medium text-neutral-800">
+        {label}
+      </label>
+      <Input
+        id={id}
+        type={type}
+        size="medium"
+        leadingIcon={null}
+        maxLength={100}
+        aria-invalid={Boolean(error)}
+        value={value}
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+          onChange(event.target.value)
+        }
+      />
+      {error ? (
+        <p className="text-xs text-text-error">{error}</p>
+      ) : (
+        hint && <p className="text-xs text-neutral-400">{hint}</p>
+      )}
+    </div>
   );
 }
