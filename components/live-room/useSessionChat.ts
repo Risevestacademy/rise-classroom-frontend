@@ -25,7 +25,12 @@ function merge(current: ChatMessage[], incoming: ChatMessage[]) {
  * The session chat: history from the backend, new messages saved through it
  * and passed around the room on `rise.chat`.
  */
-export function useSessionChat(sessionId: string, canRead: boolean) {
+export function useSessionChat(
+  sessionId: string,
+  canRead: boolean,
+  /** Called once for each message that arrives from someone else while in the room. */
+  onIncoming?: (message: ChatMessage) => void,
+) {
   const history = useQuery({ ...liveSessionQueries.chat(sessionId), enabled: canRead });
   const [live, setLive] = React.useState<ChatMessage[]>([]);
   const [sending, setSending] = React.useState(false);
@@ -33,7 +38,10 @@ export function useSessionChat(sessionId: string, canRead: boolean) {
   const { send: publish } = useDataChannel(CHAT_TOPIC, (packet) => {
     try {
       const data = JSON.parse(decoder.decode(packet.payload)) as ChatPacket;
-      if (data.type === "chat.message" && data.message?.id) setLive((current) => merge(current, [data.message]));
+      if (data.type !== "chat.message" || !data.message?.id) return;
+      const known = live.some((message) => message.id === data.message.id);
+      setLive((current) => merge(current, [data.message]));
+      if (!known) onIncoming?.(data.message);
     } catch {
       // Not a chat message.
     }
