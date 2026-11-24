@@ -292,12 +292,7 @@ export function keywordMarquee() {
 
   const loop = gsap
     .timeline({ repeat: -1 })
-    .to(track, { xPercent: -50, duration: 40, ease: "none" }, 0)
-    .to(
-      all("[data-marquee-icon]", track),
-      { rotate: 360 * 4, duration: 40, ease: "none" },
-      0
-    );
+    .to(track, { xPercent: -50, duration: 40, ease: "none" }, 0);
   // Start deep into the loop so it can run backwards without hitting zero.
   loop.totalTime(loop.duration() * 1000);
 
@@ -431,66 +426,43 @@ export function valueDeal() {
   held.to({}, { duration: 0.6 });
 }
 
-/** Audience cards: the photo is unclipped bottom-up, then the copy and bullets follow. */
+/** Audience columns: the photo is unclipped bottom-up, and each column's label and bullets follow. */
 export function solutionCards() {
-  all("[data-solution-card]").forEach((card) => {
-    const media = card.querySelector("[data-solution-media]");
-    const tl = gsap.timeline({
-      defaults: { ease: EASE_OUT },
-      scrollTrigger: { trigger: card, start: "top 80%", once: true },
-    });
-
-    if (media) {
-      tl.fromTo(
+  all("[data-solution-media]").forEach((media) => {
+    gsap
+      .timeline({
+        defaults: { ease: EASE_OUT },
+        scrollTrigger: { trigger: media, start: "top 80%", once: true },
+      })
+      .fromTo(
         media,
-        { clipPath: "inset(100% 0% 0% 0% round 16px)" },
-        { clipPath: "inset(0% 0% 0% 0% round 16px)", duration: 1.4 }
-      ).from(media.querySelector("img"), { scale: 1.15, duration: 1.6 }, 0);
-    }
+        { clipPath: "inset(100% 0% 0% 0%)" },
+        { clipPath: "inset(0% 0% 0% 0%)", duration: 1.4 }
+      )
+      .from(media.querySelector("img"), { scale: 1.15, duration: 1.6 }, 0);
+  });
 
-    tl.from(
-      all("[data-solution-text]", card),
-      { y: 20, opacity: 0, duration: 0.9, stagger: 0.08 },
-      0.3
-    )
+  all("[data-solution-card]").forEach((card) => {
+    gsap
+      .timeline({
+        defaults: { ease: EASE_OUT },
+        scrollTrigger: { trigger: card, start: "top 80%", once: true },
+      })
+      .from(all("[data-solution-text]", card), {
+        y: 20,
+        opacity: 0,
+        duration: 0.9,
+      })
       .from(
         all("[data-solution-point]", card),
         { x: -12, opacity: 0, duration: 0.8, stagger: 0.07 },
-        0.5
+        0.2
       )
       .from(
         all("[data-solution-point] svg", card),
         { rotate: -90, duration: 0.8, stagger: 0.07 },
-        0.5
+        0.2
       );
-  });
-}
-
-/**
- * The solution cards are sticky (see SolutionSection); as each next card
- * slides up over one, that card shrinks back and dims into the stack.
- */
-export function solutionStack() {
-  const cards = all("[data-solution-card]");
-  cards.slice(0, -1).forEach((card, i) => {
-    const next = cards[i + 1];
-    gsap.fromTo(
-      card,
-      { filter: "brightness(1)" },
-      {
-        scale: 0.92,
-        filter: "brightness(0.88)",
-        ease: "none",
-        scrollTrigger: {
-          trigger: next,
-          start: "top bottom",
-          // Done once the next card reaches its own sticky position.
-          end: () => `top ${parseFloat(getComputedStyle(next).top)}px`,
-          scrub: true,
-          invalidateOnRefresh: true,
-        },
-      }
-    );
   });
 }
 
@@ -553,11 +525,10 @@ export function footerReveal() {
 
   gsap.fromTo(
     wordmark,
-    { yPercent: 30, clipPath: "inset(100% 0% 0% 0%)", "--dots-shift": -1 },
+    { yPercent: 30, clipPath: "inset(100% 0% 0% 0%)" },
     {
       yPercent: 0,
       clipPath: "inset(0% 0% 0% 0%)",
-      "--dots-shift": 0,
       ease: "none",
       scrollTrigger: {
         trigger: main,

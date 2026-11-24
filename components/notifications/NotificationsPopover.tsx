@@ -18,6 +18,7 @@ import {
   useStudentNotifications,
 } from "@/lib/student-notifications";
 import { cn } from "@/lib/utils";
+import { notificationText } from "@/lib/notification-text";
 
 const PREVIEW_COUNT = 4;
 
@@ -91,7 +92,7 @@ export function NotificationsPopover({ className }: { className?: string }) {
                           {item.title}
                         </span>
                         <span className="mt-0.5 block truncate font-work text-xs text-neutral-500">
-                          {item.body}
+                          {notificationText(item.body)}
                         </span>
                       </span>
                       <span className="shrink-0 font-work text-xs text-neutral-500">

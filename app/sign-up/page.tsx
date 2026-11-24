@@ -7,7 +7,10 @@ import { z } from "zod";
 
 import { Logo } from "@/assets/logo";
 import { AuthShell } from "@/components/AuthShell";
-import { DashboardPreview } from "@/components/sign-up/DashboardPreview";
+import {
+  DashboardPreview,
+  type PreviewFocus,
+} from "@/components/sign-up/DashboardPreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +54,19 @@ export default function SignUpPage() {
   /* Which way the last step change went, so the next step slides in from
      that side. */
   const [direction, setDirection] = useState<"forward" | "back">("forward");
+
+  /* The field the preview zooms towards. Checked against the step too: a
+     field removed while focused never reports losing focus. */
+  const [focusedField, setFocusedField] = useState<PreviewFocus>(null);
+  const previewFocus: PreviewFocus =
+    (step === "you" && focusedField === "name") ||
+    (step === "space" && focusedField === "academy")
+      ? focusedField
+      : null;
+  const zoomPreviewOn = (field: NonNullable<PreviewFocus>) => ({
+    onFocus: () => setFocusedField(field),
+    onBlur: () => setFocusedField(null),
+  });
 
   /* Step two needs a valid step one; going back never does. */
   function goToStep(next: 1 | 2) {
@@ -101,7 +117,11 @@ export default function SignUpPage() {
   }
 
   const preview = (
-    <DashboardPreview fullName={fullName} academyName={academyName} />
+    <DashboardPreview
+      fullName={fullName}
+      academyName={academyName}
+      focus={previewFocus}
+    />
   );
 
   if (step === "submitted") {
@@ -158,6 +178,7 @@ export default function SignUpPage() {
                   placeholder="e.g Ada Okafor"
                   autoComplete="name"
                   value={fullName}
+                  {...zoomPreviewOn("name")}
                   onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                     setFullName(event.target.value);
                     setFullNameError(null);
@@ -215,6 +236,7 @@ export default function SignUpPage() {
                   placeholder="e.g Bright Future Academy"
                   autoComplete="organization"
                   value={academyName}
+                  {...zoomPreviewOn("academy")}
                   onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                     setAcademyName(event.target.value)
                   }

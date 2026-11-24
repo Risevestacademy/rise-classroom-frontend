@@ -65,7 +65,7 @@ const communicationNavItems: NavItem[] = [
 const accountNavItems: NavItem[] = [
   {
     title: "Settings",
-    href: "/student/settings",
+    href: "/student/profile",
     icon: Settings,
   },
   {

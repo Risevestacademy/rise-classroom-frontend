@@ -63,7 +63,7 @@ import {
   nameWithDisplayName,
   type AdminUser,
 } from "@/lib/admin";
-import { useStudentProgress } from "@/lib/student-profile";
+import { useMentorshipSessions, useStudentProgress } from "@/lib/student-profile";
 import { useTabParam } from "@/lib/use-tab-param";
 import { getStudentStatus } from "../student-display";
 import {
@@ -385,6 +385,7 @@ function ProfileCard({ student }: { student: AdminUser }) {
 }
 
 function MentorCard({ mentor }: { mentor: AdminUser["mentor"] }) {
+  const sessions = useMentorshipSessions(mentor);
   if (!mentor) {
     return (
       <Card className="gap-4">
@@ -397,6 +398,7 @@ function MentorCard({ mentor }: { mentor: AdminUser["mentor"] }) {
   }
 
   const name = mentor.name;
+  const [nextSession] = sessions.upcoming;
 
   return (
     <Card className="gap-4">
@@ -430,9 +432,8 @@ function MentorCard({ mentor }: { mentor: AdminUser["mentor"] }) {
           <p className="font-work text-sm font-medium text-text-secondary">
             Next session
           </p>
-          {/* PENDING-BACKEND: there are no mentorship sessions yet. */}
           <p className="font-work text-[13px]/[18px] text-text-secondary">
-            --
+            {nextSession ? `${nextSession.date} · ${nextSession.time}` : "--"}
           </p>
         </div>
       </div>

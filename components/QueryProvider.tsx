@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import {
+  MutationCache,
   QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
 
+import { ApiErrorToasts, toastForApiError } from "@/components/ApiErrorToasts";
 import { ApiError } from "@/lib/api";
 
 const SESSION_KEY = ["auth", "session"];
@@ -24,6 +26,15 @@ function makeQueryClient() {
         ) {
           client.invalidateQueries({ queryKey: SESSION_KEY });
         }
+        // Rate limits and time-outs get the design's toast, with a retry.
+        toastForApiError(error, () => client.refetchQueries({ queryKey: query.queryKey }));
+      },
+    }),
+    mutationCache: new MutationCache({
+      onError: (error, variables, _context, mutation) => {
+        toastForApiError(error, () => {
+          mutation.execute(variables).catch(() => {});
+        });
       },
     }),
     defaultOptions: {
@@ -60,6 +71,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = React.useState(getQueryClient);
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      {children}
+      <ApiErrorToasts />
+    </QueryClientProvider>
   );
 }

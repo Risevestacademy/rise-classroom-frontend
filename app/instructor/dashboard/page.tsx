@@ -12,6 +12,7 @@ import {
   Video,
 } from "lucide-react";
 
+import Link from "next/link";
 import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -89,6 +90,7 @@ export default function DashboardOverview() {
       label: "Live sessions today",
       value: 0,
       isLoading: false,
+      href: "/instructor/live",
       icon: Video,
       iconBg: "bg-surface-error-badge",
       iconColor: "text-icon-error",
@@ -156,11 +158,10 @@ export default function DashboardOverview() {
         <div id="cards" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {metrics.map((metric) => {
             const Icon = metric.icon;
-            return (
-              <div
-                key={metric.label}
-                className="flex items-start gap-3 rounded-xl border border-neutral-300 bg-neutral-50 h-[84px] p-4 shadow-xs"
-              >
+            const className =
+              "flex items-start gap-3 rounded-xl border border-neutral-300 bg-neutral-50 h-[84px] p-4 shadow-xs";
+            const content = (
+              <>
                 <div
                   className={cn(
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
@@ -181,6 +182,20 @@ export default function DashboardOverview() {
                     </span>
                   )}
                 </div>
+              </>
+            );
+            // A card with somewhere to go (live sessions) is a link to it.
+            return "href" in metric && metric.href ? (
+              <Link
+                key={metric.label}
+                href={metric.href}
+                className={cn(className, "transition-colors hover:border-border-strong")}
+              >
+                {content}
+              </Link>
+            ) : (
+              <div key={metric.label} className={className}>
+                {content}
               </div>
             );
           })}

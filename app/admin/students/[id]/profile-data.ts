@@ -1,5 +1,5 @@
 // PENDING-BACKEND: the admin API has no learning item,
-// activity, attendance, assignment, mentorship or notes data for a student
+// activity, attendance, assignment or notes data for a student
 // yet, so these tabs show the design's sample content until it does.
 
 import type { AttendanceStatus } from "./overview-data";
@@ -179,14 +179,6 @@ export const assignments: {
     outOf: 100,
   },
 ];
-
-export const mentorship = {
-  sessions: { total: 12, attended: 8, missed: 4 },
-  upcoming: [
-    { date: "Mon, Oct 12 2026", time: "6:00 PM -7:00 PM" },
-    { date: "Mon, Oct 12 2026", time: "6:50 PM -7:00 PM" },
-  ],
-};
 
 export const profileNotes: {
   id: string;

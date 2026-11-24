@@ -17,10 +17,12 @@ const pageLabels: Record<string, string> = {
   "my-learning": "Curriculum",
   assignments: "Assignments",
   "control-tower": "Control tower",
+  live: "Live sessions",
   announcements: "Announcements",
   notifications: "Notifications",
   chat: "Chat",
   settings: "Settings",
+  profile: "Profile",
   integration: "Integration",
 };
 

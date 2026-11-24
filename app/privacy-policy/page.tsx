@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { tomatoGrotesk } from "@/app/fonts";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LegalContents } from "@/components/landing/LegalContents";
@@ -394,7 +395,8 @@ const sections: { id: string; title: string; body: ReactNode }[] = [
 
 export default function PrivacyPolicyPage() {
   return (
-    <>
+    // display: contents keeps the layout as it was; it only scopes the font.
+    <div className={`contents ${tomatoGrotesk.variable}`}>
       <LandingNav intro={false} />
       {/* Same reveal as the home page: main lifts away to show the footer. */}
       <main
@@ -448,6 +450,6 @@ export default function PrivacyPolicyPage() {
       </main>
       <LandingFooter />
       <LandingMotion sections={false} />
-    </>
+    </div>
   );
 }

@@ -38,5 +38,6 @@ export const config = {
     "/instructor/:path*",
     "/mentor/:path*",
     "/student/:path*",
+    "/live/:path*",
   ],
 };

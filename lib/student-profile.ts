@@ -7,7 +7,14 @@ import type {
 } from "@/features/curriculum/types";
 import type { AdminUser } from "@/lib/admin";
 import { api, type Envelope, type Paginated } from "@/lib/api";
+import {
+  isMentorshipWith,
+  liveSessionQueries,
+  stillAhead,
+  toUpcomingSession,
+} from "@/lib/live-sessions";
 import { mentorQueries } from "@/lib/mentors";
+import { useCurrentMinute } from "@/lib/use-current-minute";
 
 /**
  * The student profile id the per-student endpoints are keyed on.
@@ -216,4 +223,31 @@ export function useOverallProgress(targets: ProgressTarget[]) {
     progress.set(target.profileId, studentProgress(modules, lessons).overall);
   }
   return progress;
+}
+
+/**
+ * A student's sessions with their mentor. PENDING-BACKEND: who attended isn't
+ * recorded, so only the sessions held so far are counted.
+ */
+export function useMentorshipSessions(mentor: AdminUser["mentor"]) {
+  const now = useCurrentMinute();
+  const list = useQuery({
+    ...liveSessionQueries.list({ mentorId: mentor?.id }),
+    enabled: Boolean(mentor),
+  });
+  const sessions =
+    mentor && list.data
+      ? list.data.filter((session) => isMentorshipWith(session, mentor))
+      : [];
+  return {
+    loading: list.isPending || now === null,
+    failed: list.isError,
+    held: sessions.filter((session) => session.status === "completed").length,
+    upcoming:
+      now === null
+        ? []
+        : stillAhead(sessions, now).map((session) =>
+            toUpcomingSession(session, now),
+          ),
+  };
 }
