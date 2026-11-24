@@ -17,10 +17,6 @@ export type Membership = {
   };
   track?: NamedRef;
 };
-import { queryOptions } from "@tanstack/react-query";
-
-import { api, type Envelope } from "@/lib/api";
-import type { Role, UserStatus } from "@/lib/auth";
 
 export const profileBasePath = "/admin/profile";
 
@@ -75,11 +71,15 @@ export type MyProfile = {
   memberships: Membership[];
 };
 
-/** Fields `PATCH /me` accepts. Name, email and track are admin-only. */
-export type UpdateProfileInput = {
+/** What `PATCH /me` accepts. First name, last name, email and track are admin-only. */
+export type UpdateMyProfileInput = {
   displayName?: string;
   phoneNumber?: string;
+  image?: File | null;
 };
+
+/** Older name used on feat/student-profile. */
+export type UpdateProfileInput = UpdateMyProfileInput;
 
 /** Shape of `GET /students/me/mentor`; `null` when no mentor is assigned. */
 export type MyMentorship = {
@@ -88,26 +88,6 @@ export type MyMentorship = {
   assignedAt: string;
   mentor: { id: string; name: string; email: string; role: string };
 } | null;
-
-  displayName?: string | null;
-  phoneNumber?: string | null;
-  location?: string | null;
-  description?: string | null;
-  email: string;
-  image?: string | null;
-  role: Role;
-  status: UserStatus;
-  onboardedAt?: string | null;
-  createdAt: string;
-  organization?: { id: string; name: string } | null;
-};
-
-/** What `PATCH /me` accepts. First name, last name and email are not editable here. */
-export type UpdateMyProfileInput = {
-  displayName?: string;
-  phoneNumber?: string;
-  image?: File | null;
-};
 
 async function getMyProfile() {
   const { data } = await api.get<Envelope<MyProfile>>("/me");
@@ -125,8 +105,6 @@ async function getMyMentor() {
   }
 }
 
-export async function updateMyProfile(input: UpdateProfileInput) {
-  const { data } = await api.patch<Envelope<MyProfile>>("/me", input);
 /** Sent as multipart so a new photo can go in the same request. */
 export async function updateMyProfile({ image, ...fields }: UpdateMyProfileInput) {
   const body = new FormData();
@@ -162,7 +140,7 @@ export function fullNameOf(profile: Pick<MyProfile, "firstName" | "lastName" | "
 
 /** The track they're on now: the first membership the API lists. */
 export function currentMembership(profile: MyProfile): Membership | undefined {
-  return profile.memberships[0];
+  return profile.memberships?.[0];
 }
 
 /**
@@ -276,4 +254,3 @@ export function useNotificationPreferences() {
 
   return { preferences, setPreference };
 }
-};
