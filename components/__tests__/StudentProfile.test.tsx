@@ -108,7 +108,8 @@ describe("edit profile page", () => {
   it("saves only the fields that changed", async () => {
     const api = mockApi({
       "GET /me": envelope(me),
-      "PATCH /me": (body: unknown) => envelope({ ...me, ...(body as object) }),
+      "PATCH /me": (body: unknown) =>
+        envelope({ ...me, ...Object.fromEntries(body as FormData) }),
     });
     const { user } = renderWithClient(<EditProfilePage />);
 
@@ -118,7 +119,9 @@ describe("edit profile page", () => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await vi.waitFor(() =>
-      expect(api.bodies("PATCH /me")).toEqual([{ displayName: "Aishat L." }]),
+      expect(
+        api.bodies("PATCH /me").map((body) => Object.fromEntries(body as FormData)),
+      ).toEqual([{ displayName: "Aishat L." }]),
     );
     expect(push).toHaveBeenCalledWith("/student/profile?updated=1");
   });
