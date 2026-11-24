@@ -20,6 +20,7 @@ const pageLabels: Record<string, string> = {
   notifications: "Notifications",
   chat: "Chat",
   settings: "Settings",
+  profile: "Profile",
   integration: "Integration",
 };
 
