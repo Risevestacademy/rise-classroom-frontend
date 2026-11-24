@@ -53,7 +53,9 @@ const subscribe = (listener: () => void) => {
   return () => listeners.delete(listener);
 };
 const snapshot = () => toasts;
-const serverSnapshot = (): ApiToast[] => [];
+// The same array every time, or React re-renders forever.
+const noToasts: ApiToast[] = [];
+const serverSnapshot = () => noToasts;
 
 export function ApiErrorToasts() {
   const current = React.useSyncExternalStore(subscribe, snapshot, serverSnapshot);

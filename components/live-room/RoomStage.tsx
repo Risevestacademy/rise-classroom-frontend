@@ -42,10 +42,12 @@ import {
   type SessionSettings,
 } from "@/lib/live-room";
 import { ApiError } from "@/lib/api";
-import { getSessionEntry, type RoomAccess } from "@/lib/live-sessions";
+import { getSessionEntry, personName, type RoomAccess } from "@/lib/live-sessions";
 import { cn } from "@/lib/utils";
 import { ControlBar } from "./ControlBar";
 import { displayName, OthersTile, ParticipantTile } from "./ParticipantTile";
+import { mentions } from "./mentions";
+import { RaisedHandsCard, useRaisedHands } from "./RaisedHands";
 import { SessionSettingsDialog } from "./SessionSettings";
 import { useSessionChat } from "./useSessionChat";
 import { ChatPanel, ParticipantsPanel, type PanelTab } from "./SidePanel";
@@ -95,6 +97,7 @@ export function RoomStage({
     localParticipant.setAttributes({ [ROLE_ATTRIBUTE]: role, [LABEL_ATTRIBUTE]: label }).catch(() => {});
   }, [connection, localParticipant, access.sessionRole, access.platformRole]);
   const handRaised = Boolean(attributes?.[HAND_ATTRIBUTE]);
+  const raisedHands = useRaisedHands();
   const feedback = (attributes?.[FEEDBACK_ATTRIBUTE] || undefined) as Feedback | undefined;
   const sessionSettings = useSessionSettings(sessionId, isHost);
   const { settings, setSettings, blocked } = sessionSettings;
@@ -108,8 +111,6 @@ export function RoomStage({
   const [notices, setNotices] = React.useState<Notice[]>([]);
   const [reactions, setReactions] = React.useState<Reaction[]>([]);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
-  const chat = useSessionChat(sessionId, access.canReadChat);
-  const chatMessages = chat.messages;
   const [seenMessages, setSeenMessages] = React.useState(0);
 
   const notify = React.useCallback((tone: Notice["tone"], message: string) => {
@@ -117,6 +118,14 @@ export function RoomStage({
     setNotices((current) => [...current.filter((notice) => notice.message !== message), { id, tone, message }]);
     setTimeout(() => setNotices((current) => current.filter((notice) => notice.id !== id)), 5000);
   }, []);
+
+  // Someone tagging you with "@" gets a notice, wherever you are in the room.
+  const chat = useSessionChat(sessionId, access.canReadChat, (message) => {
+    if (message.sender.id !== access.userId && mentions(message.body, localParticipant.name ?? "")) {
+      notify("info", `${personName(message.sender) || "Someone"} mentioned you in the chat.`);
+    }
+  });
+  const chatMessages = chat.messages;
 
   const showReaction = React.useCallback((emoji: string, name: string) => {
     const id = Date.now() + Math.random();
@@ -259,12 +268,14 @@ export function RoomStage({
       </div>
 
       <div className="flex min-h-0 flex-1 gap-6 px-4 sm:px-10">
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+          <RaisedHandsCard hands={raisedHands} className="absolute top-3 left-3 z-20" />
           <Gallery
             tiles={cameras}
             screen={screen}
             pinned={pinnedRef}
             featured={host?.identity}
+            narrow={panel !== null}
             onOthers={() => showPanel("participants")}
           />
         </main>
@@ -319,6 +330,10 @@ export function RoomStage({
             canSend={access.canSendChat && !blocked.chat}
             blockedReason={blocked.chat ? "The host has turned off chat" : "You can't send messages in this session"}
             maxLength={access.chatMaxLength}
+            people={participants
+              .filter((participant) => !participant.isLocal)
+              .map((participant) => ({ id: participant.identity, name: displayName(participant) }))}
+            selfName={localParticipant.name ?? ""}
             onClose={() => showPanel(null)}
           />
         )}
@@ -475,27 +490,34 @@ function useEnforcedSettings(
   }, [settings.videoQuality, isCameraEnabled, localParticipant]);
 }
 
-/** Cells in the gallery before the rest collapse into "+N Others". */
-const GALLERY_CELLS = 12;
+/**
+ * The design's stage is a grid six columns wide and two rows tall; with the
+ * participants or chat panel open it narrows to four columns.
+ */
+const cellsFor = (narrow: boolean) => (narrow ? 8 : 12);
 /** Cells beside the stage when a screen or a pinned person takes the big spot. */
 const SIDE_CELLS = 4;
 
 /**
- * The tiles, laid out as in the design: one row for up to four people, a big
- * tile beside smaller ones for five or six, then two rows of six. A screen
- * share or a pinned person takes the big spot, with the rest beside it.
+ * The tiles, laid out as in the design for each number of people: side by
+ * side up to three, two by two for four, a big tile beside smaller ones for
+ * five or six, then two full rows. A screen share or a pinned person takes
+ * the big spot, with the rest beside it.
  */
 function Gallery({
   tiles,
   screen,
   pinned,
   featured,
+  narrow,
   onOthers,
 }: {
   tiles: TrackReferenceOrPlaceholder[];
   screen?: TrackReference;
   pinned?: TrackReferenceOrPlaceholder;
   featured?: string;
+  /** A side panel is open, so there's room for four columns, not six. */
+  narrow: boolean;
   onOthers: () => void;
 }) {
   const stage = screen ?? pinned;
@@ -504,8 +526,18 @@ function Gallery({
     const rest = screen ? tiles : tiles.filter((ref) => ref !== pinned);
     const { shown, hidden } = fit(rest, SIDE_CELLS);
     return (
-      <ul className="grid min-h-0 flex-1 auto-rows-[minmax(160px,1fr)] grid-cols-2 gap-2 overflow-y-auto lg:grid-cols-6 lg:grid-rows-2 lg:overflow-hidden">
-        <li className={cn("col-span-2 min-h-[220px] lg:row-span-2", rest.length ? "lg:col-span-4" : "lg:col-span-6")}>
+      <ul
+        className={cn(
+          "grid min-h-0 flex-1 auto-rows-[minmax(160px,1fr)] grid-cols-2 gap-2 overflow-y-auto lg:grid-rows-2 lg:overflow-hidden",
+          narrow ? "lg:grid-cols-4" : "lg:grid-cols-6",
+        )}
+      >
+        <li
+          className={cn(
+            "col-span-2 min-h-[220px] lg:row-span-2",
+            !rest.length ? (narrow ? "lg:col-span-4" : "lg:col-span-6") : narrow ? "lg:col-span-2" : "lg:col-span-4",
+          )}
+        >
           {screen ? (
             <section
               aria-label={`${displayName(screen.participant)} is presenting`}
@@ -538,8 +570,8 @@ function Gallery({
   const ordered = featured
     ? [...tiles].sort((a, b) => Number(b.participant.identity === featured) - Number(a.participant.identity === featured))
     : tiles;
-  const { shown, hidden } = fit(ordered, GALLERY_CELLS);
-  const layout = galleryLayout(shown.length + (hidden.length ? 1 : 0));
+  const { shown, hidden } = fit(ordered, cellsFor(narrow));
+  const layout = galleryLayout(shown.length + (hidden.length ? 1 : 0), narrow);
 
   return (
     <ul className={cn("grid min-h-0 flex-1 auto-rows-[minmax(180px,1fr)] grid-cols-2 gap-2 overflow-y-auto lg:overflow-hidden", layout.grid)}>
@@ -564,13 +596,24 @@ function fit<T extends { participant: Participant }>(refs: T[], cells: number) {
   return { shown: refs.slice(0, cells - 1), hidden: refs.slice(cells - 1).map((ref) => ref.participant) };
 }
 
-/** Desktop grid classes for a number of cells; phones always get two columns. */
-function galleryLayout(count: number): { grid: string; cell: (index: number) => string } {
+/**
+ * Desktop grid classes for a number of cells, from the design's frames;
+ * phones always get two columns.
+ */
+function galleryLayout(count: number, narrow: boolean): { grid: string; cell: (index: number) => string } {
   const none = () => "";
   if (count <= 3) return { grid: ["lg:grid-cols-1", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3"][count] + " lg:grid-rows-1", cell: none };
   // Four share the stage as two rows of two.
   if (count === 4) return { grid: "lg:grid-cols-2 lg:grid-rows-2", cell: none };
-  if (count === 5) return { grid: "lg:grid-cols-4 lg:grid-rows-2", cell: (index) => (index === 0 ? "col-span-2 lg:row-span-2" : "") };
+  if (narrow) {
+    // Four columns: a big tile two wide for five, then two full rows.
+    if (count === 5) return { grid: "lg:grid-cols-4 lg:grid-rows-2", cell: (index) => (index === 0 ? "col-span-2 lg:row-span-2" : "") };
+    return { grid: "lg:grid-cols-4 lg:grid-rows-2", cell: none };
+  }
+  // Five: the first person four columns wide beside a two by two.
+  if (count === 5)
+    return { grid: "lg:grid-cols-6 lg:grid-rows-2", cell: (index) => (index === 0 ? "col-span-2 lg:col-span-4 lg:row-span-2" : "") };
+  // Six: three columns wide, three small on top, then one small and one wide.
   if (count === 6)
     return {
       grid: "lg:grid-cols-6 lg:grid-rows-2",

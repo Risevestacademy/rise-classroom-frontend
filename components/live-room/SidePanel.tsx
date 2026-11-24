@@ -23,6 +23,7 @@ import { feedbackFor, FEEDBACK_ATTRIBUTE, HAND_ATTRIBUTE, LABEL_ATTRIBUTE } from
 import { personName, type ChatMessage } from "@/lib/live-sessions";
 import { cn } from "@/lib/utils";
 import { displayName } from "./ParticipantTile";
+import { insertMention, mentionMatches, mentionQuery, splitMentions, type Mentionable } from "./mentions";
 import { RoomMenuContent, RoomMenuItem } from "./RoomMenu";
 
 export type PanelTab = "participants" | "chat";
@@ -247,11 +248,17 @@ export function ChatPanel({
   canSend = true,
   blockedReason = "The host has turned off chat",
   maxLength = 2000,
+  people = [],
+  selfName = "",
   onClose,
 }: {
   messages: ChatMessage[];
   /** The signed-in user, whose messages sit on the right. */
   userId: string;
+  /** Who can be tagged with "@": everyone else in the room. */
+  people?: Mentionable[];
+  /** The signed-in user's name, to highlight messages that tag them. */
+  selfName?: string;
   onSend: (message: string) => Promise<unknown>;
   sending: boolean;
   loading?: boolean;
@@ -263,6 +270,40 @@ export function ChatPanel({
 }) {
   const [draft, setDraft] = React.useState("");
   const listRef = React.useRef<HTMLOListElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [caret, setCaret] = React.useState(0);
+  const [highlight, setHighlight] = React.useState(0);
+  const [mentionClosed, setMentionClosed] = React.useState(false);
+
+  const typing = mentionClosed ? null : mentionQuery(draft, caret);
+  const suggestions = typing ? mentionMatches(people, typing.query) : [];
+  const picking = suggestions.length > 0;
+  // Names to pick out of messages: people here now, and anyone who wrote.
+  const names = [...people.map((person) => person.name), selfName, ...messages.map((message) => personName(message.sender))];
+
+  function pick(person: Mentionable) {
+    if (!typing) return;
+    const next = insertMention(draft, typing.start, caret, person.name);
+    setDraft(next.text);
+    setCaret(next.caret);
+    setHighlight(0);
+    requestAnimationFrame(() => inputRef.current?.setSelectionRange(next.caret, next.caret));
+  }
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (!picking) return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      setHighlight((index) => (index + step + suggestions.length) % suggestions.length);
+    } else if (event.key === "Enter" || event.key === "Tab") {
+      event.preventDefault();
+      pick(suggestions[Math.min(highlight, suggestions.length - 1)]);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setMentionClosed(true);
+    }
+  }
 
   React.useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
@@ -315,26 +356,60 @@ export function ChatPanel({
                     </time>
                   </p>
                 )}
-                <p
-                  className={cn(
-                    "max-w-[280px] rounded-[20px] px-3 py-2.5 text-sm/5 break-words whitespace-pre-wrap",
-                    own ? "bg-room-bubble-own text-room-bubble-own-text" : "bg-room-bubble text-room-text",
-                  )}
-                >
-                  {message.body}
-                </p>
+                <MessageBody body={message.body} names={names} own={own} selfName={selfName} />
               </div>
             </li>
           );
         })}
       </ol>
-      <form onSubmit={submit}>
+      <form onSubmit={submit} className="relative">
+        {picking && (
+          <ul
+            id="mention-options"
+            role="listbox"
+            aria-label="People to mention"
+            className="absolute inset-x-0 bottom-full mb-2 flex max-h-[240px] flex-col gap-0.5 overflow-y-auto rounded-2xl border border-room-menu-border bg-room-menu p-2 shadow-[0_8px_24px_rgb(0_0_0/0.5)]"
+          >
+            {suggestions.map((person, index) => (
+              <li
+                key={person.id}
+                id={`mention-${person.id}`}
+                role="option"
+                aria-selected={index === highlight}
+                // Keeps the message box focused while picking.
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => pick(person)}
+                onMouseEnter={() => setHighlight(index)}
+                className={cn(
+                  "flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-sm text-white",
+                  index === highlight && "bg-white/10",
+                )}
+              >
+                <PersonAvatar name={person.name} colorKey={person.id} size={24} className="size-7" />
+                <span className="truncate">{person.name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="flex items-center gap-2 rounded-xl border border-room-panel-border bg-room-panel-raised px-4 py-1.5 focus-within:border-room-text-muted">
           <input
+            ref={inputRef}
             aria-label="Message"
+            role="combobox"
+            aria-expanded={picking}
+            aria-controls={picking ? "mention-options" : undefined}
+            aria-autocomplete="list"
+            aria-activedescendant={picking ? `mention-${suggestions[Math.min(highlight, suggestions.length - 1)].id}` : undefined}
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder={canSend ? "Send a message" : blockedReason}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              setCaret(event.target.selectionStart ?? event.target.value.length);
+              setMentionClosed(false);
+              setHighlight(0);
+            }}
+            onSelect={(event) => setCaret(event.currentTarget.selectionStart ?? 0)}
+            onKeyDown={onKeyDown}
+            placeholder={canSend ? "Send a message, @ to mention someone" : blockedReason}
             disabled={!canSend}
             maxLength={maxLength}
             className="h-9 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-room-text-muted disabled:cursor-not-allowed"
@@ -350,5 +425,32 @@ export function ChatPanel({
         </div>
       </form>
     </Panel>
+  );
+}
+
+/** A chat bubble, with any @names picked out. One that tags you is outlined. */
+function MessageBody({ body, names, own, selfName }: { body: string; names: string[]; own: boolean; selfName: string }) {
+  const parts = splitMentions(body, names);
+  const tagsYou =
+    !own && Boolean(selfName) && parts.some((part) => part.mention?.toLowerCase() === selfName.trim().toLowerCase());
+
+  return (
+    <p
+      className={cn(
+        "max-w-[280px] rounded-[20px] px-3 py-2.5 text-sm/5 break-words whitespace-pre-wrap",
+        own ? "bg-room-bubble-own text-room-bubble-own-text" : "bg-room-bubble text-room-text",
+        tagsYou && "ring-2 ring-room-active",
+      )}
+    >
+      {parts.map((part, index) =>
+        part.mention ? (
+          <span key={index} className="rounded px-0.5 font-semibold text-room-active">
+            {part.text}
+          </span>
+        ) : (
+          <React.Fragment key={index}>{part.text}</React.Fragment>
+        ),
+      )}
+    </p>
   );
 }

@@ -91,15 +91,16 @@ export function LiveRoom({
     }
   }
 
+  // Joins once per visit. The page's props change after the host starts the
+  // session (it's live now), and joining again would replace this tab's
+  // connection, which LiveKit reports as "joined from somewhere else".
+  const autoJoined = React.useRef(false);
   React.useEffect(() => {
-    if (!autoJoin || block) return;
-    let cancelled = false;
+    if (!autoJoin || block || autoJoined.current) return;
+    autoJoined.current = true;
     enter(sessionId, starts, access)
-      .then((entered) => !cancelled && setStage({ name: "room", ...entered, choices: readSavedChoices() }))
-      .catch((error: Error) => !cancelled && setStage({ name: "error", message: error.message }));
-    return () => {
-      cancelled = true;
-    };
+      .then((entered) => setStage({ name: "room", ...entered, choices: readSavedChoices() }))
+      .catch((error: Error) => setStage({ name: "error", message: error.message }));
   }, [autoJoin, block, sessionId, starts, access]);
 
   // Always the live sessions lobby: going back in history would land on the device check.
