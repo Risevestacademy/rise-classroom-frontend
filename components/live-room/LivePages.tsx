@@ -44,7 +44,12 @@ export function LiveJoinPage({ topNav, basePath }: { topNav?: ReactNode; basePat
   return (
     <>
       {topNav}
-      <JoinHub serverNow={now.getTime()} deviceCheckPath={`${basePath}/live`} />
+      {/* Staff can go in early to start a session; students wait for it to go live. */}
+      <JoinHub
+        serverNow={now.getTime()}
+        deviceCheckPath={`${basePath}/live`}
+        early={basePath !== "/student"}
+      />
     </>
   );
 }

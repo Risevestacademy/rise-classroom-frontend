@@ -25,18 +25,22 @@ import {
   endSessionForAll,
   FEEDBACK_ATTRIBUTE,
   HAND_ATTRIBUTE,
+  LABEL_ATTRIBUTE,
   muteEveryone,
   parseSessionSettings,
   REACTIONS_TOPIC,
   removeParticipant,
   ROLE_ATTRIBUTE,
+  roleLabel,
   setParticipantMuted,
   setScreenShareAllowed,
   SETTINGS_ATTRIBUTE,
+  startRecording,
   turnOffAllCameras,
   type Feedback,
   type SessionSettings,
 } from "@/lib/live-room";
+import { ApiError } from "@/lib/api";
 import type { RoomAccess } from "@/lib/live-sessions";
 import { cn } from "@/lib/utils";
 import { ControlBar } from "./ControlBar";
@@ -71,11 +75,24 @@ export function RoomStage({
     useLocalParticipant();
   const { quality } = useConnectionQualityIndicator({ participant: localParticipant });
   const { attributes } = useParticipantAttributes({ participant: localParticipant });
-  const isHost = attributes?.[ROLE_ATTRIBUTE] === "host";
+  // Host controls follow what the backend lets this person do.
+  const isHost = access.canModerate;
+
+  // The backend's token carries no attributes, so say who we are once in:
+  // the host pill and the participants list read these.
+  React.useEffect(() => {
+    if (connection !== ConnectionState.Connected) return;
+    const role = access.sessionRole === "HOST" ? "host" : "participant";
+    const label = roleLabel(access.platformRole);
+    const current = localParticipant.attributes;
+    if (current[ROLE_ATTRIBUTE] === role && current[LABEL_ATTRIBUTE] === label) return;
+    localParticipant.setAttributes({ [ROLE_ATTRIBUTE]: role, [LABEL_ATTRIBUTE]: label }).catch(() => {});
+  }, [connection, localParticipant, access.sessionRole, access.platformRole]);
   const handRaised = Boolean(attributes?.[HAND_ATTRIBUTE]);
   const feedback = (attributes?.[FEEDBACK_ATTRIBUTE] || undefined) as Feedback | undefined;
   const sessionSettings = useSessionSettings(sessionId, isHost);
   const { settings, setSettings, blocked } = sessionSettings;
+  const recording = useRoomRecording(sessionId, isHost && settings.autoRecord, connection === ConnectionState.Connected);
 
   const cameras = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], { onlySubscribed: false });
   const screen = useTracks([Track.Source.ScreenShare]).filter(isTrackReference)[0];
@@ -312,6 +329,7 @@ export function RoomStage({
         isHost={isHost}
         settings={settings}
         onChange={(patch) => setSettings({ ...settings, ...patch })}
+        recording={isHost ? recording : undefined}
       />
     </div>
   );
@@ -508,7 +526,9 @@ function fit<T extends { participant: Participant }>(refs: T[], cells: number) {
 /** Desktop grid classes for a number of cells; phones always get two columns. */
 function galleryLayout(count: number): { grid: string; cell: (index: number) => string } {
   const none = () => "";
-  if (count <= 4) return { grid: ["lg:grid-cols-1", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3", "lg:grid-cols-4"][count] + " lg:grid-rows-1", cell: none };
+  if (count <= 3) return { grid: ["lg:grid-cols-1", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3"][count] + " lg:grid-rows-1", cell: none };
+  // Four share the stage as two rows of two.
+  if (count === 4) return { grid: "lg:grid-cols-2 lg:grid-rows-2", cell: none };
   if (count === 5) return { grid: "lg:grid-cols-4 lg:grid-rows-2", cell: (index) => (index === 0 ? "col-span-2 lg:row-span-2" : "") };
   if (count === 6)
     return {
@@ -605,6 +625,37 @@ const currentSecond = () => Math.floor(Date.now() / 1_000) * 1_000;
 function useClock() {
   const minute = React.useSyncExternalStore(subscribeToMinutes, currentMinute, () => null);
   return minute === null ? null : new Date(minute);
+}
+
+/**
+ * Starting the server recording: on its own when the host has auto-record
+ * on, or from the settings. It runs until the session ends.
+ */
+function useRoomRecording(sessionId: string, auto: boolean, connected: boolean) {
+  const active = useIsRecording();
+  const [starting, setStarting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const tried = React.useRef(false);
+
+  const start = React.useCallback(async () => {
+    tried.current = true;
+    setStarting(true);
+    setError(null);
+    try {
+      await startRecording(sessionId);
+    } catch (problem) {
+      // Already recording is fine.
+      if (!(problem instanceof ApiError && problem.status === 409)) setError("We couldn't start recording. Try again.");
+    } finally {
+      setStarting(false);
+    }
+  }, [sessionId]);
+
+  React.useEffect(() => {
+    if (auto && connected && !active && !tried.current) void start();
+  }, [auto, connected, active, start]);
+
+  return { active, starting: starting && !active, error, start };
 }
 
 /** How long the room has been recording, in ms, or `null` when it isn't. */

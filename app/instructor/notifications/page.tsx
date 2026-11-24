@@ -39,6 +39,7 @@ import {
   type NotificationRecord,
 } from "@/lib/instructor";
 import { cn } from "@/lib/utils";
+import { notificationText } from "@/lib/notification-text";
 
 const NOTIFICATIONS_PATH = "/instructor/notifications";
 
@@ -343,7 +344,7 @@ function NotificationItem({
           {item.title}
         </span>
         <span className="mt-0.5 block truncate font-work text-xs text-neutral-500">
-          {item.body ?? item.message ?? ""}
+          {notificationText(item.body ?? item.message ?? "")}
         </span>
       </span>
       <span className="shrink-0 font-work text-xs text-neutral-500">

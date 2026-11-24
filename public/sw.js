@@ -15,6 +15,24 @@ self.addEventListener("activate", (event) => {
 });
 
 
+/* The backend writes times as raw UTC; show them in the reader's own zone. */
+const TIMESTAMP =
+  /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})\b/g;
+const readableTime = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+function readableText(text) {
+  return String(text).replace(TIMESTAMP, (stamp) => {
+    const date = new Date(stamp);
+    return Number.isNaN(date.getTime()) ? stamp : readableTime.format(date);
+  });
+}
+
 function readPayload(data) {
   if (!data) return {};
   let payload;
@@ -57,7 +75,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration
       .showNotification(payload.title || "Rise Classroom", {
-        body: payload.body || "",
+        body: readableText(payload.body || ""),
         icon,
         badge: icon,
         tag: payload.id,

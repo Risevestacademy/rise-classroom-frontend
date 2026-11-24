@@ -4,7 +4,7 @@ import { screen, within } from "@testing-library/react";
 import { LiveSessionsScreen } from "@/components/LiveSessionsScreen";
 import { JoinHub } from "@/components/live-room/JoinHub";
 import { toLiveSession, type ApiLiveSession } from "@/lib/live-sessions";
-import { envelope, mockApi, renderWithClient } from "@/test/utils";
+import { envelope, mockApi, renderWithClient, reply } from "@/test/utils";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
@@ -32,13 +32,14 @@ const participants = envelope({
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
 
 describe("toLiveSession", () => {
   it("shows the time in Lagos and the track's name", () => {
-    expect(toLiveSession(session({}))).toMatchObject({
+    expect(toLiveSession(session({}), Date.parse("2026-11-23T12:00:00Z"))).toMatchObject({
       date: "2026-11-23",
       startTime: "19:00",
       endTime: "20:00",
@@ -46,6 +47,27 @@ describe("toLiveSession", () => {
       trackName: "Design",
       hostName: "Ada Obi",
     });
+  });
+});
+
+describe("the status shown", () => {
+  // The fixture runs 18:00–19:00 UTC on Nov 23.
+  const at = (iso: string) => Date.parse(iso);
+
+  it("shows a scheduled session nobody started as completed once its time is over", () => {
+    expect(toLiveSession(session({}), at("2026-11-23T18:30:00Z")).status).toBe("upcoming");
+    expect(toLiveSession(session({}), at("2026-11-23T19:00:00Z")).status).toBe("completed");
+  });
+
+  it("keeps a live session live while it runs over, until an hour past its end", () => {
+    const live = session({ status: "LIVE" });
+    expect(toLiveSession(live, at("2026-11-23T19:59:00Z")).status).toBe("live");
+    expect(toLiveSession(live, at("2026-11-23T20:00:00Z")).status).toBe("completed");
+  });
+
+  it("trusts the backend for ended and cancelled sessions", () => {
+    expect(toLiveSession(session({ status: "ENDED" }), at("2026-11-23T17:00:00Z")).status).toBe("completed");
+    expect(toLiveSession(session({ status: "CANCELLED" }), at("2026-11-23T17:00:00Z")).status).toBe("cancelled");
   });
 });
 
@@ -78,6 +100,89 @@ describe("LiveSessionsScreen", () => {
     renderWithClient(<LiveSessionsScreen topNav={null} />);
 
     expect(await screen.findByText(/No live sessions yet/)).toBeInTheDocument();
+  });
+});
+
+describe("A completed session", () => {
+  const past = session({
+    id: "past",
+    title: "Old class",
+    status: "ENDED",
+    scheduledStartAt: "2026-11-01T18:00:00Z",
+    scheduledEndAt: "2026-11-01T19:00:00Z",
+  });
+  const attendee = (id: string, name: string, status: "PRESENT" | "ABSENT", seconds: number) => ({
+    user: { id, name, displayName: null, image: null },
+    status,
+    totalConnectedSeconds: seconds,
+  });
+
+  it("shows who attended and plays the recording", async () => {
+    mockApi({
+      "GET /live-sessions": envelope({ items: [past], nextCursor: null }),
+      "GET /live-sessions/past/participants": participants,
+      "GET /live-sessions/past/attendance": envelope({
+        attendances: [attendee("u-2", "Tola Ade", "ABSENT", 60), attendee("h-1", "Ada Obi", "PRESENT", 2700)],
+      }),
+      "GET /live-sessions/past/recording": envelope({ id: "r-1", status: "READY", durationSeconds: 3600 }),
+      "GET /live-sessions/past/recording/url": envelope({ signedUrl: "https://files.example.com/rec/past.mp4?sig=1" }),
+    });
+    const { user, container } = renderWithClient(<LiveSessionsScreen topNav={null} />);
+
+    await user.click(await screen.findByRole("button", { name: "Old class" }));
+    expect(await screen.findByRole("heading", { name: "Attendance (1)" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "See full list" }));
+    expect(screen.getByText("Present · 45 min")).toBeInTheDocument();
+    expect(screen.getByText("Absent")).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(container.querySelector("video")?.getAttribute("src")).toContain("https://files.example.com/rec/past.mp4"),
+    );
+  });
+
+  it("says when the recording is still processing, and falls back to the invite list without attendance", async () => {
+    mockApi({
+      "GET /live-sessions": envelope({ items: [past], nextCursor: null }),
+      "GET /live-sessions/past/participants": participants,
+      "GET /live-sessions/past/attendance": reply(403, { success: false, message: "Forbidden" }),
+      "GET /live-sessions/past/recording": envelope({ id: "r-1", status: "PROCESSING", durationSeconds: null }),
+    });
+    const { user } = renderWithClient(<LiveSessionsScreen topNav={null} />);
+
+    await user.click(await screen.findByRole("button", { name: "Old class" }));
+    expect(await screen.findByText("The recording is still processing. Check back soon.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Attendance (2)" })).toBeInTheDocument();
+  });
+});
+
+describe("Joining from the session preview", () => {
+  it("offers Join for a session about to start, not one still days away", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-23T17:50:00Z"));
+    mockApi({
+      "GET /live-sessions": envelope({
+        items: [
+          session({ id: "soon", title: "Soon class" }),
+          session({
+            id: "later",
+            title: "Later class",
+            scheduledStartAt: "2026-11-30T18:00:00.000Z",
+            scheduledEndAt: "2026-11-30T19:00:00.000Z",
+          }),
+        ],
+        nextCursor: null,
+      }),
+      "GET /live-sessions/soon/participants": envelope({ items: [], total: 0 }),
+      "GET /live-sessions/later/participants": envelope({ items: [], total: 0 }),
+    });
+    const { user } = renderWithClient(<LiveSessionsScreen topNav={null} joinPath="/admin/live" />);
+
+    await user.click(await screen.findByRole("button", { name: "Soon class" }));
+    expect((await screen.findByText("Join session")).closest("a")).toHaveAttribute("href", "/admin/live/soon");
+
+    await user.click(screen.getByRole("button", { name: "Later class" }));
+    expect(await screen.findByRole("heading", { name: "Participants (0)" })).toBeInTheDocument();
+    expect(screen.queryByText("Join session")).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 });
 
@@ -130,6 +235,8 @@ describe("Editing a live session", () => {
 describe("JoinHub", () => {
   it("lets people join a live session and asks the API for the week", async () => {
     const now = Date.parse("2026-11-23T18:30:00Z");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
     const api = mockApi({
       "GET /live-sessions": envelope({ items: [session({ status: "LIVE" })], nextCursor: null }),
     });
@@ -142,5 +249,27 @@ describe("JoinHub", () => {
     const [url] = api.urls("GET /live-sessions");
     expect(url.searchParams.get("from")).toBe("2026-11-22T00:00:00Z");
     expect(url.searchParams.get("to")).toBe("2026-12-01T00:00:00Z");
+  });
+
+  it("opens Join 15 minutes early for staff, but not for students", async () => {
+    const now = Date.parse("2026-11-23T17:50:00Z");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
+    const routes = {
+      "GET /live-sessions": envelope({ items: [session({})], nextCursor: null }),
+    };
+
+    mockApi(routes);
+    const staff = renderWithClient(<JoinHub serverNow={now} deviceCheckPath="/mentor/live" />);
+    const card = (await screen.findByRole("heading", { name: "UI/UX live class" })).closest("li")!;
+    expect(within(card).getByText("In 10 Minutes")).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "Join live session" })).toHaveAttribute("href", "/mentor/live/s-1");
+    staff.unmount();
+
+    mockApi(routes);
+    renderWithClient(<JoinHub serverNow={now} deviceCheckPath="/student/live" early={false} />);
+    const studentCard = (await screen.findByRole("heading", { name: "UI/UX live class" })).closest("li")!;
+    expect(within(studentCard).queryByRole("link", { name: "Join live session" })).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 });

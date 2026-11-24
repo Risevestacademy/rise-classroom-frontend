@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -20,7 +21,9 @@ import { trackStyles } from "@/components/cohorts/CohortOverview";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminQueries } from "@/lib/admin";
-import { dashboardMock } from "@/lib/admin-dashboard";
+import { dashboardMock, toUpcomingActivity } from "@/lib/admin-dashboard";
+import { liveSessionQueries, stillAhead, upcomingRange } from "@/lib/live-sessions";
+import { useCurrentMinute } from "@/lib/use-current-minute";
 import { ActivityTimeline } from "@/components/student-profile/shared";
 import { cohortQueries, trackKeyFor } from "@/lib/cohorts";
 import { daysLeftIn, weekRangeFor } from "@/lib/control-tower";
@@ -50,6 +53,9 @@ const healthIconTones: Record<TrackKey, string> = {
   backend: "text-[#960b93]",
   mobile: "text-[#960b93]",
 };
+
+/** Rows in Upcoming Activities, as many as the design shows. */
+const UPCOMING_COUNT = 4;
 
 const dateTones = [
   "bg-surface-brand text-text-success",
@@ -98,6 +104,19 @@ export function AdminDashboard({ loading = false }: { loading?: boolean }) {
   const tracks = (allActiveTracks.data ?? []).filter(
     (track) => !cohortId || (cohortTracks.data ?? []).includes(track.id),
   );
+  const now = useCurrentMinute();
+  // Fixed when the dashboard opens, so the query isn't refetched every minute.
+  const [range] = React.useState(() => upcomingRange(Date.now()));
+  const liveSessions = useQuery({
+    ...liveSessionQueries.list(range),
+    enabled: !loading,
+  });
+  const upcoming =
+    now === null || liveSessions.isPending
+      ? null
+      : stillAhead(liveSessions.data ?? [], now)
+          .slice(0, UPCOMING_COUNT)
+          .map((item) => toUpcomingActivity(item, now));
   const adminName = session.data?.user.firstName ?? "Admin";
   // A cohort with no participants has no activity to report on yet.
   const isEmpty = participants.isSuccess && participants.data === 0;
@@ -344,7 +363,6 @@ export function AdminDashboard({ loading = false }: { loading?: boolean }) {
                   />
                 </section>
 
-                {/* PENDING-BACKEND: no events or calendar yet. */}
                 <section className={cn(cardClass, "flex flex-col gap-3 p-6")}>
                   <CardHeader
                     title="Upcoming Activites"
@@ -354,8 +372,21 @@ export function AdminDashboard({ loading = false }: { loading?: boolean }) {
                       <ArrowRight02 className="size-4" />
                     </Button>}
                   />
+                  {upcoming === null ? (
+                    <div className="flex flex-col gap-2">
+                      {Array.from({ length: 3 }, (_, index) => (
+                        <Skeleton key={index} className="h-14 w-full" />
+                      ))}
+                    </div>
+                  ) : upcoming.length === 0 ? (
+                    <p className="font-work text-sm text-text-muted">
+                      {liveSessions.isError
+                        ? "Couldn't load upcoming activities."
+                        : "Nothing scheduled yet."}
+                    </p>
+                  ) : (
                   <ul className="flex flex-col gap-2">
-                    {dashboardMock.upcoming.map((item, index) => (
+                    {upcoming.map((item, index) => (
                       <li
                         key={item.id}
                         className="flex items-center justify-between gap-3 border-b border-border-default p-2 last:border-b-0"
@@ -385,6 +416,7 @@ export function AdminDashboard({ loading = false }: { loading?: boolean }) {
                       </li>
                     ))}
                   </ul>
+                  )}
                 </section>
               </div>
             </div>

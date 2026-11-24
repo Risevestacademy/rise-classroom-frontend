@@ -23,6 +23,7 @@ import {
   type StudentNotification,
 } from "@/lib/student-notifications";
 import { cn } from "@/lib/utils";
+import { notificationText } from "@/lib/notification-text";
 
 /* The API's notification types are free-form, so match on what they mention. */
 const typeIcons: [RegExp, LucideIcon][] = [
@@ -124,7 +125,7 @@ export function NotificationRow({
           {notification.title}
         </span>
         <span className="mt-0.5 block truncate font-work text-xs text-neutral-500">
-          {notification.body}
+          {notificationText(notification.body)}
         </span>
       </span>
       <span className="shrink-0 font-work text-xs text-neutral-500">

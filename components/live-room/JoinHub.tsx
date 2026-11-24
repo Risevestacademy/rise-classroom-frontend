@@ -6,43 +6,29 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
-import { addDays, fromDateKey, monthNames, shortDate, toDateKey } from "@/lib/calendar";
-import { liveSessionQueries, sessionSpan, sessionTime, zonedParts, type LiveSession } from "@/lib/live-sessions";
+import {
+  addDays,
+  fromDateKey,
+  monthNames,
+  shortDate,
+  toDateKey,
+} from "@/lib/calendar";
+import {
+  liveSessionQueries,
+  sessionStanding as standing,
+  sessionTime,
+  zonedParts,
+} from "@/lib/live-sessions";
+import { useCurrentMinute } from "@/lib/use-current-minute";
 import { cn } from "@/lib/utils";
 import { roomButton } from "./RoomStatus";
 
 const weekLetters = ["M", "T", "W", "T", "F", "S", "S"];
 
-const subscribeToMinutes = (onChange: () => void) => {
-  const timer = setInterval(onChange, 15_000);
-  return () => clearInterval(timer);
-};
-const currentMinute = () => Math.floor(Date.now() / 60_000) * 60_000;
-
 /** Monday-first week around `date`. */
 function weekOf(date: Date) {
   const monday = addDays(date, -((date.getDay() + 6) % 7));
   return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
-}
-
-/** How early the host can go in and start a session. */
-const START_WINDOW_MS = 15 * 60_000;
-
-/**
- * Where a session stands right now, for its badge and whether Join works.
- * Join opens shortly before the start too, so the host can start it; anyone
- * else who's early is told it hasn't started yet.
- */
-function standing(session: LiveSession, now: number) {
-  if (session.status === "live") return { joinable: true, label: "Live now", status: "success" } as const;
-  if (session.status !== "upcoming") return { joinable: false, label: "Ended", status: "neutral" } as const;
-  const { start } = sessionSpan(session);
-  const joinable = start.getTime() - now <= START_WINDOW_MS;
-  const minutes = Math.ceil((start.getTime() - now) / 60_000);
-  if (minutes <= 0) return { joinable, label: "Starting soon", status: "info" } as const;
-  const label =
-    minutes < 60 ? `In ${minutes} ${minutes === 1 ? "Minute" : "Minutes"}` : `In ${Math.round(minutes / 60)} ${minutes < 90 ? "Hour" : "Hours"}`;
-  return { joinable, label, status: "info" } as const;
 }
 
 /** The week's sessions, with a day either side so no time zone loses one. */
@@ -58,17 +44,20 @@ function weekRange(week: Date[]) {
 export function JoinHub({
   serverNow,
   deviceCheckPath,
+  early = true,
 }: {
   serverNow: number;
   /** Joining goes to `${deviceCheckPath}/${id}`. */
   deviceCheckPath: string;
+  /** Join opens 15 minutes before the start, for staff who may host. */
+  early?: boolean;
 }) {
   const router = useRouter();
   const today = zonedParts(new Date(serverNow).toISOString()).date;
   const [selected, setSelected] = React.useState(today);
   const [link, setLink] = React.useState("");
   const [linkError, setLinkError] = React.useState<string | null>(null);
-  const now = React.useSyncExternalStore(subscribeToMinutes, currentMinute, () => serverNow);
+  const now = useCurrentMinute(serverNow);
 
   const week = weekOf(fromDateKey(selected));
   const list = useQuery(liveSessionQueries.list(weekRange(week)));
@@ -83,7 +72,9 @@ export function JoinHub({
     event.preventDefault();
     const id = sessionIdFromLink(link);
     if (!id) {
-      setLinkError("That isn't a Rise Classroom session link. Check it and try again.");
+      setLinkError(
+        "That isn't a Rise Classroom session link. Check it and try again.",
+      );
       return;
     }
     router.push(`${deviceCheckPath}/${id}`);
@@ -92,8 +83,14 @@ export function JoinHub({
   return (
     <main className="flex flex-1 justify-center px-4 pt-[52px] pb-16 sm:px-8">
       <div className="flex w-full max-w-[726px] flex-col items-center gap-11">
-        <form onSubmit={joinWithLink} className="flex w-full max-w-[352px] flex-col items-center gap-3">
-          <label htmlFor="session-link" className="text-sm font-medium text-text-primary">
+        <form
+          onSubmit={joinWithLink}
+          className="flex w-full max-w-[352px] flex-col items-center gap-3"
+        >
+          <label
+            htmlFor="session-link"
+            className="text-sm font-medium text-text-primary"
+          >
             Join with a link
           </label>
           <div
@@ -119,11 +116,19 @@ export function JoinHub({
             />
           </div>
           {linkError && (
-            <p id="session-link-error" role="alert" className="text-center text-sm text-text-error">
+            <p
+              id="session-link-error"
+              role="alert"
+              className="text-center text-sm text-text-error"
+            >
               {linkError}
             </p>
           )}
-          <button type="submit" disabled={!link.trim()} className={cn(roomButton.primary, "disabled:text-text-disabled")}>
+          <button
+            type="submit"
+            disabled={!link.trim()}
+            className={cn(roomButton.primary, "disabled:text-text-disabled")}
+          >
             Join live session
           </button>
         </form>
@@ -132,7 +137,11 @@ export function JoinHub({
           <p className="flex h-10 items-center justify-center rounded-full bg-surface-subtle text-base font-medium text-text-primary">
             {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
           </p>
-          <div role="group" aria-label="Pick a day" className="grid grid-cols-7 gap-2">
+          <div
+            role="group"
+            aria-label="Pick a day"
+            className="grid grid-cols-7 gap-2"
+          >
             {weekLetters.map((letter, index) => (
               <span
                 key={index}
@@ -163,7 +172,10 @@ export function JoinHub({
                   {daysWithSessions.has(key) && (
                     <span
                       aria-hidden
-                      className={cn("absolute bottom-1 size-1 rounded-full", isSelected ? "bg-white" : "bg-text-primary")}
+                      className={cn(
+                        "absolute bottom-1 size-1 rounded-full",
+                        isSelected ? "bg-white" : "bg-text-primary",
+                      )}
                     />
                   )}
                 </button>
@@ -174,16 +186,24 @@ export function JoinHub({
 
         <section className="flex w-full flex-col gap-3">
           <h1 className="text-base font-medium text-black">
-            On the calendar {selected === today ? "today" : shortDate(selectedDate)}
+            On the calendar{" "}
+            {selected === today ? "today" : shortDate(selectedDate)}
           </h1>
           {list.isPending ? (
-            <p role="status" className="rounded-[32px] bg-surface-brand px-10 py-12 text-center text-sm text-text-secondary">
+            <p
+              role="status"
+              className="rounded-[32px] bg-surface-brand px-10 py-12 text-center text-sm text-text-secondary"
+            >
               Loading sessions…
             </p>
           ) : list.isError ? (
             <p className="rounded-[32px] bg-surface-brand px-10 py-12 text-center text-sm text-text-secondary">
               We couldn&apos;t load your sessions.{" "}
-              <button type="button" onClick={() => list.refetch()} className="cursor-pointer font-medium text-text-brand underline">
+              <button
+                type="button"
+                onClick={() => list.refetch()}
+                className="cursor-pointer font-medium text-text-brand underline"
+              >
                 Try again
               </button>
             </p>
@@ -194,7 +214,7 @@ export function JoinHub({
           ) : (
             <ul className="flex flex-col gap-2">
               {onDay.map((session) => {
-                const state = standing(session, now);
+                const state = standing(session, now, { early });
                 return (
                   <li
                     key={session.id}
@@ -204,15 +224,32 @@ export function JoinHub({
                       <Badge variant="light" status={state.status} size="lg">
                         {state.label}
                       </Badge>
-                      <h2 className="text-2xl/8 font-semibold text-text-primary">{session.title}</h2>
-                      <p className="text-sm font-medium text-text-secondary">{sessionTime(session)}</p>
+                      <h2 className="text-2xl/8 font-semibold text-text-primary">
+                        {session.title}
+                      </h2>
+                      <p className="text-sm font-medium text-text-secondary">
+                        {sessionTime(session)}
+                      </p>
                     </div>
                     {state.joinable ? (
-                      <Link href={`${deviceCheckPath}/${session.id}`} className={cn(roomButton.primary, "shrink-0 border-brand-300")}>
+                      <Link
+                        href={`${deviceCheckPath}/${session.id}`}
+                        className={cn(
+                          roomButton.primary,
+                          "shrink-0 border-brand-300",
+                        )}
+                      >
                         Join live session
                       </Link>
                     ) : (
-                      <button type="button" disabled className={cn(roomButton.primary, "shrink-0 disabled:text-text-disabled")}>
+                      <button
+                        type="button"
+                        disabled
+                        className={cn(
+                          roomButton.primary,
+                          "shrink-0 disabled:text-text-disabled",
+                        )}
+                      >
                         Join live session
                       </button>
                     )}

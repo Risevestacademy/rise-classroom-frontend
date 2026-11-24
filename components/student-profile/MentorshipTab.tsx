@@ -21,28 +21,28 @@ import { buttonVariants } from "@/components/ui/button";
 import type { AdminUser } from "@/lib/admin";
 import { assignMentor } from "@/lib/mentors";
 import { cn } from "@/lib/utils";
-// PENDING-BACKEND: there are no mentorship sessions yet, so the session totals
-// and upcoming sessions are the design's sample data.
-import { mentorship } from "@/app/admin/students/[id]/profile-data";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useMentorshipSessions } from "@/lib/student-profile";
 import { BrandBadge, Card, CardHeader, MessageButton } from "./shared";
 
 // Each session total sits on its own tint, as on the design's canvas.
-const sessionStats = [
+// PENDING-BACKEND: attendance isn't recorded, so Attended and Missed are "--".
+const sessionStats = (held: number | string) => [
   {
     title: "Total sessions",
-    value: mentorship.sessions.total,
+    value: held,
     icon: Calendar03,
     className: "bg-surface-info-badge text-icon-info",
   },
   {
     title: "Attended",
-    value: mentorship.sessions.attended,
+    value: "--",
     icon: CheckmarkCircle03,
     className: "bg-surface-success-badge text-icon-success",
   },
   {
     title: "Missed",
-    value: mentorship.sessions.missed,
+    value: "--",
     icon: CancelCircle,
     className: "bg-surface-error-badge text-icon-error",
   },
@@ -63,6 +63,7 @@ export function MentorshipTab({
   track?: string;
   cohort?: string;
 }) {
+  const sessions = useMentorshipSessions(mentor);
   if (!mentor) {
     return (
       <Card>
@@ -137,7 +138,7 @@ export function MentorshipTab({
         <Card>
           <CardHeader title="Mentorship sessions" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {sessionStats.map(({ title, value, icon: Icon, className }) => (
+            {sessionStats(sessions.loading ? "--" : sessions.held).map(({ title, value, icon: Icon, className }) => (
               <div
                 key={title}
                 className={`flex min-h-[120px] items-start gap-3 rounded-xl p-5 shadow-[0_1px_3px_rgb(0_0_0/0.15)] ${className}`}
@@ -159,9 +160,22 @@ export function MentorshipTab({
         <Card className="gap-3">
           <CardHeader size="h4" title="Upcoming session" />
           <div aria-hidden className="h-2" />
+          {sessions.loading ? (
+            <div className="flex flex-col gap-3">
+              {Array.from({ length: 2 }, (_, index) => (
+                <Skeleton key={index} className="h-10 rounded-lg" />
+              ))}
+            </div>
+          ) : sessions.upcoming.length === 0 ? (
+            <p className="font-work text-sm text-text-muted">
+              {sessions.failed
+                ? "Couldn't load their sessions."
+                : "No upcoming sessions."}
+            </p>
+          ) : (
           <ul className="flex flex-col gap-3">
-            {mentorship.upcoming.map((session, index) => (
-              <li key={index} className="flex items-center gap-3">
+            {sessions.upcoming.map((session) => (
+              <li key={session.id} className="flex items-center gap-3">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-brand text-icon-info">
                   <Calendar03 className="size-5" />
                 </span>
@@ -176,6 +190,7 @@ export function MentorshipTab({
               </li>
             ))}
           </ul>
+          )}
         </Card>
       </div>
     </div>

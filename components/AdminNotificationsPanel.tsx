@@ -14,6 +14,7 @@ import {
 } from "@/lib/admin-dashboard";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { cn, timeAgo } from "@/lib/utils";
+import { notificationText } from "@/lib/notification-text";
 
 type Filter = "all" | "unread";
 
@@ -160,7 +161,7 @@ export function AdminNotificationsPanel({
                           <span className="font-medium text-neutral-800">
                             {item.actor?.name ?? item.title}
                           </span>{" "}
-                          {item.body}
+                          {notificationText(item.body)}
                         </span>
                         <span className="mt-1 block font-work text-xs text-neutral-400">
                           {timeAgo(item.createdAt)}
