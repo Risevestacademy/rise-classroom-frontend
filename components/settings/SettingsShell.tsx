@@ -49,16 +49,20 @@ export function SettingsShell({
   title = "Settings",
   href = settingsBasePath,
   navItems = defaultNavItems,
+  topNav,
   children,
 }: {
   title?: string;
   href?: string;
   navItems?: ShellNavItem[];
+  topNav?: React.ReactNode;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
     <SettingsProvider>
-      <AdminTopNav breadcrumb={["Overview", { label: title, href }]} />
+      {topNav ?? (
+        <AdminTopNav breadcrumb={["Overview", { label: title, href }]} />
+      )}
       <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
         <div className="grid gap-x-16 gap-y-6 lg:grid-cols-[236px_minmax(0,1fr)] lg:gap-y-10 xl:gap-x-25">
           <h1 className="self-center text-2xl font-semibold text-text-primary">
