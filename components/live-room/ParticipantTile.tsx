@@ -6,13 +6,15 @@ import {
   useConnectionQualityIndicator,
   useIsMuted,
   useIsSpeaking,
+  useMultibandTrackVolume,
   useParticipantAttributes,
+  useParticipantTracks,
   VideoTrack,
   type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import { ConnectionQuality, Track, type Participant } from "livekit-client";
 
-import { AudioLines, MicOff02, Pin, WavingHand02, WifiOff01 } from "@/assets/icons";
+import { MicOff02, Pin, WavingHand02, WifiOff01 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { feedbackFor, FEEDBACK_ATTRIBUTE, HAND_ATTRIBUTE } from "@/lib/live-room";
 import { cn } from "@/lib/utils";
@@ -105,7 +107,7 @@ export function ParticipantTile({
           </Badge>
         ) : (
           <Badge label={speaking ? "Speaking" : "Unmuted"} className="border border-info-border bg-info-text text-white">
-            <AudioLines className={cn(!speaking && "opacity-60")} />
+            <VoiceBars participant={participant} speaking={speaking} />
           </Badge>
         )}
       </div>
@@ -117,6 +119,53 @@ export function ParticipantTile({
         </span>
       </p>
     </article>
+  );
+}
+
+/** The bars' resting heights (out of 9), as in the design's audio icon. */
+const restingBars = [1, 5, 9, 5, 1];
+
+const reducedMotion = {
+  subscribe(onChange: () => void) {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  },
+  get: () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+};
+
+/**
+ * The unmuted badge's bars. While someone talks they rise and fall with how
+ * loud they are (low pitches in the middle, higher ones outside); otherwise
+ * they rest, dimmed, in the icon's shape.
+ */
+function VoiceBars({ participant, speaking }: { participant: Participant; speaking: boolean }) {
+  const [mic] = useParticipantTracks([Track.Source.Microphone], participant.identity);
+  const still = React.useSyncExternalStore(reducedMotion.subscribe, reducedMotion.get, () => true);
+  const live = speaking && !still;
+  // Measuring only while they talk keeps a full room cheap.
+  const bands = useMultibandTrackVolume(live ? mic : undefined, { bands: 3, updateInterval: 80 });
+  const heights = live
+    ? [bands[2], bands[1], bands[0], bands[1], bands[2]].map((level) =>
+        Math.max(1, Math.min(9, 1 + Math.sqrt(level ?? 0) * 12)),
+      )
+    : restingBars;
+
+  return (
+    <svg viewBox="0 0 12 12" aria-hidden className={cn(!speaking && "opacity-60")}>
+      {heights.map((height, index) => (
+        <rect
+          key={index}
+          x={1.625 + index * 2}
+          y={6 - height / 2}
+          width={0.75}
+          height={height}
+          rx={0.375}
+          fill="currentColor"
+          className="transition-[y,height] duration-75"
+        />
+      ))}
+    </svg>
   );
 }
 

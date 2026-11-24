@@ -38,7 +38,7 @@ afterEach(() => {
 
 describe("toLiveSession", () => {
   it("shows the time in Lagos and the track's name", () => {
-    expect(toLiveSession(session({}))).toMatchObject({
+    expect(toLiveSession(session({}), Date.parse("2026-11-23T12:00:00Z"))).toMatchObject({
       date: "2026-11-23",
       startTime: "19:00",
       endTime: "20:00",
@@ -46,6 +46,27 @@ describe("toLiveSession", () => {
       trackName: "Design",
       hostName: "Ada Obi",
     });
+  });
+});
+
+describe("the status shown", () => {
+  // The fixture runs 18:00–19:00 UTC on Nov 23.
+  const at = (iso: string) => Date.parse(iso);
+
+  it("shows a scheduled session nobody started as completed once its time is over", () => {
+    expect(toLiveSession(session({}), at("2026-11-23T18:30:00Z")).status).toBe("upcoming");
+    expect(toLiveSession(session({}), at("2026-11-23T19:00:00Z")).status).toBe("completed");
+  });
+
+  it("keeps a live session live while it runs over, until an hour past its end", () => {
+    const live = session({ status: "LIVE" });
+    expect(toLiveSession(live, at("2026-11-23T19:59:00Z")).status).toBe("live");
+    expect(toLiveSession(live, at("2026-11-23T20:00:00Z")).status).toBe("completed");
+  });
+
+  it("trusts the backend for ended and cancelled sessions", () => {
+    expect(toLiveSession(session({ status: "ENDED" }), at("2026-11-23T17:00:00Z")).status).toBe("completed");
+    expect(toLiveSession(session({ status: "CANCELLED" }), at("2026-11-23T17:00:00Z")).status).toBe("cancelled");
   });
 });
 
@@ -78,6 +99,38 @@ describe("LiveSessionsScreen", () => {
     renderWithClient(<LiveSessionsScreen topNav={null} />);
 
     expect(await screen.findByText(/No live sessions yet/)).toBeInTheDocument();
+  });
+});
+
+describe("Joining from the session preview", () => {
+  it("offers Join for a session about to start, not one still days away", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-23T17:50:00Z"));
+    mockApi({
+      "GET /live-sessions": envelope({
+        items: [
+          session({ id: "soon", title: "Soon class" }),
+          session({
+            id: "later",
+            title: "Later class",
+            scheduledStartAt: "2026-11-30T18:00:00.000Z",
+            scheduledEndAt: "2026-11-30T19:00:00.000Z",
+          }),
+        ],
+        nextCursor: null,
+      }),
+      "GET /live-sessions/soon/participants": envelope({ items: [], total: 0 }),
+      "GET /live-sessions/later/participants": envelope({ items: [], total: 0 }),
+    });
+    const { user } = renderWithClient(<LiveSessionsScreen topNav={null} joinPath="/admin/live" />);
+
+    await user.click(await screen.findByRole("button", { name: "Soon class" }));
+    expect((await screen.findByText("Join session")).closest("a")).toHaveAttribute("href", "/admin/live/soon");
+
+    await user.click(screen.getByRole("button", { name: "Later class" }));
+    expect(await screen.findByRole("heading", { name: "Participants (0)" })).toBeInTheDocument();
+    expect(screen.queryByText("Join session")).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 });
 

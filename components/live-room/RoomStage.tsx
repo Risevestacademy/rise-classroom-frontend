@@ -508,7 +508,9 @@ function fit<T extends { participant: Participant }>(refs: T[], cells: number) {
 /** Desktop grid classes for a number of cells; phones always get two columns. */
 function galleryLayout(count: number): { grid: string; cell: (index: number) => string } {
   const none = () => "";
-  if (count <= 4) return { grid: ["lg:grid-cols-1", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3", "lg:grid-cols-4"][count] + " lg:grid-rows-1", cell: none };
+  if (count <= 3) return { grid: ["lg:grid-cols-1", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3"][count] + " lg:grid-rows-1", cell: none };
+  // Four share the stage as two rows of two.
+  if (count === 4) return { grid: "lg:grid-cols-2 lg:grid-rows-2", cell: none };
   if (count === 5) return { grid: "lg:grid-cols-4 lg:grid-rows-2", cell: (index) => (index === 0 ? "col-span-2 lg:row-span-2" : "") };
   if (count === 6)
     return {

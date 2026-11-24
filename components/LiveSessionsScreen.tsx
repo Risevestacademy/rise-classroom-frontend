@@ -17,9 +17,11 @@ import {
   liveSessionQueries,
   personName,
   sessionDate,
+  sessionStanding,
   sessionTime,
   type LiveSession,
 } from "@/lib/live-sessions";
+import { useCurrentMinute } from "@/lib/use-current-minute";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -261,6 +263,7 @@ function SessionPreview({
   onEdit?: (session: LiveSession) => void;
 }) {
   const [showAll, setShowAll] = React.useState(false);
+  const now = useCurrentMinute();
   const completed = session.status === "completed";
   const guests =
     useQuery(liveSessionQueries.participants(session.id)).data ?? [];
@@ -354,7 +357,8 @@ function SessionPreview({
         )}
       </section>
 
-      {session.status === "live" && (
+      {/* Opens shortly before the start too, so the host can start it. */}
+      {now !== null && sessionStanding(session, now).joinable && (
         <Button
           variant="primary"
           size="medium"

@@ -140,7 +140,7 @@ const statuses = {
   CANCELLED: "cancelled",
 } as const;
 
-const typeNames: Record<ApiLiveSession["type"], string> = {
+export const typeNames: Record<ApiLiveSession["type"], string> = {
   TOWNHALL: "Town hall",
   TRACK_MEETING: "Track meeting",
   MENTORSHIP_GROUP: "Mentorship",
@@ -172,7 +172,27 @@ export function zonedParts(iso: string, timeZone = DEFAULT_TIME_ZONE) {
 export const personName = (person?: Person | null) =>
   person?.displayName || person?.name || "";
 
-export function toLiveSession(session: ApiLiveSession): LiveSession {
+/** How long past its end a session still counts as live, for classes that run over. */
+export const OVERRUN_MS = 60 * 60_000;
+
+/**
+ * The status to show. The backend never closes a session by itself: one
+ * nobody started stays SCHEDULED, and one nobody ended stays LIVE. So a
+ * scheduled session whose time is over, or a live one an hour past its end,
+ * shows as completed.
+ * PENDING-BACKEND: drop this once sessions end on their own.
+ */
+function shownStatus(session: ApiLiveSession, now: number): LiveSession["status"] {
+  const end = Date.parse(session.scheduledEndAt);
+  if (session.status === "SCHEDULED" && end <= now) return "completed";
+  if (session.status === "LIVE" && end + OVERRUN_MS <= now) return "completed";
+  return statuses[session.status];
+}
+
+export function toLiveSession(
+  session: ApiLiveSession,
+  now = Date.now(),
+): LiveSession {
   const zone = session.timezone || DEFAULT_TIME_ZONE;
   const start = zonedParts(session.scheduledStartAt, zone);
   return {
@@ -182,7 +202,7 @@ export function toLiveSession(session: ApiLiveSession): LiveSession {
     type: session.type,
     timeZone: zone,
     seriesId: session.seriesId ?? null,
-    status: statuses[session.status],
+    status: shownStatus(session, now),
     date: start.date,
     startTime: start.time,
     endTime: zonedParts(session.scheduledEndAt, zone).time,
@@ -439,4 +459,74 @@ export function zonedTimeToIso(
     guess += wanted - Date.UTC(y, m - 1, d, h, min);
   }
   return new Date(guess).toISOString();
+}
+
+/** How early the host can go in and start a session. */
+export const START_WINDOW_MS = 15 * 60_000;
+
+/**
+ * Where a session stands right now, for its badge and whether Join works.
+ * Join opens shortly before the start too, so the host can start it; anyone
+ * else who's early is told it hasn't started yet.
+ */
+export function sessionStanding(session: LiveSession, now: number) {
+  if (session.status === "live")
+    return { joinable: true, label: "Live now", status: "success" } as const;
+  if (session.status !== "upcoming")
+    return { joinable: false, label: "Ended", status: "neutral" } as const;
+  const { start, end } = sessionSpan(session);
+  // Never started, and its time is over.
+  if (end.getTime() <= now)
+    return { joinable: false, label: "Ended", status: "neutral" } as const;
+  const joinable = start.getTime() - now <= START_WINDOW_MS;
+  const minutes = Math.ceil((start.getTime() - now) / 60_000);
+  if (minutes <= 0)
+    return { joinable, label: "Starting soon", status: "info" } as const;
+  const label =
+    minutes < 60
+      ? `In ${minutes} ${minutes === 1 ? "Minute" : "Minutes"}`
+      : `In ${Math.round(minutes / 60)} ${minutes < 90 ? "Hour" : "Hours"}`;
+  return { joinable, label, status: "info" } as const;
+}
+
+const DAY_MS = 86_400_000;
+
+/** "Today", "Tomorrow" or "In 9 days", counted in the session's time zone. */
+export function daysUntil(session: LiveSession, now: number) {
+  const today = zonedParts(new Date(now).toISOString(), session.timeZone).date;
+  const days = Math.round(
+    (Date.parse(`${session.date}T00:00:00Z`) -
+      Date.parse(`${today}T00:00:00Z`)) /
+      DAY_MS,
+  );
+  if (days <= 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  return `In ${days} days`;
+}
+
+/**
+ * The next month of sessions, from the start of yesterday so nothing on
+ * today is missed in any time zone. Whole days keep the query key steady.
+ */
+export function upcomingRange(now: number, days = 31) {
+  const day = Math.floor(now / DAY_MS) * DAY_MS;
+  const iso = (ms: number) => new Date(ms).toISOString().replace(".000Z", "Z");
+  return { from: iso(day - DAY_MS), to: iso(day + (days + 1) * DAY_MS) };
+}
+
+/** Sessions still to come or running now: live ones first, then soonest first. */
+export function stillAhead(sessions: LiveSession[], now: number) {
+  return sessions
+    .filter(
+      (session) =>
+        session.status === "live" ||
+        (session.status === "upcoming" && Date.parse(session.endsAt) > now),
+    )
+    .sort((a, b) =>
+      a.status === b.status
+        ? a.startsAt.localeCompare(b.startsAt)
+        : a.status === "live"
+          ? -1
+          : 1,
+    );
 }

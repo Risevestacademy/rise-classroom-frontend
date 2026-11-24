@@ -1,25 +1,14 @@
 /**
  * SAMPLE DATA — not real.
  *
- * The student dashboard design has "Upcoming Event" and "Recent Activity"
- * sections, but the backend has no endpoint for either yet. These helpers feed
+ * The student dashboard design has a "Recent Activity" section, but the
+ * backend has no endpoint for it yet. These helpers feed
  * the dashboard so the layout can be built and reviewed against the design.
  *
  * The dashboard only shows this in local development
  * (process.env.NODE_ENV === "development"); deployed builds show empty states.
  
 **/
-
-export type SampleEvent = {
-  id: string;
-  kind: string;
-  title: string;
-  startsAt: Date;
-  accent: "success" | "warning" | "brand";
-  live?: boolean;
-  /** The live session it opens, for a live class. */
-  sessionId?: string;
-};
 
 export type SampleActivity = {
   id: string;
@@ -30,37 +19,6 @@ export type SampleActivity = {
 };
 
 const DAY = 60 * 24;
-
-export function getSampleEvents(): SampleEvent[] {
-  const now = Date.now();
-  const inMinutes = (minutes: number) => new Date(now + minutes * 60_000);
-
-  return [
-    {
-      id: "event-1",
-      kind: "Live class",
-      title: "Rise Academy Live Class",
-      startsAt: inMinutes(0),
-      accent: "success",
-      live: true,
-      sessionId: "s-1",
-    },
-    {
-      id: "event-2",
-      kind: "Rise",
-      title: "Town hall Meeting",
-      startsAt: inMinutes(3 * DAY),
-      accent: "warning",
-    },
-    {
-      id: "event-3",
-      kind: "Live class",
-      title: "Rise Academy Live Class",
-      startsAt: inMinutes(5 * DAY),
-      accent: "brand",
-    },
-  ];
-}
 
 export function getSampleActivity(): SampleActivity[] {
   return [
