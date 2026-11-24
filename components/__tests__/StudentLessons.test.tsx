@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 import LessonsPage from "@/app/student/my-learning/page";
 import LessonPage from "@/app/student/my-learning/lesson/[lessonId]/page";
@@ -16,7 +16,12 @@ function lock(unlocked: boolean, completed = false) {
   return { instructorUnlocked: unlocked, unlocked, completed };
 }
 
-function unlockedLesson(id: string, title: string, completed: boolean) {
+function unlockedLesson(
+  id: string,
+  title: string,
+  completed: boolean,
+  url = "https://youtu.be/abc",
+) {
   return {
     id,
     topicId: "t1",
@@ -27,7 +32,7 @@ function unlockedLesson(id: string, title: string, completed: boolean) {
     resources: [],
     assignments: [],
     recordings: [
-      { id: `r-${id}`, lessonId: id, title: "Class recording", url: "https://youtu.be/abc" },
+      { id: `r-${id}`, lessonId: id, title: "Class recording", url },
     ],
   };
 }
@@ -153,28 +158,73 @@ describe("student lessons", () => {
     params.lessonId = "l1";
   });
 
-  it("marks a lesson as completed through its module", async () => {
+  it("marks a lesson as completed through the lesson progress endpoint", async () => {
     let completed = false;
     const api = mockApi({
       "GET /student/me/progress": progress,
       "GET /student/enrollments/e1/content": () => content(completed),
       "GET /student/enrollments/e1/lessons/l1": () =>
         envelope(unlockedLesson("l1", "Grids", completed)),
-      "PATCH /student/enrollments/e1/topics/t1/progress": () => {
+      "PATCH /student/enrollments/e1/lessons/l1/progress": () => {
         completed = true;
-        return envelope({ id: "p1", itemType: "TOPIC", itemId: "t1", completed: false });
+        return envelope({ id: "p1", itemType: "LESSON", itemId: "l1", completed: true });
       },
     });
     const { user } = renderWithClient(<LessonPage />);
 
     await user.click(await screen.findByRole("button", { name: "Mark as completed" }));
 
-    expect(api.bodies("PATCH /student/enrollments/e1/topics/t1/progress")).toEqual([
-      { lessons: [{ id: "l1", completed: true }] },
+    expect(api.bodies("PATCH /student/enrollments/e1/lessons/l1/progress")).toEqual([
+      { activities: [{ id: "l1", completed: true }] },
     ]);
+    expect(await screen.findByRole("link", { name: "Next lesson" })).toHaveAttribute(
+      "href",
+      "/student/my-learning/lesson/l2",
+    );
+  });
+
+  it("marks a lesson as completed when its video ends, previewing a frame 3s in", async () => {
+    let completed = false;
+    const api = mockApi({
+      "GET /student/me/progress": progress,
+      "GET /student/enrollments/e1/content": () => content(completed),
+      "GET /student/enrollments/e1/lessons/l1": () =>
+        envelope(
+          unlockedLesson("l1", "Grids", completed, "https://cdn.example.com/class.mp4"),
+        ),
+      "PATCH /student/enrollments/e1/lessons/l1/progress": () => {
+        completed = true;
+        return envelope({ id: "p1", itemType: "LESSON", itemId: "l1", completed: true });
+      },
+    });
+    const { container } = renderWithClient(<LessonPage />);
+
+    await screen.findByRole("button", { name: "Mark as completed" });
+    const video = container.querySelector("video")!;
+    expect(video).toHaveAttribute("src", "https://cdn.example.com/class.mp4#t=3");
+
+    fireEvent.ended(video);
+
+    expect(await screen.findByRole("link", { name: "Next lesson" })).toBeInTheDocument();
+    expect(api.bodies("PATCH /student/enrollments/e1/lessons/l1/progress")).toEqual([
+      { activities: [{ id: "l1", completed: true }] },
+    ]);
+  });
+
+  it("keeps the Completed button when there's no next lesson to open", async () => {
+    params.lessonId = "l2";
+    mockApi({
+      "GET /student/me/progress": progress,
+      "GET /student/enrollments/e1/content": content(),
+      "GET /student/enrollments/e1/lessons/l2": envelope(unlockedLesson("l2", "Type", true)),
+    });
+    renderWithClient(<LessonPage />);
+
     expect(await screen.findByRole("button", { name: "Completed" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
+    expect(screen.queryByRole("link", { name: "Next lesson" })).not.toBeInTheDocument();
+    params.lessonId = "l1";
   });
 });

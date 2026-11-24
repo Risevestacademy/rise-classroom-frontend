@@ -49,10 +49,11 @@ export function StudentName({
   href,
 }: {
   student: AssignedStudent;
-  href: string;
+  /** Omit where there's no profile to open. */
+  href?: string;
 }) {
-  return (
-    <Link href={href} className="truncate text-base font-medium text-text-primary">
+  const content = (
+    <>
       {student.name}
       {needsAttention(student) && (
         <>
@@ -63,7 +64,15 @@ export function StudentName({
           <span className="sr-only">(needs attention)</span>
         </>
       )}
+    </>
+  );
+  const className = "truncate text-base font-medium text-text-primary";
+  return href ? (
+    <Link href={href} className={className}>
+      {content}
     </Link>
+  ) : (
+    <p className={className}>{content}</p>
   );
 }
 
@@ -77,7 +86,8 @@ export function StudentsProgressCard({
 }: {
   title: string;
   students: AssignedStudent[];
-  studentHref: (student: AssignedStudent) => string;
+  /** Where a student links to; omit where there's no profile to open. */
+  studentHref?: (student: AssignedStudent) => string;
   /** Shown in place of the list when there are no students. */
   emptyMessage?: string;
   /** Shows skeleton rows while the students load. */
@@ -116,7 +126,7 @@ export function StudentsProgressCard({
                   size={40}
                 />
                 <div className="min-w-0">
-                  <StudentName student={student} href={studentHref(student)} />
+                  <StudentName student={student} href={studentHref?.(student)} />
                   <p className="truncate font-work text-sm text-text-secondary">
                     {student.email}
                   </p>

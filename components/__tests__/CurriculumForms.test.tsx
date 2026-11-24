@@ -128,69 +128,81 @@ describe("NewResourceScreen", () => {
   }
 
   const linkInput = () => screen.getByRole("textbox", { name: /Link/ });
+  const fileInput = () => document.querySelector<HTMLInputElement>('input[type="file"]')!;
+  const pdf = () => new File(["%PDF"], "grid-notes.pdf", { type: "application/pdf" });
 
-  it("has no file upload, only a link", async () => {
-    await renderScreen();
+  it("uploads a file for file types, and takes a link for the Link type", async () => {
+    const { user } = await renderScreen();
 
+    expect(fileInput()).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /Link/ })).not.toBeInTheDocument();
+
+    await choose(user, /Resource type/, "Link");
     expect(linkInput()).toBeInTheDocument();
-    expect(screen.queryByText(/Drag|drop|Browse/i)).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
-  it("needs a title and a link", async () => {
+  it("needs a title and a file", async () => {
     const { user } = await renderScreen();
     const create = screen.getByRole("button", { name: "Create resource" });
 
     expect(create).toBeDisabled();
     await user.type(screen.getByRole("textbox", { name: /Title/ }), "Grid notes");
     expect(create).toBeDisabled();
-    await user.type(linkInput(), "https://drive.google.com/grid.pdf");
+    await user.upload(fileInput(), pdf());
     expect(create).toBeEnabled();
   });
 
-  it("saves a PDF link on the first lesson by default", async () => {
+  it("uploads a PDF to the first lesson by default", async () => {
     const { user, api } = await renderScreen({
-      "POST /admin/lessons/l1/resources": envelope(savedResource),
+      "POST /admin/lessons/l1/resources/upload": envelope({
+        ...savedResource,
+        source: "UPLOAD",
+        url: "/api/v1/resources/r1/download",
+      }),
     });
 
     await user.type(screen.getByRole("textbox", { name: /Title/ }), " Grid notes ");
-    await user.type(linkInput(), " https://drive.google.com/grid.pdf ");
+    await user.upload(fileInput(), pdf());
     await user.click(screen.getByRole("button", { name: "Create resource" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
-    expect(api.bodies("POST /admin/lessons/l1/resources")).toEqual([
-      {
-        title: "Grid notes",
-        url: "https://drive.google.com/grid.pdf",
-        type: "PDF",
-        publishStatus: "PUBLISHED",
-      },
-    ]);
+    const [form] = api.bodies("POST /admin/lessons/l1/resources/upload") as FormData[];
+    expect(form).toBeInstanceOf(FormData);
+    expect((form.get("file") as File).name).toBe("grid-notes.pdf");
+    expect(form.get("title")).toBe("Grid notes");
+    expect(form.get("publishStatus")).toBe("PUBLISHED");
     expect(push.mock.calls[0][0]).toBe(
       "/admin/curriculum/c1?tab=resources&created=Grid+notes&module=1",
     );
   });
 
-  it("sends the chosen type and can attach to the whole module", async () => {
+  it("saves a link on the whole module", async () => {
     const { user, api } = await renderScreen({
       "POST /admin/topics/t1/resources": envelope(savedResource),
     });
 
-    await choose(user, /Resource type/, "Video");
-    expect(linkInput()).toHaveAttribute("placeholder", "https://www.youtube.com/watch?v=…");
+    await choose(user, /Resource type/, "Link");
     await choose(user, /^Lesson/, "Whole module (no specific lesson)");
-    await user.type(screen.getByRole("textbox", { name: /Title/ }), "Intro video");
-    await user.type(linkInput(), "https://youtu.be/intro");
+    await user.type(screen.getByRole("textbox", { name: /Title/ }), "Figma file");
+    await user.type(linkInput(), " https://www.figma.com/file/grid ");
     await user.click(screen.getByRole("button", { name: "Create resource" }));
 
     await vi.waitFor(() => expect(push).toHaveBeenCalledOnce());
-    expect(api.bodies("POST /admin/topics/t1/resources")).toMatchObject([
-      { title: "Intro video", url: "https://youtu.be/intro", type: "VIDEO" },
+    expect(api.bodies("POST /admin/topics/t1/resources")).toEqual([
+      {
+        title: "Figma file",
+        url: "https://www.figma.com/file/grid",
+        type: "LINK",
+        publishStatus: "PUBLISHED",
+      },
     ]);
   });
 
   it("rejects a link that isn't https, without saving", async () => {
     const { user, api } = await renderScreen();
 
+    await choose(user, /Resource type/, "Link");
     await user.type(screen.getByRole("textbox", { name: /Title/ }), "Grid notes");
     await user.type(linkInput(), "drive.google.com/grid.pdf");
     await user.click(screen.getByRole("button", { name: "Create resource" }));

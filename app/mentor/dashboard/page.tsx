@@ -11,7 +11,6 @@ import {
 import { AppTopNav } from "@/components/AppTopNav";
 import { MetricCard } from "@/components/MetricCard";
 import {
-  needsAttention,
   StudentsProgressCard,
   UpcomingSessionsCard,
   type UpcomingSession,
@@ -22,31 +21,28 @@ import {
   CardHeader,
 } from "@/components/student-profile/shared";
 import { Skeleton } from "@/components/ui/skeleton";
+import { myMenteesQuery, toMyAssignedStudent } from "@/lib/mentors";
 import { sessionQuery } from "@/lib/session-query";
 import { greeting } from "@/lib/utils";
-import {
-  assignedStudents,
-  mentorActivity,
-} from "@/app/admin/mentors/[id]/profile-data";
+import { mentorActivity } from "@/app/admin/mentors/[id]/profile-data";
 
-// PENDING-BACKEND: mentors can't list their students, sessions or activity yet,
-// so the dashboard shows sample data from the design.
+// PENDING-BACKEND: there are no sessions or activity yet, so those show sample
+// data from the design. Mentors can't read their students' progress either, so
+// it shows as "--".
 const sessions: UpcomingSession[] = [
   { date: "Sat, Oct 27 2026", time: "6:00 PM - 7:00 PM", until: "Today", joinable: true },
   { date: "Sat, Nov 5 2026", time: "6:00 PM - 7:00 PM", until: "In 9 days" },
   { date: "Sat, Nov 5 2026", time: "6:00 PM - 7:00 PM", until: "In 16 days" },
 ];
 const sessionsThisWeek = 1;
-const students = [...assignedStudents].sort((a, b) => a.progress - b.progress);
-const averageProgress = Math.round(
-  students.reduce((sum, student) => sum + student.progress, 0) /
-    students.length,
-);
 
 export default function MentorDashboardPage() {
   const session = useQuery(sessionQuery());
   const mentorName = session.data?.user.firstName ?? "Mentor";
   const [latestDay] = mentorActivity(mentorName);
+  const mentees = useQuery(myMenteesQuery());
+  const students = (mentees.data ?? []).map(toMyAssignedStudent);
+  const studentsValue = mentees.isPending ? "--" : students.length;
 
   return (
     <>
@@ -73,14 +69,14 @@ export default function MentorDashboardPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               title="My students"
-              value={students.length}
+              value={studentsValue}
               icon={UserMultiple}
               iconClassName="bg-surface-info-badge text-icon-info"
               className="min-h-[120px]"
             />
             <MetricCard
               title="Students needing attention"
-              value={students.filter(needsAttention).length}
+              value="--"
               icon={AlertCircle}
               iconClassName="bg-surface-error-badge text-icon-error"
               className="min-h-[120px]"
@@ -95,7 +91,7 @@ export default function MentorDashboardPage() {
             />
             <MetricCard
               title="Average student progress"
-              value={`${averageProgress}%`}
+              value="--"
               icon={Progress}
               iconClassName="bg-surface-warning-badge text-icon-warning"
               className="min-h-[120px]"
@@ -106,7 +102,12 @@ export default function MentorDashboardPage() {
             <StudentsProgressCard
               title="Students progress"
               students={students}
-              studentHref={(student) => `/mentor/students/${student.id}`}
+              loading={mentees.isPending}
+              emptyMessage={
+                mentees.error
+                  ? `Couldn't load your students. ${mentees.error.message}`
+                  : "No students assigned yet."
+              }
             />
             <div className="flex min-w-0 flex-col gap-4">
               <UpcomingSessionsCard sessions={sessions} />

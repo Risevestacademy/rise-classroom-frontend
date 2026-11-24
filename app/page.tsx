@@ -1,3 +1,4 @@
+import { tomatoGrotesk } from "@/app/fonts";
 import { FaqSection } from "@/components/landing/FaqSection";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { KeywordMarquee } from "@/components/landing/KeywordMarquee";
@@ -5,6 +6,7 @@ import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LandingMotion } from "@/components/landing/motion/LandingMotion";
 import { PricingSection } from "@/components/landing/PricingSection";
+import { QuoteSection } from "@/components/landing/QuoteSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
 // Hidden until we have real testimonials.
 // import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
@@ -17,7 +19,8 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <>
+    // display: contents keeps the layout as it was; it only scopes the font.
+    <div className={`contents ${tomatoGrotesk.variable}`}>
       <LandingNav />
       {/* Sits above the sticky footer and lifts away to reveal it. */}
       <main
@@ -30,10 +33,11 @@ export default function HomePage() {
         <SolutionSection />
         {/* <TestimonialsSection /> */}
         <PricingSection />
+        <QuoteSection />
         <FaqSection />
       </main>
       <LandingFooter />
       <LandingMotion />
-    </>
+    </div>
   );
 }

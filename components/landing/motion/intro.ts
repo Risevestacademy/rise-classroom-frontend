@@ -49,8 +49,9 @@ export function heroIntro() {
       "[data-intro='dashboard']",
       {
         // A shorter rise on small screens, where 120px is most of the view.
+        // No fade: a transparent dashboard doesn't count as painted, which
+        // holds back the page's largest paint.
         y: () => (window.innerWidth < 1024 ? 60 : 120),
-        opacity: 0,
         duration: 1.6,
       },
       0.8

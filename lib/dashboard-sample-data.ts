@@ -17,6 +17,8 @@ export type SampleEvent = {
   startsAt: Date;
   accent: "success" | "warning" | "brand";
   live?: boolean;
+  /** The live session it opens, for a live class. */
+  sessionId?: string;
 };
 
 export type SampleActivity = {
@@ -41,6 +43,7 @@ export function getSampleEvents(): SampleEvent[] {
       startsAt: inMinutes(0),
       accent: "success",
       live: true,
+      sessionId: "s-1",
     },
     {
       id: "event-2",

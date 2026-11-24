@@ -27,7 +27,9 @@ export type EventGuest = { id: string; name: string; email: string };
 
 export type CalendarEvent = {
   id: string;
-  kind: "event" | "task";
+  /** Live sessions come from the live sessions API; the rest are local for now. */
+  kind: "event" | "task" | "live";
+  liveSessionId?: string;
   title: string;
   /** First day, as YYYY-MM-DD. */
   date: string;
@@ -187,6 +189,27 @@ export function occursOn(event: CalendarEvent, date: Date) {
     }
   }
   return true;
+}
+
+const rruleDays = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+const rruleFrequencies = { day: "DAILY", week: "WEEKLY", month: "MONTHLY", year: "YEARLY" } as const;
+
+/**
+ * A repeat rule as an iCalendar RRULE ("FREQ=WEEKLY;BYDAY=MO"), for the live
+ * session series API. An end date isn't part of it; the API takes that apart.
+ */
+export function toRrule(rule: RepeatRule, start: Date) {
+  const parts = [`FREQ=${rruleFrequencies[rule.frequency]}`];
+  if (rule.interval > 1) parts.push(`INTERVAL=${rule.interval}`);
+  if (rule.frequency === "week") {
+    const days = rule.weekdays?.length ? rule.weekdays : [start.getDay()];
+    parts.push(`BYDAY=${[...days].sort().map((day) => rruleDays[day]).join(",")}`);
+  }
+  if (rule.frequency === "month" && rule.monthlyOn === "weekday") {
+    parts.push(`BYDAY=${weekdayPosition(start)}${rruleDays[start.getDay()]}`);
+  }
+  if (rule.ends.type === "after") parts.push(`COUNT=${rule.ends.count}`);
+  return parts.join(";");
 }
 
 export function eventsOn(events: CalendarEvent[], date: Date) {

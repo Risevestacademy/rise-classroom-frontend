@@ -3,6 +3,19 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+
+// Session replay records every DOM change, and the landing page animates
+// constantly, so it starts once the visitor moves on from the landing pages.
+// Clarity already records sessions there.
+const LANDING_PATHS = new Set(["/", "/privacy-policy"]);
+const isLanding = (path: string) => LANDING_PATHS.has(path);
+
+function addReplay() {
+  const client = Sentry.getClient();
+  if (client && !client.getIntegrationByName("Replay"))
+    client.addIntegration(Sentry.replayIntegration());
+}
+
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   // Local `next dev` errors are tagged "development" so they don't mix with
@@ -13,7 +26,9 @@ Sentry.init({
       : process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT,
 
   // Add optional integrations for additional features
-  integrations: [Sentry.replayIntegration()],
+  integrations: isLanding(window.location.pathname)
+    ? []
+    : [Sentry.replayIntegration()],
 
   // Trace every request locally, but sample 10% in production to save quota.
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1,
@@ -34,4 +49,7 @@ Sentry.init({
   },
 });
 
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+export function onRouterTransitionStart(href: string, navigationType: string) {
+  Sentry.captureRouterTransitionStart(href, navigationType);
+  if (!isLanding(new URL(href, window.location.href).pathname)) addReplay();
+}

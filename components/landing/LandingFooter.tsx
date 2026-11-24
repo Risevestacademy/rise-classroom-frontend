@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { HoverPrefetchLink } from "@/components/landing/HoverPrefetchLink";
+
 /* TODO: Help Center and Terms of Service don't exist yet; point these at them
    when they do. Section links are rooted at "/" so they also work from the
    privacy policy page. */
@@ -82,12 +84,12 @@ export function LandingFooter() {
                 <ul className="mt-4 flex flex-col gap-2">
                   {column.links.map((link) => (
                     <li key={link.label}>
-                      <Link
+                      <HoverPrefetchLink
                         href={link.href}
                         className="block font-work text-[14px] leading-5 tracking-[-0.01em] whitespace-nowrap text-[#aab7b8] transition-colors hover:text-white"
                       >
                         {link.label}
-                      </Link>
+                      </HoverPrefetchLink>
                     </li>
                   ))}
                 </ul>
@@ -105,10 +107,10 @@ export function LandingFooter() {
           <span className="sr-only">Rise Classroom</span>
           <div aria-hidden className="leading-none font-normal select-none">
             {/* The taller line box keeps the dot on the "i" inside the reveal clip. */}
-            <p className="wordmark-dots w-fit text-[length:7.9cqw] leading-[1.3]">
+            <p className="w-fit text-[length:7.9cqw] text-brand-300 leading-[1.3]">
               rise
             </p>
-            <p className="wordmark-dots -mt-[2.7cqw] w-fit text-[length:20.2cqw]">
+            <p className="-mt-[2.7cqw] w-fit text-[length:20.2cqw] text-brand-300">
               Classroom
             </p>
           </div>

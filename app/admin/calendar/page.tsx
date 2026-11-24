@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SuccessToast } from "@/components/ui/toast";
 import {
+  addDays,
   eventsOn,
   filterEvents,
   monthGrid,
@@ -29,6 +30,11 @@ import {
   type CalendarEvent,
   type CalendarFilters,
 } from "@/lib/calendar";
+import {
+  liveSessionQueries,
+  zonedTimeToIso,
+  type LiveSession,
+} from "@/lib/live-sessions";
 import { sessionQuery } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +48,32 @@ const weekdays = ["Sun", "Mon", "Tues", "Wed", "Thur", "Fri", "Sat"];
 
 /** Events shown in a day before the rest collapse into "+N more". */
 const VISIBLE_EVENTS = 3;
+
+/** A live session from the API, shown in the grid like an event. */
+function liveEvent(session: LiveSession): CalendarEvent {
+  return {
+    id: `live-${session.id}`,
+    liveSessionId: session.id,
+    kind: "live",
+    title: session.title,
+    date: session.date,
+    endDate: session.endDate,
+    startTime: session.startTime,
+    endTime: session.endTime,
+    allDay: false,
+    repeat: null,
+    // Town halls and mentorship sessions aren't tied to one track.
+    trackIds: session.trackId ? [session.trackId] : "all",
+    link: `/admin/live/${session.id}`,
+    description: session.description,
+    guests: [],
+    permissions: { modify: false, invite: false, seeGuests: false },
+    notifications: [],
+    color: "#e5484d",
+    organizer: session.hostName,
+    attachments: [],
+  };
+}
 
 export default function CalendarPage() {
   const today = React.useMemo(() => new Date(), []);
@@ -61,10 +93,20 @@ export default function CalendarPage() {
   const session = useQuery(sessionQuery());
 
   const days = monthGrid(view.year, view.month);
+  const liveSessions = useQuery(
+    liveSessionQueries.list({
+      from: zonedTimeToIso(toDateKey(days[0]), "00:00"),
+      to: zonedTimeToIso(toDateKey(addDays(days[days.length - 1], 1)), "00:00"),
+    }),
+  );
   const todayKey = toDateKey(today);
   const viewingToday =
     view.year === today.getFullYear() && view.month === today.getMonth();
-  const visibleEvents = filterEvents(events, filters);
+  const allEvents = React.useMemo(
+    () => [...events, ...(liveSessions.data ?? []).map(liveEvent)],
+    [events, liveSessions.data],
+  );
+  const visibleEvents = filterEvents(allEvents, filters);
   const hasEvents = (date: Date) => eventsOn(visibleEvents, date).length > 0;
 
   const shiftMonth = (by: number) =>
@@ -277,6 +319,12 @@ export default function CalendarPage() {
           initial={form.initial}
           onSubmit={saveEvent}
           hasEvents={hasEvents}
+          onLiveSessionCreated={(title) =>
+            setToast({
+              title: "Live session scheduled",
+              message: `“${title}” has been added to the calendar`,
+            })
+          }
         />
       )}
 

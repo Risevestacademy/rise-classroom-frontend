@@ -29,6 +29,7 @@ export function AppSidebar({
   accountItems = [],
   mobileTop,
   showUserMenu = true,
+  footer,
 }: {
   homeHref: string;
   sections: NavSectionConfig[];
@@ -36,6 +37,8 @@ export function AppSidebar({
   /** Shown above the links on screens where the top nav hides its filters. */
   mobileTop?: React.ReactNode;
   showUserMenu?: boolean;
+  /** Replaces the user card at the foot of the sidebar. */
+  footer?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const { open, setOpen } = useSidebarNav();
@@ -96,26 +99,28 @@ export function AppSidebar({
 
         <div className="mb-3 px-3.5">
           {accountItems.length > 0 && (
-            <>
-              <div className="space-y-1">
-                {accountItems.map((item) => (
-                  <SidebarNavItem
-                    key={item.href}
-                    item={item}
-                    isActive={isActivePath(pathname, item.href)}
-                  />
-                ))}
-              </div>
-              <hr className="mx-2 text-neutral-200" />
-            </>
+            <div className="space-y-1">
+              {accountItems.map((item) => (
+                <SidebarNavItem
+                  key={item.href}
+                  item={item}
+                  isActive={isActivePath(pathname, item.href)}
+                />
+              ))}
+            </div>
           )}
-          {showUserMenu && (
+          {/* A footer draws its own top border. */}
+          {!footer && showUserMenu && accountItems.length > 0 && (
+            <hr className="mx-2 text-neutral-200" />
+          )}
+          {!footer && showUserMenu && (
             <div className="mt-auto p-2">
               {/* Sign-out lives in the top nav's profile menu. */}
               <UserMenu variant="plain-white" subtitle="email" withMenu={false} />
             </div>
           )}
         </div>
+        {footer}
       </aside>
     </>
   );

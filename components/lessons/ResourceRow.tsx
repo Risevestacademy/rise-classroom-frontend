@@ -6,24 +6,29 @@ import {
   Video,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { isApiFilePath } from "@/lib/api";
+import { cn, formatFileSize } from "@/lib/utils";
 import {
   describeResource,
-  toHttpUrl,
+  resourceHref,
   type LessonResource,
 } from "@/lib/student-lessons";
 
 /* A link or file in a student list: lesson resources, assignment attachments,
-   and handed-in work. `detail` replaces the "PDF · host" line when given. */
+   and handed-in work. `detail` replaces the "PDF · host" line when given.
+   Files uploaded to the API download; links open in a new tab. */
 export function ResourceRow({
   resource,
   detail,
 }: {
-  resource: { title: string; url: string; type?: LessonResource["type"] };
+  resource: Pick<LessonResource, "title" | "url" | "type"> &
+    Partial<Pick<LessonResource, "fileName" | "sizeBytes">>;
   detail?: string;
 }) {
-  const href = toHttpUrl(resource.url);
-  const info = describeResource(resource.url, resource.type);
+  const href = resourceHref(resource.url);
+  const isUpload = isApiFilePath(resource.url);
+  const info = describeResource(resource.url, resource.type, resource.fileName);
+  const size = isUpload && resource.sizeBytes ? formatFileSize(resource.sizeBytes) : "";
   const Icon = info.isFile ? FileText : info.kind === "Video" ? Video : Link2;
   const Action = info.isFile ? Download : ExternalLink;
 
@@ -37,7 +42,7 @@ export function ResourceRow({
           {resource.title}
         </p>
         <p className="mt-0.5 truncate text-xs text-neutral-400">
-          {detail ?? [info.kind, info.host].filter(Boolean).join(" · ")}
+          {detail ?? [info.kind, info.host || size].filter(Boolean).join(" · ")}
         </p>
       </div>
       {href && <Action className="h-4 w-4 shrink-0 text-neutral-400" />}
@@ -48,8 +53,9 @@ export function ResourceRow({
   return href ? (
     <a
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+      {...(isUpload
+        ? { download: resource.fileName || resource.title }
+        : { target: "_blank", rel: "noopener noreferrer" })}
       className={cn(className, "hover:bg-white")}
     >
       {content}

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
 
@@ -11,9 +13,12 @@ import { cn } from "@/lib/utils";
  */
 export function AuthShell({
   panel = "branded",
+  aside,
   children,
 }: {
   panel?: "branded" | "plain";
+  /* Centred in the panel; the panel only shows on large screens. */
+  aside?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const plain = panel === "plain";
@@ -30,19 +35,28 @@ export function AuthShell({
         {!plain && (
           <>
             <div className="absolute inset-x-0 top-[48.4%] flex -translate-y-1/2 justify-center">
-              <Logo variant="white" size="lg" />
+              <Link href="/" aria-label="Rise Classroom home">
+                <Logo variant="white" size="lg" />
+              </Link>
             </div>
             <p className="absolute inset-x-0 bottom-18 text-center text-2xl font-bold [word-spacing:0.3rem] text-neutral-0">
               Learn. Practice. Progress.
             </p>
           </>
         )}
+        {aside && (
+          <div className="absolute inset-0 flex items-center justify-center p-8 xl:p-12">
+            {aside}
+          </div>
+        )}
       </div>
 
       <div className="flex min-h-dvh flex-col lg:min-h-[calc(100dvh-2rem)]">
         {!plain && (
           <div className="flex items-center px-6 pt-6 lg:hidden">
-            <Logo variant="teal" size="sm" />
+            <Link href="/" aria-label="Rise Classroom home">
+              <Logo variant="teal" size="sm" />
+            </Link>
           </div>
         )}
 

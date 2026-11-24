@@ -151,6 +151,8 @@ export type AdminNotification = {
   title: string;
   body: string;
   type: string;
+  /** Who caused it, or null for system notifications. */
+  actor?: { id: string; name: string; image?: string | null; role: string } | null;
   isRead: boolean;
   createdAt: string;
 };

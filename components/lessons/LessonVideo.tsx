@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { ExternalLink, Play, Video, WifiOff } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
   formatDuration,
   getVideoSource,
+  previewFrameUrl,
   videoThumbnail,
   type LessonRecording,
 } from "@/lib/student-lessons";
@@ -24,17 +25,87 @@ function itemCaption(item: VideoItem) {
   return item.caption ?? (item.durationSec ? formatDuration(item.durationSec) : "");
 }
 
+/* YouTube and Vimeo embeds report playback through postMessage; this listens for the end. */
+function useEmbedEnded(
+  frame: RefObject<HTMLIFrameElement | null>,
+  onEnded: () => void,
+) {
+  const callback = useRef(onEnded);
+  useEffect(() => {
+    callback.current = onEnded;
+  });
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.source !== frame.current?.contentWindow) return;
+      let data: { event?: string; info?: unknown } | null = null;
+      try {
+        data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+      } catch {
+        return;
+      }
+      const info = data?.info as { playerState?: number } | number | undefined;
+      const youtubeEnded =
+        (data?.event === "onStateChange" && info === 0) ||
+        (data?.event === "infoDelivery" &&
+          typeof info === "object" &&
+          info?.playerState === 0);
+      if (youtubeEnded || data?.event === "ended") callback.current();
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [frame]);
+}
+
+function subscribeToEmbed(frame: HTMLIFrameElement) {
+  const target = frame.contentWindow;
+  if (!target) return;
+  if (frame.src.includes("youtube.com")) {
+    target.postMessage(JSON.stringify({ event: "listening" }), "*");
+  } else if (frame.src.includes("vimeo.com")) {
+    target.postMessage(JSON.stringify({ method: "addEventListener", value: "ended" }), "*");
+  }
+}
+
+/* A video file's own frame, a few seconds in, as its thumbnail. */
+function FramePreview({ src }: { src: string }) {
+  return (
+    <video
+      src={previewFrameUrl(src)}
+      preload="metadata"
+      muted
+      playsInline
+      aria-hidden
+      tabIndex={-1}
+      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+    />
+  );
+}
+
+/* `onWatched` fires once every recording has played to the end. */
 export function LessonVideo({
   recordings,
   emptyMessage = "No recording for this lesson yet",
+  onWatched,
 }: {
   recordings: VideoItem[];
   emptyMessage?: string;
+  onWatched?: () => void;
 }) {
   const [selected, setSelected] = useState(0);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const recording = recordings[selected] ?? recordings[0];
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const started = useRef(false);
+  const watched = useRef(new Set<string>());
+
+  function handleEnded() {
+    if (!recording) return;
+    watched.current.add(recording.id);
+    if (recordings.every((item) => watched.current.has(item.id))) onWatched?.();
+  }
+  useEmbedEnded(frameRef, handleEnded);
 
   if (!recording) {
     return (
@@ -76,8 +147,10 @@ export function LessonVideo({
         </div>
       ) : source.type === "iframe" ? (
         <iframe
+          ref={frameRef}
           key={`${recording.id}-${attempt}`}
           src={source.src}
+          onLoad={(event) => subscribeToEmbed(event.currentTarget)}
           title={recording.title}
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
@@ -86,9 +159,16 @@ export function LessonVideo({
       ) : source.type === "file" ? (
         <video
           key={`${recording.id}-${attempt}`}
-          src={source.src}
+          src={previewFrameUrl(source.src)}
           controls
+          playsInline
           preload="metadata"
+          onPlay={(event) => {
+            if (started.current) return;
+            started.current = true;
+            event.currentTarget.currentTime = 0;
+          }}
+          onEnded={handleEnded}
           onError={() => setFailed(true)}
           className={frame}
         />
@@ -112,6 +192,7 @@ export function LessonVideo({
         <ul className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
           {recordings.map((item, index) => {
             const thumbnail = videoThumbnail(item.url);
+            const itemSource = getVideoSource(item.url);
             const active = index === selected;
             return (
               <li key={item.id} className="w-[152px] shrink-0 sm:w-[168px]">
@@ -120,6 +201,7 @@ export function LessonVideo({
                   onClick={() => {
                     setSelected(index);
                     setFailed(false);
+                    started.current = false;
                   }}
                   aria-pressed={active}
                   aria-label={`Play ${itemLabel(item)}`}
@@ -139,6 +221,9 @@ export function LessonVideo({
                         alt=""
                         className="absolute inset-0 h-full w-full object-cover"
                       />
+                    )}
+                    {!thumbnail && itemSource.type === "file" && (
+                      <FramePreview src={itemSource.src} />
                     )}
                     <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800/70 text-white">
                       <Play className="h-3 w-3 fill-current" />

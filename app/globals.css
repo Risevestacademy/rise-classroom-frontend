@@ -104,6 +104,38 @@
   --color-avatar-red-surface: #f8c9d2;
   --color-avatar-red-text: #710e21;
 
+  /* Live session room (dark) */
+  --color-room-canvas: #1e1e1e;
+  --color-room-panel: #212224;
+  --color-room-panel-raised: #303234;
+  --color-room-panel-border: #56595c;
+  --color-room-menu: #292a2c;
+  --color-room-menu-border: #454649;
+  --color-room-tile-action: #393a3d;
+  --color-room-chip: #343638;
+  --color-room-pill: #353535;
+  --color-room-control: #344043; /* neutral-600 */
+  --color-room-control-hover: #3e4b4f;
+  --color-room-popover: #333638;
+  --color-room-tile-blue: #3540a3; /* brand-700 */
+  --color-room-tile-slate: #344043; /* neutral-600 */
+  --color-room-tile-teal: #00455d;
+  --color-room-tile-others: #514020;
+  --color-room-screen: #1a4f51;
+  --color-room-bubble: #303030;
+  --color-room-bubble-own: #005278;
+  --color-room-bubble-own-text: #d2eaff;
+  --color-room-border: #444747;
+  --color-room-text: #dddddd;
+  --color-room-text-strong: #ededed;
+  --color-room-text-muted: #b9bcbc;
+  --color-room-danger: #ff897b;
+  --color-room-off: #f2cfcf;
+  --color-room-off-text: #7a241f;
+  --color-room-active: #d5d9ff; /* brand-200 */
+  --color-room-leave: #dc2626;
+  --color-room-leave-hover: #b91c1c;
+
   /* Semantic · Border */
   --color-border-default: #e2e8e8; /* neutral-200 */
   --color-border-strong: #cbd5d6; /* neutral-300 */
@@ -165,6 +197,7 @@
   /* Font */
   --font-lato: var(--font-lato-family), system-ui, sans-serif;
   --font-work: var(--font-work-sans), system-ui, sans-serif;
+  --font-tomato: var(--font-tomato-grotesk), system-ui, sans-serif;
 
   /* Radius */
   --radius-xs: 2px;
@@ -379,4 +412,19 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* Sign-up dashboard preview: the blinking cursor after the text being typed. */
+@keyframes preview-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* A reaction drifts up from the bottom of the room and fades out. */
+@keyframes room-reaction {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  12% { transform: translateY(-24px) scale(1); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(-320px) scale(1); opacity: 0; }
 }
