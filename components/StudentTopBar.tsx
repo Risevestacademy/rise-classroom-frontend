@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, ChevronRight, Menu, Search } from "lucide-react";
+import { Calendar, ChevronRight, Menu, Search, Bell } from "lucide-react";
 
 import { Logo } from "@/assets/logo";
+import { UserAvatar } from "@/components/UserAvatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsPopover } from "@/components/notifications/NotificationsPopover";
 import { useStudentNav } from "@/components/StudentNavContext";
@@ -121,6 +123,13 @@ export function StudentTopBar() {
         >
           <Calendar className="h-5 w-5" />
         </button>
+        {/* <Link
+          href="/student/notifications"
+          aria-label="Notifications"
+          className={iconButton}
+        >
+          <Bell className="h-5 w-5" />
+        </Link> */}
         <NotificationsPopover className={iconButton} />
 
         <div className="pl-1">

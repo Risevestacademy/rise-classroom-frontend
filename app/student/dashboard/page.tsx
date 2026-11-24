@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { CompanionGreeting } from "@/components/mascot/Companion";
 import { ContinueLearningCard } from "@/components/student-dashboard/ContinueLearningCard";
 import { RecentActivityCard } from "@/components/student-dashboard/RecentActivityCard";
 import { UpcomingDeadlinesCard } from "@/components/student-dashboard/UpcomingDeadlinesCard";
@@ -31,21 +32,23 @@ export default function StudentDashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        {session.isPending ? (
-          <Skeleton className="h-8 w-64" />
-        ) : (
-          <h1 className="text-2xl font-medium text-neutral-800">
-            {getGreeting()}
-            {firstName ? `, ${firstName}` : ""}
-          </h1>
-        )}
-        <p className="mt-1 text-sm text-neutral-500">
-          {curriculum.isPending || hasStarted
+      <CompanionGreeting
+        heading={
+          session.isPending ? (
+            <Skeleton className="h-8 w-64" />
+          ) : (
+            <h1 className="text-2xl font-medium text-neutral-800">
+              {getGreeting()}
+              {firstName ? `, ${firstName}` : ""}
+            </h1>
+          )
+        }
+        subtitle={
+          curriculum.isPending || hasStarted
             ? "Here’s what’s happening in your learning journey"
-            : "Your learning journey starts here"}
-        </p>
-      </div>
+            : "Your learning journey starts here"
+        }
+      />
 
       {/* Two rows, so Recent Activity and Upcoming deadlines line up and share a height. */}
       <div className="grid grid-cols-1 gap-x-6 gap-y-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">

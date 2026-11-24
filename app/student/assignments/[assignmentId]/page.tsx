@@ -16,6 +16,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useCompanionCheer } from "@/components/mascot/Companion";
 import { FormField } from "@/components/ui/field";
 import { FileDropzone, type UploadedFile } from "@/components/ui/file-upload";
 import { Label } from "@/components/ui/input";
@@ -106,6 +107,8 @@ function SubmissionForm({
     });
   }
 
+  const cheer = useCompanionCheer();
+
   const save = useMutation({
     mutationFn: () => {
       const next = draft();
@@ -130,6 +133,7 @@ function SubmissionForm({
     },
     onSuccess: async () => {
       setFiles([]);
+      cheer("Submitted. That one is off your list.");
       await queryClient.invalidateQueries({
         queryKey: studentAssignmentKeys.submission(assignment.id),
       });

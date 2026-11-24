@@ -9,11 +9,11 @@ import {
   Lock,
   Paperclip,
   Video,
-  WifiOff,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorriedLeafy } from "@/components/mascot/Companion";
 import {
   countTopicResources,
   isUnlocked,
@@ -192,7 +192,7 @@ export default function CurriculumPage() {
   } else if (curriculum.error) {
     body = (
       <StatePanel
-        icon={WifiOff}
+        icon={WorriedLeafy}
         title="Couldn't load your curriculum"
         message="Check your internet connection and try again."
       >

@@ -8,11 +8,11 @@ import {
   ChevronLeft,
   CirclePlay,
   Lock,
-  WifiOff,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WorriedLeafy } from "@/components/mascot/Companion";
 import { FileChip } from "@/components/lessons/FileChip";
 import { LessonVideo } from "@/components/lessons/LessonVideo";
 import { Notice } from "@/components/lessons/Notice";
@@ -425,7 +425,7 @@ export default function ModulePage() {
   if (curriculum.error) {
     return (
       <Notice
-        icon={WifiOff}
+        icon={WorriedLeafy}
         title="Couldn't load this module"
         message="Check your internet connection and try again."
       >
