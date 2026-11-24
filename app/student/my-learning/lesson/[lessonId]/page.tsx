@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCompanion } from "@/components/mascot/Companion";
+import { useCompanionCelebrate } from "@/components/mascot/Companion";
 import { LessonVideo } from "@/components/lessons/LessonVideo";
 import { Notice } from "@/components/lessons/Notice";
 import { ResourceRow } from "@/components/lessons/ResourceRow";
@@ -194,7 +194,7 @@ function CompleteButton({
   completed: boolean;
   next: CurriculumLesson | null;
 }) {
-  const { celebrateLesson, stage } = useCompanion();
+  const celebrate = useCompanionCelebrate();
   return (
     <div className="flex shrink-0 flex-col items-end gap-1">
       {completed && next ? (
@@ -215,12 +215,7 @@ function CompleteButton({
           onClick={() =>
             mutation.mutate(!completed, {
               onSuccess: () => {
-                if (!completed) {
-                  celebrateLesson({
-                    nextHref: next ? lessonHref(next.id) : undefined,
-                    stageBefore: stage,
-                  });
-                }
+                if (!completed) celebrate(next ? lessonHref(next.id) : undefined);
               },
             })
           }

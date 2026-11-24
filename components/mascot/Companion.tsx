@@ -139,6 +139,20 @@ export function useCompanionCheer() {
   return useCallback((message: string) => cheer?.(message), [cheer]);
 }
 
+/*
+ * `celebrateLesson` for code that also renders outside the student area, where
+ * it does nothing. Records the stage at call time so growth can be compared after.
+ */
+export function useCompanionCelebrate() {
+  const context = useContext(CompanionContext);
+  const celebrateLesson = context?.celebrateLesson;
+  const stage = context?.stage ?? 0;
+  return useCallback(
+    (nextHref?: string) => celebrateLesson?.({ nextHref, stageBefore: stage }),
+    [celebrateLesson, stage],
+  );
+}
+
 const primaryAction =
   "inline-flex h-8 shrink-0 items-center rounded-lg bg-brand-primary px-3 text-xs font-medium text-white transition-colors hover:bg-brand-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus";
 
