@@ -248,6 +248,7 @@ export function toResourceFile(record: ResourceRecord): ResourceFile {
 export function toSubmission(record: AssignmentSubmissionRecord): AssignmentSubmission {
   return {
     id: record.id,
+    studentProfileId: record.studentProfile?.id,
     studentName: record.studentProfile?.user.name ?? "Unknown student",
     studentEmail: record.studentProfile?.user.email ?? "",
     submittedAt: record.submittedAt ?? null,
