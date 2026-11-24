@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 describe("UpcomingEvents", () => {
-  it("shows the student's next live sessions, live first, and lets them join one that's about to start", async () => {
+  it("shows the student's next live sessions, live first, with Join only on the one that's live", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-11-24T17:50:00Z"));
     mockApi({
@@ -44,7 +44,8 @@ describe("UpcomingEvents", () => {
     expect(screen.getByText("Now")).toBeInTheDocument();
     // Base UI gives the links a button role.
     const joins = screen.getAllByRole("button", { name: "Join" }).map((join) => join.closest("a")?.getAttribute("href"));
-    expect(joins).toEqual(["/student/live/now", "/student/live/soon"]);
+    // One starting in 10 minutes waits for the host to start it.
+    expect(joins).toEqual(["/student/live/now"]);
     expect(screen.getByText("27 Nov")).toBeInTheDocument();
     expect(screen.getByText("6:00 PM")).toBeInTheDocument();
   });

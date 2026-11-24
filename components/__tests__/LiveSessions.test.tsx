@@ -32,6 +32,7 @@ const participants = envelope({
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
@@ -183,6 +184,8 @@ describe("Editing a live session", () => {
 describe("JoinHub", () => {
   it("lets people join a live session and asks the API for the week", async () => {
     const now = Date.parse("2026-11-23T18:30:00Z");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
     const api = mockApi({
       "GET /live-sessions": envelope({ items: [session({ status: "LIVE" })], nextCursor: null }),
     });
@@ -195,5 +198,27 @@ describe("JoinHub", () => {
     const [url] = api.urls("GET /live-sessions");
     expect(url.searchParams.get("from")).toBe("2026-11-22T00:00:00Z");
     expect(url.searchParams.get("to")).toBe("2026-12-01T00:00:00Z");
+  });
+
+  it("opens Join 15 minutes early for staff, but not for students", async () => {
+    const now = Date.parse("2026-11-23T17:50:00Z");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
+    const routes = {
+      "GET /live-sessions": envelope({ items: [session({})], nextCursor: null }),
+    };
+
+    mockApi(routes);
+    const staff = renderWithClient(<JoinHub serverNow={now} deviceCheckPath="/mentor/live" />);
+    const card = (await screen.findByRole("heading", { name: "UI/UX live class" })).closest("li")!;
+    expect(within(card).getByText("In 10 Minutes")).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: "Join live session" })).toHaveAttribute("href", "/mentor/live/s-1");
+    staff.unmount();
+
+    mockApi(routes);
+    renderWithClient(<JoinHub serverNow={now} deviceCheckPath="/student/live" early={false} />);
+    const studentCard = (await screen.findByRole("heading", { name: "UI/UX live class" })).closest("li")!;
+    expect(within(studentCard).queryByRole("link", { name: "Join live session" })).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 });

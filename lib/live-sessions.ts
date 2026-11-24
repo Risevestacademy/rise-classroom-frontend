@@ -39,6 +39,9 @@ export type ApiLiveSession = {
   timezone?: string | null;
   track?: { id: string; name: string } | null;
   cohort?: { id: string; name: string } | null;
+  /** Mentorship sessions: the mentor, and for a pair, the mentorship. */
+  mentorId?: string | null;
+  mentorshipId?: string | null;
   /** Set on the sessions of a repeating series. */
   seriesId?: string | null;
 };
@@ -125,7 +128,10 @@ export type LiveSession = {
   endDate: string;
   trackId: string | null;
   trackName: string;
+  hostId: string;
   hostName: string;
+  mentorId: string | null;
+  mentorshipId: string | null;
   // PENDING-BACKEND: nothing links a live session to its recording yet.
   recordings: LessonRecording[];
 };
@@ -212,7 +218,10 @@ export function toLiveSession(
     trackId: session.track?.id ?? null,
     trackName:
       session.track?.name ?? session.cohort?.name ?? typeNames[session.type],
+    hostId: session.hostId,
     hostName: personName(session.host),
+    mentorId: session.mentorId ?? null,
+    mentorshipId: session.mentorshipId ?? null,
     recordings: [],
   };
 }
@@ -283,8 +292,10 @@ export const entrySession = (entry: SessionEntry) =>
     hostId: entry.session.host?.id ?? "",
   });
 
+type ListFilter = { from?: string; to?: string; mentorId?: string };
+
 /** Every session the signed-in user can see between two instants (all of them without a range). */
-async function listLiveSessions(range: { from?: string; to?: string }) {
+async function listLiveSessions(range: ListFilter) {
   const items: ApiLiveSession[] = [];
   let cursor: string | undefined;
   // A few pages is plenty for a week, or the whole list until it's paginated on screen.
@@ -305,14 +316,13 @@ async function listLiveSessions(range: { from?: string; to?: string }) {
 
 export const liveSessionKeys = {
   all: ["live-sessions"] as const,
-  list: (range: { from?: string; to?: string }) =>
-    ["live-sessions", "list", range] as const,
+  list: (range: ListFilter) => ["live-sessions", "list", range] as const,
   participants: (id: string) => ["live-sessions", id, "participants"] as const,
   chat: (id: string) => ["live-sessions", id, "chat"] as const,
 };
 
 export const liveSessionQueries = {
-  list: (range: { from?: string; to?: string } = {}) =>
+  list: (range: ListFilter = {}) =>
     queryOptions({
       queryKey: liveSessionKeys.list(range),
       queryFn: () => listLiveSessions(range),
@@ -466,10 +476,14 @@ export const START_WINDOW_MS = 15 * 60_000;
 
 /**
  * Where a session stands right now, for its badge and whether Join works.
- * Join opens shortly before the start too, so the host can start it; anyone
- * else who's early is told it hasn't started yet.
+ * Staff (`early`) can go in from 15 minutes before the start, so the host can
+ * start it; students can join once it's live.
  */
-export function sessionStanding(session: LiveSession, now: number) {
+export function sessionStanding(
+  session: LiveSession,
+  now: number,
+  { early = true }: { early?: boolean } = {},
+) {
   if (session.status === "live")
     return { joinable: true, label: "Live now", status: "success" } as const;
   if (session.status !== "upcoming")
@@ -478,7 +492,7 @@ export function sessionStanding(session: LiveSession, now: number) {
   // Never started, and its time is over.
   if (end.getTime() <= now)
     return { joinable: false, label: "Ended", status: "neutral" } as const;
-  const joinable = start.getTime() - now <= START_WINDOW_MS;
+  const joinable = early && start.getTime() - now <= START_WINDOW_MS;
   const minutes = Math.ceil((start.getTime() - now) / 60_000);
   if (minutes <= 0)
     return { joinable, label: "Starting soon", status: "info" } as const;
@@ -512,6 +526,29 @@ export function upcomingRange(now: number, days = 31) {
   const day = Math.floor(now / DAY_MS) * DAY_MS;
   const iso = (ms: number) => new Date(ms).toISOString().replace(".000Z", "Z");
   return { from: iso(day - DAY_MS), to: iso(day + (days + 1) * DAY_MS) };
+}
+
+/** A student's sessions with their mentor: their own pair sessions and the mentor's groups. */
+export const isMentorshipWith = (
+  session: LiveSession,
+  mentor: { id: string; mentorshipId: string },
+) =>
+  (session.type === "MENTORSHIP_PAIR" &&
+    session.mentorshipId === mentor.mentorshipId) ||
+  (session.type === "MENTORSHIP_GROUP" && session.mentorId === mentor.id);
+
+/** Sessions someone hosts or mentors in. */
+export const isRunBy = (session: LiveSession, userId: string) =>
+  session.hostId === userId || session.mentorId === userId;
+
+/** A session as a row of the "Upcoming sessions" cards. */
+export function toUpcomingSession(session: LiveSession, now: number) {
+  return {
+    id: session.id,
+    date: sessionDate(session.date),
+    time: sessionTime(session),
+    until: session.status === "live" ? "Live now" : daysUntil(session, now),
+  };
 }
 
 /** Sessions still to come or running now: live ones first, then soonest first. */

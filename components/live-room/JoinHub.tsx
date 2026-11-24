@@ -44,10 +44,13 @@ function weekRange(week: Date[]) {
 export function JoinHub({
   serverNow,
   deviceCheckPath,
+  early = true,
 }: {
   serverNow: number;
   /** Joining goes to `${deviceCheckPath}/${id}`. */
   deviceCheckPath: string;
+  /** Join opens 15 minutes before the start, for staff who may host. */
+  early?: boolean;
 }) {
   const router = useRouter();
   const today = zonedParts(new Date(serverNow).toISOString()).date;
@@ -211,7 +214,7 @@ export function JoinHub({
           ) : (
             <ul className="flex flex-col gap-2">
               {onDay.map((session) => {
-                const state = standing(session, now);
+                const state = standing(session, now, { early });
                 return (
                   <li
                     key={session.id}

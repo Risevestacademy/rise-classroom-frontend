@@ -24,12 +24,10 @@ import {
 } from "@/components/student-profile/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  daysUntil,
   liveSessionQueries,
-  sessionDate,
   sessionStanding,
-  sessionTime,
   stillAhead,
+  toUpcomingSession,
   upcomingRange,
 } from "@/lib/live-sessions";
 import { myMenteesQuery, toMyAssignedStudent } from "@/lib/mentors";
@@ -69,10 +67,7 @@ export default function MentorDashboardPage() {
   const sessions: UpcomingSession[] = ahead
     .slice(0, VISIBLE_SESSIONS)
     .map((live) => ({
-      id: live.id,
-      date: sessionDate(live.date),
-      time: sessionTime(live),
-      until: live.status === "live" ? "Live now" : daysUntil(live, now ?? 0),
+      ...toUpcomingSession(live, now ?? 0),
       joinable: now !== null && sessionStanding(live, now).joinable,
       href: `/mentor/live/${live.id}`,
     }));

@@ -90,7 +90,8 @@ export function UpcomingEvents() {
         <ul className="flex flex-col gap-3">
           {events.map((session) => {
             const live = session.status === "live";
-            const { joinable } = sessionStanding(session, now);
+            // Students join once the host has started it.
+            const { joinable } = sessionStanding(session, now, { early: false });
             const { day, time } = when(session);
             return (
               <li

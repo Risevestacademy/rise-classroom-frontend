@@ -66,14 +66,21 @@ import {
   type Mentor,
   type MentorStatus,
 } from "@/lib/mentors";
+import {
+  isRunBy,
+  liveSessionQueries,
+  stillAhead,
+  toUpcomingSession,
+  upcomingRange,
+} from "@/lib/live-sessions";
 import { useOverallProgress } from "@/lib/student-profile";
+import { useCurrentMinute } from "@/lib/use-current-minute";
 import { useTabParam } from "@/lib/use-tab-param";
 import { cn } from "@/lib/utils";
 import {
   instructorRecentActivity,
   mentorActivity,
   mentorActivityFilters,
-  upcomingSessions,
   type AssignedStudent,
 } from "./profile-data";
 
@@ -300,6 +307,27 @@ function menteesMessage(query: ReturnType<typeof useMentees>) {
   return "No students assigned yet.";
 }
 
+/** Sessions coming up that someone hosts or mentors in. */
+function useUpcomingSessions(userId: string) {
+  const now = useCurrentMinute();
+  const [range] = React.useState(() => upcomingRange(Date.now()));
+  const list = useQuery(liveSessionQueries.list(range));
+  return {
+    loading: list.isPending || now === null,
+    failed: list.isError,
+    items:
+      now === null
+        ? []
+        : stillAhead(list.data ?? [], now)
+            .filter((session) => isRunBy(session, userId))
+            .slice(0, VISIBLE_SESSIONS)
+            .map((session) => toUpcomingSession(session, now)),
+  };
+}
+
+/** Sessions listed on the Overview before "View all". */
+const VISIBLE_SESSIONS = 3;
+
 function OverviewTab({
   mentor,
   onTabChange,
@@ -310,6 +338,7 @@ function OverviewTab({
   const router = useRouter();
   const mentees = useMentees(mentor);
   const isMentor = mentor.user.role === "MENTOR";
+  const sessions = useUpcomingSessions(mentor.user.id);
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,657fr)_minmax(0,463fr)]">
@@ -330,7 +359,13 @@ function OverviewTab({
       </div>
       <div className="flex min-w-0 flex-col gap-4">
         <UpcomingSessionsCard
-          sessions={upcomingSessions}
+          sessions={sessions.items}
+          loading={sessions.loading}
+          emptyMessage={
+            sessions.failed
+              ? "Couldn't load their sessions."
+              : "No upcoming sessions."
+          }
           onViewAll={() => router.push("/admin/calendar")}
         />
         <Card className="gap-4">
