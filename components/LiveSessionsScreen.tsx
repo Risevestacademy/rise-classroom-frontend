@@ -19,7 +19,9 @@ import {
   sessionDate,
   sessionStanding,
   sessionTime,
+  type AttendanceRecord,
   type LiveSession,
+  type SessionParticipant,
 } from "@/lib/live-sessions";
 import { useCurrentMinute } from "@/lib/use-current-minute";
 import { cn } from "@/lib/utils";
@@ -265,17 +267,26 @@ function SessionPreview({
   const [showAll, setShowAll] = React.useState(false);
   const now = useCurrentMinute();
   const completed = session.status === "completed";
-  const guests =
-    useQuery(liveSessionQueries.participants(session.id)).data ?? [];
+  // A finished session shows who came; until then, everyone invited.
+  const attendance = useQuery({
+    ...liveSessionQueries.attendance(session.id),
+    enabled: completed,
+  });
+  const showsAttendance = completed && attendance.isSuccess;
+  const participants = useQuery({
+    ...liveSessionQueries.participants(session.id),
+    enabled: !completed || attendance.isError,
+  });
+  const people: Person[] = showsAttendance
+    ? attendance.data
+    : (participants.data ?? []);
+  const present = showsAttendance
+    ? attendance.data.filter((record) => record.status === "PRESENT")
+    : people;
 
   return (
     <div className="flex flex-col gap-3 p-6">
-      {completed && (
-        <LessonVideo
-          recordings={session.recordings}
-          emptyMessage="No recording for this session yet"
-        />
-      )}
+      {completed && <SessionRecordingPlayer session={session} />}
 
       <div className="flex items-start justify-between gap-3 py-2.5">
         <h2 className="text-xl font-semibold text-text-primary">
@@ -312,13 +323,18 @@ function SessionPreview({
 
       <section className="mt-3 flex flex-col gap-3">
         <h3 className="text-lg/6 font-semibold text-text-primary">
-          {/* PENDING-BACKEND: who actually attended isn't recorded yet, so a
-            past session lists everyone who was invited. */}
-          {completed ? "Attendance" : "Participants"} ({guests.length})
+          {completed ? "Attendance" : "Participants"} ({present.length})
         </h3>
         <div className="flex items-center justify-between gap-3">
-          <Guests sessionId={session.id} size={40} />
-          {guests.length > VISIBLE_GUESTS && (
+          {showsAttendance && people.length === 0 ? (
+            <p className="font-work text-sm text-text-secondary">
+              No one joined this session.
+            </p>
+          ) : (
+            <Avatars people={present} size={40} />
+          )}
+          {(people.length > VISIBLE_GUESTS ||
+            people.length > present.length) && (
             <Button
               variant="tertiary"
               aria-expanded={showAll}
@@ -330,7 +346,7 @@ function SessionPreview({
         </div>
         {showAll && (
           <ul className="flex flex-col gap-3 rounded-xl bg-surface-default p-3 shadow-[0_1px_4px_0_rgb(0_0_0/0.25)]">
-            {guests.map((guest) => (
+            {people.map((guest) => (
               <li
                 key={guest.userId}
                 className="flex items-center gap-3 border-b border-border-default p-3 last:border-b-0"
@@ -345,10 +361,23 @@ function SessionPreview({
                   <p className="truncate text-base font-medium text-text-primary">
                     {personName({ id: guest.userId, ...guest })}
                   </p>
-                  {guest.email && (
-                    <p className="truncate text-sm text-text-secondary">
-                      {guest.email}
+                  {"status" in guest ? (
+                    <p
+                      className={cn(
+                        "truncate text-sm",
+                        guest.status === "PRESENT"
+                          ? "text-text-success"
+                          : "text-text-secondary",
+                      )}
+                    >
+                      {attendanceNote(guest)}
                     </p>
+                  ) : (
+                    guest.email && (
+                      <p className="truncate text-sm text-text-secondary">
+                        {guest.email}
+                      </p>
+                    )
                   )}
                 </div>
               </li>
@@ -373,9 +402,66 @@ function SessionPreview({
   );
 }
 
+type Person = (SessionParticipant | AttendanceRecord) & { email?: string };
+
+/** A finished session's recording, once the backend has processed it. */
+function SessionRecordingPlayer({ session }: { session: LiveSession }) {
+  const recording = useQuery(liveSessionQueries.recording(session.id));
+  const ready = recording.data?.status === "READY";
+  const url = useQuery({
+    ...liveSessionQueries.recordingUrl(session.id),
+    enabled: ready,
+  });
+  const recordings =
+    ready && url.data
+      ? [
+          {
+            id: recording.data!.id,
+            lessonId: session.id,
+            title: session.title,
+            url: url.data,
+            durationSec: recording.data!.durationSeconds,
+          },
+        ]
+      : [];
+  const status = recording.data?.status;
+
+  return (
+    <LessonVideo
+      recordings={recordings}
+      emptyMessage={
+        recording.isPending || (ready && url.isPending)
+          ? "Loading the recording…"
+          : status === "RECORDING" || status === "PROCESSING"
+            ? "The recording is still processing. Check back soon."
+            : status === "FAILED" || url.isError
+              ? "We couldn't load the recording for this session"
+              : "No recording for this session"
+      }
+    />
+  );
+}
+
+/** "Present · 45 min" or "Absent". */
+function attendanceNote(record: AttendanceRecord) {
+  if (record.status === "ABSENT") return "Absent";
+  return `Present · ${Math.max(1, Math.round(record.connectedSeconds / 60))} min`;
+}
+
+/** The invited people's faces, for a session card. */
 function Guests({ sessionId, size }: { sessionId: string; size: 24 | 40 }) {
   const guests =
     useQuery(liveSessionQueries.participants(sessionId)).data ?? [];
+  return <Avatars people={guests} size={size} />;
+}
+
+function Avatars({
+  people: guests,
+  size,
+}: {
+  people: Pick<Person, "userId" | "name" | "image">[];
+  size: 24 | 40;
+}) {
   const shown = guests.slice(0, VISIBLE_GUESTS);
   const rest = guests.length - shown.length;
 

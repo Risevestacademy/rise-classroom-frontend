@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
-import { api, type Envelope } from "@/lib/api";
+import { api, ApiError, type Envelope } from "@/lib/api";
 import {
   fieldTime,
   fromDateKey,
@@ -8,7 +8,6 @@ import {
   weekdayNames,
 } from "@/lib/calendar";
 import type { JoinBlock } from "@/lib/live-room";
-import type { LessonRecording } from "@/lib/student-lessons";
 
 type Person = {
   id: string;
@@ -132,8 +131,6 @@ export type LiveSession = {
   hostName: string;
   mentorId: string | null;
   mentorshipId: string | null;
-  // PENDING-BACKEND: nothing links a live session to its recording yet.
-  recordings: LessonRecording[];
 };
 
 /** Rise runs on Lagos time; a session can name another zone. */
@@ -188,7 +185,10 @@ export const OVERRUN_MS = 60 * 60_000;
  * shows as completed.
  * PENDING-BACKEND: drop this once sessions end on their own.
  */
-function shownStatus(session: ApiLiveSession, now: number): LiveSession["status"] {
+function shownStatus(
+  session: ApiLiveSession,
+  now: number,
+): LiveSession["status"] {
   const end = Date.parse(session.scheduledEndAt);
   if (session.status === "SCHEDULED" && end <= now) return "completed";
   if (session.status === "LIVE" && end + OVERRUN_MS <= now) return "completed";
@@ -222,7 +222,6 @@ export function toLiveSession(
     hostName: personName(session.host),
     mentorId: session.mentorId ?? null,
     mentorshipId: session.mentorshipId ?? null,
-    recordings: [],
   };
 }
 
@@ -268,6 +267,9 @@ export function joinBlockFor(entry: SessionEntry): JoinBlock | undefined {
 /** What the backend lets someone do once they're in the room. */
 export type RoomAccess = {
   userId: string;
+  sessionRole: SessionEntry["participant"]["sessionRole"];
+  /** e.g. "INSTRUCTOR", for the label beside their name. */
+  platformRole: string;
   canShareScreen: boolean;
   canModerate: boolean;
   canReadChat: boolean;
@@ -277,6 +279,8 @@ export type RoomAccess = {
 
 export const roomAccess = (entry: SessionEntry): RoomAccess => ({
   userId: entry.participant.userId,
+  sessionRole: entry.participant.sessionRole,
+  platformRole: entry.participant.platformRole,
   canShareScreen: entry.permissions.canShareScreen,
   canModerate: entry.permissions.canModerate,
   canReadChat: entry.chat.canRead,
@@ -314,10 +318,45 @@ async function listLiveSessions(range: ListFilter) {
     .filter((session) => session.status !== "cancelled");
 }
 
+/** Who came to a finished session, from `GET /live-sessions/:id/attendance`. */
+export type AttendanceRecord = {
+  userId: string;
+  name: string;
+  displayName?: string | null;
+  image?: string | null;
+  /** Present once connected for 5 minutes and 60% of the session. */
+  status: "PRESENT" | "ABSENT";
+  connectedSeconds: number;
+};
+
+type ApiAttendance = {
+  attendances: {
+    user: {
+      id: string;
+      name: string;
+      displayName?: string | null;
+      image?: string | null;
+    };
+    status: AttendanceRecord["status"];
+    totalConnectedSeconds: number;
+  }[];
+};
+
+/** A session's recording, from `GET /live-sessions/:id/recording`. */
+export type SessionRecording = {
+  id: string;
+  status: "NOT_STARTED" | "RECORDING" | "PROCESSING" | "READY" | "FAILED";
+  durationSeconds: number | null;
+};
+
 export const liveSessionKeys = {
   all: ["live-sessions"] as const,
   list: (range: ListFilter) => ["live-sessions", "list", range] as const,
   participants: (id: string) => ["live-sessions", id, "participants"] as const,
+  attendance: (id: string) => ["live-sessions", id, "attendance"] as const,
+  recording: (id: string) => ["live-sessions", id, "recording"] as const,
+  recordingUrl: (id: string) =>
+    ["live-sessions", id, "recording", "url"] as const,
   chat: (id: string) => ["live-sessions", id, "chat"] as const,
 };
 
@@ -326,6 +365,66 @@ export const liveSessionQueries = {
     queryOptions({
       queryKey: liveSessionKeys.list(range),
       queryFn: () => listLiveSessions(range),
+    }),
+
+  /** `null` when the session wasn't recorded. */
+  recording: (id: string) =>
+    queryOptions({
+      queryKey: liveSessionKeys.recording(id),
+      queryFn: async () => {
+        try {
+          return (
+            await api.get<Envelope<SessionRecording>>(
+              `/live-sessions/${id}/recording`,
+            )
+          ).data;
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 404) return null;
+          throw error;
+        }
+      },
+      retry: false,
+    }),
+
+  /** A link to watch it, valid for an hour. */
+  recordingUrl: (id: string) =>
+    queryOptions({
+      queryKey: liveSessionKeys.recordingUrl(id),
+      queryFn: async () =>
+        (
+          await api.get<Envelope<{ signedUrl: string }>>(
+            `/live-sessions/${id}/recording/url`,
+          )
+        ).data.signedUrl,
+      // A fresh link would restart the video, so keep this one while watching.
+      staleTime: 50 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: false,
+    }),
+
+  /** Present first, then the rest. */
+  attendance: (id: string) =>
+    queryOptions({
+      queryKey: liveSessionKeys.attendance(id),
+      queryFn: async (): Promise<AttendanceRecord[]> =>
+        (
+          await api.get<Envelope<ApiAttendance>>(
+            `/live-sessions/${id}/attendance`,
+          )
+        ).data.attendances
+          .map((record) => ({
+            userId: record.user.id,
+            name: record.user.name,
+            displayName: record.user.displayName,
+            image: record.user.image,
+            status: record.status,
+            connectedSeconds: record.totalConnectedSeconds,
+          }))
+          .sort(
+            (a, b) =>
+              Number(b.status === "PRESENT") - Number(a.status === "PRESENT"),
+          ),
+      retry: false,
     }),
 
   participants: (id: string) =>

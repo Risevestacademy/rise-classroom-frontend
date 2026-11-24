@@ -66,12 +66,15 @@ export function SessionSettingsDialog({
   isHost,
   settings,
   onChange,
+  recording,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isHost: boolean;
   settings: Settings;
   onChange: Change;
+  /** The room's recording, for hosts in a live session. */
+  recording?: Recording;
 }) {
   const visible = sections.filter((section) => isHost || !section.hostOnly);
   const [chosen, setChosen] = React.useState<SectionId>(visible[0].id);
@@ -133,7 +136,7 @@ export function SessionSettingsDialog({
               {current.id === "permissions" && <PermissionRows settings={settings} onChange={onChange} />}
               {current.id === "access" && <AccessRows settings={settings} onChange={onChange} />}
               {current.id === "media" && <MediaRows isHost={isHost} settings={settings} onChange={onChange} />}
-              {current.id === "recording" && <RecordingRows settings={settings} onChange={onChange} />}
+              {current.id === "recording" && <RecordingRows settings={settings} onChange={onChange} recording={recording} />}
             </div>
           </section>
         </DialogPrimitive.Popup>
@@ -197,9 +200,34 @@ function MediaRows({ isHost, settings, onChange }: { isHost: boolean; settings: 
   );
 }
 
-function RecordingRows({ settings, onChange }: { settings: Settings; onChange: Change }) {
+type Recording = { active: boolean; starting: boolean; error: string | null; start: () => void };
+
+function RecordingRows({ settings, onChange, recording }: { settings: Settings; onChange: Change; recording?: Recording }) {
   return (
     <>
+      {recording && (
+        <Row
+          title="Record this session"
+          description={
+            recording.error ??
+            (recording.active
+              ? "Recording now. It stops when the session ends."
+              : "Start recording now. It runs until the session ends.")
+          }
+          id="record-now"
+        >
+          <button
+            type="button"
+            aria-describedby="record-now"
+            disabled={recording.active || recording.starting}
+            onClick={recording.start}
+            className="flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-surface-subtle px-3 text-sm font-medium text-text-primary hover:bg-neutral-200 disabled:cursor-default disabled:opacity-60"
+          >
+            <RecordCircle className="size-4 text-text-error" />
+            {recording.active ? "Recording" : recording.starting ? "Starting…" : "Start"}
+          </button>
+        </Row>
+      )}
       <ToggleRow title="Auto-record session" description="Automatically start recording when the session begins" checked={settings.autoRecord} onChange={(autoRecord) => onChange({ autoRecord })} />
       <SelectRow
         title="Recording visibility"

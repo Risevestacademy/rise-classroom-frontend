@@ -1,12 +1,25 @@
-import { api } from "@/lib/api";
+import { api, ApiError, type Envelope } from "@/lib/api";
 
 /** What the room needs to connect: the LiveKit server and a signed join token. */
 export type JoinCredentials = { url: string; token: string };
 
+/** The chip shown beside someone's name in the participants list. */
+const roleLabels: Record<string, string> = {
+  PLATFORM_ADMIN: "Admin",
+  SUPERADMIN: "Admin",
+  INSTRUCTOR: "Instructor",
+  MENTOR: "Mentor",
+};
+
+export const roleLabel = (platformRole: string) => roleLabels[platformRole] ?? "";
+
 /** Why someone can't join yet, matching `canJoin.reason` in the proposed API. */
 export type JoinBlock = "too_early" | "not_eligible" | "ended" | "cancelled";
 
-/** Participant attributes the join token and the room share. */
+/**
+ * Participant attributes the room shares. The backend's token doesn't set
+ * any, so each person sets their own role and label once connected.
+ */
 export const ROLE_ATTRIBUTE = "role";
 /** The person's platform role, shown as a chip in the participants list, e.g. "Admin". */
 export const LABEL_ATTRIBUTE = "label";
@@ -55,8 +68,8 @@ export type SessionSettings = {
   reactions: boolean;
   handRaising: boolean;
   // PENDING-BACKEND: who may join is decided when the backend signs a join
-  // token, and recording runs on the server, so these four sections only
-  // remember the host's choice for now.
+  // token, and who may watch a recording on the server, so these only
+  // remember the host's choice for now. Auto-record does start recording.
   locked: boolean;
   invitedOnly: boolean;
   waitingRoom: boolean;
@@ -98,17 +111,19 @@ export function parseSessionSettings(value?: string): SessionSettings {
 export type Feedback = (typeof feedbackOptions)[number]["value"];
 export const feedbackFor = (value?: string) => feedbackOptions.find((option) => option.value === value);
 
-// PENDING-BACKEND: `GET /live-sessions/:id/entry` says whether someone may
-// join but doesn't give them a LiveKit token yet, so the dev-only token route
-// signs one with the permissions the entry details grant.
+/**
+ * A two-hour join token from the backend, with the powers the session gives
+ * the signed-in person. Only works once the session is live.
+ */
 export async function fetchJoinCredentials(sessionId: string): Promise<JoinCredentials> {
-  const params = new URLSearchParams({ session: sessionId, tab: crypto.randomUUID().slice(0, 8) });
-  const response = await fetch(`/api/live-room/token?${params}`, { cache: "no-store" });
-  if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    throw new Error(body?.message ?? "Couldn't get a token to join this session.");
+  try {
+    const { data } = await api.post<Envelope<JoinCredentials>>(`/live-sessions/${sessionId}/token`, {}, { cache: "no-store" });
+    return { url: data.url, token: data.token };
+  } catch (error) {
+    throw new Error(
+      error instanceof ApiError && error.message ? error.message : "Couldn't get a token to join this session.",
+    );
   }
-  return response.json();
 }
 
 // PENDING-BACKEND: host controls. A browser can't mute or remove someone else
@@ -129,3 +144,7 @@ export const setScreenShareAllowed = (sessionId: string, allowed: boolean) =>
 
 export const endSessionForAll = (sessionId: string) =>
   api.post(`/live-sessions/${sessionId}/end`);
+
+/** Records the room on the server; it runs until the session ends. Hosts and moderators only. */
+export const startRecording = (sessionId: string) =>
+  api.post(`/live-sessions/${sessionId}/recording/start`, {});

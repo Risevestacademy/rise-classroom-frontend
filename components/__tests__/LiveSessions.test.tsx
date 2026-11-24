@@ -4,7 +4,7 @@ import { screen, within } from "@testing-library/react";
 import { LiveSessionsScreen } from "@/components/LiveSessionsScreen";
 import { JoinHub } from "@/components/live-room/JoinHub";
 import { toLiveSession, type ApiLiveSession } from "@/lib/live-sessions";
-import { envelope, mockApi, renderWithClient } from "@/test/utils";
+import { envelope, mockApi, renderWithClient, reply } from "@/test/utils";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
@@ -100,6 +100,57 @@ describe("LiveSessionsScreen", () => {
     renderWithClient(<LiveSessionsScreen topNav={null} />);
 
     expect(await screen.findByText(/No live sessions yet/)).toBeInTheDocument();
+  });
+});
+
+describe("A completed session", () => {
+  const past = session({
+    id: "past",
+    title: "Old class",
+    status: "ENDED",
+    scheduledStartAt: "2026-11-01T18:00:00Z",
+    scheduledEndAt: "2026-11-01T19:00:00Z",
+  });
+  const attendee = (id: string, name: string, status: "PRESENT" | "ABSENT", seconds: number) => ({
+    user: { id, name, displayName: null, image: null },
+    status,
+    totalConnectedSeconds: seconds,
+  });
+
+  it("shows who attended and plays the recording", async () => {
+    mockApi({
+      "GET /live-sessions": envelope({ items: [past], nextCursor: null }),
+      "GET /live-sessions/past/participants": participants,
+      "GET /live-sessions/past/attendance": envelope({
+        attendances: [attendee("u-2", "Tola Ade", "ABSENT", 60), attendee("h-1", "Ada Obi", "PRESENT", 2700)],
+      }),
+      "GET /live-sessions/past/recording": envelope({ id: "r-1", status: "READY", durationSeconds: 3600 }),
+      "GET /live-sessions/past/recording/url": envelope({ signedUrl: "https://files.example.com/rec/past.mp4?sig=1" }),
+    });
+    const { user, container } = renderWithClient(<LiveSessionsScreen topNav={null} />);
+
+    await user.click(await screen.findByRole("button", { name: "Old class" }));
+    expect(await screen.findByRole("heading", { name: "Attendance (1)" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "See full list" }));
+    expect(screen.getByText("Present · 45 min")).toBeInTheDocument();
+    expect(screen.getByText("Absent")).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(container.querySelector("video")?.getAttribute("src")).toContain("https://files.example.com/rec/past.mp4"),
+    );
+  });
+
+  it("says when the recording is still processing, and falls back to the invite list without attendance", async () => {
+    mockApi({
+      "GET /live-sessions": envelope({ items: [past], nextCursor: null }),
+      "GET /live-sessions/past/participants": participants,
+      "GET /live-sessions/past/attendance": reply(403, { success: false, message: "Forbidden" }),
+      "GET /live-sessions/past/recording": envelope({ id: "r-1", status: "PROCESSING", durationSeconds: null }),
+    });
+    const { user } = renderWithClient(<LiveSessionsScreen topNav={null} />);
+
+    await user.click(await screen.findByRole("button", { name: "Old class" }));
+    expect(await screen.findByText("The recording is still processing. Check back soon.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Attendance (2)" })).toBeInTheDocument();
   });
 });
 
