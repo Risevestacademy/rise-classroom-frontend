@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
-import { Calendar03, MoreHorizontal, Time04, Track } from "@/assets/icons";
+import { Calendar03, Cancel01, MoreHorizontal, Time04, Track } from "@/assets/icons";
 import { EditLiveSessionDialog } from "@/components/calendar/LiveSessionForm";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
 import { LessonVideo } from "@/components/lessons/LessonVideo";
@@ -50,6 +50,22 @@ function byWhen(a: LiveSession, b: LiveSession) {
   return a.status === "completed" ? -sooner : sooner;
 }
 
+/**
+ * The previewed session, kept a moment after it closes so the panel can slide
+ * away. `opening` is only set when it opens from nothing, not when switching.
+ */
+function usePresence(id: string | null) {
+  const [shown, setShown] = React.useState({ id, opening: false });
+  if (id !== null && id !== shown.id) setShown({ id, opening: shown.id === null });
+  React.useEffect(() => {
+    if (id !== null) return;
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const timer = setTimeout(() => setShown({ id: null, opening: false }), still ? 0 : 200);
+    return () => clearTimeout(timer);
+  }, [id]);
+  return { ...shown, leaving: id === null && shown.id !== null };
+}
+
 /** Avatars shown before the rest collapse into "+N". */
 const VISIBLE_GUESTS = 5;
 
@@ -89,7 +105,11 @@ export function LiveSessionsScreen({
     [list.data],
   );
   const sessions = all.filter((session) => inTab(session, tab));
-  const selected = all.find((session) => session.id === selectedId);
+  const panel = usePresence(selectedId);
+  const previewed = all.find((session) => session.id === panel.id);
+  const previewOpen = selectedId !== null && previewed !== undefined;
+  const toggle = (id: string) =>
+    setSelectedId((current) => (current === id ? null : id));
 
   return (
     // On desktop the page fits the viewport so the list and the preview
@@ -142,7 +162,12 @@ export function LiveSessionsScreen({
             </p>
           ) : null}
 
-          <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[repeat(3,220px)]">
+          <ul
+            className={cn(
+              "mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2",
+              previewOpen ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-4 xl:grid-cols-5",
+            )}
+          >
             {list.isPending &&
               Array.from({ length: 6 }, (_, index) => (
                 <li key={index}>
@@ -154,7 +179,7 @@ export function LiveSessionsScreen({
                 <SessionCard
                   session={session}
                   selected={session.id === selectedId}
-                  onSelect={() => setSelectedId(session.id)}
+                  onSelect={() => toggle(session.id)}
                   onEdit={onEdit}
                 />
               </li>
@@ -162,20 +187,41 @@ export function LiveSessionsScreen({
           </ul>
         </main>
 
-        <aside className="border-t border-border-default lg:w-[461px] lg:shrink-0 lg:overflow-y-auto lg:border-t-0 lg:border-l">
-          {selected ? (
-            <SessionPreview
-              key={selected.id}
-              session={selected}
-              joinPath={joinPath}
-              onEdit={onEdit}
-            />
-          ) : (
-            <p className="flex min-h-[240px] items-center justify-center p-6 font-work text-sm text-text-primary lg:h-full">
-              Select a session to preview
-            </p>
-          )}
-        </aside>
+        {previewed && (
+          // The frame widens from nothing so the cards slide over instead of jumping.
+          <div
+            className={cn(
+              "border-t border-border-default lg:w-[360px] lg:shrink-0 lg:overflow-hidden lg:border-t-0 lg:border-l",
+              panel.leaving
+                ? "motion-safe:lg:animate-[preview-panel-close_200ms_cubic-bezier(0.4,0,1,1)_forwards]"
+                : panel.opening &&
+                    "motion-safe:lg:animate-[preview-panel-open_280ms_cubic-bezier(0.2,0,0,1)]",
+            )}
+          >
+            <aside
+              aria-label="Session preview"
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                setSelectedId(null);
+              }}
+              className={cn(
+                "lg:h-full lg:w-[360px] lg:overflow-y-auto",
+                panel.leaving
+                  ? "motion-safe:animate-out motion-safe:fade-out-0 motion-safe:slide-out-to-right-6 motion-safe:duration-200 motion-safe:fill-mode-forwards"
+                  : "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-6 motion-safe:duration-300",
+              )}
+            >
+              <SessionPreview
+                key={previewed.id}
+                session={previewed}
+                joinPath={joinPath}
+                onEdit={onEdit}
+                onClose={() => setSelectedId(null)}
+              />
+            </aside>
+          </div>
+        )}
       </div>
 
       {canEdit && (
@@ -212,13 +258,13 @@ function SessionCard({
   return (
     <article
       className={cn(
-        "relative flex flex-col gap-8 rounded-xl border border-transparent p-3 shadow-[0_1px_3px_rgb(0_0_0/0.15)]",
+        "relative flex h-full min-w-0 flex-col gap-6 rounded-xl border border-transparent p-3 shadow-[0_1px_3px_rgb(0_0_0/0.15)] transition-[translate,box-shadow,background-color,border-color] duration-200 hover:shadow-[0_4px_12px_rgb(0_0_0/0.12)] motion-safe:hover:-translate-y-0.5",
         selected
           ? "border-border-focus bg-surface-subtle"
           : "bg-surface-default",
       )}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Badge
           variant="light"
           status={badge.status}
@@ -230,24 +276,24 @@ function SessionCard({
         <ActionsButton session={session} onEdit={onEdit} />
       </div>
 
-      <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-black">
+      <div className="flex min-w-0 flex-col gap-3">
+        <h2 className="line-clamp-2 text-sm font-medium break-words text-black">
           <button
             type="button"
             aria-pressed={selected}
             onClick={onSelect}
-            className="cursor-pointer text-left after:absolute after:inset-0 after:rounded-xl"
+            className="cursor-pointer text-left outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-2 focus-visible:after:ring-border-focus"
           >
             {session.title}
           </button>
         </h2>
-        <p className="flex items-center gap-2 font-work text-[13px]/[18px] text-text-secondary">
+        <p className="flex min-w-0 items-center gap-2 font-work text-[13px]/[18px] text-text-secondary">
           <Calendar03 className="size-4 shrink-0 text-icon-secondary" />
-          {sessionDate(session.date)}
+          <span className="truncate">{sessionDate(session.date)}</span>
         </p>
-        <p className="flex items-center gap-2 font-work text-[13px]/[18px] text-text-secondary">
+        <p className="flex min-w-0 items-center gap-2 font-work text-[13px]/[18px] text-text-secondary">
           <Track className="size-4 shrink-0 text-icon-secondary" />
-          {session.trackName}
+          <span className="truncate">{session.trackName}</span>
         </p>
         <Guests sessionId={session.id} size={24} />
       </div>
@@ -259,10 +305,12 @@ function SessionPreview({
   session,
   joinPath,
   onEdit,
+  onClose,
 }: {
   session: LiveSession;
   joinPath: string;
   onEdit?: (session: LiveSession) => void;
+  onClose: () => void;
 }) {
   const [showAll, setShowAll] = React.useState(false);
   const now = useCurrentMinute();
@@ -285,14 +333,24 @@ function SessionPreview({
     : people;
 
   return (
-    <div className="flex flex-col gap-3 p-6">
+    <div className="flex flex-col gap-3 p-5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300">
       {completed && <SessionRecordingPlayer session={session} />}
 
       <div className="flex items-start justify-between gap-3 py-2.5">
-        <h2 className="text-xl font-semibold text-text-primary">
+        <h2 className="min-w-0 text-xl font-semibold break-words text-text-primary">
           {session.title}
         </h2>
-        <ActionsButton session={session} onEdit={onEdit} />
+        <div className="flex shrink-0 items-center gap-2">
+          <ActionsButton session={session} onEdit={onEdit} />
+          <button
+            type="button"
+            aria-label="Close preview"
+            onClick={onClose}
+            className="flex size-6 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-subtle"
+          >
+            <Cancel01 className="size-5" />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 font-work text-sm font-medium text-text-secondary">

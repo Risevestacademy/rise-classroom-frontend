@@ -12,10 +12,10 @@ import {
   Mail,
   Phone,
   SquarePen,
+  UserRound,
   Users,
 } from "lucide-react";
 
-import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,8 +29,10 @@ import {
   PROFILE_PATH,
   SectionCard,
 } from "@/components/student-settings/ProfileParts";
+import { ProfilePhoto } from "@/components/student-settings/ChangePhotoDialog";
 import {
   currentMembership,
+  displayNameOf,
   fullNameOf,
   profileQueries,
   type MyProfile,
@@ -41,7 +43,7 @@ const links = [
     href: EDIT_PROFILE_PATH,
     icon: SquarePen,
     title: "Edit profile",
-    description: "Update your name and phone number",
+    description: "Update your display name and phone number",
   },
   {
     href: NOTIFICATION_SETTINGS_PATH,
@@ -151,8 +153,9 @@ function UpdatedToast() {
 
 function ProfileSummary({ profile }: { profile: MyProfile }) {
   const mentor = useQuery(profileQueries.mentor());
-  const name = fullNameOf(profile);
+  const name = displayNameOf(profile);
   const membership = currentMembership(profile);
+  const [photoSaved, setPhotoSaved] = React.useState(false);
 
   const mentorValue = mentor.isPending ? (
     <Skeleton className="mt-1 h-4 w-32" />
@@ -167,7 +170,7 @@ function ProfileSummary({ profile }: { profile: MyProfile }) {
   return (
     <>
       <SectionCard className="flex items-center gap-4 p-4 sm:p-5">
-        <PersonAvatar name={name} src={profile.image} colorKey={profile.id} size={56} />
+        <ProfilePhoto profile={profile} onSaved={() => setPhotoSaved(true)} />
         <div className="min-w-0">
           <p className="truncate text-lg font-semibold text-neutral-800">{name}</p>
           {membership && (
@@ -186,10 +189,20 @@ function ProfileSummary({ profile }: { profile: MyProfile }) {
       </SectionCard>
 
       <SectionCard className="flex flex-col gap-4 p-4 sm:p-5">
+        <DetailRow icon={UserRound} label="Full name" value={fullNameOf(profile)} />
         <DetailRow icon={Mail} label="Email" value={profile.email} />
         <DetailRow icon={Phone} label="Phone" value={profile.phoneNumber || "Not added"} />
         <DetailRow icon={Users} label="Mentor" value={mentorValue} />
       </SectionCard>
+
+      {photoSaved && (
+        <SuccessToast
+          tone="success"
+          title="Photo updated"
+          message="Your new profile photo has been saved."
+          onDismiss={() => setPhotoSaved(false)}
+        />
+      )}
     </>
   );
 }
@@ -247,7 +260,7 @@ function ProfileSummarySkeleton() {
         </div>
       </SectionCard>
       <SectionCard className="flex flex-col gap-4 p-4 sm:p-5">
-        {[0, 1, 2].map((row) => (
+        {[0, 1, 2, 3].map((row) => (
           <div key={row} className="flex items-center gap-3">
             <Skeleton className="size-9 rounded-full" />
             <div className="flex flex-col gap-1.5">

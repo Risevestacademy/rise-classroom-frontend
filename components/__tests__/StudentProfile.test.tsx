@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 
 import StudentProfilePage from "@/app/student/profile/page";
 import EditProfilePage from "@/app/student/profile/edit/page";
@@ -61,7 +61,8 @@ describe("student profile page", () => {
     });
     renderWithClient(<StudentProfilePage />);
 
-    expect(await screen.findByText("Aishat Lawal")).toBeInTheDocument();
+    // No display name yet, so the heading falls back to the full name.
+    expect(await screen.findAllByText("Aishat Lawal")).toHaveLength(2);
     expect(screen.getByText("Product Design")).toBeInTheDocument();
     expect(screen.getByText("Rise Cohort 4")).toBeInTheDocument();
     expect(screen.getByText("aishat@example.com")).toBeInTheDocument();
@@ -70,6 +71,39 @@ describe("student profile page", () => {
       "href",
       "/student/profile/edit",
     );
+  });
+
+  it("shows the display name as the heading and the full name below", async () => {
+    mockApi({
+      "GET /me": envelope({ ...me, displayName: "Shatty" }),
+      "GET /students/me/mentor": envelope(null),
+    });
+    renderWithClient(<StudentProfilePage />);
+
+    expect(await screen.findByText("Shatty")).toBeInTheDocument();
+    expect(screen.getByText("Aishat Lawal")).toBeInTheDocument();
+  });
+
+  it("changes the photo to a preset avatar", async () => {
+    const api = mockApi({
+      "GET /me": envelope(me),
+      "GET /students/me/mentor": envelope(null),
+      "GET /avatars/illustration-james-brown.png": "png",
+      "PATCH /me": () => envelope({ ...me, image: "/avatars/illustration-james-brown.png" }),
+    });
+    const { user } = renderWithClient(<StudentProfilePage />);
+
+    await user.click(await screen.findByRole("button", { name: "Change photo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Change photo" });
+    expect(within(dialog).getByRole("button", { name: "Update" })).toBeDisabled();
+    await user.click(within(dialog).getByRole("button", { name: "Avatar 1" }));
+    await user.click(within(dialog).getByRole("button", { name: "Update" }));
+
+    await vi.waitFor(() => {
+      const [body] = api.bodies("PATCH /me") as FormData[];
+      expect(body.get("image")).toBeInstanceOf(File);
+    });
+    expect(await screen.findByText("Photo updated")).toBeInTheDocument();
   });
 
   it("says when no mentor is assigned", async () => {
@@ -113,7 +147,7 @@ describe("edit profile page", () => {
     });
     const { user } = renderWithClient(<EditProfilePage />);
 
-    const name = await screen.findByLabelText(/Full name/);
+    const name = await screen.findByLabelText(/Display name/);
     await user.clear(name);
     await user.type(name, "Aishat L.");
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -126,11 +160,14 @@ describe("edit profile page", () => {
     expect(push).toHaveBeenCalledWith("/student/profile?updated=1");
   });
 
-  it("keeps email and track read-only", async () => {
+  it("keeps full name, email and track read-only", async () => {
     mockApi({ "GET /me": envelope(me) });
     renderWithClient(<EditProfilePage />);
 
-    expect(await screen.findByLabelText("Email")).toHaveAttribute("readonly");
+    expect(await screen.findByLabelText("Full name")).toHaveValue("Aishat Lawal");
+    expect(screen.getByLabelText("Full name")).toHaveAttribute("readonly");
+    expect(screen.getByLabelText(/Display name/)).toHaveValue("");
+    expect(screen.getByLabelText("Email")).toHaveAttribute("readonly");
     expect(screen.getByLabelText("Track")).toHaveValue("Product Design");
   });
 });

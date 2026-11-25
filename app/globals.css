@@ -444,6 +444,14 @@ body {
   to { width: 0; margin-left: -16px; }
 }
 
+/* The live sessions preview opens out from the right, pushing the cards over. */
+@keyframes preview-panel-open {
+  from { width: 0; }
+}
+@keyframes preview-panel-close {
+  to { width: 0; }
+}
+
 /* A new tile settles into the grid. */
 @keyframes room-tile-in {
   from { opacity: 0; scale: 0.94; }

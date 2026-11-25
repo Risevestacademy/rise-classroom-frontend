@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Add01, ArrowLeft01, ArrowRight01, Filter } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
 import { CalendarFilterDialog } from "@/components/calendar/CalendarFilterDialog";
+import { DayEventsDialog } from "@/components/calendar/DayEventsDialog";
 import {
   EventDetailsPopover,
   type OpenEvent,
@@ -22,6 +23,7 @@ import {
   eventsOn,
   filterEvents,
   monthGrid,
+  longDate,
   monthNames,
   noFilters,
   sampleEvents,
@@ -84,6 +86,7 @@ export default function CalendarPage() {
   // No events API yet: events live here, seeded with the design's samples.
   const [events, setEvents] = React.useState<CalendarEvent[]>(sampleEvents);
   const [openEvent, setOpenEvent] = React.useState<OpenEvent | null>(null);
+  const [openDay, setOpenDay] = React.useState<Date | null>(null);
   const [form, setForm] = React.useState<Form | null>(null);
   const [formOpen, setFormOpen] = React.useState(false);
   const [filters, setFilters] = React.useState<CalendarFilters>(noFilters);
@@ -117,6 +120,7 @@ export default function CalendarPage() {
 
   const openForm = (next: Form) => {
     setOpenEvent(null);
+    setOpenDay(null);
     setForm(next);
     setFormOpen(true);
   };
@@ -237,16 +241,25 @@ export default function CalendarPage() {
               return (
                 <div
                   key={key}
+                  onClick={() => setOpenDay(date)}
                   className={cn(
-                    "h-[120px] min-w-0 border-b border-neutral-200 p-2.5",
+                    "h-[120px] min-w-0 cursor-pointer border-b border-neutral-200 p-2.5 transition-colors",
                     key === todayKey
-                      ? "bg-brand-100"
-                      : weekend && "bg-neutral-100",
+                      ? "bg-brand-100 hover:bg-brand-200/60"
+                      : weekend
+                        ? "bg-neutral-100 hover:bg-neutral-200/60"
+                        : "hover:bg-neutral-50",
                   )}
                 >
-                  <p
+                  <button
+                    type="button"
+                    aria-label={`Show events on ${longDate(date)}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenDay(date);
+                    }}
                     className={cn(
-                      "text-base leading-6",
+                      "rounded-sm text-left text-base leading-6 outline-none focus-visible:ring-2 focus-visible:ring-border-focus",
                       inMonth ? "text-text-primary" : "text-text-muted",
                     )}
                   >
@@ -256,7 +269,7 @@ export default function CalendarPage() {
                       </span>
                     )}
                     {date.getDate()}
-                  </p>
+                  </button>
                   <ul className="mt-1 flex flex-col gap-1">
                     {dayEvents
                       .slice(
@@ -267,13 +280,14 @@ export default function CalendarPage() {
                         <li key={event.id}>
                           <button
                             type="button"
-                            onClick={(e) =>
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setOpenEvent({
                                 event,
                                 date,
                                 anchor: e.currentTarget,
-                              })
-                            }
+                              });
+                            }}
                             className="-ml-[3px] flex h-4 w-full items-center gap-1 rounded-sm text-left font-work text-xs text-text-primary hover:bg-black/5"
                           >
                             <span
@@ -290,8 +304,17 @@ export default function CalendarPage() {
                         </li>
                       ))}
                     {hidden > 0 && (
-                      <li className="pl-1 font-work text-xs text-text-muted">
-                        +{hidden + 1} more
+                      <li>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenDay(date);
+                          }}
+                          className="rounded-sm pl-1 font-work text-xs text-text-muted hover:text-text-primary hover:underline"
+                        >
+                          +{hidden + 1} more
+                        </button>
                       </li>
                     )}
                   </ul>
@@ -305,6 +328,17 @@ export default function CalendarPage() {
       <EventDetailsPopover
         open={openEvent}
         onClose={() => setOpenEvent(null)}
+        onEdit={(event) =>
+          openForm({ mode: "edit", initial: event, id: event.id })
+        }
+        onDelete={deleteEvent}
+      />
+
+      <DayEventsDialog
+        date={openDay}
+        events={openDay ? eventsOn(visibleEvents, openDay) : []}
+        onClose={() => setOpenDay(null)}
+        onCreate={(date) => openForm({ mode: "create", initial: blankDraft(date) })}
         onEdit={(event) =>
           openForm({ mode: "edit", initial: event, id: event.id })
         }

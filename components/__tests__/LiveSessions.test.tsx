@@ -95,6 +95,23 @@ describe("LiveSessionsScreen", () => {
     expect(screen.getByText("Join session").closest("a")).toHaveAttribute("href", "/admin/live/live");
   });
 
+  it("closes the preview when the open session is clicked again", async () => {
+    mockApi({
+      "GET /live-sessions": envelope({ items: [session({ id: "live", title: "Live class", status: "LIVE" })], nextCursor: null }),
+      "GET /live-sessions/live/participants": participants,
+    });
+    const { user } = renderWithClient(<LiveSessionsScreen topNav={null} />);
+
+    expect(screen.queryByRole("complementary", { name: "Session preview" })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Live class" }));
+    expect(screen.getByRole("complementary", { name: "Session preview" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Live class", pressed: true }));
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("complementary", { name: "Session preview" })).not.toBeInTheDocument(),
+    );
+  });
+
   it("says when there are no sessions", async () => {
     mockApi({ "GET /live-sessions": envelope({ items: [], nextCursor: null }) });
     renderWithClient(<LiveSessionsScreen topNav={null} />);

@@ -61,7 +61,7 @@ export function EventDetailsPopover({
           align="start"
           sideOffset={8}
           collisionPadding={16}
-          className="z-40"
+          className="z-[60]"
         >
           <Popover.Popup className="w-[446px] max-w-[calc(100vw-2rem)] rounded-3xl bg-neutral-100 pb-6 shadow-[0_4px_4px_rgb(0_0_0/0.25)] outline-none">
             {open && (
