@@ -4,7 +4,7 @@ import * as React from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { useMediaDeviceSelect } from "@livekit/components-react";
 
-import { Cancel01, RecordCircle, Shield01, UserMultiple, Video } from "@/assets/icons";
+import { Cancel01, Notification02, RecordCircle, Shield01, UserMultiple, Video } from "@/assets/icons";
 import { SettingsSwitch } from "@/components/settings/SettingsControls";
 import { settingsSelectClass } from "@/components/settings/SettingsSection";
 import { SelectInput } from "@/components/ui/select";
@@ -15,8 +15,10 @@ import {
 } from "@/lib/live-room";
 import { cn } from "@/lib/utils";
 import { readSavedChoices, saveChoices } from "./PreJoinScreen";
+import { setSoundsOn, useSoundsOn } from "./room-sounds";
+import { shortcutKeys, shortcuts, useOnMac } from "./shortcuts";
 
-type SectionId = "permissions" | "access" | "media" | "recording";
+export type SectionId = "permissions" | "access" | "media" | "recording" | "shortcuts";
 type Change = (patch: Partial<Settings>) => void;
 
 const sections: {
@@ -54,6 +56,13 @@ const sections: {
     icon: <RecordCircle />,
     hostOnly: true,
   },
+  {
+    id: "shortcuts",
+    label: "Sounds & shortcuts",
+    description: "Choose what you hear, and see the keys that work in the room.",
+    icon: <Notification02 />,
+    hostOnly: false,
+  },
 ];
 
 /**
@@ -62,6 +71,7 @@ const sections: {
  */
 export function SessionSettingsDialog({
   open,
+  section,
   onOpenChange,
   isHost,
   settings,
@@ -69,6 +79,8 @@ export function SessionSettingsDialog({
   recording,
 }: {
   open: boolean;
+  /** The section to show when it opens; otherwise the last one picked. */
+  section?: SectionId;
   onOpenChange: (open: boolean) => void;
   isHost: boolean;
   settings: Settings;
@@ -77,7 +89,12 @@ export function SessionSettingsDialog({
   recording?: Recording;
 }) {
   const visible = sections.filter((section) => isHost || !section.hostOnly);
-  const [chosen, setChosen] = React.useState<SectionId>(visible[0].id);
+  const [chosen, setChosen] = React.useState<SectionId>(section ?? visible[0].id);
+  const [wasOpen, setWasOpen] = React.useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open && section) setChosen(section);
+  }
   const current = visible.find((section) => section.id === chosen) ?? visible[0];
 
   return (
@@ -137,6 +154,7 @@ export function SessionSettingsDialog({
               {current.id === "access" && <AccessRows settings={settings} onChange={onChange} />}
               {current.id === "media" && <MediaRows isHost={isHost} settings={settings} onChange={onChange} />}
               {current.id === "recording" && <RecordingRows settings={settings} onChange={onChange} recording={recording} />}
+              {current.id === "shortcuts" && <ShortcutRows isHost={isHost} />}
             </div>
           </section>
         </DialogPrimitive.Popup>
@@ -236,6 +254,48 @@ function RecordingRows({ settings, onChange, recording }: { settings: Settings; 
         options={recordingVisibilityOptions}
         onChange={(recordingVisibility) => onChange({ recordingVisibility })}
       />
+    </>
+  );
+}
+
+function ShortcutRows({ isHost }: { isHost: boolean }) {
+  const soundsOn = useSoundsOn();
+  const mac = useOnMac();
+  const keys = [
+    ...shortcuts.map((shortcut) => ({ label: shortcut.label, keys: shortcutKeys(shortcut.action, mac) })),
+    { label: "Close the chat or participants", keys: ["Esc"] },
+  ];
+
+  return (
+    <>
+      <ToggleRow
+        title="Play sounds"
+        description={
+          isHost
+            ? "A chime when people join or leave, raise a hand, message or mention you"
+            : "A chime when people join or leave, message or mention you"
+        }
+        checked={soundsOn}
+        onChange={setSoundsOn}
+      />
+      <h3 className="mt-4 text-base font-semibold">Keyboard shortcuts</h3>
+      <dl className="flex flex-col rounded-xl border border-border-default">
+        {keys.map((shortcut) => (
+          <div key={shortcut.label} className="flex min-h-12 items-center gap-6 border-border-default px-5 not-last:border-b md:pl-7">
+            <dt className="min-w-0 flex-1 text-sm">{shortcut.label}</dt>
+            <dd className="flex shrink-0 items-center gap-1">
+              {shortcut.keys.map((key) => (
+                <kbd
+                  key={key}
+                  className="flex h-7 min-w-7 items-center justify-center rounded-md border border-border-default bg-surface-subtle px-2 font-sans text-xs font-medium"
+                >
+                  {key}
+                </kbd>
+              ))}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </>
   );
 }

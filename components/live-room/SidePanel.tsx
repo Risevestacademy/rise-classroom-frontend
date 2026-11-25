@@ -20,11 +20,12 @@ import {
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { feedbackFor, FEEDBACK_ATTRIBUTE, HAND_ATTRIBUTE, LABEL_ATTRIBUTE } from "@/lib/live-room";
-import { personName, type ChatMessage } from "@/lib/live-sessions";
+import { personName } from "@/lib/live-sessions";
 import { cn } from "@/lib/utils";
-import { displayName } from "./ParticipantTile";
+import { avatarOf, displayName } from "./ParticipantTile";
 import { insertMention, mentionMatches, mentionQuery, splitMentions, type Mentionable } from "./mentions";
 import { RoomMenuContent, RoomMenuItem } from "./RoomMenu";
+import type { RoomChatMessage } from "./useSessionChat";
 
 export type PanelTab = "participants" | "chat";
 
@@ -34,37 +35,63 @@ const timeFormat = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "
 function Panel({
   title,
   count,
+  opening = false,
+  leaving = false,
   onClose,
   children,
 }: {
   title: string;
   count?: number;
+  /** It's opening from closed, rather than switching from the other panel. */
+  opening?: boolean;
+  /** It's closing; it slides away before it's removed. */
+  leaving?: boolean;
   onClose: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <aside
-      aria-label={title}
-      className="flex min-h-0 flex-col gap-4 rounded-3xl bg-room-panel px-5 pt-5 pb-5 max-lg:fixed max-lg:inset-0 max-lg:z-40 max-lg:rounded-none sm:px-10 lg:w-[444px] lg:shrink-0"
+    // Beside the stage, the frame opens out so the tiles glide over rather than jump.
+    <div
+      className={cn(
+        "max-lg:contents lg:w-[380px] lg:shrink-0 lg:overflow-hidden",
+        leaving
+          ? "motion-safe:lg:animate-[room-panel-close_200ms_cubic-bezier(0.4,0,1,1)_forwards]"
+          : opening && "motion-safe:lg:animate-[room-panel-open_260ms_cubic-bezier(0.2,0,0,1)]",
+      )}
     >
-      <header className="flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-3 text-xl/7 font-semibold text-white">
-          {title}
-          {count !== undefined && (
-            <span className="rounded-full bg-room-chip px-3 py-1 text-base/5 font-normal">{count}</span>
-          )}
-        </h2>
-        <button
-          type="button"
-          aria-label={`Close ${title.toLowerCase()}`}
-          onClick={onClose}
-          className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"
-        >
-          <Cancel01 className="size-6" />
-        </button>
-      </header>
-      {children}
-    </aside>
+      <aside
+        aria-label={title}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape" || event.defaultPrevented) return;
+          event.preventDefault();
+          onClose();
+        }}
+        className={cn(
+          "flex min-h-0 flex-col gap-4 rounded-3xl bg-room-panel px-5 pt-5 pb-5 max-lg:fixed max-lg:inset-0 max-lg:z-40 max-lg:rounded-none sm:px-6 lg:h-full lg:w-[380px]",
+          leaving
+            ? "motion-safe:animate-out motion-safe:fade-out-0 motion-safe:duration-200 max-lg:motion-safe:slide-out-to-bottom-6 lg:motion-safe:slide-out-to-right-6 motion-safe:fill-mode-forwards"
+            : "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 max-lg:motion-safe:slide-in-from-bottom-6 lg:motion-safe:slide-in-from-right-6",
+        )}
+      >
+        <header className="flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-3 text-xl/7 font-semibold text-white">
+            {title}
+            {count !== undefined && (
+              <span className="rounded-full bg-room-chip px-3 py-1 text-base/5 font-normal">{count}</span>
+            )}
+          </h2>
+          <button
+            type="button"
+            aria-label={`Close ${title.toLowerCase()}`}
+            onClick={onClose}
+            className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"
+          >
+            <Cancel01 className="size-6" />
+          </button>
+        </header>
+        {children}
+      </aside>
+    </div>
   );
 }
 
@@ -73,6 +100,8 @@ export function ParticipantsPanel({
   participants,
   isHost,
   pinned,
+  opening,
+  leaving,
   onClose,
   onPin,
   onMute,
@@ -85,6 +114,8 @@ export function ParticipantsPanel({
   participants: Participant[];
   isHost: boolean;
   pinned: string | null;
+  opening?: boolean;
+  leaving?: boolean;
   onClose: () => void;
   onPin: (identity: string | null) => void;
   onMute: (participant: Participant) => void;
@@ -97,7 +128,7 @@ export function ParticipantsPanel({
   const [actionsOpen, setActionsOpen] = React.useState(false);
 
   return (
-    <Panel title="Participants" count={participants.length} onClose={onClose}>
+    <Panel title="Participants" count={participants.length} opening={opening} leaving={leaving} onClose={onClose}>
       <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {participants.map((participant) => (
           <ParticipantRow
@@ -125,7 +156,7 @@ export function ParticipantsPanel({
             <ArrowDown01 className={cn("size-6 transition-transform", actionsOpen && "rotate-180")} />
           </button>
           {actionsOpen && (
-            <div className="grid grid-cols-3 gap-4 px-4 pb-4">
+            <div className="grid grid-cols-3 gap-4 px-4 pb-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200">
               <ActionTile label="Mute all participants" icon={<MicOff02 />} onClick={onMuteAll} />
               <ActionTile label="Turn off all cameras" icon={<VideoOff />} onClick={onCamerasOff} />
               <ActionTile label="Disable screen share" icon={<ComputerScreenShareOff />} onClick={onDisableScreenShare} />
@@ -178,7 +209,7 @@ function ParticipantRow({
 
   return (
     <li className="flex min-h-[52px] items-center gap-4">
-      <PersonAvatar name={name} colorKey={participant.identity} size={36} className="size-[38px]" />
+      <PersonAvatar name={name} src={avatarOf(participant)} colorKey={participant.identity} size={36} className="size-[38px]" />
       <div className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
         <p className="w-full truncate text-base text-white">
           {name}
@@ -243,16 +274,17 @@ export function ChatPanel({
   messages,
   userId,
   onSend,
-  sending,
   loading = false,
   canSend = true,
   blockedReason = "The host has turned off chat",
   maxLength = 2000,
   people = [],
   selfName = "",
+  opening,
+  leaving,
   onClose,
 }: {
-  messages: ChatMessage[];
+  messages: RoomChatMessage[];
   /** The signed-in user, whose messages sit on the right. */
   userId: string;
   /** Who can be tagged with "@": everyone else in the room. */
@@ -260,15 +292,19 @@ export function ChatPanel({
   /** The signed-in user's name, to highlight messages that tag them. */
   selfName?: string;
   onSend: (message: string) => Promise<unknown>;
-  sending: boolean;
   loading?: boolean;
   canSend?: boolean;
   /** Shown in the message box when they can't send. */
   blockedReason?: string;
   maxLength?: number;
+  opening?: boolean;
+  leaving?: boolean;
   onClose: () => void;
 }) {
   const [draft, setDraft] = React.useState("");
+  // What was already here when the chat opened; only newer messages slide in.
+  const [earlier, setEarlier] = React.useState<Set<string> | null>(null);
+  if (earlier === null && !loading) setEarlier(new Set(messages.map((message) => message.id)));
   const listRef = React.useRef<HTMLOListElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [caret, setCaret] = React.useState(0);
@@ -323,7 +359,7 @@ export function ChatPanel({
   }
 
   return (
-    <Panel title="Chat" onClose={onClose}>
+    <Panel title="Chat" opening={opening} leaving={leaving} onClose={onClose}>
       <ol ref={listRef} aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {messages.length === 0 && (
           <li className="m-auto max-w-[240px] text-center font-work text-sm text-room-text-muted">
@@ -339,7 +375,16 @@ export function ChatPanel({
           const name = personName(sender) || "Someone";
 
           return (
-            <li key={message.id} className={cn("flex gap-2.5", own && "flex-col items-end", !grouped && "mt-3")}>
+            <li
+              // Keeps the bubble in place when the sent copy replaces the pending one.
+              key={message.clientMessageId ?? message.id}
+              className={cn(
+                "flex gap-2.5",
+                own && "flex-col items-end",
+                !grouped && "mt-3",
+                earlier && !earlier.has(message.id) && "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300",
+              )}
+            >
               {!own && (
                 <span className="w-7 shrink-0">
                   {!grouped && (
@@ -356,7 +401,7 @@ export function ChatPanel({
                     </time>
                   </p>
                 )}
-                <MessageBody body={message.body} names={names} own={own} selfName={selfName} />
+                <MessageBody body={message.body} names={names} own={own} selfName={selfName} pending={message.pending} />
               </div>
             </li>
           );
@@ -417,7 +462,7 @@ export function ChatPanel({
           <button
             type="submit"
             aria-label="Send"
-            disabled={!canSend || !draft.trim() || sending}
+            disabled={!canSend || !draft.trim()}
             className="flex size-8 cursor-pointer items-center justify-center rounded-full text-room-text-muted transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Sent className="size-[18px]" />
@@ -429,7 +474,20 @@ export function ChatPanel({
 }
 
 /** A chat bubble, with any @names picked out. One that tags you is outlined. */
-function MessageBody({ body, names, own, selfName }: { body: string; names: string[]; own: boolean; selfName: string }) {
+function MessageBody({
+  body,
+  names,
+  own,
+  selfName,
+  pending = false,
+}: {
+  body: string;
+  names: string[];
+  own: boolean;
+  selfName: string;
+  /** Still on its way; it firms up once saved. */
+  pending?: boolean;
+}) {
   const parts = splitMentions(body, names);
   const tagsYou =
     !own && Boolean(selfName) && parts.some((part) => part.mention?.toLowerCase() === selfName.trim().toLowerCase());
@@ -437,7 +495,8 @@ function MessageBody({ body, names, own, selfName }: { body: string; names: stri
   return (
     <p
       className={cn(
-        "max-w-[280px] rounded-[20px] px-3 py-2.5 text-sm/5 break-words whitespace-pre-wrap",
+        "max-w-[280px] rounded-[20px] px-3 py-2.5 text-sm/5 break-words whitespace-pre-wrap transition-opacity duration-300",
+        pending && "opacity-70",
         own ? "bg-room-bubble-own text-room-bubble-own-text" : "bg-room-bubble text-room-text",
         tagsYou && "ring-2 ring-room-active",
       )}

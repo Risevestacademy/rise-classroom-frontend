@@ -45,21 +45,31 @@ describe("RaisedHandsCard", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Ada Obi raised their hand");
   });
 
-  it("lists everyone in the order hands went up, and comes back when someone new raises theirs", async () => {
+  it("folds a queue into a hand and a count, and opens it in the order hands went up", async () => {
     const user = userEvent.setup();
     const hands = [
       { participant: person("2", "Tola Ade"), since: 2 },
       { participant: person("me", "Me", true), since: 3 },
     ];
-    const { rerender } = render(<RaisedHandsCard hands={[{ participant: person("1", "Ada Obi"), since: 1 }, ...hands]} />);
+    render(<RaisedHandsCard hands={[{ participant: person("1", "Ada Obi"), since: 1 }, ...hands]} />);
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "3 raised hands, show the queue" }));
     expect(screen.getByRole("status")).toHaveTextContent("3 raised hands");
     const rows = within(screen.getByRole("list")).getAllByRole("listitem");
     ["Ada Obi", "Tola Ade", "You"].forEach((name, index) => expect(rows[index]).toHaveTextContent(name));
 
+    await user.click(screen.getByRole("button", { name: "Hide the queue" }));
+    expect(screen.getByRole("button", { name: "3 raised hands, show the queue" })).toBeInTheDocument();
+  });
+
+  it("hides one person's card when dismissed, until someone new raises theirs", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<RaisedHandsCard hands={[{ participant: person("1", "Ada Obi"), since: 1 }]} />);
     await user.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByRole("region", { name: "Raised hands" })).not.toBeInTheDocument();
 
-    rerender(<RaisedHandsCard hands={[...hands, { participant: person("4", "Kemi Bello"), since: 4 }]} />);
+    rerender(<RaisedHandsCard hands={[{ participant: person("4", "Kemi Bello"), since: 4 }]} />);
     expect(screen.getByRole("region", { name: "Raised hands" })).toBeInTheDocument();
   });
 
