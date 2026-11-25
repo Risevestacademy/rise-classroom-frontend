@@ -1,6 +1,7 @@
 import { daysLeftIn, isWeekCompleted, type ControlTowerWeek } from "@/lib/control-tower";
 import type { TrackProgress } from "@/lib/student";
 import { assignmentHref, type StudentSubmission } from "@/lib/student-assignments";
+import type { LiveSession } from "@/lib/live-sessions";
 import type { ContinueLearning, Deadline } from "@/lib/student-dashboard";
 import {
   LESSONS_BASE,
@@ -25,6 +26,9 @@ export type Nudge = {
 };
 
 const KINDS = [
+  "live-now",
+  "live-soon",
+  "live-today",
   "due-today",
   "due-soon",
   "changes",
@@ -57,6 +61,8 @@ export type NudgeInput = {
   daysAway?: number;
   /** The curriculum, to tell whether an assignment's lesson has been watched. */
   topics?: CurriculumTopic[];
+  /** The student's live classes around today, as the live sessions list returns them. */
+  liveSessions?: LiveSession[];
   /** Which wording to use where there are several. Changes daily unless given. */
   variant?: number;
 };
@@ -69,6 +75,72 @@ const SOON_DAYS = 3;
 const AWAY_DAYS = 4;
 
 const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "long" });
+const clock = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
+
+/** A class this close is worth interrupting for. */
+export const LIVE_HEADS_UP_MINUTES = 15;
+/** Within this, the companion counts down to a class rather than naming its time. */
+const LIVE_COUNTDOWN_MINUTES = 60;
+
+const liveHref = (session: LiveSession) => `/student/live/${session.id}`;
+
+/**
+ * What to say about live classes: any that are live now, then the next one if
+ * it's today. Ten minutes out reads "starts in 10 minutes"; this evening reads
+ * "is at 6:00 PM today".
+ */
+function liveNudges(sessions: LiveSession[], now: Date, say: (...wordings: string[]) => string): Nudge[] {
+  const at = now.getTime();
+  const byStart = (a: LiveSession, b: LiveSession) => Date.parse(a.startsAt) - Date.parse(b.startsAt);
+  const nudges: Nudge[] = sessions
+    .filter((session) => session.status === "live")
+    .sort(byStart)
+    .map((session) => ({
+      id: `live-now-${session.id}`,
+      mood: "celebrate",
+      message: say(`“${session.title}” is live now.`, `“${session.title}” has started. Come on in.`),
+      action: { label: "Join now", href: liveHref(session) },
+      urgent: true,
+    }));
+
+  const next = sessions
+    .filter((session) => session.status === "upcoming" && Date.parse(session.endsAt) > at)
+    .sort(byStart)[0];
+  if (!next) return nudges;
+
+  const minutes = Math.ceil((Date.parse(next.startsAt) - at) / 60_000);
+  const setup = { label: "Check your setup", href: liveHref(next) };
+  if (minutes <= 0) {
+    nudges.push({
+      id: `live-soon-${next.id}`,
+      mood: "happy",
+      message: `“${next.title}” should start any minute. You can join as soon as the host lets everyone in.`,
+      action: setup,
+      urgent: true,
+    });
+  } else if (minutes <= LIVE_COUNTDOWN_MINUTES) {
+    const inTime = `in ${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+    nudges.push({
+      id: `live-soon-${next.id}`,
+      mood: "happy",
+      message:
+        minutes <= LIVE_HEADS_UP_MINUTES
+          ? `“${next.title}” starts ${inTime}. Check your mic and camera while you wait.`
+          : `“${next.title}” starts ${inTime}.`,
+      action: setup,
+      urgent: minutes <= LIVE_HEADS_UP_MINUTES,
+    });
+  } else if (new Date(next.startsAt).toDateString() === now.toDateString()) {
+    nudges.push({
+      id: `live-today-${next.id}`,
+      mood: "happy",
+      message: `“${next.title}” is at ${clock.format(new Date(next.startsAt))} today.`,
+      action: { label: "See sessions", href: "/student/live" },
+      urgent: false,
+    });
+  }
+  return nudges;
+}
 
 function dueLabel(dueAt: string, now: Date) {
   const due = new Date(dueAt);
@@ -111,10 +183,12 @@ export function buildNudges({
   controlTowerWeek,
   daysAway = 0,
   topics = [],
+  liveSessions = [],
   variant = Math.floor(now.getTime() / DAY_MS),
 }: NudgeInput): Nudge[] {
   const nudges: Nudge[] = [];
   const say = (...wordings: string[]) => wordings[variant % wordings.length];
+  const live = liveNudges(liveSessions, now, say);
 
   const changes = submissions.filter((item) => item.status === "CHANGES_REQUESTED");
   const titleOf = (submission: StudentSubmission, fallback: string) =>
@@ -291,7 +365,7 @@ export function buildNudges({
     });
   }
 
-  if (nudges.length === 0) {
+  if (nudges.length === 0 && live.length === 0) {
     nudges.push({
       id: "all-clear",
       mood: "happy",
@@ -304,6 +378,11 @@ export function buildNudges({
   const welcome = nudges.findIndex((item) => item.id === "welcome-back");
   const firstCalm = nudges.findIndex((item) => !item.urgent);
   if (welcome > firstCalm) nudges.splice(firstCalm, 0, ...nudges.splice(welcome, 1));
+
+  // A class about to start beats everything; one later today leads the calm things.
+  const calmAt = nudges.findIndex((item) => !item.urgent);
+  nudges.splice(calmAt === -1 ? nudges.length : calmAt, 0, ...live.filter((item) => !item.urgent));
+  nudges.unshift(...live.filter((item) => item.urgent));
 
   return nudges;
 }
