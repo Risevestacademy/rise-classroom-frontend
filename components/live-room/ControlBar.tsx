@@ -33,6 +33,8 @@ const off = "bg-room-off text-room-off-text hover:bg-[#ecc0c0]";
 const swap = "motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:fade-in-0 motion-safe:duration-200";
 
 export type ControlBarProps = {
+  /** Shown at the bar's left edge from `sm` up, e.g. the recording timer. */
+  status?: React.ReactNode;
   micOn: boolean;
   cameraOn: boolean;
   sharing: boolean;
@@ -58,12 +60,10 @@ export function ControlBar(props: ControlBarProps) {
   const { micOn, cameraOn, sharing, handRaised, feedback, isHost, blocked } = props;
 
   return (
-    <div className="flex justify-center px-3 pt-3 pb-4 sm:pb-5">
-      <div
-        role="toolbar"
-        aria-label="Call controls"
-        className="flex items-center gap-2 rounded-2xl border border-white/5 bg-room-panel p-2 shadow-[0_8px_24px_rgb(0_0_0/0.35)] sm:gap-2.5"
-      >
+    // From `sm` up the recording timer sits at the left edge and Leave at the right, with the controls centred.
+    <div className="relative flex items-center justify-center px-3 pt-3 pb-4 sm:px-6 sm:pb-5">
+      {props.status && <div className="absolute left-6 max-sm:hidden">{props.status}</div>}
+      <div role="toolbar" aria-label="Call controls" className="flex items-center gap-2 sm:gap-3">
         <ToggleButton
           on={micOn}
           label={micOn ? "Turn off microphone" : "Turn on microphone"}
@@ -192,7 +192,7 @@ export function ControlBar(props: ControlBarProps) {
 }
 
 const leaveButton =
-  "flex h-11 shrink-0 cursor-pointer items-center rounded-full bg-room-leave px-5 text-base font-medium text-white transition-colors hover:bg-room-leave-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white max-sm:h-10 max-sm:px-4";
+  "flex h-11 shrink-0 cursor-pointer items-center rounded-full bg-room-leave px-5 text-base font-medium text-white transition-colors hover:bg-room-leave-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white max-sm:h-10 max-sm:px-4 sm:absolute sm:right-6";
 
 function ToggleButton({
   on,
