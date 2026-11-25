@@ -125,8 +125,8 @@ export function ParticipantTile({
         )}
       </div>
 
-      <p className="absolute right-2 bottom-2 left-2 flex">
-        <span className="flex h-7 min-w-0 items-center gap-1.5 rounded-lg bg-black/55 pr-2.5 pl-0.5 text-[13px] font-medium text-white backdrop-blur-sm">
+      <p className="absolute right-2 bottom-2 left-2 flex justify-center">
+        <span className="flex h-7 min-w-0 items-center gap-1.5 rounded-full bg-black/55 pr-3 pl-0.5 text-[13px] font-medium text-white backdrop-blur-sm">
           {micOff ? (
             <span role="img" aria-label="Muted" title="Muted" className="flex size-6 shrink-0 items-center justify-center rounded-full bg-room-off text-room-off-text [&_svg]:size-3.5">
               <MicOff02 />
