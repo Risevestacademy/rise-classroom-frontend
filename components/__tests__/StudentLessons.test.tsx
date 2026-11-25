@@ -190,6 +190,29 @@ describe("student lessons", () => {
     );
   });
 
+  it("moves on at once after saving, without waiting for the refetch", async () => {
+    let saved = false;
+    // Once saved, the refetches never answer: the page must not wait on them.
+    const later = <T,>(value: T) => (saved ? new Promise<T>(() => {}) : value);
+    const api = mockApi({
+      "GET /student/me/progress": () => later(progress),
+      "GET /student/enrollments/e1/content": () => later(content()),
+      "GET /student/enrollments/e1/lessons/l1": () =>
+        later(envelope(unlockedLesson("l1", "Grids", false))),
+      "PATCH /student/enrollments/e1/lessons/l1/progress": () => {
+        saved = true;
+        return envelope({ id: "p1", itemType: "LESSON", itemId: "l1", completed: true });
+      },
+    });
+    const { user } = renderWithClient(<LessonPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Mark as completed" }));
+
+    expect(await screen.findByRole("link", { name: "Next lesson" })).toBeInTheDocument();
+    expect(screen.getByText("2 of 3 completed")).toBeInTheDocument();
+    expect(api.bodies("PATCH /student/enrollments/e1/lessons/l1/progress")).toHaveLength(1);
+  });
+
   it("marks a lesson as completed when its video ends, previewing a frame 3s in", async () => {
     let completed = false;
     const api = mockApi({

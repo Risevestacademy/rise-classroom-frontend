@@ -106,7 +106,12 @@ function useStorageReady() {
   );
 }
 
-type Celebration = { nextHref?: string; stageBefore: MascotStage };
+type Celebration = {
+  nextHref?: string;
+  stageBefore: MascotStage;
+  /** Leafy's growth before the lesson, so the pop-up can grow it from there. */
+  growthBefore: number;
+};
 type Saying = Pick<Nudge, "message" | "mood" | "action">;
 
 type CompanionValue = {
@@ -118,6 +123,8 @@ type CompanionValue = {
   growth: number;
   /** Lessons left before the next growth stage; 0 in bloom or before enrolling. */
   toNextStage: number;
+  /** Every lesson on the track is done; Leafy wears its ribbon. */
+  trackComplete: boolean;
   quiet: boolean;
   setQuiet: (value: boolean) => void;
   /** False until the student has planted the seed; Leafy stays out of sight until then. */
@@ -158,9 +165,11 @@ export function useCompanionCelebrate() {
   const context = useContext(CompanionContext);
   const celebrateLesson = context?.celebrateLesson;
   const stage = context?.stage ?? 0;
+  const growth = context?.growth ?? 0;
   return useCallback(
-    (nextHref?: string) => celebrateLesson?.({ nextHref, stageBefore: stage }),
-    [celebrateLesson, stage],
+    (nextHref?: string) =>
+      celebrateLesson?.({ nextHref, stageBefore: stage, growthBefore: growth }),
+    [celebrateLesson, stage, growth],
   );
 }
 
@@ -200,10 +209,17 @@ export function CompanionFigure({
   mood?: MascotMood;
   size?: number;
 }) {
-  const growth = useContext(CompanionContext)?.growth ?? 0;
+  const context = useContext(CompanionContext);
   return (
     <span aria-hidden>
-      <Mascot growth={growth} mood={mood} palette={TEAL_PALETTE} size={size} animated={false} />
+      <Mascot
+        growth={context?.growth ?? 0}
+        complete={context?.trackComplete}
+        mood={mood}
+        palette={TEAL_PALETTE}
+        size={size}
+        animated={false}
+      />
     </span>
   );
 }
@@ -271,67 +287,164 @@ function LeafyIntro({
   );
 }
 
+/** Pause before Leafy starts growing, so the student sees where it began. */
+const GROW_DELAY_MS = 500;
+const GROW_MS = 1100;
+
+/** Eases from `from` to `to` after a short pause; arrives at once with reduced motion. */
+function useGrowthTween(from: number, to: number) {
+  const [t, setT] = useState(0);
+
+  useEffect(() => {
+    const still =
+      from === to || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    let frame = 0;
+    let start = 0;
+    const step = (time: number) => {
+      start ||= time;
+      const next = Math.min(1, (time - start) / GROW_MS);
+      setT(next);
+      if (next < 1) frame = requestAnimationFrame(step);
+    };
+    const timer = setTimeout(
+      () => (still ? setT(1) : (frame = requestAnimationFrame(step))),
+      still ? 0 : GROW_DELAY_MS,
+    );
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+    };
+  }, [from, to]);
+
+  const eased = 1 - Math.pow(1 - t, 3);
+  return { shown: from + (to - from) * eased, done: t >= 1 };
+}
+
 function LessonCelebration({
   celebration,
-  stage,
-  growth,
-  toNextStage,
   onClose,
+  ...progress
 }: {
   celebration: Celebration | null;
   stage: MascotStage;
   growth: number;
   toNextStage: number;
+  lessonsLeft: number;
   onClose: () => void;
 }) {
-  const bloomed = stage === BLOOM;
+  // Kept while the dialog animates out; each new celebration starts the growth over.
+  const [last, setLast] = useState<{ celebration: Celebration; id: number } | null>(null);
+  if (celebration && celebration !== last?.celebration) {
+    setLast({ celebration, id: (last?.id ?? 0) + 1 });
+  }
+
   return (
     <Dialog open={celebration !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="w-88 text-center">
-        <div className="flex flex-col items-center">
-          <Mascot growth={growth} mood="celebrate" palette={TEAL_PALETTE} size={168} label="" />
-          <DialogTitle className="mt-2">
-            {bloomed ? "Track complete" : "Lesson complete"}
-          </DialogTitle>
-          <DialogDescription className="mt-1 text-neutral-500">
-            {bloomed
-              ? "That was the last lesson. Leafy is in full bloom."
-              : celebration && stage > celebration.stageBefore
-                ? `Leafy grew into ${MASCOT_STAGES[stage]}.`
-                : `${toNextStage} more ${toNextStage === 1 ? "lesson" : "lessons"} to ${MASCOT_STAGES[stage + 1]}.`}
-          </DialogDescription>
-          <div className="mt-4 flex gap-1.5" aria-hidden>
-            {MASCOT_STAGES.slice(1).map((name, index) => (
-              <span
-                key={name}
-                className={cn(
-                  "h-1.5 w-6 rounded-full",
-                  index < stage ? "bg-brand-600" : "bg-neutral-200",
-                )}
-              />
-            ))}
-          </div>
-          <div className="mt-6 flex w-full flex-col gap-2">
-            {celebration?.nextHref && (
-              <Link
-                href={celebration.nextHref}
-                onClick={onClose}
-                className={cn(primaryAction, "h-10 justify-center text-sm")}
-              >
-                Next lesson
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              className="h-10 rounded-lg text-sm font-medium text-neutral-500 hover:bg-neutral-100"
-            >
-              {celebration?.nextHref ? "Stay here" : "Done"}
-            </button>
-          </div>
-        </div>
+        {last && (
+          <CelebrationBody
+            key={last.id}
+            celebration={last.celebration}
+            onClose={onClose}
+            {...progress}
+          />
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function CelebrationBody({
+  celebration,
+  stage,
+  growth,
+  toNextStage,
+  lessonsLeft,
+  onClose,
+}: {
+  celebration: Celebration;
+  stage: MascotStage;
+  growth: number;
+  toNextStage: number;
+  lessonsLeft: number;
+  onClose: () => void;
+}) {
+  // Leafy grows from where it was to where the lesson took it, in front of the student.
+  const { shown, done } = useGrowthTween(celebration.growthBefore, growth);
+  const shownStage = Math.floor(shown) as MascotStage;
+  const grew = stage > celebration.stageBefore;
+  const complete = lessonsLeft === 0;
+  const lessons = (count: number) => `${count} ${count === 1 ? "lesson" : "lessons"}`;
+
+  const title = !done
+    ? "Lesson complete"
+    : complete
+      ? "Track complete"
+      : grew
+        ? `Leafy reached the ${MASCOT_STAGES[stage]} stage!`
+        : "Lesson complete";
+  const description = !done
+    ? "Leafy is growing…"
+    : complete
+      ? "That was the last lesson. Leafy earned its ribbon."
+      : stage === BLOOM
+        ? grew
+          ? `Leafy is in full bloom. ${lessons(lessonsLeft)} left to finish your track.`
+          : `${lessons(lessonsLeft)} left to finish your track.`
+        : `${lessons(toNextStage)} to ${MASCOT_STAGES[stage + 1]}.`;
+
+  return (
+    <div className="flex flex-col items-center">
+      {/* Re-keyed as each stage is crossed, so the new stage lands with a bounce. */}
+      <div
+        key={shownStage}
+        className={shownStage > celebration.stageBefore ? styles.stageJump : undefined}
+      >
+        <Mascot
+          growth={shown}
+          mood="celebrate"
+          palette={TEAL_PALETTE}
+          size={168}
+          label=""
+          complete={complete && done}
+        />
+      </div>
+      <DialogTitle key={title} className={cn("mt-2", done && styles.settle)}>
+        {title}
+      </DialogTitle>
+      <DialogDescription key={description} className="mt-1 text-neutral-500">
+        {description}
+      </DialogDescription>
+      <div className="mt-4 flex gap-1.5" aria-hidden>
+        {MASCOT_STAGES.slice(1).map((name, index) => (
+          <span
+            key={name}
+            className={cn(
+              "h-1.5 w-6 rounded-full transition-colors duration-500",
+              index < shownStage ? "bg-brand-600" : "bg-neutral-200",
+            )}
+          />
+        ))}
+      </div>
+      <div className="mt-6 flex w-full flex-col gap-2">
+        {celebration.nextHref && (
+          <Link
+            href={celebration.nextHref}
+            onClick={onClose}
+            className={cn(primaryAction, "h-10 justify-center text-sm")}
+          >
+            Next lesson
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-10 rounded-lg text-sm font-medium text-neutral-500 hover:bg-neutral-100"
+        >
+          {celebration.nextHref ? "Stay here" : "Done"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -578,6 +691,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   const growth = growthFromLessons(completed, total);
   const stage = Math.floor(growth) as MascotStage;
   const toNextStage = total > 0 ? lessonsToNextStage(completed, total) : 0;
+  const trackComplete = total > 0 && completed >= total;
 
   const value: CompanionValue = {
     nudges,
@@ -585,6 +699,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     stage,
     growth,
     toNextStage,
+    trackComplete,
     quiet,
     setQuiet: (next) => {
       track(next ? "leafy_quiet_on" : "leafy_quiet_off");
@@ -617,6 +732,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         stage={stage}
         growth={growth}
         toNextStage={toNextStage}
+        lessonsLeft={Math.max(0, total - completed)}
         onClose={() => setCelebration(null)}
       />
       <LiveHeadsUp nudges={nudges} growth={growth} muted={quiet || !planted} />
@@ -653,7 +769,8 @@ export function CompanionGreeting({
   heading: ReactNode;
   subtitle: string;
 }) {
-  const { nudges, ready, growth, quiet, planted, plantedKnown, dismissNudge } = useCompanion();
+  const { nudges, ready, growth, trackComplete, quiet, planted, plantedKnown, dismissNudge } =
+    useCompanion();
   const [popped, setPopped] = useStored(POPPED_KEY);
   const [skips, setSkips] = useStored(SKIPS_KEY);
   const [heard, setHeard] = useStored(LIVE_HEARD_KEY);
@@ -704,6 +821,7 @@ export function CompanionGreeting({
         <InteractiveMascot
           key={settled ? "settled" : "waiting"}
           growth={growth}
+          complete={trackComplete}
           mood={settled ? rest.mood : "happy"}
           scene={settled ? rest.scene : undefined}
           palette={TEAL_PALETTE}
@@ -827,8 +945,18 @@ const popupClass =
  * pressing things it hasn't shown yet; opening it lists what matters today.
  */
 export function CompanionResident() {
-  const { nudges, ready, stage, growth, toNextStage, quiet, setQuiet, planted, popping } =
-    useCompanion();
+  const {
+    nudges,
+    ready,
+    stage,
+    growth,
+    toNextStage,
+    trackComplete,
+    quiet,
+    setQuiet,
+    planted,
+    popping,
+  } = useCompanion();
   const [seen, setSeen] = useStored(SEEN_KEY);
   const [skips, setSkips] = useStored(SKIPS_KEY);
   const [storedTucked, setTucked] = useStored(TUCKED_KEY);
@@ -863,8 +991,9 @@ export function CompanionResident() {
             return;
           }
           track("leafy_tucked");
+          // Said once; after that the student knows where Leafy goes.
+          if (!tucked) setTuckToast(true);
           setTucked("1");
-          setTuckToast(true);
         }}
       >
         <div
@@ -891,6 +1020,7 @@ export function CompanionResident() {
             <span key={resting ? "resting" : "out"} aria-hidden className={styles.tuckHop}>
               <Mascot
                 growth={growth}
+                complete={trackComplete}
                 palette={TEAL_PALETTE}
                 size={52}
                 closeUp
@@ -914,6 +1044,7 @@ export function CompanionResident() {
               <div className="flex items-center gap-3 rounded-2xl border border-neutral-200 p-3">
                 <InteractiveMascot
                   growth={growth}
+                  complete={trackComplete}
                   mood={ready ? rest.mood : "thinking"}
                   scene={ready ? rest.scene : undefined}
                   palette={TEAL_PALETTE}

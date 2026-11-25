@@ -509,6 +509,8 @@ export type MascotProps = {
   planted?: boolean;
   /** Frames just the face in a square, for sizes too small for the whole plant. */
   closeUp?: boolean;
+  /** Track finished: a ribbon on the pot that only finishing earns. */
+  complete?: boolean;
 };
 
 export function Mascot({
@@ -527,6 +529,7 @@ export function Mascot({
   paused = false,
   planted = true,
   closeUp = false,
+  complete = false,
 }: MascotProps) {
   const { stage, next, t } = splitGrowth(growth);
   const top = 200 - lerp(BODY_HEIGHT[stage], BODY_HEIGHT[next], t);
@@ -591,6 +594,14 @@ export function Mascot({
               <path key={d.slice(0, 12)} d={d} />
             ))}
           </g>
+          {complete && (
+            <g className={animated ? styles.grow : undefined}>
+              <path d="M170 214 L162 246 L170 240 L175 249 Z" fill={palette.accent} />
+              <path d="M178 214 L186 246 L178 240 L173 249 Z" fill={palette.accent} />
+              <circle cx={174} cy={210} r={12} fill={palette.petal} />
+              <circle cx={174} cy={210} r={6} fill={palette.petalCenter} />
+            </g>
+          )}
         </g>
       </g>
     </svg>

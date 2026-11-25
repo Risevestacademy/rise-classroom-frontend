@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, type QueryClient } from "@tanstack/react-query";
 import { api, ApiError, apiFileHref, isApiFilePath } from "@/lib/api";
 import { studentQueries } from "@/lib/student";
 import type { ResourceRecord } from "@/features/curriculum/types";
@@ -134,6 +134,49 @@ export async function setLessonCompleted(
   await api.patch(
     `/student/enrollments/${enrollmentId}/lessons/${lessonId}/progress`,
     { activities: [{ id: lessonId, completed }] },
+  );
+}
+
+/**
+ * Applies a saved completion to the cached progress, curriculum and lesson, so
+ * Leafy and every progress bar move at once instead of after the refetch.
+ */
+export function applyLessonCompletion(
+  queryClient: QueryClient,
+  enrollmentId: string,
+  lessonId: string,
+  completed: boolean,
+) {
+  const mark = <T extends CurriculumLesson>(lesson: T): T =>
+    lesson.id === lessonId && lesson.lock ? { ...lesson, lock: { ...lesson.lock, completed } } : lesson;
+
+  queryClient.setQueryData(
+    lessonQueries.lesson(enrollmentId, lessonId).queryKey,
+    (lesson) => (lesson ? mark(lesson) : lesson),
+  );
+  queryClient.setQueryData(lessonQueries.content(enrollmentId).queryKey, (curricula) =>
+    curricula?.map((curriculum) => ({
+      ...curriculum,
+      topics: curriculum.topics?.map((topic) => ({ ...topic, lessons: topic.lessons.map(mark) })),
+    })),
+  );
+  queryClient.setQueryData(studentQueries.progress().queryKey, (tracks) =>
+    tracks?.map((track) => {
+      if (track.enrollmentId !== enrollmentId) return track;
+      const { totalLessons } = track.progress;
+      const completedLessons = Math.min(
+        totalLessons,
+        Math.max(0, track.progress.completedLessons + (completed ? 1 : -1)),
+      );
+      return {
+        ...track,
+        progress: {
+          completedLessons,
+          totalLessons,
+          percentage: totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0,
+        },
+      };
+    }),
   );
 }
 
