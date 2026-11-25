@@ -232,7 +232,7 @@ function CohortCardsSkeleton() {
             <Skeleton className="size-5" />
           </div>
           <Skeleton className="mt-3 h-7 w-40" />
-          <Skeleton className="mt-1 h-4 w-32" />
+          <Skeleton className="mt-1 h-4 w-20" />
           <div className="mt-4 flex gap-8">
             {Array.from({ length: 2 }).map((_, stat) => (
               <div key={stat} className="flex gap-3">

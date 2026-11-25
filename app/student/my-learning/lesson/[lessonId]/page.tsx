@@ -303,8 +303,13 @@ function LessonView({
                 {lesson.title}
               </h1>
               <p className="mt-1 text-sm text-neutral-400">
-                Module {week} · Lesson {number}
+                Module {week} · Lesson {number} of {topic.lessons.length}
               </p>
+              {!completed && (
+                <p className="mt-1 text-xs text-neutral-400">
+                  Completing lessons moves your module progress forward.
+                </p>
+              )}
             </div>
             <CompleteButton mutation={completion} completed={completed} next={next} />
           </div>

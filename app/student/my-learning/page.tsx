@@ -6,6 +6,7 @@ import {
   BookOpen,
   ChevronDown,
   ClipboardList,
+  ChevronRight,
   Lock,
   Paperclip,
   Video,
@@ -16,10 +17,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WorriedLeafy } from "@/components/mascot/Companion";
 import {
   countTopicResources,
+  countWatched,
   isUnlocked,
   moduleHref,
   moduleNumber,
   topicAssignments,
+  topicNextLesson,
   topicRecordings,
   useStudentCurriculum,
   type CurriculumTopic,
@@ -56,17 +59,52 @@ function Included({ topic }: { topic: CurriculumTopic }) {
   return (
     <div className="mt-4">
       <p className="text-xs font-medium text-neutral-800">What&apos;s included</p>
-      <ul className="mt-2 flex flex-wrap gap-2">
-        {items.map(({ icon: Icon, label }) => (
-          <li
-            key={label}
-            className="inline-flex h-7 items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2 text-xs text-neutral-600"
-          >
+      {/* Plain text, so nothing here looks clickable next to the button below. */}
+      <ul className="mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-neutral-500">
+        {items.map(({ icon: Icon, label }, index) => (
+          <li key={label} className="inline-flex items-center gap-1">
+            {index > 0 && (
+              <span aria-hidden className="mr-1 text-neutral-300">
+                ·
+              </span>
+            )}
             <Icon className="h-3.5 w-3.5 text-neutral-400" />
             {label}
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function moduleActionLabel(topic: CurriculumTopic) {
+  const next = topicNextLesson(topic);
+  if (countWatched(topic) === 0) return "Start module";
+  return next ? `Continue · Lesson ${next.number}` : "Review module";
+}
+
+function ModuleProgress({ topic }: { topic: CurriculumTopic }) {
+  const total = topic.lessons.length;
+  if (total === 0) return null;
+  const done = countWatched(topic);
+  return (
+    <div className="mt-4 flex items-center gap-3">
+      <div
+        role="progressbar"
+        aria-label="Lessons completed"
+        aria-valuenow={done}
+        aria-valuemin={0}
+        aria-valuemax={total}
+        className="h-1.5 max-w-60 flex-1 overflow-hidden rounded-full bg-neutral-200"
+      >
+        <div
+          className="h-full rounded-full bg-brand-primary transition-[width]"
+          style={{ width: `${(done / total) * 100}%` }}
+        />
+      </div>
+      <span className="shrink-0 text-xs text-neutral-500">
+        {done} of {plural(total, "lesson")} done
+      </span>
     </div>
   );
 }
@@ -120,11 +158,13 @@ function ModuleItem({
             <p className="text-sm text-neutral-500">{topic.description}</p>
           )}
           <Included topic={topic} />
+          <ModuleProgress topic={topic} />
           <Link
             href={moduleHref(topic.id)}
-            className="mt-4 inline-flex h-8 items-center rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 hover:bg-neutral-50"
+            className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-primary px-4 text-sm font-medium text-white transition-colors hover:bg-brand-primary-hover"
           >
-            View module
+            {moduleActionLabel(topic)}
+            <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
       )}

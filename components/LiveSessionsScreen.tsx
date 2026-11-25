@@ -111,6 +111,22 @@ export function LiveSessionsScreen({
   const toggle = (id: string) =>
     setSelectedId((current) => (current === id ? null : id));
 
+  const previewRef = React.useRef<HTMLElement>(null);
+  // Focus moves into the preview so Escape closes it straight away.
+  React.useEffect(() => {
+    if (selectedId !== null) previewRef.current?.focus({ preventScroll: true });
+  }, [selectedId]);
+
+  // The mobile sheet covers the list, so the page behind it shouldn't scroll.
+  React.useEffect(() => {
+    if (selectedId === null || !window.matchMedia?.("(max-width: 1023px)").matches) return;
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [selectedId]);
+
   return (
     // On desktop the page fits the viewport so the list and the preview
     // scroll on their own instead of stretching each other.
@@ -188,17 +204,24 @@ export function LiveSessionsScreen({
         </main>
 
         {previewed && (
-          // The frame widens from nothing so the cards slide over instead of jumping.
+          // Beside the list on desktop, the frame widens from nothing so the cards slide
+          // over. On smaller screens it's a bottom sheet over the list instead.
           <div
+            onClick={(event) => {
+              if (event.target === event.currentTarget) setSelectedId(null);
+            }}
             className={cn(
-              "border-t border-border-default lg:w-[360px] lg:shrink-0 lg:overflow-hidden lg:border-t-0 lg:border-l",
+              "max-lg:fixed max-lg:inset-0 max-lg:z-40 max-lg:flex max-lg:items-end max-lg:bg-neutral-800/40",
+              "lg:w-[360px] lg:shrink-0 lg:overflow-hidden lg:border-l lg:border-border-default",
               panel.leaving
-                ? "motion-safe:lg:animate-[preview-panel-close_200ms_cubic-bezier(0.4,0,1,1)_forwards]"
+                ? "max-lg:motion-safe:animate-out max-lg:motion-safe:fade-out-0 max-lg:motion-safe:duration-200 max-lg:motion-safe:fill-mode-forwards motion-safe:lg:animate-[preview-panel-close_200ms_cubic-bezier(0.4,0,1,1)_forwards]"
                 : panel.opening &&
-                    "motion-safe:lg:animate-[preview-panel-open_280ms_cubic-bezier(0.2,0,0,1)]",
+                    "max-lg:motion-safe:animate-in max-lg:motion-safe:fade-in-0 max-lg:motion-safe:duration-200 motion-safe:lg:animate-[preview-panel-open_280ms_cubic-bezier(0.2,0,0,1)]",
             )}
           >
             <aside
+              ref={previewRef}
+              tabIndex={-1}
               aria-label="Session preview"
               onKeyDown={(event) => {
                 if (event.key !== "Escape") return;
@@ -206,12 +229,16 @@ export function LiveSessionsScreen({
                 setSelectedId(null);
               }}
               className={cn(
-                "lg:h-full lg:w-[360px] lg:overflow-y-auto",
+                "max-lg:max-h-[85dvh] max-lg:w-full max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:rounded-t-3xl max-lg:bg-surface-default max-lg:shadow-[0_-8px_24px_rgb(0_0_0/0.12)]",
+                "outline-none lg:h-full lg:w-[360px] lg:overflow-y-auto",
                 panel.leaving
-                  ? "motion-safe:animate-out motion-safe:fade-out-0 motion-safe:slide-out-to-right-6 motion-safe:duration-200 motion-safe:fill-mode-forwards"
-                  : "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-6 motion-safe:duration-300",
+                  ? "motion-safe:animate-out motion-safe:fade-out-0 motion-safe:duration-200 motion-safe:fill-mode-forwards max-lg:motion-safe:slide-out-to-bottom-1/2 lg:motion-safe:slide-out-to-right-6"
+                  : "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 max-lg:motion-safe:slide-in-from-bottom-1/2 lg:motion-safe:slide-in-from-right-6",
               )}
             >
+              <div aria-hidden className="flex justify-center pt-3 lg:hidden">
+                <span className="h-1 w-10 rounded-full bg-neutral-300" />
+              </div>
               <SessionPreview
                 key={previewed.id}
                 session={previewed}

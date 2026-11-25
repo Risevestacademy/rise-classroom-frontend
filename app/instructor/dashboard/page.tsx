@@ -218,7 +218,7 @@ export default function DashboardOverview() {
                 >
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-40 bg-neutral-200" />
-                    <Skeleton className="h-3 w-32 bg-neutral-200" />
+                    <Skeleton className="h-3 w-36 bg-neutral-200" />
                   </div>
                   <div className="space-y-1.5">
                     <Skeleton className="h-2 w-full rounded-full bg-neutral-200" />
@@ -359,7 +359,7 @@ export default function DashboardOverview() {
                   >
                     <div className="space-y-1.5">
                       <Skeleton className="h-3.5 w-48 bg-neutral-200" />
-                      <Skeleton className="h-3 w-32 bg-neutral-200" />
+                      <Skeleton className="h-3 w-36 bg-neutral-200" />
                     </div>
                     <Skeleton className="h-5 w-14 rounded-full bg-neutral-200 shrink-0" />
                   </div>

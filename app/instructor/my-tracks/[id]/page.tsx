@@ -547,7 +547,7 @@ function TrackDetailsContent({ trackId }: { trackId: string }) {
                         >
                           <div className="space-y-2">
                             <Skeleton className="h-3.5 w-52 bg-neutral-200" />
-                            <Skeleton className="h-3 w-32 bg-neutral-200" />
+                            <Skeleton className="h-3 w-20 bg-neutral-200" />
                           </div>
 
                           <Skeleton className="h-6 w-20 rounded-full bg-neutral-200 shrink-0" />
@@ -612,7 +612,7 @@ function TrackDetailsContent({ trackId }: { trackId: string }) {
 
                       <div className="space-y-2">
                         <Skeleton className="h-5 w-48 bg-neutral-200" />
-                        <Skeleton className="h-4 w-32 bg-neutral-200" />
+                        <Skeleton className="h-4 w-20 bg-neutral-200" />
                       </div>
                     </div>
 

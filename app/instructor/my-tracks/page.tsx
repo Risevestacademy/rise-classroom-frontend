@@ -98,7 +98,7 @@ export default function MyTracks() {
               >
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-40 bg-neutral-200" />
-                  <Skeleton className="h-3 w-32 bg-neutral-200" />
+                  <Skeleton className="h-3 w-20 bg-neutral-200" />
                 </div>
                 <div className="space-y-1.5">
                   <Skeleton className="h-2 w-full rounded-full bg-neutral-200" />

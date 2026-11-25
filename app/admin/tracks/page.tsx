@@ -108,7 +108,7 @@ export default function TracksPage() {
                   {allTracksQuery.isPending || cohortPending ? (
                     <>
                       <Skeleton className="h-5 w-20" />
-                      <Skeleton className="mt-2 h-4 w-32" />
+                      <Skeleton className="mt-2 h-4 w-20" />
                     </>
                   ) : (
                     <>
@@ -162,7 +162,7 @@ export default function TracksPage() {
                             <div className="flex items-center gap-3">
                               <Skeleton className="h-9 w-9 rounded-full" />
                               <div className="flex flex-col gap-1.5">
-                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-4 w-20" />
                                 <Skeleton className="h-3 w-44" />
                               </div>
                             </div>

@@ -123,7 +123,17 @@ export default function CreateAccountPage() {
 
         <label className="flex items-center gap-2 text-sm text-neutral-600">
           <Checkbox checked={agreed} onCheckedChange={setAgreed} />
-          I agree to the Terms of Use and Privacy Policy
+          <span>
+            I agree to the Terms of Use and{" "}
+            <Link
+              href="/privacy-policy"
+              target="_blank"
+              rel="noopener"
+              className="font-medium text-brand-primary underline underline-offset-2 hover:text-brand-primary-hover"
+            >
+              Privacy Policy
+            </Link>
+          </span>
         </label>
 
         <Button

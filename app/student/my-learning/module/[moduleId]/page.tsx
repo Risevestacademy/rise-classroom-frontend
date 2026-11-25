@@ -5,16 +5,17 @@ import { useParams } from "next/navigation";
 import { useMemo } from "react";
 import {
   CalendarDays,
+  Check,
   ChevronLeft,
-  CirclePlay,
+  ChevronRight,
   Lock,
+  Play,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorriedLeafy } from "@/components/mascot/Companion";
 import { FileChip } from "@/components/lessons/FileChip";
-import { LessonVideo } from "@/components/lessons/LessonVideo";
 import { Notice } from "@/components/lessons/Notice";
 import { assignmentHref } from "@/lib/student-assignments";
 import {
@@ -26,6 +27,7 @@ import {
 } from "@/lib/module-sample-data";
 import {
   LESSONS_BASE,
+  countWatched,
   findTopic,
   formatDuration,
   isCompleted,
@@ -33,7 +35,7 @@ import {
   lessonHref,
   moduleNumber,
   topicAssignments,
-  topicRecordings,
+  topicNextLesson,
   useStudentCurriculum,
   type CurriculumTopic,
 } from "@/lib/student-lessons";
@@ -72,79 +74,162 @@ function Outcomes({ outcomes }: { outcomes: string[] }) {
 }
 
 function Lessons({ topic }: { topic: CurriculumTopic }) {
+  const current = topicNextLesson(topic)?.lesson.id;
   return (
     <section className="flex flex-col gap-3">
       <SectionHeading
         title="Lessons"
-        hint={`${topic.lessons.length} ${topic.lessons.length === 1 ? "lesson" : "lessons"} in this module`}
+        hint="Open a lesson to watch it and mark it complete."
       />
-      <ul className="flex flex-col gap-2">
+      <ol className="flex flex-col gap-2">
         {topic.lessons.map((lesson, index) => {
           const unlocked = isUnlocked(lesson);
+          const done = isCompleted(lesson);
+          const isCurrent = lesson.id === current;
+          const duration = lesson.recordings?.[0]?.durationSec;
           const status = !unlocked
-            ? "Locked"
-            : isCompleted(lesson)
-              ? "Completed"
-              : null;
+            ? " · Locked"
+            : done
+              ? " · Completed"
+              : isCurrent
+                ? " · Up next"
+                : "";
           return (
             <li
               key={lesson.id}
               className={cn(
-                "relative rounded-xl bg-neutral-100 p-4",
-                unlocked ? "hover:bg-neutral-200/60" : "opacity-60",
+                "group relative flex items-start gap-3 rounded-xl border p-4 transition-colors",
+                isCurrent
+                  ? "border-brand-primary/40 bg-surface-brand"
+                  : "border-transparent bg-neutral-100",
+                unlocked ? "hover:border-neutral-300" : "opacity-60",
               )}
             >
-              <p className="flex items-center gap-1 text-xs text-neutral-400">
-                {!unlocked && <Lock className="h-3 w-3" />}
-                Lesson {index + 1}
-                {status && ` · ${status}`}
-              </p>
-              {unlocked ? (
-                <Link
-                  href={lessonHref(lesson.id)}
-                  className="mt-1 block text-sm font-medium text-neutral-800 after:absolute after:inset-0 after:rounded-xl"
-                >
-                  {lesson.title}
-                </Link>
-              ) : (
-                <p className="mt-1 text-sm font-medium text-neutral-800">
-                  {lesson.title}
+              <span
+                aria-hidden
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium",
+                  done
+                    ? "bg-brand-primary text-white"
+                    : isCurrent
+                      ? "border-2 border-brand-primary bg-white text-brand-primary"
+                      : "border border-neutral-300 bg-white text-neutral-500",
+                )}
+              >
+                {done ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : !unlocked ? (
+                  <Lock className="h-3 w-3" />
+                ) : (
+                  index + 1
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-neutral-400">
+                  Lesson {index + 1}
+                  {status}
+                  {unlocked && duration ? ` · ${formatDuration(duration)}` : ""}
                 </p>
-              )}
-              {lesson.description && (
-                <p className="mt-1 text-xs text-neutral-500">
-                  {lesson.description}
-                </p>
-              )}
-              {unlocked && (lesson.recordings?.length ?? 0) > 0 && (
-                <p className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700">
-                  <CirclePlay className="h-4 w-4 fill-neutral-800 text-white" />
-                  Lesson video
-                  {lesson.recordings![0].durationSec ? (
-                    <span className="font-normal text-neutral-400">
-                      {formatDuration(lesson.recordings![0].durationSec)}
-                    </span>
-                  ) : null}
-                </p>
-              )}
-              {(lesson.resources?.length ?? 0) > 0 && (
-                <div className="relative mt-3 flex flex-wrap gap-2">
-                  {lesson.resources!.map((resource) => (
-                    <FileChip
-                      key={resource.id}
-                      title={resource.fileName || resource.title}
-                      url={resource.url}
-                      type={resource.type}
-                      sizeBytes={resource.sizeBytes}
-                    />
-                  ))}
-                </div>
+                {unlocked ? (
+                  <Link
+                    href={lessonHref(lesson.id)}
+                    className="mt-0.5 block text-sm font-medium text-neutral-800 after:absolute after:inset-0 after:rounded-xl"
+                  >
+                    {lesson.title}
+                  </Link>
+                ) : (
+                  <p className="mt-0.5 text-sm font-medium text-neutral-800">
+                    {lesson.title}
+                  </p>
+                )}
+                {lesson.description && (
+                  <p className="mt-1 line-clamp-2 text-xs text-neutral-500">
+                    {lesson.description}
+                  </p>
+                )}
+                {(lesson.resources?.length ?? 0) > 0 && (
+                  <div className="relative mt-3 flex flex-wrap gap-2">
+                    {lesson.resources!.map((resource) => (
+                      <FileChip
+                        key={resource.id}
+                        title={resource.fileName || resource.title}
+                        url={resource.url}
+                        type={resource.type}
+                        sizeBytes={resource.sizeBytes}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+              {unlocked && (
+                <ChevronRight className="mt-1.5 h-4 w-4 shrink-0 text-neutral-400 transition-transform group-hover:translate-x-0.5" />
               )}
             </li>
           );
         })}
-      </ul>
+      </ol>
     </section>
+  );
+}
+
+/** The module's progress and the one lesson to open next. */
+function ModuleHeader({ topic, number }: { topic: CurriculumTopic; number: number }) {
+  const total = topic.lessons.length;
+  const done = countWatched(topic);
+  const next = topicNextLesson(topic);
+  const duration = next?.lesson.recordings?.[0]?.durationSec;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <p className="text-xs font-medium text-neutral-400">Module {number}</p>
+        <h1 className="mt-1 text-xl font-medium text-neutral-800">{topic.title}</h1>
+        {topic.description && (
+          <p className="mt-2 text-sm text-neutral-500">{topic.description}</p>
+        )}
+        {total > 0 && (
+          <div className="mt-4 flex items-center gap-3">
+            <div
+              role="progressbar"
+              aria-label="Lessons completed"
+              aria-valuenow={done}
+              aria-valuemin={0}
+              aria-valuemax={total}
+              className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-200"
+            >
+              <div
+                className="h-full rounded-full bg-brand-primary"
+                style={{ width: `${(done / total) * 100}%` }}
+              />
+            </div>
+            <span className="shrink-0 text-xs text-neutral-500">
+              {done} of {total} {total === 1 ? "lesson" : "lessons"} completed
+            </span>
+          </div>
+        )}
+      </div>
+
+      {next && (
+        <Link
+          href={lessonHref(next.lesson.id)}
+          className="group flex items-center gap-4 rounded-2xl bg-brand-900 p-4 text-white transition-colors hover:bg-brand-800 sm:p-5"
+        >
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:scale-105">
+            <Play className="h-5 w-5 fill-white" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs text-white/70">
+              {done === 0 ? "Start here" : "Continue"} · Lesson {next.number}
+              {duration ? ` · ${formatDuration(duration)}` : ""}
+            </span>
+            <span className="mt-0.5 block truncate text-base font-medium">
+              {next.lesson.title}
+            </span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-white/70 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      )}
+    </div>
   );
 }
 
@@ -329,13 +414,6 @@ function ModuleView({
   topic: CurriculumTopic;
   number: number;
 }) {
-  const recordings = topicRecordings(topic).map(
-    ({ recording, lesson }, index) => ({
-      ...recording,
-      label: `Live Class ${index + 1}`,
-      caption: lesson.title,
-    }),
-  );
   const outcomes = (topic.outcomes ?? []).filter((item) => item.trim());
   const instructor = SHOW_MODULE_SAMPLE_DATA ? getSampleInstructor() : null;
   const classes = useMemo(
@@ -354,18 +432,7 @@ function ModuleView({
           Module {number}
         </Link>
 
-        {recordings.length > 0 && (
-          <LessonVideo key={topic.id} recordings={recordings} />
-        )}
-
-        <div>
-          <h1 className="text-xl font-medium text-neutral-800">
-            {topic.title}
-          </h1>
-          {topic.description && (
-            <p className="mt-2 text-sm text-neutral-500">{topic.description}</p>
-          )}
-        </div>
+        <ModuleHeader topic={topic} number={number} />
 
         {outcomes.length > 0 && <Outcomes outcomes={outcomes} />}
         {topic.lessons.length > 0 && <Lessons topic={topic} />}
@@ -384,9 +451,10 @@ function ModuleView({
 function ModuleSkeleton() {
   return (
     <div className="flex max-w-[780px] flex-col gap-6">
-      <Skeleton className="aspect-[16/9] w-full rounded-2xl" />
       <Skeleton className="h-6 w-[240px]" />
       <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-2 w-full rounded-full" />
+      <Skeleton className="h-20 w-full rounded-2xl" />
       <Skeleton className="h-24 w-full rounded-xl" />
       <Skeleton className="h-24 w-full rounded-xl" />
     </div>

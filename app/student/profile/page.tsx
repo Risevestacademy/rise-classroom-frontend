@@ -158,7 +158,7 @@ function ProfileSummary({ profile }: { profile: MyProfile }) {
   const [photoSaved, setPhotoSaved] = React.useState(false);
 
   const mentorValue = mentor.isPending ? (
-    <Skeleton className="mt-1 h-4 w-32" />
+    <Skeleton className="mt-1 h-4 w-20" />
   ) : mentor.error ? (
     "Couldn’t load your mentor"
   ) : mentor.data ? (
