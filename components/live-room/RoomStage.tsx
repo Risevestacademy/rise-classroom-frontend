@@ -419,6 +419,7 @@ export function RoomStage({
       </div>
 
       <ControlBar
+        status={<RecordingTimer />}
         micOn={isMicrophoneEnabled}
         cameraOn={isCameraEnabled}
         sharing={isScreenShareEnabled}
@@ -837,7 +838,6 @@ function RoomHeading({
   onPanel: (tab: PanelTab) => void;
 }) {
   const now = useClock();
-  const recordingFor = useRecordingTime();
 
   return (
     <header className="flex items-center gap-4 px-4 pt-4 pb-3 sm:px-6">
@@ -860,18 +860,7 @@ function RoomHeading({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        {recordingFor !== null && (
-          <p
-            role="status"
-            className="flex h-10 items-center gap-2 rounded-full bg-white/10 px-3 text-sm font-medium text-white tabular-nums motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95"
-          >
-            <span aria-hidden className="size-2.5 animate-pulse rounded-full bg-room-leave" />
-            <span>
-              <span className="max-sm:sr-only">Recording </span>
-              {formatDuration(recordingFor)}
-            </span>
-          </p>
-        )}
+        <RecordingTimer className="sm:hidden" />
         <button
           type="button"
           aria-pressed={panel === "participants"}
@@ -947,6 +936,27 @@ function useRoomRecording(sessionId: string, auto: boolean, connected: boolean) 
   }, [auto, connected, active, start]);
 
   return { active, starting: starting && !active, error, start };
+}
+
+/** The recording pill: in the header on phones, at the left of the call controls from `sm` up. */
+function RecordingTimer({ className }: { className?: string }) {
+  const recordingFor = useRecordingTime();
+  if (recordingFor === null) return null;
+  return (
+    <p
+      role="status"
+      className={cn(
+        "flex h-10 items-center gap-2 rounded-full bg-white/10 pr-3 pl-2 text-sm font-medium text-white tabular-nums motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 sm:h-11 sm:pr-4",
+        className,
+      )}
+    >
+      <span aria-hidden className="m-1 size-4 rounded-full border-[1.5px] border-white bg-[#c62828]" />
+      <span>
+        <span className="sr-only">Recording </span>
+        {formatDuration(recordingFor)}
+      </span>
+    </p>
+  );
 }
 
 /** How long the room has been recording, in ms, or `null` when it isn't. */
