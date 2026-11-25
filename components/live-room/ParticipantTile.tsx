@@ -196,7 +196,8 @@ function VoiceBars({ participant, speaking }: { participant: Participant; speaki
   const live = speaking && !still;
   // Measuring only while they talk keeps a full room cheap.
   const bands = useMultibandTrackVolume(live ? mic : undefined, voiceBands);
-  const [peaks, setPeaks] = React.useState([0.1, 0.1, 0.1]);
+  // Peaks only move when a new sample arrives, never on a plain re-render.
+  const [sampled, setSampled] = React.useState({ bands, peaks: [0.1, 0.1, 0.1] });
 
   if (!speaking) {
     return (
@@ -209,9 +210,12 @@ function VoiceBars({ participant, speaking }: { participant: Participant; speaki
   // Each band is measured against its own recent peak, so a quiet mic, and the
   // naturally quieter high pitches, move their bars as much as a loud voice.
   const levels = bands.map(loudness);
-  const nextPeaks = peaks.map((peak, index) => Math.max(levels[index] ?? 0, peak * 0.97, 0.1));
-  if (live && nextPeaks.some((peak, index) => Math.abs(peak - peaks[index]) > 0.005)) setPeaks(nextPeaks);
-  const share = (index: number) => Math.min(1, (levels[index] ?? 0) / nextPeaks[index]);
+  let peaks = sampled.peaks;
+  if (live && sampled.bands !== bands) {
+    peaks = peaks.map((peak, index) => Math.max(levels[index] ?? 0, peak * 0.97, 0.1));
+    setSampled({ bands, peaks });
+  }
+  const share = (index: number) => Math.min(1, (levels[index] ?? 0) / peaks[index]);
   // The outer bars also follow the middle one a little, so they never sit still while someone talks.
   const outer = (index: number) => 2 + Math.max(share(index), share(0) * 0.6) * 9;
   const heights = live ? [outer(1), 2 + share(0) * 9, outer(2)] : stillHeights;
