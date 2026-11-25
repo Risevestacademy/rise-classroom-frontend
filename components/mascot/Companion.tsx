@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Popover } from "@base-ui/react/popover";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, BellOff, WifiOff, X } from "lucide-react";
@@ -19,11 +20,13 @@ import { useControlTowerData } from "@/components/control-tower/hooks";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { SuccessToast } from "@/components/ui/toast";
 import { track } from "@/lib/analytics/track";
+import { liveSessionQueries, type LiveSession } from "@/lib/live-sessions";
 import { sessionQuery } from "@/lib/session-query";
 import { studentQueries } from "@/lib/student";
 import { studentAssignmentQueries } from "@/lib/student-assignments";
 import { continueLearning, upcomingDeadlines } from "@/lib/student-dashboard";
-import { useStudentCurriculum } from "@/lib/student-lessons";
+import { LESSONS_BASE, useStudentCurriculum } from "@/lib/student-lessons";
+import { useCurrentMinute } from "@/lib/use-current-minute";
 import { cn } from "@/lib/utils";
 import { InteractiveMascot } from "./InteractiveMascot";
 import { Mascot, TEAL_PALETTE, type MascotMood } from "./Mascot";
@@ -45,10 +48,14 @@ const SKIPS_KEY = "companion-pop-skips";
 const VISITS_KEY = "companion-visits";
 const PLANTED_KEY = "companion-planted";
 const TUCKED_KEY = "companion-tucked";
+/** Class heads-ups already given, so each is said once. */
+const LIVE_HEARD_KEY = "companion-live-heard";
 /** Daily pop-ups stop by themselves once this many in a row go unanswered. */
 const MAX_SKIPS = 3;
 const POP_MS = 12_000;
 const CHEER_MS = 6_000;
+const LIVE_POP_MS = 20_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const SINK_MS = 350;
 
 const listeners = new Set<() => void>();
@@ -410,6 +417,78 @@ function useTimedPop(active: boolean, ms: number, onDone: (timedOut: boolean) =>
   return { leaving, dismiss };
 }
 
+/** Yesterday to the day after tomorrow, so a late class isn't lost to a time zone. Stable for the day. */
+function liveWindow(today: string) {
+  const start = new Date(`${today}T00:00:00`).getTime();
+  return {
+    from: new Date(start - DAY_MS).toISOString(),
+    to: new Date(start + 2 * DAY_MS).toISOString(),
+  };
+}
+
+/** A class is live, or starts within two hours. */
+function classNear(sessions: LiveSession[]) {
+  const soon = Date.now() + 2 * 60 * 60 * 1000;
+  return sessions.some(
+    (session) =>
+      session.status === "live" ||
+      (session.status === "upcoming" && Date.parse(session.startsAt) <= soon),
+  );
+}
+
+/** Lessons, assignments and the class itself are left alone; the dot on Leafy still shows. */
+const undisturbed = (path: string) =>
+  path.startsWith(`${LESSONS_BASE}/lesson/`) ||
+  /^\/student\/assignments\/[^/]+/.test(path) ||
+  path.startsWith("/student/live");
+
+/**
+ * Wherever the student is, Leafy rises to say a class is about to start (15
+ * minutes out) and again once it's live. Each is said once, and waits for any
+ * other pop-up to finish first.
+ */
+function LiveHeadsUp({ nudges, growth, muted }: { nudges: Nudge[]; growth: number; muted: boolean }) {
+  const pathname = usePathname();
+  const popping = useContext(CompanionContext)?.popping ?? false;
+  const [heard, setHeard] = useStored(LIVE_HEARD_KEY);
+  const heardIds = heard ? heard.split("\n") : [];
+  const [showing, setShowing] = useState<string | null>(null);
+
+  const due = nudges.find(
+    (nudge) =>
+      nudge.urgent &&
+      ["live-now", "live-soon"].includes(nudgeKind(nudge)) &&
+      !heardIds.includes(nudge.id),
+  );
+  if (!showing && due && !muted && !popping && !undisturbed(pathname)) setShowing(due.id);
+  const saying = nudges.find((nudge) => nudge.id === showing);
+
+  const pop = useTimedPop(showing !== null, LIVE_POP_MS, (timedOut) => {
+    if (showing) {
+      track(`leafy_live_${timedOut ? "ignored" : "closed"}:${nudgeKind({ id: showing })}`);
+      setHeard([...heardIds.slice(-20), showing].join("\n"));
+    }
+    setShowing(null);
+  });
+  useEffect(() => {
+    if (showing) track(`leafy_live_shown:${nudgeKind({ id: showing })}`);
+  }, [showing]);
+
+  if (!showing || !saying) return null;
+  return (
+    <Pop
+      saying={saying}
+      growth={growth}
+      leaving={pop.leaving}
+      onDismiss={() => pop.dismiss()}
+      onAct={() => {
+        track(`leafy_live_acted:${nudgeKind(saying)}`);
+        pop.dismiss();
+      }}
+    />
+  );
+}
+
 /** Works out what the companion knows and holds the moments it can take over for. */
 export function CompanionProvider({ children }: { children: ReactNode }) {
   const curriculum = useStudentCurriculum();
@@ -421,6 +500,12 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
   // The same request the dashboard's deadlines card makes.
   const tasks = useQuery(studentQueries.weeklyTasks({ limit: 100 }));
   const tower = useControlTowerData();
+  const now = useCurrentMinute();
+  const live = useQuery({
+    ...liveSessionQueries.list(liveWindow(dayKey())),
+    // Checked every minute when a class is near, so "live now" shows soon after the host starts.
+    refetchInterval: (query) => (classNear(query.state.data ?? []) ? 60_000 : 10 * 60_000),
+  });
 
   const [visits, setVisits] = useStored(VISITS_KEY);
   const visitsKey = useScopedKey(VISITS_KEY);
@@ -445,6 +530,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     setPops((count) => count + 1);
     return () => setPops((count) => count - 1);
   }, []);
+  // Other corner prompts (like turning on notifications) step aside while Leafy talks.
+  useEffect(() => {
+    document.documentElement.toggleAttribute("data-leafy-talking", pops > 0);
+    return () => document.documentElement.removeAttribute("data-leafy-talking");
+  }, [pops]);
 
   const { enrollment, topics } = curriculum;
   const ready =
@@ -462,6 +552,8 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     controlTowerWeek: tower.weeks?.current,
     daysAway: daysAway(visits),
     topics,
+    liveSessions: live.data ?? [],
+    now: now === null ? undefined : new Date(now),
   });
 
   const completed = enrollment?.progress.completedLessons ?? 0;
@@ -506,6 +598,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
         toNextStage={toNextStage}
         onClose={() => setCelebration(null)}
       />
+      <LiveHeadsUp nudges={nudges} growth={growth} muted={quiet || !planted} />
       {cheering !== null && (
         <Pop
           saying={{ message: cheering, mood: "proud" }}
@@ -542,6 +635,7 @@ export function CompanionGreeting({
   const { nudges, ready, growth, quiet, planted, plantedKnown } = useCompanion();
   const [popped, setPopped] = useStored(POPPED_KEY);
   const [skips, setSkips] = useStored(SKIPS_KEY);
+  const [heard, setHeard] = useStored(LIVE_HEARD_KEY);
   const acted = useRef(false);
   const [top] = nudges;
   const kind = nudgeKind(top);
@@ -553,6 +647,8 @@ export function CompanionGreeting({
   // Ignored or waved away counts towards backing off; taking the action clears it.
   const pop = useTimedPop(popping, POP_MS, (timedOut) => {
     setPopped(today);
+    // A class the daily pop-up already mentioned doesn't get a second heads-up.
+    if (kind.startsWith("live-")) setHeard([...(heard?.split("\n") ?? []).slice(-20), top.id].join("\n"));
     if (acted.current) {
       track(`leafy_pop_acted:${kind}`);
       setSkips("0");

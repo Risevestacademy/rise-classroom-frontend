@@ -4,6 +4,7 @@ import type { ControlTowerWeek } from "@/lib/control-tower";
 import type { TrackProgress } from "@/lib/student";
 import type { StudentSubmission } from "@/lib/student-assignments";
 import type { ContinueLearning, Deadline } from "@/lib/student-dashboard";
+import type { LiveSession } from "@/lib/live-sessions";
 import type { CurriculumTopic } from "@/lib/student-lessons";
 import { growthFromLessons, lessonsToNextStage, stageFromLessons } from "../growth";
 import { buildNudges, nudgeKind } from "../nudges";
@@ -207,6 +208,43 @@ describe("buildNudges", () => {
     const monday = buildNudges({ ...base, variant: undefined })[0].message;
     const later = new Date(now.getTime() + 60 * 60 * 1000);
     expect(buildNudges({ ...base, variant: undefined, now: later })[0].message).toBe(monday);
+  });
+
+  describe("live classes", () => {
+    const at = (minutes: number) => new Date(now.getTime() + minutes * 60_000).toISOString();
+    const session = (id: string, startsIn: number, status: LiveSession["status"] = "upcoming") =>
+      ({ id, title: `Class ${id}`, status, startsAt: at(startsIn), endsAt: at(startsIn + 60) }) as LiveSession;
+    const dueToday = [deadline("d1", "2026-10-14T20:00:00.000Z", "dueToday")];
+
+    it("counts down to a class 15 minutes out, ahead of everything else", () => {
+      const [top] = buildNudges({ ...base, deadlines: dueToday, liveSessions: [session("s1", 15)] });
+      expect(top).toMatchObject({
+        id: "live-soon-s1",
+        urgent: true,
+        message: "“Class s1” starts in 15 minutes. Check your mic and camera while you wait.",
+        action: { label: "Check your setup", href: "/student/live/s1" },
+      });
+    });
+
+    it("says when a class is live, and offers to join", () => {
+      const [top] = buildNudges({ ...base, liveSessions: [session("s2", -5, "live")] });
+      expect(top).toMatchObject({ id: "live-now-s2", urgent: true, action: { label: "Join now", href: "/student/live/s2" } });
+    });
+
+    it("mentions a class later today calmly, behind anything pressing", () => {
+      const nudges = buildNudges({ ...base, deadlines: dueToday, liveSessions: [session("s3", 5 * 60)] });
+      expect(nudges[0].id).toBe("due-today-d1");
+      expect(nudges[1]).toMatchObject({ id: "live-today-s3", urgent: false });
+      expect(nudges[1].message).toMatch(/^“Class s3” is at \d{1,2}:\d{2} [AP]M today\.$/);
+    });
+
+    it("says nothing about classes that are over or days away", () => {
+      const nudges = buildNudges({
+        ...base,
+        liveSessions: [session("old", -120, "completed"), session("later", 3 * 24 * 60)],
+      });
+      expect(nudges.some((nudge) => nudge.id.startsWith("live-"))).toBe(false);
+    });
   });
 
   it("always has something to say", () => {
