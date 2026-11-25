@@ -252,6 +252,12 @@ export function countWatched(topic: CurriculumTopic) {
   return topic.lessons.filter(isCompleted).length;
 }
 
+/** Where to pick a module up: its first open lesson that isn't done yet. */
+export function topicNextLesson(topic: CurriculumTopic) {
+  const index = topic.lessons.findIndex((lesson) => isUnlocked(lesson) && !isCompleted(lesson));
+  return index === -1 ? null : { lesson: topic.lessons[index], number: index + 1 };
+}
+
 /** Published assignments the student can open: the module's own, then each unlocked lesson's. */
 export function topicAssignments(topic: CurriculumTopic) {
   if (!isUnlocked(topic)) return [];

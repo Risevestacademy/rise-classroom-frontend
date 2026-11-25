@@ -48,6 +48,8 @@ const SKIPS_KEY = "companion-pop-skips";
 const VISITS_KEY = "companion-visits";
 const PLANTED_KEY = "companion-planted";
 const TUCKED_KEY = "companion-tucked";
+/** Nudges the student read or closed on the dashboard, so they don't come back. */
+const DISMISSED_KEY = "companion-dismissed";
 /** Class heads-ups already given, so each is said once. */
 const LIVE_HEARD_KEY = "companion-live-heard";
 /** Daily pop-ups stop by themselves once this many in a row go unanswered. */
@@ -130,6 +132,8 @@ type CompanionValue = {
   popping: boolean;
   /* Called by each pop-up as it mounts; returns its unmount cleanup. */
   registerPop: () => () => void;
+  /** Hides a nudge for good once it's been read or closed. */
+  dismissNudge: (id: string) => void;
 };
 
 const CompanionContext = createContext<CompanionValue | null>(null);
@@ -176,6 +180,11 @@ function atRest(mood: MascotMood) {
 function growthLine(stage: MascotStage, toNextStage: number) {
   if (stage === BLOOM) return "In full bloom";
   return `${MASCOT_STAGES[stage]} · ${toNextStage} ${toNextStage === 1 ? "lesson" : "lessons"} to ${MASCOT_STAGES[stage + 1]}`;
+}
+
+/** Leafy keeps its eyes open while it has something to tell you, so they can follow the pointer. */
+function openEyed(mood: MascotMood): MascotMood {
+  return mood === "celebrate" || mood === "proud" ? "happy" : mood;
 }
 
 /** Whether Leafy has been planted, and so may be shown. False outside the student area. */
@@ -378,7 +387,7 @@ function Pop({
       </div>
       <InteractiveMascot
         growth={growth}
-        mood={saying.mood}
+        mood={saying.action ? openEyed(saying.mood) : saying.mood}
         palette={TEAL_PALETTE}
         size={128}
         className="pointer-events-auto translate-y-6"
@@ -542,8 +551,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     !tasks.isPending &&
     !(enrollmentId !== "" && submissions.isPending);
 
+  const [storedDismissed, setDismissed] = useStored(DISMISSED_KEY);
+  const dismissed = storedDismissed ? storedDismissed.split("\n") : [];
+
   const submitted = submissions.data?.items ?? [];
-  const nudges = buildNudges({
+  const allNudges = buildNudges({
     enrollment,
     notEnrolled: curriculum.notEnrolled,
     current: enrollment ? continueLearning(enrollment, topics) : null,
@@ -555,6 +567,11 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     liveSessions: live.data ?? [],
     now: now === null ? undefined : new Date(now),
   });
+  const unread = allNudges.filter((nudge) => !dismissed.includes(nudge.id));
+  const nudges: Nudge[] =
+    unread.length > 0
+      ? unread
+      : [{ id: "all-clear", mood: "happy", message: "You’re all caught up.", urgent: false }];
 
   const completed = enrollment?.progress.completedLessons ?? 0;
   const total = enrollment?.progress.totalLessons ?? 0;
@@ -585,6 +602,10 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
     },
     popping: pops > 0,
     registerPop,
+    dismissNudge: (id) => {
+      if (dismissed.includes(id)) return;
+      setDismissed([...dismissed.slice(-50), id].join("\n"));
+    },
   };
 
   return (
@@ -632,7 +653,7 @@ export function CompanionGreeting({
   heading: ReactNode;
   subtitle: string;
 }) {
-  const { nudges, ready, growth, quiet, planted, plantedKnown } = useCompanion();
+  const { nudges, ready, growth, quiet, planted, plantedKnown, dismissNudge } = useCompanion();
   const [popped, setPopped] = useStored(POPPED_KEY);
   const [skips, setSkips] = useStored(SKIPS_KEY);
   const [heard, setHeard] = useStored(LIVE_HEARD_KEY);
@@ -650,6 +671,7 @@ export function CompanionGreeting({
     // A class the daily pop-up already mentioned doesn't get a second heads-up.
     if (kind.startsWith("live-")) setHeard([...(heard?.split("\n") ?? []).slice(-20), top.id].join("\n"));
     if (acted.current) {
+      dismissNudge(top.id);
       track(`leafy_pop_acted:${kind}`);
       setSkips("0");
       return;
@@ -663,7 +685,8 @@ export function CompanionGreeting({
   }, [popping, kind]);
 
   const settled = ready && planted && !popping;
-  const rest = atRest(top.mood);
+  const closable = kind !== "all-clear";
+  const rest = top.action ? { mood: openEyed(top.mood), scene: undefined } : atRest(top.mood);
 
   // Until `planted` is known, Leafy's place is held so the greeting doesn't jump.
   if (plantedKnown && !planted) {
@@ -692,17 +715,44 @@ export function CompanionGreeting({
       <div className="min-w-0 pb-1">
         {heading}
         {settled ? (
+          // A thought bubble: two small bubbles trail back towards Leafy.
           <div
+            key={top.id}
             className={cn(
-              "mt-2 inline-flex max-w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl rounded-bl-sm border border-neutral-200 bg-white px-4 py-2.5 shadow-sm",
+              "relative mt-2 ml-3 inline-flex max-w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-[22px] border border-neutral-200 bg-white py-2.5 pl-4 shadow-sm",
+              closable ? "pr-9" : "pr-4",
               styles.settle,
             )}
           >
+            <span
+              aria-hidden
+              className="absolute -bottom-1 -left-3 size-3 rounded-full border border-neutral-200 bg-white shadow-sm"
+            />
+            <span
+              aria-hidden
+              className="absolute -bottom-3 -left-6 size-1.5 rounded-full border border-neutral-200 bg-white"
+            />
             <p className="text-sm text-neutral-700">{top.message}</p>
             <SayingAction
               saying={top}
-              onClick={() => track(`leafy_greeting_acted:${kind}`)}
+              onClick={() => {
+                track(`leafy_greeting_acted:${kind}`);
+                dismissNudge(top.id);
+              }}
             />
+            {closable && (
+              <button
+                type="button"
+                aria-label="Dismiss"
+                onClick={() => {
+                  track(`leafy_greeting_dismissed:${kind}`);
+                  dismissNudge(top.id);
+                }}
+                className="absolute top-2 right-2 flex size-5 items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:outline-none"
+              >
+                <X className="size-3" />
+              </button>
+            )}
           </div>
         ) : (
           <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>

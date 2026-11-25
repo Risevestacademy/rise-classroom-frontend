@@ -107,7 +107,8 @@ describe("student lessons", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("2 live class recordings")).toBeInTheDocument();
     expect(screen.getByText("3 lessons")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View module" })).toHaveAttribute(
+    expect(screen.getByText("1 of 3 lessons done")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Continue · Lesson 1" })).toHaveAttribute(
       "href",
       "/student/my-learning/module/t1",
     );
@@ -124,7 +125,13 @@ describe("student lessons", () => {
 
     expect(await screen.findByRole("heading", { name: "Visual design" })).toBeInTheDocument();
     expect(screen.getByText("Use a grid")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Play Live Class 2" })).toBeInTheDocument();
+    expect(screen.getByText("1 of 3 lessons completed")).toBeInTheDocument();
+    // The module sends you into a lesson instead of playing recordings itself.
+    expect(screen.queryByRole("button", { name: /Play Live Class/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Continue · Lesson 1/ })).toHaveAttribute(
+      "href",
+      "/student/my-learning/lesson/l1",
+    );
     expect(screen.getByRole("link", { name: "Grids" })).toHaveAttribute(
       "href",
       "/student/my-learning/lesson/l1",
