@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info } from "lucide-react";
 
-import { PersonAvatar } from "@/components/PersonAvatar";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/field";
 import { LockedField } from "@/components/ui/locked-field";
@@ -18,6 +17,7 @@ import {
   ProfileSubpageHeader,
   SectionCard,
 } from "@/components/student-settings/ProfileParts";
+import { ProfilePhoto } from "@/components/student-settings/ChangePhotoDialog";
 import { ApiError } from "@/lib/api";
 import {
   currentMembership,
@@ -36,7 +36,7 @@ export default function EditProfilePage() {
     <ProfileColumn>
       <ProfileSubpageHeader
         title="Edit profile"
-        description="Update your name and phone number"
+        description="Update your display name and phone number"
       />
       {profile.isPending ? (
         <EditProfileSkeleton />
@@ -56,7 +56,7 @@ function EditProfileForm({ profile }: { profile: MyProfile }) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const initialName = fullNameOf(profile);
+  const initialName = profile.displayName?.trim() ?? "";
   const initialPhone = profile.phoneNumber ?? "";
   const [name, setName] = React.useState(initialName);
   const [phone, setPhone] = React.useState(initialPhone);
@@ -65,7 +65,8 @@ function EditProfileForm({ profile }: { profile: MyProfile }) {
 
   const trimmedName = name.trim();
   const trimmedPhone = phone.trim();
-  const nameError = submitted && !trimmedName ? "Enter your name" : null;
+  const nameError =
+    submitted && !trimmedName && initialName ? "Enter a display name" : null;
   const phoneError =
     submitted && trimmedPhone && !isValidPhoneNumber(trimmedPhone)
       ? "Enter a valid phone number"
@@ -92,7 +93,8 @@ function EditProfileForm({ profile }: { profile: MyProfile }) {
   const onSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitted(true);
-    if (!trimmedName || (trimmedPhone && !isValidPhoneNumber(trimmedPhone))) return;
+    if (!trimmedName && initialName) return;
+    if (trimmedPhone && !isValidPhoneNumber(trimmedPhone)) return;
     if (!isDirty) {
       router.push(PROFILE_PATH);
       return;
@@ -108,17 +110,17 @@ function EditProfileForm({ profile }: { profile: MyProfile }) {
   return (
     <>
       <SectionCard className="p-4 sm:p-6">
+        {/* Outside the form: the dialog's own submit would bubble into it through the portal. */}
+        <ProfilePhoto profile={profile} className="mb-5" />
         <form noValidate onSubmit={onSubmit} className="flex flex-col gap-5">
-          <PersonAvatar
-            name={initialName}
-            src={profile.image}
-            colorKey={profile.id}
-            size={56}
+          <LockedWithNote
+            label="Full name"
+            value={fullNameOf(profile)}
+            note="Contact your admin to change your full name"
           />
 
           <FormField
-            label="Full name"
-            required
+            label="Display name"
             invalid={!!nameError}
             error={nameError}
             inputProps={{
@@ -126,7 +128,8 @@ function EditProfileForm({ profile }: { profile: MyProfile }) {
               leadingIcon: null,
               value: name,
               maxLength: 100,
-              autoComplete: "name",
+              placeholder: "What should people call you?",
+              autoComplete: "nickname",
               onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
                 setName(event.target.value),
             }}

@@ -131,11 +131,16 @@ export const profileQueries = {
     }),
 };
 
-export function fullNameOf(profile: Pick<MyProfile, "firstName" | "lastName" | "displayName">) {
-  return (
-    profile.displayName?.trim() ||
-    `${profile.firstName} ${profile.lastName}`.trim()
-  );
+/** First and last name, as set by an admin. */
+export function fullNameOf(profile: Pick<MyProfile, "firstName" | "lastName">) {
+  return `${profile.firstName} ${profile.lastName}`.trim();
+}
+
+/** What the user goes by: their display name, or their full name until they set one. */
+export function displayNameOf(
+  profile: Pick<MyProfile, "firstName" | "lastName" | "displayName">,
+) {
+  return profile.displayName?.trim() || fullNameOf(profile);
 }
 
 /** The track they're on now: the first membership the API lists. */
