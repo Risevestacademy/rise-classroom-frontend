@@ -257,21 +257,39 @@ describe("buildNudges", () => {
 });
 
 describe("lessonsToNextStage", () => {
-  it("counts lessons up to the next sixth of the track", () => {
-    expect(lessonsToNextStage(0, 12)).toBe(2);
+  it("counts lessons up to the next stage's share of the track", () => {
+    // On 12 lessons the stages start at lessons 1, 2, 4, 6, 9 and 11.
+    expect(lessonsToNextStage(0, 12)).toBe(1);
     expect(lessonsToNextStage(3, 12)).toBe(1);
-    expect(lessonsToNextStage(10, 12)).toBe(2);
+    expect(lessonsToNextStage(6, 12)).toBe(3);
+    expect(lessonsToNextStage(10, 12)).toBe(1);
+    expect(lessonsToNextStage(11, 12)).toBe(0);
     expect(lessonsToNextStage(12, 12)).toBe(0);
+  });
+
+  it("isn't thrown off by float rounding at a stage's edge", () => {
+    // 20 × 0.15 is 3.0000000000000004, which must still read as lesson 3.
+    expect(lessonsToNextStage(2, 20)).toBe(1);
+    expect(stageFromLessons(3, 20)).toBe(2);
   });
 });
 
 describe("growth", () => {
-  it("grows a little with every lesson and blooms only at the end", () => {
-    expect(growthFromLessons(0, 12)).toBe(0);
-    expect(growthFromLessons(3, 12)).toBe(1.5);
-    expect(stageFromLessons(3, 12)).toBe(1);
-    expect(stageFromLessons(11, 12)).toBe(5);
+  it("comes quickly at first and blooms a few lessons before the end", () => {
+    expect(stageFromLessons(1, 20)).toBe(1);
+    expect(stageFromLessons(3, 12)).toBe(2);
+    expect(stageFromLessons(9, 12)).toBe(5);
+    expect(stageFromLessons(11, 12)).toBe(6);
+    expect(growthFromLessons(11, 12)).toBe(6);
     expect(growthFromLessons(12, 12)).toBe(6);
     expect(growthFromLessons(0, 0)).toBe(0);
+  });
+
+  it("grows only a little between stages, saving the change for the stage", () => {
+    expect(growthFromLessons(0, 12)).toBe(0);
+    // A quarter of the way between Seedling and Growing at most.
+    expect(growthFromLessons(3, 12)).toBeCloseTo(2 + (0.1 / 0.15) * 0.25);
+    expect(growthFromLessons(3, 12)).toBeLessThan(2.25);
+    expect(Math.floor(growthFromLessons(4, 12))).toBe(3);
   });
 });

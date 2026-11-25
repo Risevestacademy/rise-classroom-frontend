@@ -24,6 +24,7 @@ import { submissionBadges, type SubmissionStatus } from "@/features/curriculum/t
 import { assignmentHref } from "@/lib/student-assignments";
 import {
   LESSONS_BASE,
+  applyLessonCompletion,
   countWatched,
   findLesson,
   isCompleted,
@@ -174,13 +175,14 @@ function useLessonCompletion(enrollmentId: string, lessonId: string) {
   return useMutation({
     mutationFn: (next: boolean) =>
       setLessonCompleted(enrollmentId, lessonId, next),
-    onSuccess: () =>
-      Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["student", "enrollments", enrollmentId],
-        }),
-        queryClient.invalidateQueries({ queryKey: ["student", "progress"] }),
-      ]),
+    // Not awaited: the celebration shouldn't wait on the (slow) refetch to show.
+    onSuccess: (_, next) => {
+      applyLessonCompletion(queryClient, enrollmentId, lessonId, next);
+      void queryClient.invalidateQueries({
+        queryKey: ["student", "enrollments", enrollmentId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["student", "progress"] });
+    },
   });
 }
 
@@ -189,12 +191,13 @@ function CompleteButton({
   mutation,
   completed,
   next,
+  onComplete,
 }: {
   mutation: ReturnType<typeof useLessonCompletion>;
   completed: boolean;
   next: CurriculumLesson | null;
+  onComplete: () => void;
 }) {
-  const celebrate = useCompanionCelebrate();
   return (
     <div className="flex shrink-0 flex-col items-end gap-1">
       {completed && next ? (
@@ -212,13 +215,7 @@ function CompleteButton({
           aria-pressed={completed}
           title={completed ? "Mark as not completed" : undefined}
           disabled={mutation.isPending}
-          onClick={() =>
-            mutation.mutate(!completed, {
-              onSuccess: () => {
-                if (!completed) celebrate(next ? lessonHref(next.id) : undefined);
-              },
-            })
-          }
+          onClick={() => (completed ? mutation.mutate(false) : onComplete())}
         >
           <Check />
           {mutation.isPending
@@ -257,6 +254,12 @@ function LessonView({
   const assignments = lesson.assignments ?? [];
   const completed = isCompleted(lesson);
   const completion = useLessonCompletion(enrollmentId, lesson.id);
+  const celebrate = useCompanionCelebrate();
+  // The button and a finished video both end here, so both get the celebration.
+  const complete = () =>
+    completion.mutate(true, {
+      onSuccess: () => celebrate(next ? lessonHref(next.id) : undefined),
+    });
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: "overview", label: "Overview" },
@@ -293,7 +296,7 @@ function LessonView({
             key={lesson.id}
             recordings={lesson.recordings ?? []}
             onWatched={() => {
-              if (!completed && !completion.isPending) completion.mutate(true);
+              if (!completed && !completion.isPending) complete();
             }}
           />
 
@@ -311,7 +314,12 @@ function LessonView({
                 </p>
               )}
             </div>
-            <CompleteButton mutation={completion} completed={completed} next={next} />
+            <CompleteButton
+              mutation={completion}
+              completed={completed}
+              next={next}
+              onComplete={complete}
+            />
           </div>
 
           <div>

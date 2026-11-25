@@ -9,6 +9,7 @@ import {
   MASCOT_STAGES,
   growthFromProgress,
   stageFromProgress,
+  STAGE_STARTS,
   type MascotStage,
 } from "./growth";
 
@@ -74,7 +75,9 @@ export function MascotPlayground() {
   const stage = stageFromProgress(progress / 100);
   const palette = PALETTES[paletteKey];
   const setStage = (s: MascotStage) =>
-    setProgress(s === BLOOM ? 100 : Math.round(((s + 0.5) / BLOOM) * 100));
+    setProgress(
+      s === BLOOM ? 100 : Math.round(((STAGE_STARTS[s] + STAGE_STARTS[s + 1]) / 2) * 100),
+    );
 
   return (
     <main className="min-h-screen bg-white px-6 py-10">
