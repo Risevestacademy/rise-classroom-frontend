@@ -57,4 +57,30 @@ describe("useSessionChat", () => {
     expect(result.current.messages.map((m) => m.body)).toEqual(["Hi", "Hello", "On my way"]);
     expect(publish).toHaveBeenCalledWith(expect.any(Uint8Array), { reliable: true, topic: CHAT_TOPIC });
   });
+
+  it("shows a message as soon as it's sent, and takes it back if saving fails", async () => {
+    let finish: (value: Response) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) =>
+        init?.method === "POST"
+          ? new Promise<Response>((resolve) => (finish = resolve))
+          : Promise.resolve(Response.json(envelope({ items: [] }))),
+      ),
+    );
+    const { result } = renderChat();
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let sent: Promise<unknown> = Promise.resolve();
+    act(() => {
+      sent = result.current.send("Be right there").catch(() => "failed");
+    });
+    expect(result.current.messages).toMatchObject([{ body: "Be right there", pending: true }]);
+
+    await act(async () => {
+      finish(Response.json({ message: "Chat is off" }, { status: 403 }));
+      expect(await sent).toBe("failed");
+    });
+    expect(result.current.messages).toEqual([]);
+  });
 });

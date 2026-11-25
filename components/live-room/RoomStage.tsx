@@ -17,11 +17,13 @@ import {
   type TrackReference,
   type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
+import { useQuery } from "@tanstack/react-query";
 import { ConnectionQuality, ConnectionState, LocalVideoTrack, Track, VideoPresets, type Participant } from "livekit-client";
 
-import { AlertCircle, Message01, UserMultiple, WifiOff01 } from "@/assets/icons";
+import { AlertCircle, ComputerScreenShare, Message01, UserMultiple, WifiOff01 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import {
+  AVATAR_ATTRIBUTE,
   endSessionForAll,
   FEEDBACK_ATTRIBUTE,
   HAND_ATTRIBUTE,
@@ -43,12 +45,15 @@ import {
 } from "@/lib/live-room";
 import { ApiError } from "@/lib/api";
 import { getSessionEntry, personName, type RoomAccess } from "@/lib/live-sessions";
+import { sessionQuery } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
 import { ControlBar } from "./ControlBar";
-import { displayName, OthersTile, ParticipantTile } from "./ParticipantTile";
+import { avatarOf, displayName, OthersTile, ParticipantTile } from "./ParticipantTile";
 import { mentions } from "./mentions";
 import { RaisedHandsCard, useRaisedHands } from "./RaisedHands";
-import { SessionSettingsDialog } from "./SessionSettings";
+import { playCue, useRoomSounds } from "./room-sounds";
+import { SessionSettingsDialog, type SectionId } from "./SessionSettings";
+import { useRoomShortcuts } from "./shortcuts";
 import { useSessionChat } from "./useSessionChat";
 import { ChatPanel, ParticipantsPanel, type PanelTab } from "./SidePanel";
 
@@ -56,6 +61,10 @@ type Notice = { id: number; tone: "info" | "warning" | "error"; message: string 
 type Reaction = { id: number; emoji: string; name: string; left: number };
 
 const SESSION_ENDED = "ended";
+const raisedNow = () => String(Date.now());
+
+/** A photo link short enough to pass round the room; an embedded image isn't. */
+const shareablePhoto = (image?: string | null) => (image && /^https?:\/\//.test(image) && image.length <= 1024 ? image : "");
 
 const clockFormat = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit" });
 
@@ -86,16 +95,20 @@ export function RoomStage({
   // Host controls follow what the backend lets this person do.
   const isHost = access.canModerate;
 
+  const photo = shareablePhoto(useQuery(sessionQuery()).data?.user.image);
+
   // The backend's token carries no attributes, so say who we are once in:
-  // the host pill and the participants list read these.
+  // the host pill, the participants list and everyone's tiles read these.
   React.useEffect(() => {
     if (connection !== ConnectionState.Connected) return;
     const role = access.sessionRole === "HOST" ? "host" : "participant";
     const label = roleLabel(access.platformRole);
     const current = localParticipant.attributes;
-    if (current[ROLE_ATTRIBUTE] === role && current[LABEL_ATTRIBUTE] === label) return;
-    localParticipant.setAttributes({ [ROLE_ATTRIBUTE]: role, [LABEL_ATTRIBUTE]: label }).catch(() => {});
-  }, [connection, localParticipant, access.sessionRole, access.platformRole]);
+    if (current[ROLE_ATTRIBUTE] === role && current[LABEL_ATTRIBUTE] === label && (current[AVATAR_ATTRIBUTE] ?? "") === photo) return;
+    localParticipant
+      .setAttributes({ [ROLE_ATTRIBUTE]: role, [LABEL_ATTRIBUTE]: label, [AVATAR_ATTRIBUTE]: photo })
+      .catch(() => {});
+  }, [connection, localParticipant, access.sessionRole, access.platformRole, photo]);
   const handRaised = Boolean(attributes?.[HAND_ATTRIBUTE]);
   const raisedHands = useRaisedHands();
   const feedback = (attributes?.[FEEDBACK_ATTRIBUTE] || undefined) as Feedback | undefined;
@@ -110,8 +123,16 @@ export function RoomStage({
   const [pinned, setPinned] = React.useState<string | null>(null);
   const [notices, setNotices] = React.useState<Notice[]>([]);
   const [reactions, setReactions] = React.useState<Reaction[]>([]);
-  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [settingsOpen, setSettingsOpen] = React.useState<SectionId | true | false>(false);
   const [seenMessages, setSeenMessages] = React.useState(0);
+  const [announcement, setAnnouncement] = React.useState("");
+  const shownPanel = usePresence(panel);
+  const panelNow = React.useRef(panel);
+  React.useEffect(() => {
+    panelNow.current = panel;
+  }, [panel]);
+
+  useRoomSounds({ hands: isHost });
 
   const notify = React.useCallback((tone: Notice["tone"], message: string) => {
     const id = Date.now() + Math.random();
@@ -121,10 +142,14 @@ export function RoomStage({
 
   // Someone tagging you with "@" gets a notice, wherever you are in the room.
   const chat = useSessionChat(sessionId, access.canReadChat, (message) => {
-    if (message.sender.id !== access.userId && mentions(message.body, localParticipant.name ?? "")) {
+    if (message.sender.id === access.userId) return;
+    if (mentions(message.body, localParticipant.name ?? "")) {
       notify("info", `${personName(message.sender) || "Someone"} mentioned you in the chat.`);
+      playCue("mention");
+    } else if (panelNow.current !== "chat") {
+      playCue("message");
     }
-  });
+  }, { id: access.userId, name: localParticipant.name ?? "", image: photo || null });
   const chatMessages = chat.messages;
 
   const showReaction = React.useCallback((emoji: string, name: string) => {
@@ -182,6 +207,41 @@ export function RoomStage({
     }
   }
 
+  const toggleMic = () => {
+    if (!isMicrophoneEnabled && blocked.microphone) return notify("info", "The host has turned off microphones.");
+    localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled).catch(() => {});
+  };
+  const toggleCamera = () => {
+    if (!isCameraEnabled && blocked.camera) return notify("info", "The host has turned off cameras.");
+    localParticipant.setCameraEnabled(!isCameraEnabled, cameraCapture(settings.videoQuality)).catch(() => {});
+  };
+  const toggleHand = () => {
+    if (!handRaised && blocked.handRaising) return notify("info", "The host has turned off hand raising.");
+    setOwnAttribute(HAND_ATTRIBUTE, handRaised ? "" : raisedNow(), "Couldn't raise your hand. Try again.");
+  };
+  const canShareScreen =
+    access.canShareScreen && !blocked.screenShare && typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia);
+
+  // Said out loud for screen readers, since the key press doesn't move focus to the control.
+  useRoomShortcuts({
+    mic: () => {
+      toggleMic();
+      if (isMicrophoneEnabled || !blocked.microphone) setAnnouncement(isMicrophoneEnabled ? "Microphone off" : "Microphone on");
+    },
+    camera: () => {
+      toggleCamera();
+      if (isCameraEnabled || !blocked.camera) setAnnouncement(isCameraEnabled ? "Camera off" : "Camera on");
+    },
+    share: canShareScreen ? () => void toggleShare() : undefined,
+    hand: () => {
+      toggleHand();
+      if (handRaised || !blocked.handRaising) setAnnouncement(handRaised ? "Hand lowered" : "Hand raised");
+    },
+    chat: () => togglePanel("chat"),
+    participants: () => togglePanel("participants"),
+    help: () => setSettingsOpen("shortcuts"),
+  });
+
   async function react(emoji: string) {
     showReaction(emoji, "You");
     await sendData(new TextEncoder().encode(emoji), { reliable: false, topic: REACTIONS_TOPIC }).catch(() => {});
@@ -216,6 +276,9 @@ export function RoomStage({
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       <RoomAudioRenderer />
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
 
       <RoomHeading
         title={title}
@@ -267,24 +330,26 @@ export function RoomStage({
         ))}
       </div>
 
-      <div className="flex min-h-0 flex-1 gap-6 px-4 sm:px-10">
+      <div className="flex min-h-0 flex-1 gap-4 px-4 sm:px-6">
         <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <RaisedHandsCard hands={raisedHands} className="absolute top-3 left-3 z-20" />
+          <RaisedHandsCard hands={raisedHands} className="absolute top-2 left-2 z-20" />
           <Gallery
             tiles={cameras}
             screen={screen}
             pinned={pinnedRef}
             featured={host?.identity}
-            narrow={panel !== null}
             onOthers={() => showPanel("participants")}
+            onStopShare={() => void toggleShare()}
           />
         </main>
 
-        {panel === "participants" && (
+        {shownPanel.tab === "participants" && (
           <ParticipantsPanel
             participants={participants}
             isHost={isHost}
             pinned={pinned}
+            opening={shownPanel.opening}
+            leaving={shownPanel.leaving}
             onClose={() => showPanel(null)}
             onPin={setPinned}
             onMute={(participant) =>
@@ -315,8 +380,10 @@ export function RoomStage({
             }
           />
         )}
-        {panel === "chat" && (
+        {shownPanel.tab === "chat" && (
           <ChatPanel
+            opening={shownPanel.opening}
+            leaving={shownPanel.leaving}
             messages={chatMessages}
             userId={access.userId}
             loading={chat.loading}
@@ -326,7 +393,6 @@ export function RoomStage({
                 throw error;
               })
             }
-            sending={chat.sending}
             canSend={access.canSendChat && !blocked.chat}
             blockedReason={blocked.chat ? "The host has turned off chat" : "You can't send messages in this session"}
             maxLength={access.chatMaxLength}
@@ -339,7 +405,7 @@ export function RoomStage({
         )}
       </div>
 
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-[120px] z-20 h-0">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-[96px] z-20 h-0">
         {reactions.map((reaction) => (
           <span
             key={reaction.id}
@@ -359,18 +425,12 @@ export function RoomStage({
         handRaised={handRaised}
         feedback={feedback}
         isHost={isHost}
-        canShareScreen={
-          access.canShareScreen && !blocked.screenShare && typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia)
-        }
+        canShareScreen={canShareScreen}
         blocked={blocked}
-        onToggleMic={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled).catch(() => {})}
-        onToggleCamera={() =>
-          localParticipant.setCameraEnabled(!isCameraEnabled, cameraCapture(settings.videoQuality)).catch(() => {})
-        }
+        onToggleMic={toggleMic}
+        onToggleCamera={toggleCamera}
         onToggleShare={toggleShare}
-        onToggleHand={() =>
-          setOwnAttribute(HAND_ATTRIBUTE, handRaised ? "" : String(Date.now()), "Couldn't raise your hand. Try again.")
-        }
+        onToggleHand={toggleHand}
         onReact={react}
         onFeedback={(next) => setOwnAttribute(FEEDBACK_ATTRIBUTE, next ?? "", "Couldn't send your feedback. Try again.")}
         onOpenSettings={() => setSettingsOpen(true)}
@@ -379,7 +439,8 @@ export function RoomStage({
       />
 
       <SessionSettingsDialog
-        open={settingsOpen}
+        open={settingsOpen !== false}
+        section={typeof settingsOpen === "string" ? settingsOpen : undefined}
         onOpenChange={setSettingsOpen}
         isHost={isHost}
         settings={settings}
@@ -490,99 +551,149 @@ function useEnforcedSettings(
   }, [settings.videoQuality, isCameraEnabled, localParticipant]);
 }
 
-/**
- * The design's stage is a grid six columns wide and two rows tall; with the
- * participants or chat panel open it narrows to four columns.
- */
-const cellsFor = (narrow: boolean) => (narrow ? 8 : 12);
-/** Cells beside the stage when a screen or a pinned person takes the big spot. */
-const SIDE_CELLS = 4;
+const GAP = 8;
+const tileIn = "motion-safe:animate-[room-tile-in_320ms_cubic-bezier(0.2,0,0,1)]";
 
 /**
- * The tiles, laid out as in the design for each number of people: side by
- * side up to three, two by two for four, a big tile beside smaller ones for
- * five or six, then two full rows. A screen share or a pinned person takes
- * the big spot, with the rest beside it.
+ * The open side panel, kept a moment after it closes so it can slide away.
+ * `opening` is only set when it opens from nothing, not when switching tabs.
+ */
+function usePresence(tab: PanelTab | null) {
+  const [shown, setShown] = React.useState<{ tab: PanelTab | null; opening: boolean }>({ tab, opening: false });
+  if (tab !== null && tab !== shown.tab) setShown({ tab, opening: shown.tab === null });
+  React.useEffect(() => {
+    if (tab !== null) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = setTimeout(() => setShown({ tab: null, opening: false }), still ? 0 : 200);
+    return () => clearTimeout(timer);
+  }, [tab]);
+  return { ...shown, leaving: tab === null && shown.tab !== null };
+}
+
+/** The size of an element, kept up to date as it resizes. */
+function useElementSize<T extends HTMLElement>() {
+  const ref = React.useRef<T>(null);
+  const [size, setSize] = React.useState({ width: 0, height: 0 });
+  React.useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const measure = () => setSize({ width: element.clientWidth, height: element.clientHeight });
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, size] as const;
+}
+
+/**
+ * The column count that gives `count` tiles the most room. Tiles stretch
+ * between the two shapes to fill the space, then stop so cameras stay framed.
+ */
+function bestGrid(count: number, width: number, height: number, [narrowest, widest]: readonly [number, number]) {
+  let best = { columns: 1, width: 0, height: 0 };
+  for (let columns = 1; columns <= count; columns++) {
+    const rows = Math.ceil(count / columns);
+    const cellWidth = (width - GAP * (columns - 1)) / columns;
+    const cellHeight = (height - GAP * (rows - 1)) / rows;
+    const tileWidth = Math.floor(Math.min(cellWidth, cellHeight * widest));
+    const tileHeight = Math.floor(Math.min(cellHeight, tileWidth / narrowest));
+    if (tileWidth * tileHeight > best.width * best.height) best = { columns, width: tileWidth, height: tileHeight };
+  }
+  return best;
+}
+
+/** Up to `cells` tiles; past that, the last cell goes to "+N more". */
+function fit<T extends { participant: Participant }>(refs: T[], cells: number) {
+  if (refs.length <= cells) return { shown: refs, hidden: [] as Participant[] };
+  const room = Math.max(0, cells - 1);
+  return { shown: refs.slice(0, room), hidden: refs.slice(room).map((ref) => ref.participant) };
+}
+
+/**
+ * Everyone as equal tiles, as large as the stage allows, or a screen share
+ * or pinned person on the stage with everyone else in a filmstrip.
  */
 function Gallery({
   tiles,
   screen,
   pinned,
   featured,
-  narrow,
   onOthers,
+  onStopShare,
 }: {
   tiles: TrackReferenceOrPlaceholder[];
   screen?: TrackReference;
   pinned?: TrackReferenceOrPlaceholder;
   featured?: string;
-  /** A side panel is open, so there's room for four columns, not six. */
-  narrow: boolean;
   onOthers: () => void;
+  onStopShare: () => void;
 }) {
-  const stage = screen ?? pinned;
-
-  if (stage) {
-    const rest = screen ? tiles : tiles.filter((ref) => ref !== pinned);
-    const { shown, hidden } = fit(rest, SIDE_CELLS);
-    return (
-      <ul
-        className={cn(
-          "grid min-h-0 flex-1 auto-rows-[minmax(160px,1fr)] grid-cols-2 gap-2 overflow-y-auto lg:grid-rows-2 lg:overflow-hidden",
-          narrow ? "lg:grid-cols-4" : "lg:grid-cols-6",
-        )}
-      >
-        <li
-          className={cn(
-            "col-span-2 min-h-[220px] lg:row-span-2",
-            !rest.length ? (narrow ? "lg:col-span-4" : "lg:col-span-6") : narrow ? "lg:col-span-2" : "lg:col-span-4",
-          )}
-        >
-          {screen ? (
-            <section
-              aria-label={`${displayName(screen.participant)} is presenting`}
-              className="relative flex size-full items-center justify-center overflow-hidden rounded-2xl bg-room-screen"
-            >
-              <VideoTrack trackRef={screen} className="size-full object-contain" />
-            </section>
-          ) : (
-            <ParticipantTile trackRef={pinned!} pinned className="size-full" />
-          )}
-        </li>
-        {shown.map((ref) => (
-          <li key={ref.participant.identity} className="min-h-0">
-            <ParticipantTile
-              trackRef={ref}
-              presenting={ref.participant === screen?.participant}
-              className="size-full"
-            />
-          </li>
-        ))}
-        {hidden.length > 0 && (
-          <li className="min-h-0">
-            <OthersTile participants={hidden} onClick={onOthers} className="size-full" />
-          </li>
-        )}
-      </ul>
-    );
-  }
-
+  const [ref, { width, height }] = useElementSize<HTMLDivElement>();
   const ordered = featured
     ? [...tiles].sort((a, b) => Number(b.participant.identity === featured) - Number(a.participant.identity === featured))
     : tiles;
-  const { shown, hidden } = fit(ordered, cellsFor(narrow));
-  const layout = galleryLayout(shown.length + (hidden.length ? 1 : 0), narrow);
+  const measured = width > 0 && height > 0;
 
   return (
-    <ul className={cn("grid min-h-0 flex-1 auto-rows-[minmax(180px,1fr)] grid-cols-2 gap-2 overflow-y-auto lg:overflow-hidden", layout.grid)}>
-      {shown.map((ref, index) => (
-        <li key={ref.participant.identity} className={cn("min-h-0", layout.cell(index), shown.length === 1 && "col-span-2")}>
-          {/* Alone, the tile spans the stage, so show the whole camera picture. */}
-          <ParticipantTile trackRef={ref} fit={shown.length === 1 ? "contain" : "cover"} className="size-full" />
+    <div ref={ref} className="relative min-h-0 flex-1">
+      {measured && screen && (
+        <StageLayout
+          width={width}
+          height={height}
+          stage={<ScreenStage screen={screen} onStopShare={onStopShare} />}
+          rest={ordered}
+          presenter={screen.participant}
+          onOthers={onOthers}
+        />
+      )}
+      {measured && !screen && pinned && (
+        <StageLayout
+          width={width}
+          height={height}
+          stage={<ParticipantTile trackRef={pinned} pinned fit="contain" className="size-full" />}
+          rest={ordered.filter((tile) => tile !== pinned)}
+          onOthers={onOthers}
+        />
+      )}
+      {measured && !screen && !pinned && <GridLayout width={width} height={height} tiles={ordered} onOthers={onOthers} />}
+    </div>
+  );
+}
+
+/** People only fold into "+N more" once tiles would get too small to read. */
+function GridLayout({
+  width,
+  height,
+  tiles,
+  onOthers,
+}: {
+  width: number;
+  height: number;
+  tiles: TrackReferenceOrPlaceholder[];
+  onOthers: () => void;
+}) {
+  // Phones get squarer tiles so a column of people still fills the screen.
+  const shapes = width < 640 ? ([0.75, 1.4] as const) : ([4 / 3, 2] as const);
+  const minimum = width < 640 ? 120 : 200;
+  let cells = tiles.length;
+  while (cells > 2 && bestGrid(cells, width, height, shapes).width < minimum) cells--;
+  const { shown, hidden } = fit(tiles, cells);
+  const grid = bestGrid(shown.length + (hidden.length ? 1 : 0), width, height, shapes);
+  const tile = { width: grid.width, height: grid.height };
+
+  return (
+    <ul
+      className="mx-auto flex h-full flex-wrap content-center justify-center gap-2"
+      style={{ width: grid.columns * grid.width + (grid.columns - 1) * GAP }}
+    >
+      {shown.map((ref) => (
+        <li key={ref.participant.identity} style={tile} className={tileIn}>
+          <ParticipantTile trackRef={ref} className="size-full" />
         </li>
       ))}
       {hidden.length > 0 && (
-        <li className="min-h-0">
+        <li style={tile}>
           <OthersTile participants={hidden} onClick={onOthers} className="size-full" />
         </li>
       )}
@@ -590,37 +701,125 @@ function Gallery({
   );
 }
 
-/** Up to `cells` tiles; past that, one cell goes to "+N Others". */
-function fit<T extends { participant: Participant }>(refs: T[], cells: number) {
-  if (refs.length <= cells) return { shown: refs, hidden: [] as Participant[] };
-  return { shown: refs.slice(0, cells - 1), hidden: refs.slice(cells - 1).map((ref) => ref.participant) };
+/**
+ * The stage takes most of the space; everyone else sits in a filmstrip beside
+ * it on wide screens and beneath it on narrow ones.
+ */
+function StageLayout({
+  width,
+  height,
+  stage,
+  rest,
+  presenter,
+  onOthers,
+}: {
+  width: number;
+  height: number;
+  stage: React.ReactNode;
+  rest: TrackReferenceOrPlaceholder[];
+  presenter?: Participant;
+  onOthers: () => void;
+}) {
+  const side = width >= 768;
+  const count = rest.length;
+  // Tiles shrink so everyone fits, down to a size that's still readable.
+  const share = (space: number, largest: number, smallest: number) =>
+    Math.floor(Math.max(smallest, Math.min(largest, (space - GAP * (count - 1)) / Math.max(1, count))));
+  let strip = { width: 0, height: 0, cells: 0 };
+  if (count && side) {
+    const tileHeight = share(height, Math.min(158, (Math.max(180, width * 0.2) * 9) / 16), 96);
+    strip = { width: Math.round((tileHeight * 16) / 9), height: tileHeight, cells: Math.floor((height + GAP) / (tileHeight + GAP)) };
+  } else if (count) {
+    const tileHeight = Math.round(Math.min(110, height * 0.22));
+    const tileWidth = share(width, Math.round((tileHeight * 4) / 3), Math.round(tileHeight * 0.8));
+    strip = { width: tileWidth, height: tileHeight, cells: Math.floor((width + GAP) / (tileWidth + GAP)) };
+  }
+  strip.cells = Math.max(1, strip.cells);
+  const { shown, hidden } = fit(rest, strip.cells);
+  const tile = { width: strip.width, height: strip.height };
+
+  return (
+    <div className={cn("flex size-full gap-2", !side && "flex-col")}>
+      <div className="min-h-0 min-w-0 flex-1">{stage}</div>
+      {rest.length > 0 && (
+        <ul aria-label="Participants" className={cn("flex shrink-0 justify-center gap-2", side && "flex-col")}>
+          {shown.map((ref) => (
+            <li key={ref.participant.identity} style={tile} className={tileIn}>
+              <ParticipantTile trackRef={ref} presenting={ref.participant === presenter} className="size-full" />
+            </li>
+          ))}
+          {hidden.length > 0 && (
+            <li style={tile}>
+              <OthersTile participants={hidden} onClick={onOthers} className="size-full" />
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 /**
- * Desktop grid classes for a number of cells, from the design's frames;
- * phones always get two columns.
+ * Someone's shared screen. Presenters see a note instead of their own screen,
+ * which would otherwise repeat inside itself when they share this tab.
  */
-function galleryLayout(count: number, narrow: boolean): { grid: string; cell: (index: number) => string } {
-  const none = () => "";
-  if (count <= 3) return { grid: ["lg:grid-cols-1", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3"][count] + " lg:grid-rows-1", cell: none };
-  // Four share the stage as two rows of two.
-  if (count === 4) return { grid: "lg:grid-cols-2 lg:grid-rows-2", cell: none };
-  if (narrow) {
-    // Four columns: a big tile two wide for five, then two full rows.
-    if (count === 5) return { grid: "lg:grid-cols-4 lg:grid-rows-2", cell: (index) => (index === 0 ? "col-span-2 lg:row-span-2" : "") };
-    return { grid: "lg:grid-cols-4 lg:grid-rows-2", cell: none };
-  }
-  // Five: the first person four columns wide beside a two by two.
-  if (count === 5)
-    return { grid: "lg:grid-cols-6 lg:grid-rows-2", cell: (index) => (index === 0 ? "col-span-2 lg:col-span-4 lg:row-span-2" : "") };
-  // Six: three columns wide, three small on top, then one small and one wide.
-  if (count === 6)
-    return {
-      grid: "lg:grid-cols-6 lg:grid-rows-2",
-      cell: (index) => (index === 0 ? "col-span-2 lg:col-span-3 lg:row-span-2" : index === 5 ? "lg:col-span-2" : ""),
-    };
-  return { grid: "lg:grid-cols-6 lg:grid-rows-2", cell: none };
+function ScreenStage({ screen, onStopShare }: { screen: TrackReference; onStopShare: () => void }) {
+  const own = screen.participant.isLocal;
+  const [preview, setPreview] = React.useState(false);
+  const name = displayName(screen.participant);
+  const showScreen = !own || preview;
+
+  return (
+    <section
+      aria-label={own ? "You're presenting" : `${name} is presenting`}
+      className="relative flex size-full items-center justify-center overflow-hidden rounded-2xl bg-room-screen"
+    >
+      {showScreen ? (
+        <VideoTrack trackRef={screen} className="size-full object-contain" />
+      ) : (
+        <div className="flex max-w-[360px] flex-col items-center gap-4 p-6 text-center">
+          <span className="flex size-14 items-center justify-center rounded-full bg-room-active text-text-brand [&_svg]:size-6">
+            <ComputerScreenShare />
+          </span>
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-semibold text-white">You&apos;re presenting to everyone</p>
+            <p className="text-sm text-room-text-muted">Your screen is hidden here so it doesn&apos;t repeat inside itself.</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button type="button" onClick={onStopShare} className={stageButton.primary}>
+              Stop presenting
+            </button>
+            <button type="button" onClick={() => setPreview(true)} className={stageButton.secondary}>
+              Show preview
+            </button>
+          </div>
+        </div>
+      )}
+      {showScreen && (
+        <p className="absolute bottom-3 left-3 flex h-8 items-center gap-2 rounded-lg bg-black/60 pr-3 pl-2 text-[13px] font-medium text-white backdrop-blur-sm [&_svg]:size-4">
+          <ComputerScreenShare />
+          {own ? "Your screen" : `${name} is presenting`}
+          {own && (
+            <button
+              type="button"
+              onClick={() => setPreview(false)}
+              className="ml-1 cursor-pointer text-room-active underline-offset-2 hover:underline"
+            >
+              Hide
+            </button>
+          )}
+        </p>
+      )}
+    </section>
+  );
 }
+
+const stageButton = {
+  primary:
+    "h-10 cursor-pointer rounded-full bg-room-active px-4 text-sm font-medium text-text-brand transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
+  secondary:
+    "h-10 cursor-pointer rounded-full bg-white/10 px-4 text-sm font-medium text-white transition-colors hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
+};
 
 function RoomHeading({
   title,
@@ -641,60 +840,68 @@ function RoomHeading({
   const recordingFor = useRecordingTime();
 
   return (
-    <header className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 px-4 pt-6 pb-6 sm:px-10 sm:pt-12 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:pb-10">
-      <div className="min-w-0">
-        <p className="text-lg/6 font-semibold text-neutral-350">{now && clockFormat.format(now)}</p>
-        <h1 className="truncate text-xl/7 font-semibold text-white sm:text-2xl/8">{title}</h1>
+    <header className="flex items-center gap-4 px-4 pt-4 pb-3 sm:px-6">
+      <div className="min-w-0 flex-1">
+        <h1 className="truncate text-lg/7 font-semibold text-white sm:text-xl/7">{title}</h1>
+        <p className="flex min-w-0 items-center gap-2 text-sm/5 text-room-text-muted">
+          {now && <span className="shrink-0">{clockFormat.format(now)}</span>}
+          {host && (
+            <>
+              <span aria-hidden>·</span>
+              <span className="flex min-w-0 items-center gap-1.5">
+                <PersonAvatar name={displayName(host)} src={avatarOf(host)} colorKey={host.identity} size={20} />
+                <span className="truncate">
+                  Hosted by <span className="text-room-text">{host.isLocal ? "you" : displayName(host)}</span>
+                </span>
+              </span>
+            </>
+          )}
+        </p>
       </div>
 
-      <div className="hidden items-center gap-3 lg:flex">
-        {host && (
-          <p className="flex h-11 items-center gap-2 rounded-full bg-white/10 py-2 pr-4 pl-2 text-sm font-medium text-white">
-            <PersonAvatar name={displayName(host)} colorKey={host.identity} size={24} className="size-7" />
-            {displayName(host)}
-          </p>
-        )}
+      <div className="flex shrink-0 items-center gap-2">
         {recordingFor !== null && (
-          <p role="status" className="flex h-11 items-center gap-2 rounded-full bg-white/10 px-3 text-sm font-medium text-white">
-            <span aria-hidden className="size-4 rounded-full border-[1.5px] border-white bg-text-error" />
-            <span className="sr-only">Recording</span>
-            {formatDuration(recordingFor)}
+          <p
+            role="status"
+            className="flex h-10 items-center gap-2 rounded-full bg-white/10 px-3 text-sm font-medium text-white tabular-nums motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95"
+          >
+            <span aria-hidden className="size-2.5 animate-pulse rounded-full bg-room-leave" />
+            <span>
+              <span className="max-sm:sr-only">Recording </span>
+              {formatDuration(recordingFor)}
+            </span>
           </p>
         )}
-      </div>
-
-      <div className="flex items-center justify-end gap-3">
         <button
           type="button"
           aria-pressed={panel === "participants"}
           onClick={() => onPanel("participants")}
-          className={cn(
-            "flex h-11 cursor-pointer items-center gap-2 rounded-full px-3 text-sm font-medium text-white transition-colors",
-            panel === "participants" ? "bg-room-tile-blue" : "bg-white/10 hover:bg-white/15",
-          )}
+          className={cn(headerButton, panel === "participants" ? "bg-room-active text-text-brand" : "bg-white/10 text-white hover:bg-white/15")}
         >
           <UserMultiple className="size-4" />
           {count}
-          <span className="max-sm:sr-only">{count === 1 ? "Participant" : "Participants"}</span>
+          <span className="max-md:sr-only">{count === 1 ? "Participant" : "Participants"}</span>
         </button>
         <button
           type="button"
           aria-pressed={panel === "chat"}
           aria-label={unreadChat ? "Chat, new messages" : "Chat"}
           onClick={() => onPanel("chat")}
-          className={cn(
-            "relative flex h-11 cursor-pointer items-center gap-2 rounded-full px-3 text-sm font-medium text-white transition-colors",
-            panel === "chat" ? "bg-room-tile-blue" : "bg-room-pill hover:bg-white/15",
-          )}
+          className={cn(headerButton, "relative", panel === "chat" ? "bg-room-active text-text-brand" : "bg-white/10 text-white hover:bg-white/15")}
         >
           <Message01 className="size-[18px]" />
-          <span className="max-sm:sr-only">Chat</span>
-          {unreadChat && <span className="absolute top-2 right-2 size-2 rounded-full bg-room-active ring-2 ring-room-pill" />}
+          <span className="max-md:sr-only">Chat</span>
+          {unreadChat && (
+            <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-room-leave ring-2 ring-room-canvas motion-safe:animate-in motion-safe:zoom-in-0 motion-safe:duration-300" />
+          )}
         </button>
       </div>
     </header>
   );
 }
+
+const headerButton =
+  "flex h-10 cursor-pointer items-center gap-2 rounded-full px-3 text-sm font-medium transition-[background-color,color,scale] duration-150 motion-safe:active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
 
 const subscribeEvery = (ms: number) => (onChange: () => void) => {
   const timer = setInterval(onChange, ms);
@@ -769,7 +976,7 @@ function Banner({ tone, icon, children }: { tone: keyof typeof bannerTones; icon
     <p
       role={tone === "error" ? "alert" : "status"}
       className={cn(
-        "flex max-w-[560px] items-center gap-2.5 rounded-xl border px-4 py-2.5 font-work text-sm shadow-lg [&_svg]:size-[18px] [&_svg]:shrink-0",
+        "flex max-w-[560px] items-center gap-2.5 rounded-xl border px-4 py-2.5 font-work text-sm shadow-lg motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-2 motion-safe:duration-300 [&_svg]:size-[18px] [&_svg]:shrink-0",
         bannerTones[tone],
       )}
     >

@@ -8,7 +8,7 @@ import { ArrowDown01, Cancel01, WavingHand02 } from "@/assets/icons";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { HAND_ATTRIBUTE } from "@/lib/live-room";
 import { cn } from "@/lib/utils";
-import { displayName } from "./ParticipantTile";
+import { avatarOf, displayName } from "./ParticipantTile";
 
 export type RaisedHand = { participant: Participant; since: number };
 
@@ -45,28 +45,54 @@ export function useRaisedHands(): RaisedHand[] {
 }
 
 /**
- * The card that tells the room who has a hand up: one name, or a list in the
- * order hands went up once there's more than one. Closing it hides it until
- * someone else raises theirs.
+ * Who has a hand up. One person gets a card with their name; once there's a
+ * queue it folds into a hand and a count, and clicking that opens the queue in
+ * the order hands went up. Dismissing the card hides it until someone else
+ * raises theirs.
  */
 export function RaisedHandsCard({ hands, className }: { hands: RaisedHand[]; className?: string }) {
   // The newest raise that's been dismissed; a later one brings the card back.
   const [dismissedAt, setDismissedAt] = React.useState(0);
-  const [expanded, setExpanded] = React.useState(true);
+  const [open, setOpen] = React.useState(false);
   const latest = hands.reduce((newest, hand) => Math.max(newest, hand.since), 0);
 
   // Your own hand alone shows on the hand button already.
-  if (hands.every((hand) => hand.participant.isLocal) || latest <= dismissedAt) return null;
+  if (hands.every((hand) => hand.participant.isLocal)) return null;
 
   const [first] = hands;
   const many = hands.length > 1;
   const name = (participant: Participant) => (participant.isLocal ? "You" : displayName(participant));
+  const count = `${hands.length} raised hands`;
+
+  if (!many && latest <= dismissedAt) return null;
+
+  if (many && !open) {
+    return (
+      <section aria-label="Raised hands" className={className}>
+        <button
+          // A new hand in the queue pops it again.
+          key={latest}
+          type="button"
+          aria-expanded={false}
+          aria-label={`${count}, show the queue`}
+          title="Show the queue"
+          onClick={() => setOpen(true)}
+          className="flex h-10 cursor-pointer items-center gap-2 rounded-full border border-room-menu-border bg-room-menu py-1 pr-3.5 pl-1 text-sm font-semibold text-white tabular-nums shadow-[0_8px_24px_rgb(0_0_0/0.5)] transition-[background-color,scale] hover:bg-room-control-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-75 motion-safe:duration-300 motion-safe:active:scale-95"
+        >
+          <span className="flex size-8 items-center justify-center rounded-full bg-room-active text-text-brand">
+            <WavingHand02 className="size-[18px]" />
+          </span>
+          {hands.length}
+        </button>
+      </section>
+    );
+  }
 
   return (
     <section
       aria-label="Raised hands"
       className={cn(
-        "w-[300px] max-w-[calc(100vw-2rem)] rounded-2xl border border-room-menu-border bg-room-menu text-white shadow-[0_8px_24px_rgb(0_0_0/0.5)]",
+        "w-[300px] max-w-[calc(100vw-2rem)] rounded-2xl border border-room-menu-border bg-room-menu text-white shadow-[0_8px_24px_rgb(0_0_0/0.5)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-2 motion-safe:duration-300",
         className,
       )}
     >
@@ -76,7 +102,7 @@ export function RaisedHandsCard({ hands, className }: { hands: RaisedHand[]; cla
         </span>
         <p className="min-w-0 flex-1 text-sm/5">
           {many ? (
-            <span className="font-medium">{hands.length} raised hands</span>
+            <span className="font-medium">{count}</span>
           ) : (
             <>
               <span className="font-medium">{name(first.participant)}</span>{" "}
@@ -84,32 +110,42 @@ export function RaisedHandsCard({ hands, className }: { hands: RaisedHand[]; cla
             </>
           )}
         </p>
-        {many && (
+        {many ? (
           <button
             type="button"
-            aria-label={expanded ? "Hide the list" : "Show the list"}
-            aria-expanded={expanded}
-            onClick={() => setExpanded((open) => !open)}
+            aria-label="Hide the queue"
+            aria-expanded
+            onClick={() => setOpen(false)}
             className="flex size-7 cursor-pointer items-center justify-center rounded-full text-room-text-muted hover:bg-white/10 hover:text-white"
           >
-            <ArrowDown01 className={cn("size-5 transition-transform", expanded && "rotate-180")} />
+            <ArrowDown01 className="size-5 rotate-180" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => setDismissedAt(latest)}
+            className="flex size-7 cursor-pointer items-center justify-center rounded-full text-room-text-muted hover:bg-white/10 hover:text-white"
+          >
+            <Cancel01 className="size-4" />
           </button>
         )}
-        <button
-          type="button"
-          aria-label="Dismiss"
-          onClick={() => setDismissedAt(latest)}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-full text-room-text-muted hover:bg-white/10 hover:text-white"
-        >
-          <Cancel01 className="size-4" />
-        </button>
       </div>
-      {many && expanded && (
+      {many && (
         <ol className="flex max-h-[220px] flex-col gap-1 overflow-y-auto border-t border-room-menu-border px-2 py-2">
           {hands.map(({ participant }, index) => (
-            <li key={participant.identity} className="flex items-center gap-3 rounded-xl px-2 py-1.5">
+            <li
+              key={participant.identity}
+              className="flex items-center gap-3 rounded-xl px-2 py-1.5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1"
+            >
               <span className="w-4 shrink-0 text-center text-xs text-room-text-muted">{index + 1}</span>
-              <PersonAvatar name={displayName(participant)} colorKey={participant.identity} size={24} className="size-7" />
+              <PersonAvatar
+                name={displayName(participant)}
+                src={avatarOf(participant)}
+                colorKey={participant.identity}
+                size={24}
+                className="size-7"
+              />
               <span className="min-w-0 flex-1 truncate text-sm">{name(participant)}</span>
             </li>
           ))}

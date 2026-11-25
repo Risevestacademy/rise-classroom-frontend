@@ -23,6 +23,8 @@ export type JoinBlock = "too_early" | "not_eligible" | "ended" | "cancelled" | "
 export const ROLE_ATTRIBUTE = "role";
 /** The person's platform role, shown as a chip in the participants list, e.g. "Admin". */
 export const LABEL_ATTRIBUTE = "label";
+/** A link to the person's profile photo, for their tile and avatar. */
+export const AVATAR_ATTRIBUTE = "avatar";
 export const HAND_ATTRIBUTE = "hand";
 /** A feedback signal someone has left up, e.g. "slower". */
 export const FEEDBACK_ATTRIBUTE = "feedback";

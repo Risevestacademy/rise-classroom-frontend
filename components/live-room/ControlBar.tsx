@@ -22,12 +22,15 @@ import {
 import { feedbackOptions, reactionEmojis, type Feedback } from "@/lib/live-room";
 import { cn } from "@/lib/utils";
 import { RoomMenuContent, RoomMenuItem } from "./RoomMenu";
+import { ariaShortcut, useOnMac, withShortcut, type ShortcutAction } from "./shortcuts";
 
 const control =
-  "flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50 max-sm:size-10 [&_svg]:size-5";
+  "flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-[background-color,color,scale] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50 max-sm:size-10 motion-safe:active:not-disabled:scale-92 [&_svg]:size-5";
 const idle = "bg-room-control text-white hover:bg-room-control-hover";
 const active = "bg-room-active text-text-brand";
 const off = "bg-room-off text-room-off-text hover:bg-[#ecc0c0]";
+// The icon pops in when a control flips.
+const swap = "motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:fade-in-0 motion-safe:duration-200";
 
 export type ControlBarProps = {
   micOn: boolean;
@@ -55,35 +58,38 @@ export function ControlBar(props: ControlBarProps) {
   const { micOn, cameraOn, sharing, handRaised, feedback, isHost, blocked } = props;
 
   return (
-    <div className="flex justify-center px-3 pt-4 pb-4 sm:pt-10 sm:pb-[56px]">
+    <div className="flex justify-center px-3 pt-3 pb-4 sm:pb-5">
       <div
         role="toolbar"
         aria-label="Call controls"
-        className="flex items-center gap-2 rounded-3xl border border-white/10 bg-room-popover/20 p-2.5 sm:gap-3 sm:p-3"
+        className="flex items-center gap-2 rounded-2xl border border-white/5 bg-room-panel p-2 shadow-[0_8px_24px_rgb(0_0_0/0.35)] sm:gap-2.5"
       >
         <ToggleButton
           on={micOn}
           label={micOn ? "Turn off microphone" : "Turn on microphone"}
           blockedLabel={!micOn && blocked.microphone ? "The host has turned off microphones" : undefined}
+          shortcut="mic"
           onClick={props.onToggleMic}
           className={micOn ? idle : off}
         >
-          {micOn ? <Mic02 /> : <MicOff02 />}
+          {micOn ? <Mic02 key="on" className={swap} /> : <MicOff02 key="off" className={swap} />}
         </ToggleButton>
         <ToggleButton
           on={cameraOn}
           label={cameraOn ? "Turn off camera" : "Turn on camera"}
           blockedLabel={!cameraOn && blocked.camera ? "The host has turned off cameras" : undefined}
+          shortcut="camera"
           onClick={props.onToggleCamera}
           className={cameraOn ? idle : off}
         >
-          {cameraOn ? <Video /> : <VideoOff />}
+          {cameraOn ? <Video key="on" className={swap} /> : <VideoOff key="off" className={swap} />}
         </ToggleButton>
 
         {props.canShareScreen && (
           <ToggleButton
             on={sharing}
             label={sharing ? "Stop presenting" : "Present your screen"}
+            shortcut="share"
             onClick={props.onToggleShare}
             className={cn("max-sm:hidden", sharing ? active : idle)}
           >
@@ -147,10 +153,11 @@ export function ControlBar(props: ControlBarProps) {
           on={handRaised}
           label={handRaised ? "Lower hand" : "Raise hand"}
           blockedLabel={!handRaised && blocked.handRaising ? "The host has turned off hand raising" : undefined}
+          shortcut="hand"
           onClick={props.onToggleHand}
           className={handRaised ? active : idle}
         >
-          <WavingHand02 />
+          <WavingHand02 className={cn(handRaised && "motion-safe:animate-[room-wave_0.6s_ease-in-out]")} />
         </ToggleButton>
 
         <button
@@ -191,24 +198,29 @@ function ToggleButton({
   on,
   label,
   blockedLabel,
+  shortcut,
   onClick,
   className,
   children,
 }: {
   on: boolean;
   label: string;
+  shortcut?: ShortcutAction;
   /** Set when the host doesn't allow turning this on. */
   blockedLabel?: string;
   onClick: () => void;
   className: string;
   children: React.ReactNode;
 }) {
+  const mac = useOnMac();
+  const title = blockedLabel ?? (shortcut ? withShortcut(label, shortcut, mac) : label);
   return (
     <button
       type="button"
       aria-pressed={on}
       aria-label={blockedLabel ?? label}
-      title={blockedLabel ?? label}
+      aria-keyshortcuts={shortcut && !blockedLabel ? ariaShortcut(shortcut, mac) : undefined}
+      title={title}
       disabled={Boolean(blockedLabel)}
       onClick={onClick}
       className={cn(control, className)}

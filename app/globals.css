@@ -117,11 +117,11 @@
   --color-room-control: #344043; /* neutral-600 */
   --color-room-control-hover: #3e4b4f;
   --color-room-popover: #333638;
+  --color-room-tile: #2a2d30;
+  --color-room-tile-hover: #33373b;
   --color-room-tile-blue: #3540a3; /* brand-700 */
-  --color-room-tile-slate: #344043; /* neutral-600 */
-  --color-room-tile-teal: #00455d;
-  --color-room-tile-others: #514020;
-  --color-room-screen: #1a4f51;
+  --color-room-speaking: #8fd9b6;
+  --color-room-screen: #141516;
   --color-room-bubble: #303030;
   --color-room-bubble-own: #005278;
   --color-room-bubble-own-text: #d2eaff;
@@ -427,4 +427,24 @@ body {
   12% { transform: translateY(-24px) scale(1); opacity: 1; }
   80% { opacity: 1; }
   100% { transform: translateY(-320px) scale(1); opacity: 0; }
+}
+
+/* The hand waves once when it goes up. */
+@keyframes room-wave {
+  0%, 100% { rotate: 0deg; }
+  25% { rotate: -18deg; }
+  60% { rotate: 14deg; }
+}
+
+/* The side panel opens out from the right, pushing the stage over. */
+@keyframes room-panel-open {
+  from { width: 0; margin-left: -16px; }
+}
+@keyframes room-panel-close {
+  to { width: 0; margin-left: -16px; }
+}
+
+/* A new tile settles into the grid. */
+@keyframes room-tile-in {
+  from { opacity: 0; scale: 0.94; }
 }
