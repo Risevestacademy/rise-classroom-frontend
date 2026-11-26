@@ -17,6 +17,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { SetupHint } from "@/components/admin-setup/AdminSetup";
 import { adminKeys, createTrack, type CreateTrackInput } from "@/lib/admin";
 
 type Step = "basics" | "review" | "success";
@@ -73,7 +74,7 @@ export function CreateTrackDialog() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <Button onClick={() => setOpen(true)} className="gap-2">
+      <Button data-tour="create-track" onClick={() => setOpen(true)} className="gap-2">
         <Plus className="h-4 w-4" />
         Create track
       </Button>
@@ -144,6 +145,11 @@ function BasicsStep({
           Let&apos;s start with the essentials
         </DialogDescription>
       </DialogHeader>
+
+      <SetupHint item="track">
+        Name it after what students will learn, like Product Design. Running
+        more than one programme? Create a track for each, now or later.
+      </SetupHint>
 
       <div className="mt-6 flex flex-col gap-6">
         <FormField
