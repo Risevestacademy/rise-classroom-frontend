@@ -40,11 +40,20 @@ export default function TracksPage() {
     ...cohortQueries.trackIds(cohortId ?? ""),
     enabled: Boolean(cohortId),
   });
+  /* A new track has no instructor or student in any cohort yet, so it is shown under every cohort. Otherwise it disappears right after it is created. */
+  const assignedTracksQuery = useQuery({
+    ...cohortQueries.assignedTrackIds(),
+    enabled: Boolean(cohortId),
+  });
   const inCohort = (track: { id: string }) =>
-    !cohortId || (cohortTracksQuery.data ?? []).includes(track.id);
+    !cohortId ||
+    (cohortTracksQuery.data ?? []).includes(track.id) ||
+    !(assignedTracksQuery.data ?? []).includes(track.id);
 
   const cohortPending =
-    !isReady || (Boolean(cohortId) && cohortTracksQuery.isPending);
+    !isReady ||
+    (Boolean(cohortId) &&
+      (cohortTracksQuery.isPending || assignedTracksQuery.isPending));
 
   const tracks = (tracksQuery.data ?? []).filter(inCohort);
   const allTracks = (allTracksQuery.data ?? []).filter(inCohort);
