@@ -141,6 +141,8 @@ type CompanionValue = {
   registerPop: () => () => void;
   /** Hides a nudge for good once it's been read or closed. */
   dismissNudge: (id: string) => void;
+  /** Fetches what the nudges need. Until then, away from the dashboard, they're read from the cache only. */
+  loadNudges: () => void;
 };
 
 const CompanionContext = createContext<CompanionValue | null>(null);
@@ -613,15 +615,24 @@ function LiveHeadsUp({ nudges, growth, muted }: { nudges: Nudge[]; growth: numbe
 
 /** Works out what the companion knows and holds the moments it can take over for. */
 export function CompanionProvider({ children }: { children: ReactNode }) {
-  const curriculum = useStudentCurriculum();
+  /* The nudges need several slow requests, so away from the dashboard they wait
+     until Leafy is opened. Growth (from progress) and live classes load everywhere. */
+  const onDashboard = usePathname() === "/student/dashboard";
+  const [opened, setOpened] = useState(false);
+  const fetchNudges = onDashboard || opened;
+
+  const curriculum = useStudentCurriculum({ loadContent: fetchNudges });
   const enrollmentId = curriculum.enrollmentId ?? "";
   const submissions = useQuery({
     ...studentAssignmentQueries.enrollmentSubmissions(enrollmentId),
-    enabled: enrollmentId.length > 0,
+    enabled: fetchNudges && enrollmentId.length > 0,
   });
   // The same request the dashboard's deadlines card makes.
-  const tasks = useQuery(studentQueries.weeklyTasks({ limit: 100 }));
-  const tower = useControlTowerData();
+  const tasks = useQuery({
+    ...studentQueries.weeklyTasks({ limit: 100 }),
+    enabled: fetchNudges,
+  });
+  const tower = useControlTowerData({ enabled: fetchNudges });
   const now = useCurrentMinute();
   const live = useQuery({
     ...liveSessionQueries.list(liveWindow(dayKey())),
@@ -721,6 +732,7 @@ export function CompanionProvider({ children }: { children: ReactNode }) {
       if (dismissed.includes(id)) return;
       setDismissed([...dismissed.slice(-50), id].join("\n"));
     },
+    loadNudges: () => setOpened(true),
   };
 
   return (
@@ -956,6 +968,7 @@ export function CompanionResident() {
     setQuiet,
     planted,
     popping,
+    loadNudges,
   } = useCompanion();
   const [seen, setSeen] = useStored(SEEN_KEY);
   const [skips, setSkips] = useStored(SKIPS_KEY);
@@ -986,10 +999,13 @@ export function CompanionResident() {
           setOpen(next);
           if (next) {
             track("leafy_opened");
+            loadNudges();
             setSeen(urgent.join("\n"));
             setTuckToast(false);
             return;
           }
+          // Nudges may have loaded while it was open; those count as seen too.
+          setSeen(urgent.join("\n"));
           track("leafy_tucked");
           // Said once; after that the student knows where Leafy goes.
           if (!tucked) setTuckToast(true);

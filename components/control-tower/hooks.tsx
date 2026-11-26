@@ -20,11 +20,17 @@ import {
   type Answers,
 } from "./week-answers";
 
-/** The student's profile and every week of their Control Tower so far. */
-export function useControlTowerData() {
-  const tower = useQuery(controlTowerQueries.student());
+/**
+ * The student's profile and every week of their Control Tower so far. With
+ * `enabled: false` it's only read from the cache, never requested.
+ */
+export function useControlTowerData({ enabled = true } = {}) {
+  const tower = useQuery({ ...controlTowerQueries.student(), enabled });
   const profileId = tower.data?.student.id ?? "";
-  const metrics = useQuery(controlTowerQueries.weeklyMetrics(profileId));
+  const metrics = useQuery({
+    ...controlTowerQueries.weeklyMetrics(profileId),
+    enabled: enabled && profileId !== "",
+  });
 
   // Fixed for the visit, so every save targets the same week.
   const [now] = React.useState(() => new Date());

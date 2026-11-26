@@ -84,7 +84,13 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  allowedDevOrigins: ["192.168.1.114"]
+  allowedDevOrigins: ["192.168.1.114"],
+
+  experimental: {
+    /* Going back to a page opened in the last 30s reuses it instead of asking
+       the server again. Data is still kept fresh by React Query. */
+    staleTimes: { dynamic: 30 },
+  },
 };
 
 export default isDev 
