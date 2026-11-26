@@ -49,6 +49,9 @@ export const studentQueries = {
     queryOptions({
       queryKey: ["student", "progress"] as const,
       queryFn: getMyProgress,
+      // The curriculum waits on this, so it's kept as long as the curriculum is.
+      staleTime: 5 * 60_000,
+      gcTime: 30 * 60_000,
     }),
 
   weeklyTasks: (filters: StudentWeeklyTaskFilters = {}) =>

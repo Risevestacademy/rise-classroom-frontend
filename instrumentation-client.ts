@@ -33,12 +33,10 @@ Sentry.init({
   // Trace every request locally, but sample 10% in production to save quota.
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1,
 
-  // Define how likely Replay events are sampled.
-  // This sets the sample rate to be 10%. You may want this to be 100% while
-  // in development and sample at a lower rate in production
-  replaysSessionSampleRate: 0.1,
-
-  // Define how likely Replay events are sampled when an error occurs.
+  // Clarity already records ordinary sessions, and every replay upload goes
+  // through the /monitoring tunnel on our server. Replays are only sent for
+  // sessions that hit an error, with the moments leading up to it.
+  replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1.0,
 
   dataCollection: {

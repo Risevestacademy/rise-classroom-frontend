@@ -107,6 +107,10 @@ export const lessonQueries = {
         );
         return response.data;
       },
+      /* Takes the API several seconds and nearly every page reads it, so it isn't
+         re-asked on each page change. Completions update it in place. */
+      staleTime: 5 * 60_000,
+      gcTime: 30 * 60_000,
     }),
 
   lesson: (enrollmentId: string, lessonId: string) =>
@@ -184,7 +188,11 @@ export function applyLessonCompletion(
  * The student's current track and its curriculum, as every learning page
  * loads them. Picks the track still being worked through, like the dashboard.
  */
-export function useStudentCurriculum() {
+/**
+ * The student's current track and its curriculum. With `loadContent: false`
+ * the curriculum is only read from the cache, never requested.
+ */
+export function useStudentCurriculum({ loadContent = true } = {}) {
   const progress = useQuery(studentQueries.progress());
   const enrollment =
     progress.data?.find((item) => !item.trackComplete) ?? progress.data?.[0];
@@ -192,7 +200,7 @@ export function useStudentCurriculum() {
 
   const content = useQuery({
     ...lessonQueries.content(enrollmentId ?? ""),
-    enabled: Boolean(enrollmentId),
+    enabled: loadContent && Boolean(enrollmentId),
   });
 
   const notEnrolled =
