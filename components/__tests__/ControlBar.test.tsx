@@ -46,4 +46,23 @@ describe("ControlBar More menu", () => {
     expect(screen.queryByRole("button", { name: "More options" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Session settings" })).not.toHaveClass("max-sm:hidden");
   });
+
+  it("offers the floating window from More, even where the browser can't present", async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    setup({ canShareScreen: false, floating: { open: false, available: true, onToggle } });
+
+    await user.click(screen.getByRole("button", { name: "More options" }));
+    expect(screen.queryByRole("menuitem", { name: "Present your screen" })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("menuitem", { name: "Float the call" }));
+    expect(onToggle).toHaveBeenCalledOnce();
+  });
+
+  it("can't float the call while nobody's camera is on", async () => {
+    const user = userEvent.setup();
+    setup({ floating: { open: false, available: false, onToggle: vi.fn() } });
+
+    await user.click(screen.getByRole("button", { name: "More options" }));
+    expect(await screen.findByRole("menuitem", { name: "Float the call (no cameras on)" })).toHaveAttribute("aria-disabled", "true");
+  });
 });

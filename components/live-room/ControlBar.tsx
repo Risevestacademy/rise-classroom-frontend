@@ -4,6 +4,7 @@ import * as React from "react";
 
 import {
   ComputerScreenShare,
+  LinkSquare02,
   Mic02,
   MicOff02,
   MoreHorizontal,
@@ -43,6 +44,8 @@ export type ControlBarProps = {
   feedback?: Feedback;
   isHost: boolean;
   canShareScreen: boolean;
+  /** The call in a small window over other apps, where the browser can do it. */
+  floating?: { open: boolean; available: boolean; onToggle: () => void };
   /** What the host has turned off for everyone else; hosts get `{}`. */
   blocked: { microphone?: boolean; camera?: boolean; reactions?: boolean; handRaising?: boolean };
   onToggleMic: () => void;
@@ -59,9 +62,10 @@ export type ControlBarProps = {
 /** The call controls along the bottom of the room. */
 export function ControlBar(props: ControlBarProps) {
   const { micOn, cameraOn, sharing, handRaised, feedback, isHost, blocked } = props;
-  // On a phone, presenting and settings fold into a More menu so the bar fits. Where
-  // the browser can't present there's only settings, which stays on the bar.
-  const folded = props.canShareScreen;
+  // On a phone, presenting, the floating window and settings fold into a More menu so
+  // the bar fits. Where there's only settings, it stays on the bar.
+  const floating = props.floating;
+  const folded = props.canShareScreen || Boolean(floating);
 
   return (
     // From `sm` up the recording timer sits at the left edge and Leave at the right, with the controls centred.
@@ -185,10 +189,18 @@ export function ControlBar(props: ControlBarProps) {
               <MoreHorizontal />
             </DropdownMenuTrigger>
             <RoomMenuContent side="top" align="end" sideOffset={12} className="w-[220px]">
-              <RoomMenuItem onClick={props.onToggleShare}>
-                <ComputerScreenShare />
-                {sharing ? "Stop presenting" : "Present your screen"}
-              </RoomMenuItem>
+              {props.canShareScreen && (
+                <RoomMenuItem onClick={props.onToggleShare}>
+                  <ComputerScreenShare />
+                  {sharing ? "Stop presenting" : "Present your screen"}
+                </RoomMenuItem>
+              )}
+              {floating && (
+                <RoomMenuItem disabled={!floating.available && !floating.open} onClick={floating.onToggle}>
+                  <LinkSquare02 />
+                  {floating.open ? "Close floating window" : floating.available ? "Float the call" : "Float the call (no cameras on)"}
+                </RoomMenuItem>
+              )}
               <RoomMenuItem onClick={props.onOpenSettings}>
                 <Settings01 />
                 Session settings

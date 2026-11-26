@@ -56,6 +56,7 @@ import { avatarOf, displayName, OthersTile, ParticipantTile } from "./Participan
 import { mentions } from "./mentions";
 import { RaisedHandsCard, useRaisedHands } from "./RaisedHands";
 import { playCue, useRoomSounds } from "./room-sounds";
+import { useFloatingVideo } from "./FloatingVideo";
 import { SessionSettingsDialog, type SectionId } from "./SessionSettings";
 import { useRoomShortcuts } from "./shortcuts";
 import { useSessionChat } from "./useSessionChat";
@@ -126,6 +127,8 @@ export function RoomStage({
 
   const [panel, setPanel] = React.useState<PanelTab | null>(null);
   const [pinned, setPinned] = React.useState<string | null>(null);
+  const host = participants.find((participant) => participant.attributes[ROLE_ATTRIBUTE] === "host");
+  const floating = useFloatingVideo({ pinned, host: host?.identity });
   const [notices, setNotices] = React.useState<Notice[]>([]);
   const [reactions, setReactions] = React.useState<Reaction[]>([]);
   const [settingsOpen, setSettingsOpen] = React.useState<SectionId | true | false>(false);
@@ -278,13 +281,13 @@ export function RoomStage({
     );
   }
 
-  const host = participants.find((participant) => participant.attributes[ROLE_ATTRIBUTE] === "host");
   const pinnedRef = pinned ? cameras.find((ref) => ref.participant.identity === pinned) : undefined;
   const weakConnection = quality === ConnectionQuality.Poor || quality === ConnectionQuality.Lost;
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       <RoomAudioRenderer />
+      {floating.element}
       <p role="status" className="sr-only">
         {announcement}
       </p>
@@ -425,6 +428,15 @@ export function RoomStage({
         feedback={feedback}
         isHost={isHost}
         canShareScreen={canShareScreen}
+        floating={
+          floating.supported
+            ? {
+                open: floating.open,
+                available: floating.available,
+                onToggle: () => void floating.toggle().catch(() => notify("error", "Couldn't open the floating window. Try again.")),
+              }
+            : undefined
+        }
         blocked={blocked}
         onToggleMic={toggleMic}
         onToggleCamera={toggleCamera}
