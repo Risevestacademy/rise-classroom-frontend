@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LiveKitRoom } from "@livekit/components-react";
+import { LiveKitRoom, useLocalParticipant, useRoomContext } from "@livekit/components-react";
 import { DisconnectReason } from "livekit-client";
 
 import {
@@ -28,7 +28,9 @@ type Ending = "left" | "you_ended" | "host_ended" | "removed" | "elsewhere" | "c
 type Stage =
   | { name: "prejoin"; joining: boolean }
   | { name: "connecting" }
-  | { name: "room"; credentials: JoinCredentials; access: RoomAccess; choices: DeviceChoices }
+  | { name: "room"; credentials: JoinCredentials; access: RoomAccess; choices: DeviceChoices; tries: number }
+  /** Dropped without leaving, e.g. the phone paused the page; rejoins once it's back on screen. */
+  | { name: "reconnecting"; access: RoomAccess; choices: DeviceChoices; tries: number }
   | { name: "ended"; ending: Ending }
   | { name: "error"; message: string };
 
@@ -47,6 +49,11 @@ const endingFor = (reason?: DisconnectReason): Ending => {
       return "connection_lost";
   }
 };
+
+/** Rejoin attempts in a row before giving up and offering the Rejoin button. */
+const MAX_TRIES = 3;
+
+type Media = Pick<DeviceChoices, "audioEnabled" | "videoEnabled">;
 
 /** A live session from the door to the exit: who can join, the device check, the call, and how it ended. */
 export function LiveRoom({
@@ -80,12 +87,18 @@ export function LiveRoom({
   const router = useRouter();
   const [stage, setStage] = React.useState<Stage>(autoJoin && !block ? { name: "connecting" } : { name: "prejoin", joining: false });
   const endedByMe = React.useRef(false);
+  // Set when they press Leave or end the session, so that drop isn't rejoined.
+  const leaving = React.useRef(false);
+  // Their microphone and camera as they last had them on screen, to rejoin the same way.
+  const media = React.useRef<Media | null>(null);
 
   async function connect(choices: DeviceChoices) {
     try {
       const entered = await enter(sessionId, starts, access);
       endedByMe.current = false;
-      setStage({ name: "room", ...entered, choices });
+      leaving.current = false;
+      media.current = null;
+      setStage({ name: "room", ...entered, choices, tries: 0 });
     } catch (error) {
       setStage({ name: "error", message: (error as Error).message });
     }
@@ -99,9 +112,37 @@ export function LiveRoom({
     if (!autoJoin || block || autoJoined.current) return;
     autoJoined.current = true;
     enter(sessionId, starts, access)
-      .then((entered) => setStage({ name: "room", ...entered, choices: readSavedChoices() }))
+      .then((entered) => setStage({ name: "room", ...entered, choices: readSavedChoices(), tries: 0 }))
       .catch((error: Error) => setStage({ name: "error", message: error.message }));
   }, [autoJoin, block, sessionId, starts, access]);
+
+  // Rejoins once the page is on screen and online again, waiting a little longer after each failed try.
+  const reconnecting = stage.name === "reconnecting" ? stage : null;
+  React.useEffect(() => {
+    if (!reconnecting) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+    const attempt = () => {
+      if (timer || document.visibilityState !== "visible" || !navigator.onLine) return;
+      timer = setTimeout(async () => {
+        try {
+          const entered = await enter(sessionId, false, reconnecting.access);
+          if (!cancelled) setStage({ name: "room", ...entered, choices: reconnecting.choices, tries: reconnecting.tries + 1 });
+        } catch {
+          if (!cancelled) setStage(failedTry(reconnecting));
+        }
+      }, reconnecting.tries * 2000);
+    };
+    attempt();
+    document.addEventListener("visibilitychange", attempt);
+    window.addEventListener("online", attempt);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", attempt);
+      window.removeEventListener("online", attempt);
+    };
+  }, [reconnecting, sessionId]);
 
   // Always the live sessions lobby: going back in history would land on the device check.
   const back = () => router.push(homeHref);
@@ -113,9 +154,15 @@ export function LiveRoom({
 
   // Coming from the device check page, rejoining skips it with the same devices.
   function rejoin() {
+    leaving.current = false;
     if (!autoJoin) return setStage({ name: "prejoin", joining: false });
     setStage({ name: "connecting" });
     void connect(readSavedChoices());
+  }
+
+  function leave() {
+    leaving.current = true;
+    setStage({ name: "ended", ending: "left" });
   }
 
   const backButton = (
@@ -162,27 +209,45 @@ export function LiveRoom({
           serverUrl={stage.credentials.url}
           token={stage.credentials.token}
           connect
-          options={{ adaptiveStream: true, dynacast: true }}
+          // The SDK would hang up whenever a phone hides the page; RoomKeeper only does when it closes.
+          options={{ adaptiveStream: true, dynacast: true, disconnectOnPageLeave: false }}
           audio={stage.choices.audioEnabled ? { deviceId: stage.choices.audioDeviceId || undefined } : false}
           video={stage.choices.videoEnabled ? { deviceId: stage.choices.videoDeviceId || undefined } : false}
-          onDisconnected={(reason) =>
-            setStage({ name: "ended", ending: endedByMe.current ? "you_ended" : endingFor(reason) })
-          }
-          onError={(error) => setStage({ name: "error", message: error.message })}
+          onConnected={() => setStage((current) => (current.name === "room" ? { ...current, tries: 0 } : current))}
+          onDisconnected={(reason) => {
+            if (leaving.current) return;
+            const ending = endedByMe.current ? "you_ended" : endingFor(reason);
+            // Anything short of a real ending (the host closing the room, being
+            // removed, joining elsewhere) is a drop, so they're brought back.
+            if (ending === "left" || ending === "connection_lost") {
+              setStage({ name: "reconnecting", access: stage.access, choices: { ...stage.choices, ...media.current }, tries: stage.tries });
+            } else setStage({ name: "ended", ending });
+          }}
+          onError={(error) => setStage(stage.tries > 0 ? failedTry(stage) : { name: "error", message: error.message })}
           className="flex min-h-0 flex-1 flex-col"
         >
+          <RoomKeeper onMedia={(on) => (media.current = on)} />
           <RoomStage
             sessionId={sessionId}
             title={title}
             access={stage.access}
-            onLeave={() => setStage({ name: "ended", ending: "left" })}
+            onLeave={leave}
             onEndedForAll={() => {
+              leaving.current = true;
               endedByMe.current = true;
               setStage({ name: "ended", ending: "you_ended" });
             }}
             onHostEnded={() => setStage({ name: "ended", ending: "host_ended" })}
           />
         </LiveKitRoom>
+      ) : stage.name === "reconnecting" ? (
+        <div role="status" className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+          <Spinner className="size-8 text-room-active" />
+          <p className="text-base text-room-text">Reconnecting you to {title}…</p>
+          <button type="button" onClick={leave} className={roomButton.secondary}>
+            Leave
+          </button>
+        </div>
       ) : stage.name === "ended" ? (
         <Ended ending={stage.ending} title={title} backButton={backButton} rejoinButton={rejoinButton} />
       ) : (
@@ -202,6 +267,32 @@ export function LiveRoom({
       )}
     </div>
   );
+}
+
+/** One more failed rejoin: try again, or after a few, say the connection was lost. */
+const failedTry = ({ access, choices, tries }: { access: RoomAccess; choices: DeviceChoices; tries: number }): Stage =>
+  tries + 1 >= MAX_TRIES ? { name: "ended", ending: "connection_lost" } : { name: "reconnecting", access, choices, tries: tries + 1 };
+
+/**
+ * Notes their microphone and camera while the page is on screen (a phone turns
+ * the camera off in the background, which shouldn't count), and leaves the
+ * call properly when the tab is closed or reloaded.
+ */
+function RoomKeeper({ onMedia }: { onMedia: (media: Media) => void }) {
+  const room = useRoomContext();
+  const { isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
+
+  React.useEffect(() => {
+    if (document.visibilityState === "visible") onMedia({ audioEnabled: isMicrophoneEnabled, videoEnabled: isCameraEnabled });
+  }, [onMedia, isMicrophoneEnabled, isCameraEnabled]);
+
+  React.useEffect(() => {
+    const close = () => void room.disconnect();
+    window.addEventListener("beforeunload", close);
+    return () => window.removeEventListener("beforeunload", close);
+  }, [room]);
+
+  return null;
 }
 
 /**
