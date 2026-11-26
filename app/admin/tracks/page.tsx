@@ -111,7 +111,7 @@ export default function TracksPage() {
               <CreateTrackDialog />
             </div>
 
-            <div className="rounded-xl border border-neutral-200 bg-white">
+            <div data-tour="tracks-list" className="rounded-xl border border-neutral-200 bg-white">
               <div className="flex flex-col gap-4 border-b border-neutral-100 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   {allTracksQuery.isPending || cohortPending ? (

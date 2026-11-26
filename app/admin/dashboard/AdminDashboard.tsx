@@ -33,6 +33,7 @@ import { cn, greeting } from "@/lib/utils";
 import type { TrackKey } from "@/app/admin/cohorts/cohort-data";
 import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/MetricCard";
+import { AdminSetupChecklist } from "@/components/admin-setup/AdminSetup";
 import { DashboardEmptyState } from "@/components/DashboardEmptyState";
 
 const cardClass =
@@ -205,7 +206,7 @@ export function AdminDashboard({ loading = false }: { loading?: boolean }) {
           </div>
 
           {isEmpty ? (
-            <DashboardEmptyState />
+            <AdminSetupChecklist fallback={<DashboardEmptyState />} />
           ) : (
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-[657fr_463fr]">

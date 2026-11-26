@@ -99,8 +99,8 @@ export default function CohortsPage({
           <EmptyState />
         ) : (
           <ul className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {visible.map((cohort) => (
-              <li key={cohort.id}>
+            {visible.map((cohort, index) => (
+              <li key={cohort.id} data-tour={index === 0 ? "cohort-card" : undefined}>
                 <CohortCard cohort={cohort} onStatusChanged={setStatusToast} />
               </li>
             ))}
@@ -136,6 +136,7 @@ function CreateCohortLink({ label = "Create cohort" }: { label?: string }) {
   return (
     <Link
       href="/admin/cohorts/create"
+      data-tour="create-cohort"
       className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-interactive-primary-hover"
     >
       <Add01 className="size-[18px]" />

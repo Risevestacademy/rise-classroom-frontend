@@ -126,6 +126,7 @@ export function CohortForm({
   const submitButton = (
     <button
       type="submit"
+      data-tour="cohort-submit"
       disabled={!canSubmit}
       className="inline-flex h-10 items-center rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-interactive-primary-hover disabled:bg-brand-200 disabled:text-[#a8b2b3]"
     >
@@ -173,7 +174,7 @@ export function CohortForm({
             </h2>
 
             <div className="mt-[18px] flex flex-col gap-[18px]">
-              <Field label="Cohort name" htmlFor="cohort-name" required>
+              <Field label="Cohort name" htmlFor="cohort-name" required tour="cohort-name">
                 <input
                   id="cohort-name"
                   value={name}
@@ -198,7 +199,7 @@ export function CohortForm({
                 />
               </Field>
 
-              <div className="grid gap-[18px] sm:grid-cols-3 sm:gap-2">
+              <div data-tour="cohort-dates" className="grid gap-[18px] sm:grid-cols-3 sm:gap-2">
                 <Field label="Start date" htmlFor="cohort-start" required>
                   <DateInput
                     id="cohort-start"
@@ -225,7 +226,7 @@ export function CohortForm({
                 </Field>
               </div>
 
-              <Field label="Cohort status" htmlFor="cohort-status" required>
+              <Field label="Cohort status" htmlFor="cohort-status" required tour="cohort-status">
                 <div className="relative">
                   <select
                     id="cohort-status"
@@ -283,16 +284,19 @@ function Field({
   htmlFor,
   required,
   hint,
+  tour,
   children,
 }: {
   label: string;
   htmlFor: string;
   required?: boolean;
   hint?: string;
+  /** Marks the field for the admin setup guide. */
+  tour?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div data-tour={tour} className="flex flex-col gap-1.5">
       <label
         htmlFor={htmlFor}
         className="text-sm font-medium text-text-primary"
