@@ -84,7 +84,8 @@ export function EventFormDialog({
   onOpenChange: (open: boolean) => void;
   initial: EventDraft;
   mode: "create" | "edit";
-  onSubmit: (draft: EventDraft) => void;
+  /** Can return a promise; the dialog stays open with its error if it rejects. */
+  onSubmit: (draft: EventDraft) => void | Promise<void>;
   hasEvents: (date: Date) => boolean;
   onLiveSessionCreated?: (title: string) => void;
 }) {
@@ -100,8 +101,8 @@ export function EventFormDialog({
             initial={initial}
             mode={mode}
             hasEvents={hasEvents}
-            onSubmit={(draft) => {
-              onSubmit(draft);
+            onSubmit={async (draft) => {
+              await onSubmit(draft);
               onOpenChange(false);
             }}
             onLiveSessionCreated={
@@ -128,7 +129,7 @@ function EventDialogBody({
 }: {
   initial: EventDraft;
   mode: "create" | "edit";
-  onSubmit: (draft: EventDraft) => void;
+  onSubmit: (draft: EventDraft) => Promise<void>;
   hasEvents: (date: Date) => boolean;
   onLiveSessionCreated?: (title: string) => void;
 }) {
@@ -177,7 +178,7 @@ function EventForm({
 }: {
   initial: EventDraft;
   mode: "create" | "edit";
-  onSubmit: (draft: EventDraft) => void;
+  onSubmit: (draft: EventDraft) => Promise<void>;
   hasEvents: (date: Date) => boolean;
   /** Offers "Live session" as a type, handing over what's been typed so far. */
   onLive?: (draft: EventDraft) => void;
@@ -187,9 +188,26 @@ function EventForm({
     setDraft((d) => ({ ...d, [key]: value }));
 
   const tracksQuery = useQuery(adminQueries.tracks("ACTIVE"));
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const start = fromDateKey(draft.date);
   const end = fromDateKey(draft.endDate);
-  const canSubmit = draft.title.trim().length > 0;
+  const canSubmit = draft.title.trim().length > 0 && !saving;
+
+  const submit = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSubmit({ ...draft, title: draft.title.trim() });
+    } catch (err) {
+      setError(
+        (err instanceof Error && err.message) ||
+          "We couldn't save this. Please try again.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Moving the start keeps the event's length, like most calendars.
   const setStartDate = (date: Date) => {
@@ -219,7 +237,7 @@ function EventForm({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (canSubmit) onSubmit({ ...draft, title: draft.title.trim() });
+        if (canSubmit) void submit();
       }}
     >
       <CalendarDialogHeader
@@ -439,8 +457,16 @@ function EventForm({
         </div>
       </div>
 
+      {error && (
+        <p role="alert" className="mt-4 font-work text-sm text-text-error">
+          {error}
+        </p>
+      )}
+
       <CalendarDialogActions
-        submitLabel={mode === "create" ? "Create event" : "Save changes"}
+        submitLabel={
+          saving ? "Saving…" : mode === "create" ? "Create event" : "Save changes"
+        }
         disabled={!canSubmit}
         className="mt-[26px]"
       />

@@ -43,6 +43,7 @@ import {
   type LiveSession,
   type CreateLiveSessionInput,
   type LiveSessionType,
+  type UpdateLiveSessionInput,
 } from "@/lib/live-sessions";
 import { mentorQueries } from "@/lib/mentors";
 
@@ -78,8 +79,8 @@ const sessionTypes: Record<
   },
   MENTORSHIP_GROUP: {
     label: "Mentorship group",
-    hint: "A mentor and all of their students.",
-    needs: ["mentorId"],
+    hint: "A mentor and their students in one cohort.",
+    needs: ["cohortId", "mentorId"],
   },
   MENTORSHIP_PAIR: {
     label: "One-on-one mentorship",
@@ -161,7 +162,13 @@ export function LiveSessionForm({
     ...adminQueries.tracks("ACTIVE"),
     enabled: needs.includes("trackId"),
   });
-  const mentors = useQuery({ ...mentorQueries.list(), enabled: mentored });
+  // A mentorship group is for one cohort, so only its mentors are offered.
+  const groupCohort =
+    draft.type === "MENTORSHIP_GROUP" ? draft.cohortId || undefined : undefined;
+  const mentors = useQuery({
+    ...mentorQueries.list(groupCohort),
+    enabled: mentored,
+  });
   const mentees = useQuery({
     ...mentorQueries.mentees(draft.mentorId),
     enabled: needs.includes("mentee") && draft.mentorId !== "",
@@ -401,7 +408,12 @@ export function LiveSessionForm({
               label="Cohort"
               value={draft.cohortId}
               onChange={(cohortId) =>
-                setDraft((d) => ({ ...d, cohortId, hostId: ME }))
+                setDraft((d) => ({
+                  ...d,
+                  cohortId,
+                  hostId: ME,
+                  ...(d.type === "MENTORSHIP_GROUP" && { mentorId: "" }),
+                }))
               }
               loading={cohorts.isPending}
               options={(cohorts.data ?? []).map((cohort) => ({
@@ -633,7 +645,7 @@ export function ScheduleLiveSessionButton() {
   );
 }
 
-type Scope = "THIS_OCCURRENCE" | "THIS_AND_FUTURE_OCCURRENCES";
+type Scope = NonNullable<UpdateLiveSessionInput["scope"]>;
 
 const scopes: { value: Scope; label: string }[] = [
   { value: "THIS_OCCURRENCE", label: "This session" },
@@ -641,7 +653,46 @@ const scopes: { value: Scope; label: string }[] = [
     value: "THIS_AND_FUTURE_OCCURRENCES",
     label: "This and following sessions",
   },
+  { value: "ALL_OCCURRENCES", label: "All sessions" },
 ];
+
+/** Picks which sessions of a series a change or cancellation covers. */
+export function ScopeChoice<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className={labelClass}>{label}</span>
+      <div role="radiogroup" aria-label={label} className="flex flex-col gap-2">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={value === option.value}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "flex h-9 items-center rounded-lg border px-3 text-left font-work text-sm",
+              value === option.value
+                ? "border-brand-primary bg-brand-100 text-brand-primary"
+                : "border-neutral-200 text-text-primary hover:bg-neutral-100",
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Changes a scheduled session's title, time and description, all the API
@@ -780,32 +831,12 @@ function EditLiveSessionForm({
           <Fixed label="Host" value={session.hostName || "Not set"} />
 
           {session.seriesId && (
-            <div className="flex flex-col gap-2">
-              <span className={labelClass}>Apply changes to</span>
-              <div
-                role="radiogroup"
-                aria-label="Apply changes to"
-                className="flex flex-col gap-2"
-              >
-                {scopes.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={scope === option.value}
-                    onClick={() => setScope(option.value)}
-                    className={cn(
-                      "flex h-9 items-center rounded-lg border px-3 text-left font-work text-sm",
-                      scope === option.value
-                        ? "border-brand-primary bg-brand-100 text-brand-primary"
-                        : "border-neutral-200 text-text-primary hover:bg-neutral-100",
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <ScopeChoice
+              label="Apply changes to"
+              options={scopes}
+              value={scope}
+              onChange={setScope}
+            />
           )}
         </div>
       </div>

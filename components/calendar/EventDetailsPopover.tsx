@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Popover } from "@base-ui/react/popover";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   ArrowDown01,
@@ -23,6 +24,8 @@ import {
   timeRange,
   type CalendarEvent,
 } from "@/lib/calendar";
+import { calendarQueries } from "@/lib/calendar-events";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 export type OpenEvent = {
@@ -41,11 +44,13 @@ export function EventDetailsPopover({
   onClose,
   onEdit,
   onDelete,
+  onToggleDone,
 }: {
   open: OpenEvent | null;
   onClose: () => void;
   onEdit: (event: CalendarEvent) => void;
   onDelete: (event: CalendarEvent) => void;
+  onToggleDone?: (event: CalendarEvent, done: boolean) => void;
 }) {
   return (
     <Popover.Root
@@ -71,6 +76,7 @@ export function EventDetailsPopover({
                 onClose={onClose}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onToggleDone={onToggleDone}
               />
             )}
           </Popover.Popup>
@@ -86,14 +92,29 @@ function EventDetails({
   onClose,
   onEdit,
   onDelete,
+  onToggleDone,
 }: OpenEvent & {
   onClose: () => void;
   onEdit: (event: CalendarEvent) => void;
   onDelete: (event: CalendarEvent) => void;
+  onToggleDone?: (event: CalendarEvent, done: boolean) => void;
 }) {
   const [guestsOpen, setGuestsOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const live = event.kind === "live";
+  // The list only has the host; the participants come with the item.
+  const details = useQuery({
+    ...calendarQueries.item(event.id),
+    enabled: event.source === "LIVE_SESSION",
+  });
+  const guests =
+    event.guests.length > 0
+      ? event.guests
+      : (details.data?.participants ?? []).map((person) => ({
+          id: person.id,
+          name: person.name,
+          email: "",
+        }));
   // A live session's link is a path in the app; share the full address.
   const link =
     live && typeof window !== "undefined"
@@ -114,12 +135,11 @@ function EventDetails({
   return (
     <>
       <div className="flex justify-end pt-3.5 pr-3.5">
-        {/* Editing and cancelling live sessions isn't designed yet. */}
-        {!live && (
+        {event.canEdit !== false && (
           <>
             <button
               type="button"
-              aria-label="Edit event"
+              aria-label={live ? "Edit live session" : "Edit event"}
               onClick={() => onEdit(event)}
               className={iconButton}
             >
@@ -127,7 +147,7 @@ function EventDetails({
             </button>
             <button
               type="button"
-              aria-label="Delete event"
+              aria-label={live ? "Cancel live session" : "Delete event"}
               onClick={() => onDelete(event)}
               className={iconButton}
             >
@@ -156,7 +176,12 @@ function EventDetails({
           style={{ backgroundColor: event.color }}
         />
         <div>
-          <Popover.Title className="text-xl leading-7 font-semibold">
+          <Popover.Title
+            className={cn(
+              "text-xl leading-7 font-semibold",
+              event.done && "text-text-muted line-through",
+            )}
+          >
             {event.title}
           </Popover.Title>
           <p className="mt-0.5 font-work text-sm leading-[22px]">
@@ -172,6 +197,16 @@ function EventDetails({
             <p className="font-work text-sm leading-[22px]">
               {describeRepeat(event.repeat, fromDateKey(event.date))}
             </p>
+          )}
+          {event.source === "CALENDAR_TASK" && onToggleDone && (
+            <label className="mt-3 flex items-center gap-3 font-work text-sm">
+              <Checkbox
+                checked={event.done ?? false}
+                onCheckedChange={(checked) => onToggleDone(event, checked)}
+                className="border-[1.5px] border-neutral-600"
+              />
+              Done
+            </label>
           )}
         </div>
 
@@ -204,7 +239,7 @@ function EventDetails({
         )}
 
         <dl className="col-span-2 mt-[22px] grid grid-cols-[39px_minmax(0,1fr)] gap-y-3 font-work text-sm leading-5">
-          {event.guests.length > 0 && (
+          {guests.length > 0 && (
             <>
               <dt className="flex h-5 items-center">
                 <UserMultiple className="size-4 text-icon-secondary" />
@@ -217,8 +252,8 @@ function EventDetails({
                   onClick={() => setGuestsOpen((o) => !o)}
                   className="flex w-full items-center justify-between"
                 >
-                  {event.guests.length} guest
-                  {event.guests.length === 1 ? "" : "s"}
+                  {guests.length} guest
+                  {guests.length === 1 ? "" : "s"}
                   <ArrowDown01
                     className={cn(
                       "size-5 text-icon-secondary transition-transform",
@@ -228,7 +263,7 @@ function EventDetails({
                 </button>
                 {guestsOpen && (
                   <ul className="mt-2 flex max-h-[128px] flex-col gap-1 overflow-y-auto text-text-secondary">
-                    {event.guests.map((guest) => (
+                    {guests.map((guest) => (
                       <li key={guest.id} className="truncate">
                         {guest.name}
                       </li>

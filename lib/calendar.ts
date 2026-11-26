@@ -1,9 +1,8 @@
 /**
- * Calendar events for the admin calendar.
- *
- * The API has no events or calendar endpoints yet, so events live in the
- * page's state, seeded with `sampleEvents`. Swap the seed for a query once
- * the backend adds events.
+ * Calendar events for the admin calendar. Live sessions and tasks come from
+ * `GET /calendar/events` (see `lib/calendar-events.ts`).
+ * PENDING-BACKEND: the API has no plain events (every event is a live
+ * session), so events made with the Event type stay in the page's state.
  */
 
 export type RepeatFrequency = "day" | "week" | "month" | "year";
@@ -27,8 +26,16 @@ export type EventGuest = { id: string; name: string; email: string };
 
 export type CalendarEvent = {
   id: string;
-  /** Live sessions come from the live sessions API; the rest are local for now. */
+  /** Live sessions and tasks come from the calendar API; events are local for now. */
   kind: "event" | "task" | "live";
+  /** Where an API item lives; unset for local events. */
+  source?: "LIVE_SESSION" | "WEEKLY_TASK" | "CALENDAR_TASK";
+  /** False for items the API won't let this person change, like weekly tasks. */
+  canEdit?: boolean;
+  /** A calendar task that's been ticked off. */
+  done?: boolean;
+  seriesId?: string | null;
+  cohortId?: string | null;
   liveSessionId?: string;
   title: string;
   /** First day, as YYYY-MM-DD. */
@@ -400,104 +407,3 @@ export function describeNotification(minutes: number) {
     return `${minutes / 60} hour${minutes === 60 ? "" : "s"} before`;
   return `${minutes} minutes before`;
 }
-
-const sampleBase = {
-  kind: "event",
-  allDay: false,
-  trackIds: [],
-  link: "https://link.risecampus.com",
-  description: "",
-  guests: [],
-  permissions: { modify: false, invite: false, seeGuests: true },
-  notifications: [30],
-  organizer: "admin@gmail.com",
-  attachments: [],
-} satisfies Partial<CalendarEvent>;
-
-const weekly = (weekdays: number[]): RepeatRule => ({
-  frequency: "week",
-  interval: 1,
-  weekdays,
-  ends: { type: "never" },
-});
-
-/** Placeholder events from the design, shown until the API serves events. */
-export const sampleEvents: CalendarEvent[] = [
-  {
-    ...sampleBase,
-    id: "sample-rise-classroom",
-    title: "Rise classroom",
-    date: "2026-09-02",
-    endDate: "2026-09-02",
-    startTime: "20:00",
-    endTime: "21:00",
-    repeat: weekly([0, 3]),
-    color: "#2e7d32",
-  },
-  {
-    ...sampleBase,
-    id: "sample-mentorship",
-    title: "Mentorship session",
-    date: "2026-09-01",
-    endDate: "2026-09-01",
-    startTime: "20:00",
-    endTime: "21:00",
-    repeat: weekly([2]),
-    color: "#2253dd",
-  },
-  {
-    ...sampleBase,
-    id: "sample-check-in",
-    title: "weekly check-in",
-    date: "2026-09-04",
-    endDate: "2026-09-04",
-    startTime: "19:00",
-    endTime: "19:30",
-    repeat: weekly([5]),
-    color: "#22dd92",
-  },
-  {
-    ...sampleBase,
-    id: "sample-classroom-session",
-    title: "Rise Classroom session",
-    date: "2026-09-04",
-    endDate: "2026-09-04",
-    startTime: "20:00",
-    endTime: "21:00",
-    repeat: weekly([5]),
-    color: "#932a6e",
-  },
-  {
-    ...sampleBase,
-    id: "sample-academy-catch-up",
-    title: "Rise Academy catch-up",
-    date: "2026-09-05",
-    endDate: "2026-09-05",
-    startTime: "18:00",
-    endTime: "19:00",
-    repeat: weekly([6]),
-    color: "#2e7d32",
-  },
-  {
-    ...sampleBase,
-    id: "sample-live-class",
-    title: "Rise Academy Live Class",
-    date: "2026-10-18",
-    endDate: "2026-10-18",
-    startTime: "20:00",
-    endTime: "20:30",
-    repeat: { ...weekly([0]), ends: { type: "on", date: "2026-12-06" } },
-    color: "#2563a8",
-  },
-  {
-    ...sampleBase,
-    id: "sample-admin-testing",
-    title: "Admin Testing",
-    date: "2026-10-17",
-    endDate: "2026-10-17",
-    startTime: "21:00",
-    endTime: "22:00",
-    repeat: null,
-    color: "#2563a8",
-  },
-];
