@@ -6,6 +6,7 @@ import {
   ComputerScreenShare,
   Mic02,
   MicOff02,
+  MoreHorizontal,
   Settings01,
   Smile,
   Video,
@@ -58,6 +59,9 @@ export type ControlBarProps = {
 /** The call controls along the bottom of the room. */
 export function ControlBar(props: ControlBarProps) {
   const { micOn, cameraOn, sharing, handRaised, feedback, isHost, blocked } = props;
+  // On a phone, presenting and settings fold into a More menu so the bar fits. Where
+  // the browser can't present there's only settings, which stays on the bar.
+  const folded = props.canShareScreen;
 
   return (
     // From `sm` up the recording timer sits at the left edge and Leave at the right, with the controls centred.
@@ -166,10 +170,32 @@ export function ControlBar(props: ControlBarProps) {
           title="Session settings"
           aria-haspopup="dialog"
           onClick={props.onOpenSettings}
-          className={cn(control, idle)}
+          className={cn(control, idle, folded && "max-sm:hidden")}
         >
           <Settings01 />
         </button>
+
+        {folded && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="More options"
+              title="More options"
+              className={cn(control, sharing ? active : idle, "data-popup-open:bg-room-active data-popup-open:text-text-brand sm:hidden")}
+            >
+              <MoreHorizontal />
+            </DropdownMenuTrigger>
+            <RoomMenuContent side="top" align="end" sideOffset={12} className="w-[220px]">
+              <RoomMenuItem onClick={props.onToggleShare}>
+                <ComputerScreenShare />
+                {sharing ? "Stop presenting" : "Present your screen"}
+              </RoomMenuItem>
+              <RoomMenuItem onClick={props.onOpenSettings}>
+                <Settings01 />
+                Session settings
+              </RoomMenuItem>
+            </RoomMenuContent>
+          </DropdownMenu>
+        )}
 
         {isHost ? (
           <DropdownMenu>
