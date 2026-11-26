@@ -157,7 +157,7 @@ function EmptyState() {
       </p>
       <div className="mt-[23px]">
         {/* Label kept from the design. */}
-        <CreateCohortLink label="Add assignment" />
+        <CreateCohortLink label="Add cohort" />
       </div>
     </div>
   );
