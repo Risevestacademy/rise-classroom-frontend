@@ -142,6 +142,32 @@ describe("Scheduling a live session from the calendar", () => {
     });
   });
 
+  it("asks for a mentorship group's cohort and sends it with the mentor", async () => {
+    const { user, api, onLiveSessionCreated } = renderDialog({
+      "POST /live-sessions": created,
+    });
+
+    await user.type(screen.getByPlaceholderText("Add title"), "Group check-in");
+    await user.click(screen.getByRole("radio", { name: "Live session" }));
+    await pick(user, "Who it", "Mentorship group");
+    const schedule = screen.getByRole("button", { name: "Schedule session" });
+    await pick(user, "Mentor", "Tola Ade");
+    expect(schedule).toBeDisabled();
+    await pick(user, "Cohort", "Cohort 4");
+    expect(schedule).toBeDisabled();
+    await pick(user, "Mentor", "Tola Ade");
+    await user.click(schedule);
+
+    await vi.waitFor(() => expect(onLiveSessionCreated).toHaveBeenCalled());
+    expect(api.bodies("POST /live-sessions")[0]).toMatchObject({
+      type: "MENTORSHIP_GROUP",
+      hostId: "i-1",
+      cohortId: "cohort-1",
+      mentorId: "i-1",
+    });
+    expect(api.urls("GET /admin/users").some((url) => url.searchParams.get("cohortId") === "cohort-1")).toBe(true);
+  });
+
   it("shows why the API turned it down", async () => {
     const { user, onLiveSessionCreated } = renderDialog({
       "POST /live-sessions": reply(409, { success: false, message: "The host already has a session then" }),

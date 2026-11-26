@@ -10,6 +10,7 @@ import {
   useDataChannel,
   useIsRecording,
   useLocalParticipant,
+  useLocalParticipantPermissions,
   useParticipantAttributes,
   useParticipants,
   useTracks,
@@ -28,9 +29,12 @@ import {
   FEEDBACK_ATTRIBUTE,
   HAND_ATTRIBUTE,
   LABEL_ATTRIBUTE,
+  latestSettings,
+  mayShareScreen,
   muteEveryone,
   parseSessionSettings,
   REACTIONS_TOPIC,
+  recordingProblem,
   removeParticipant,
   ROLE_ATTRIBUTE,
   roleLabel,
@@ -101,7 +105,7 @@ export function RoomStage({
   // the host pill, the participants list and everyone's tiles read these.
   React.useEffect(() => {
     if (connection !== ConnectionState.Connected) return;
-    const role = access.sessionRole === "HOST" ? "host" : "participant";
+    const role = roomRoles[access.sessionRole];
     const label = roleLabel(access.platformRole);
     const current = localParticipant.attributes;
     if (current[ROLE_ATTRIBUTE] === role && current[LABEL_ATTRIBUTE] === label && (current[AVATAR_ATTRIBUTE] ?? "") === photo) return;
@@ -115,6 +119,7 @@ export function RoomStage({
   const sessionSettings = useSessionSettings(sessionId, isHost);
   const { settings, setSettings, blocked } = sessionSettings;
   const recording = useRoomRecording(sessionId, isHost && settings.autoRecord, connection === ConnectionState.Connected);
+  const permissions = useLocalParticipantPermissions();
 
   const cameras = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], { onlySubscribed: false });
   const screen = useTracks([Track.Source.ScreenShare]).filter(isTrackReference)[0];
@@ -159,6 +164,7 @@ export function RoomStage({
   }, []);
 
   useEnforcedSettings(sessionSettings, notify);
+  useScreenShareRights(sessionId, isHost, settings.screenShare, notify);
 
   const { send: sendData } = useDataChannel(REACTIONS_TOPIC, (message) => {
     const emoji = new TextDecoder().decode(message.payload);
@@ -220,7 +226,10 @@ export function RoomStage({
     setOwnAttribute(HAND_ATTRIBUTE, handRaised ? "" : raisedNow(), "Couldn't raise your hand. Try again.");
   };
   const canShareScreen =
-    access.canShareScreen && !blocked.screenShare && typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia);
+    mayShareScreen(permissions, access.canShareScreen) &&
+    !blocked.screenShare &&
+    typeof navigator !== "undefined" &&
+    Boolean(navigator.mediaDevices?.getDisplayMedia);
 
   // Said out loud for screen readers, since the key press doesn't move focus to the control.
   useRoomShortcuts({
@@ -366,18 +375,7 @@ export function RoomStage({
             }
             onMuteAll={() => hostAction(() => muteEveryone(sessionId), "Couldn't mute everyone.")}
             onCamerasOff={() => hostAction(() => turnOffAllCameras(sessionId), "Couldn't turn off everyone's camera.")}
-            onDisableScreenShare={() =>
-              hostAction(async () => {
-                // Hosts keep theirs; moderators can't act on the host anyway.
-                const others = participants.filter(
-                  (participant) => !participant.isLocal && participant.attributes[ROLE_ATTRIBUTE] !== "host",
-                );
-                const results = await Promise.allSettled(
-                  others.map((participant) => setScreenShare(sessionId, participant.identity, "block")),
-                );
-                if (results.some((result) => result.status === "rejected")) throw new Error("Some failed");
-              }, "Couldn't turn off screen sharing for everyone.")
-            }
+            onDisableScreenShare={() => setSettings({ ...settings, screenShare: false })}
           />
         )}
         {shownPanel.tab === "chat" && (
@@ -462,16 +460,18 @@ const savedSettingsKey = (sessionId: string) => `rise-live-room-settings:${sessi
 
 type Blocked = Partial<Record<"microphone" | "camera" | "screenShare" | "chat" | "reactions" | "handRaising", boolean>>;
 
+/** The role each person shares in the room, which the host pill and settings read. */
+const roomRoles = { HOST: "host", MODERATOR: "moderator", PARTICIPANT: "participant" } as const;
+const leaderRoles = new Set<string>([roomRoles.HOST, roomRoles.MODERATOR]);
+
 /**
- * The host's Session settings. The host keeps them on this browser and shares
- * them through their `settings` attribute; everyone else reads them from the
- * host. Hosts aren't held back by their own settings.
+ * The Session settings. Hosts and moderators keep theirs on this browser and
+ * share them through their `settings` attribute; the room follows whoever
+ * changed them last. Hosts and moderators aren't held back by them.
  */
 function useSessionSettings(sessionId: string, isHost: boolean) {
   const { localParticipant } = useLocalParticipant();
   const participants = useParticipants();
-  const host = participants.find((participant) => !participant.isLocal && participant.attributes[ROLE_ATTRIBUTE] === "host");
-  const { attributes: hostAttributes } = useParticipantAttributes({ participant: host });
   const [own, setOwn] = React.useState(() => parseSessionSettings(localStorage.getItem(savedSettingsKey(sessionId)) ?? undefined));
 
   const shared = JSON.stringify(own);
@@ -480,8 +480,12 @@ function useSessionSettings(sessionId: string, isHost: boolean) {
     localParticipant.setAttributes({ [SETTINGS_ATTRIBUTE]: shared }).catch(() => {});
   }, [isHost, localParticipant, shared]);
 
-  const hostShared = hostAttributes?.[SETTINGS_ATTRIBUTE];
-  const settings = isHost ? own : parseSessionSettings(hostShared);
+  const fromLeaders = participants
+    .filter((participant) => !participant.isLocal && leaderRoles.has(participant.attributes[ROLE_ATTRIBUTE]))
+    .map((participant) => participant.attributes[SETTINGS_ATTRIBUTE])
+    .filter((value): value is string => Boolean(value));
+  // Your own come last, so they win until someone changes theirs.
+  const settings = latestSettings([...fromLeaders.map(parseSessionSettings), ...(isHost ? [own] : [])]);
   const blocked: Blocked = isHost
     ? {}
     : {
@@ -494,15 +498,50 @@ function useSessionSettings(sessionId: string, isHost: boolean) {
       };
 
   const setSettings = (next: SessionSettings) => {
-    setOwn(next);
-    localStorage.setItem(savedSettingsKey(sessionId), JSON.stringify(next));
+    const stamped = { ...next, updatedAt: Date.now() };
+    setOwn(stamped);
+    localStorage.setItem(savedSettingsKey(sessionId), JSON.stringify(stamped));
   };
 
-  return { settings, setSettings, blocked, hostShared: Boolean(hostShared) };
+  return { settings, setSettings, blocked, hostShared: fromLeaders.length > 0 };
 }
 
 /**
- * Applies the host's settings to this person: turns off what the host just
+ * Participants can't share their screen until a host allows it, so while
+ * "Allow screen sharing" is on, hosts and moderators allow everyone in the
+ * room, late joiners too; turning it off blocks them again.
+ */
+function useScreenShareRights(
+  sessionId: string,
+  isHost: boolean,
+  allowed: boolean,
+  notify: (tone: Notice["tone"], message: string) => void,
+) {
+  const participants = useParticipants();
+  const [applied, setApplied] = React.useState<Record<string, boolean>>({});
+  const pending = participants
+    .filter((participant) => !participant.isLocal && participant.attributes[ROLE_ATTRIBUTE] === roomRoles.PARTICIPANT)
+    .map((participant) => participant.identity)
+    .filter((identity) => applied[identity] !== allowed)
+    .join(",");
+
+  React.useEffect(() => {
+    if (!isHost || !pending) return;
+    const identities = pending.split(",");
+    Promise.allSettled(
+      identities.map((identity) => setScreenShare(sessionId, identity, allowed ? "allow" : "block")),
+    ).then((results) => {
+      const done = identities.filter((_, index) => results[index].status === "fulfilled");
+      setApplied((current) => ({ ...current, ...Object.fromEntries(done.map((identity) => [identity, allowed])) }));
+      if (done.length < identities.length) {
+        notify("error", allowed ? "Couldn't let everyone share their screen." : "Couldn't turn off screen sharing for everyone.");
+      }
+    });
+  }, [isHost, pending, allowed, sessionId, notify]);
+}
+
+/**
+ * Applies the room's settings to this person: turns off what the host just
  * disallowed, follows the "on entry" choices once, and captures the camera at
  * the chosen quality.
  */
@@ -907,35 +946,49 @@ function useClock() {
   return minute === null ? null : new Date(minute);
 }
 
+const AUTO_RECORD_TRIES = 3;
+const AUTO_RECORD_RETRY_MS = 15_000;
+
 /**
- * Starting the server recording: on its own when the host has auto-record
- * on, or from the settings. It runs until the session ends.
+ * Starting the server recording: on its own when auto-record is on, trying a
+ * few times in case the media server is slow, or from the settings. It runs
+ * until the session ends.
  */
 function useRoomRecording(sessionId: string, auto: boolean, connected: boolean) {
   const active = useIsRecording();
   const [starting, setStarting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const tried = React.useRef(false);
+  const [started, setStarted] = React.useState(false);
+  const [autoTries, setAutoTries] = React.useState(0);
 
   const start = React.useCallback(async () => {
-    tried.current = true;
     setStarting(true);
     setError(null);
     try {
       await startRecording(sessionId);
+      setStarted(true);
     } catch (problem) {
       // Already recording is fine.
-      if (!(problem instanceof ApiError && problem.status === 409)) setError("We couldn't start recording. Try again.");
+      if (problem instanceof ApiError && problem.status === 409) setStarted(true);
+      else setError(recordingProblem(problem));
     } finally {
       setStarting(false);
     }
   }, [sessionId]);
 
   React.useEffect(() => {
-    if (auto && connected && !active && !tried.current) void start();
-  }, [auto, connected, active, start]);
+    if (!auto || !connected || active || started || autoTries >= AUTO_RECORD_TRIES) return;
+    const timer = setTimeout(
+      () => {
+        setAutoTries((tries) => tries + 1);
+        void start();
+      },
+      autoTries === 0 ? 0 : AUTO_RECORD_RETRY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [auto, connected, active, started, autoTries, start]);
 
-  return { active, starting: starting && !active, error, start };
+  return { active, starting: starting && !active, error: active ? null : error, start };
 }
 
 /** The recording pill: in the header on phones, at the left of the call controls from `sm` up. */

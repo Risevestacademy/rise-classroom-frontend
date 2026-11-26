@@ -7,8 +7,8 @@ import { setSelectedCohortId, useSelectedCohort } from "@/lib/selected-cohort";
 
 /**
  * Picks the cohort the admin area works with.
- * Students, instructors, tracks, curriculum and the dashboard follow it.
- * PENDING-BACKEND: the calendar has no events API to scope.
+ * Students, instructors, tracks, curriculum, the dashboard and the calendar
+ * follow it.
  */
 export function AdminCohortSelect({ className }: { className?: string }) {
   const { cohort, cohorts, cohortsQuery } = useSelectedCohort();

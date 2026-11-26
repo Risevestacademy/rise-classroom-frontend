@@ -11,12 +11,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { longDate, timeRange, type CalendarEvent } from "@/lib/calendar";
+import { cn } from "@/lib/utils";
 
 const kindLabels: Record<CalendarEvent["kind"], string> = {
   event: "Event",
   task: "Task",
   live: "Live session",
 };
+
+/** The open card with the latest copy of its event, e.g. once a task is ticked off. */
+export function freshOpen(open: OpenEvent | null, events: CalendarEvent[]) {
+  if (!open) return null;
+  const event = events.find((e) => e.id === open.event.id);
+  return event ? { ...open, event } : open;
+}
 
 /** Every event on one day of the month grid; each opens the usual details card. */
 export function DayEventsDialog({
@@ -26,6 +34,7 @@ export function DayEventsDialog({
   onCreate,
   onEdit,
   onDelete,
+  onToggleDone,
 }: {
   date: Date | null;
   events: CalendarEvent[];
@@ -33,6 +42,7 @@ export function DayEventsDialog({
   onCreate: (date: Date) => void;
   onEdit: (event: CalendarEvent) => void;
   onDelete: (event: CalendarEvent) => void;
+  onToggleDone?: (event: CalendarEvent, done: boolean) => void;
 }) {
   const [openEvent, setOpenEvent] = React.useState<OpenEvent | null>(null);
   // Keep the last day while the dialog animates out.
@@ -86,7 +96,12 @@ export function DayEventsDialog({
                     style={{ backgroundColor: event.color }}
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-text-primary">
+                    <span
+                      className={cn(
+                        "block truncate text-sm font-medium text-text-primary",
+                        event.done && "text-text-muted line-through",
+                      )}
+                    >
                       {event.title}
                     </span>
                     <span className="mt-0.5 block truncate font-work text-xs text-text-muted">
@@ -114,9 +129,10 @@ export function DayEventsDialog({
         </div>
 
         <EventDetailsPopover
-          open={openEvent}
+          open={freshOpen(openEvent, events)}
           onClose={() => setOpenEvent(null)}
           onEdit={onEdit}
+          onToggleDone={onToggleDone}
           onDelete={(event) => {
             setOpenEvent(null);
             onDelete(event);

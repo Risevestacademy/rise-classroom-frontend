@@ -533,7 +533,7 @@ export const createLiveSessionSeries = async (
 /** `PATCH /live-sessions/:id`. Who it's for and who hosts it can't change. */
 export type UpdateLiveSessionInput = {
   /** Required for a session in a series. */
-  scope?: "THIS_OCCURRENCE" | "THIS_AND_FUTURE_OCCURRENCES";
+  scope?: "THIS_OCCURRENCE" | "THIS_AND_FUTURE_OCCURRENCES" | "ALL_OCCURRENCES";
   title?: string;
   description?: string;
   scheduledStartAt?: string;

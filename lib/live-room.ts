@@ -46,8 +46,9 @@ export const feedbackOptions = [
 ] as const;
 
 /**
- * The host's Session settings, shared through the host's own `settings`
- * attribute so everyone in the room, including late joiners, can follow them.
+ * The Session settings, shared through each host's and moderator's own
+ * `settings` attribute so everyone in the room, including late joiners, can
+ * follow them. The most recent change wins.
  */
 export const SETTINGS_ATTRIBUTE = "settings";
 
@@ -83,6 +84,8 @@ export type SessionSettings = {
   muteOnEntry: boolean;
   camerasOffOnEntry: boolean;
   videoQuality: (typeof videoQualityOptions)[number]["value"];
+  /** When these were last changed, in ms; 0 for the defaults. */
+  updatedAt: number;
 };
 
 export const defaultSessionSettings: SessionSettings = {
@@ -101,6 +104,7 @@ export const defaultSessionSettings: SessionSettings = {
   muteOnEntry: false,
   camerasOffOnEntry: false,
   videoQuality: "auto",
+  updatedAt: 0,
 };
 
 export function parseSessionSettings(value?: string): SessionSettings {
@@ -110,6 +114,28 @@ export function parseSessionSettings(value?: string): SessionSettings {
   } catch {
     return defaultSessionSettings;
   }
+}
+
+/** The most recently changed settings; on a tie the later one in the list wins. */
+export const latestSettings = (candidates: SessionSettings[]) =>
+  candidates.reduce((latest, next) => (next.updatedAt >= latest.updatedAt ? next : latest), defaultSessionSettings);
+
+/** LiveKit's number for the screen share source in a participant's permissions. */
+const SCREEN_SHARE_SOURCE = 3;
+
+/**
+ * Whether LiveKit lets this person share their screen right now. A host can
+ * allow it mid-session, so this follows the live connection; `fallback` (from
+ * the entry details) covers the moment before the permissions arrive.
+ */
+export function mayShareScreen(
+  permissions: { canPublish: boolean; canPublishSources: number[] } | undefined,
+  fallback: boolean,
+) {
+  if (!permissions) return fallback;
+  if (!permissions.canPublish) return false;
+  // An empty list means every source is allowed.
+  return permissions.canPublishSources.length === 0 || permissions.canPublishSources.includes(SCREEN_SHARE_SOURCE);
 }
 
 export type Feedback = (typeof feedbackOptions)[number]["value"];
@@ -156,6 +182,13 @@ export const setScreenShare = (sessionId: string, identity: string, action: "sto
 export const endSessionForAll = (sessionId: string) =>
   api.post(`/live-sessions/${sessionId}/end`);
 
+/** Why recording didn't start, in the backend's words when it gives them. */
+export function recordingProblem(error: unknown) {
+  const reason = error instanceof ApiError ? error.message : "";
+  return reason ? `${reason.replace(/\.$/, "")}. Try again.` : "We couldn't start recording. Try again.";
+}
+
+// PENDING-BACKEND: there's no endpoint to stop a recording.
 /** Records the room on the server; it runs until the session ends. Hosts and moderators only. */
 export const startRecording = (sessionId: string) =>
   api.post(`/live-sessions/${sessionId}/recording/start`, {});

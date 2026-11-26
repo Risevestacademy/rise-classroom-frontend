@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { screen, within } from "@testing-library/react";
 
 import { DayEventsDialog } from "@/components/calendar/DayEventsDialog";
-import { sampleEvents, type CalendarEvent } from "@/lib/calendar";
+import { blankDraft } from "@/components/calendar/EventFormDialog";
+import type { CalendarEvent } from "@/lib/calendar";
+import { renderWithClient } from "@/test/utils";
 
 const event = (id: string, title: string, startTime: string): CalendarEvent => ({
-  ...sampleEvents[0],
+  ...blankDraft(new Date(2026, 10, 25)),
+  organizer: "admin@example.com",
   id,
   title,
   date: "2026-11-25",
@@ -21,14 +23,13 @@ const day = new Date(2026, 10, 25);
 
 describe("DayEventsDialog", () => {
   it("lists every event on the day and opens one's details", async () => {
-    const user = userEvent.setup();
     const events = [
       event("a", "Standup", "09:00"),
       event("b", "Design review", "11:00"),
       event("c", "Office hours", "14:00"),
       event("d", "Retro", "16:00"),
     ];
-    render(
+    const { user } = renderWithClient(
       <DayEventsDialog
         date={day}
         events={events}
@@ -50,9 +51,8 @@ describe("DayEventsDialog", () => {
   });
 
   it("offers to create an event on an empty day", async () => {
-    const user = userEvent.setup();
     const onCreate = vi.fn();
-    render(
+    const { user } = renderWithClient(
       <DayEventsDialog
         date={day}
         events={[]}
