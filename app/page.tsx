@@ -6,6 +6,7 @@ import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LandingMotion } from "@/components/landing/motion/LandingMotion";
 import { PricingSection } from "@/components/landing/PricingSection";
+import { ProductDemoSection } from "@/components/landing/ProductDemoSection";
 import { QuoteSection } from "@/components/landing/QuoteSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
 // Hidden until we have real testimonials.
@@ -29,6 +30,7 @@ export default function HomePage() {
       >
         <HeroSection />
         <KeywordMarquee />
+        <ProductDemoSection />
         <ValuePropSection />
         <SolutionSection />
         {/* <TestimonialsSection /> */}
