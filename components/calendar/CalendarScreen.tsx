@@ -39,6 +39,7 @@ import {
   createCalendarTask,
   deleteCalendarItem,
   inCohort,
+  isEventItem,
   setTaskDone,
   toCalendarEvent,
   updateCalendarTask,
@@ -64,16 +65,20 @@ const weekdays = ["Sun", "Mon", "Tues", "Wed", "Thur", "Fri", "Sat"];
 const VISIBLE_EVENTS = 3;
 
 /**
- * The month calendar admins and mentors share. Live sessions and tasks come
- * from the API; each area passes its own top nav and cohorts.
+ * The month calendar admins, mentors and students share. Live sessions and
+ * tasks come from the API; each area passes its own top nav and cohorts.
  */
 export function CalendarScreen({
   topNav,
+  readOnly = false,
   cohortId,
   taskCohortId,
   noTaskCohort = "Pick a cohort first: every task belongs to one.",
 }: {
-  topNav: React.ReactNode;
+  /* Left out where the area's layout already has the top nav and page frame. */
+  topNav?: React.ReactNode;
+  /* For students: only events show, and nothing can be created or changed. */
+  readOnly?: boolean;
   /** Only this cohort's items show, plus those with no cohort. */
   cohortId?: string;
   /** The cohort new tasks go in, since the API needs one. */
@@ -91,6 +96,9 @@ export function CalendarScreen({
   const [events, setEvents] = React.useState<CalendarEvent[]>([]);
   const [openEvent, setOpenEvent] = React.useState<OpenEvent | null>(null);
   const [openDay, setOpenDay] = React.useState<Date | null>(null);
+  /* The day last opened, so its events stay in the dialog while it closes. */
+  const [lastDay, setLastDay] = React.useState<Date | null>(null);
+  if (openDay && openDay !== lastDay) setLastDay(openDay);
   const [form, setForm] = React.useState<Form | null>(null);
   const [formOpen, setFormOpen] = React.useState(false);
   const [filters, setFilters] = React.useState<CalendarFilters>(noFilters);
@@ -119,9 +127,11 @@ export function CalendarScreen({
       ...events,
       ...(calendar.data ?? [])
         .filter((item) => inCohort(item, cohortId))
-        .map((item) => toCalendarEvent(item, `/${area}`)),
+        .filter((item) => !readOnly || isEventItem(item))
+        .map((item) => toCalendarEvent(item, `/${area}`))
+        .map((event) => (readOnly ? { ...event, canEdit: false } : event)),
     ],
-    [events, calendar.data, cohortId, area],
+    [events, calendar.data, cohortId, area, readOnly],
   );
   const visibleEvents = filterEvents(allEvents, filters);
   const hasEvents = (date: Date) => eventsOn(visibleEvents, date).length > 0;
@@ -257,10 +267,18 @@ export function CalendarScreen({
     });
   };
 
+  /* Inside a layout that already has a <main>, the calendar is just a block. */
+  const Body = topNav === undefined ? "div" : "main";
+
   return (
     <>
       {topNav}
-      <main className="min-w-0 flex-1 px-4 pt-5 pb-8 sm:px-6 lg:px-8">
+      <Body
+        className={cn(
+          "min-w-0 flex-1",
+          topNav !== undefined && "px-4 pt-5 pb-8 sm:px-6 lg:px-8",
+        )}
+      >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center">
             <button
@@ -294,21 +312,23 @@ export function CalendarScreen({
               Filter
             </button>
           </div>
-          <Button
-            size="medium"
-            onClick={() =>
-              openForm({
-                mode: "create",
-                initial: blankDraft(
-                  viewingToday ? today : new Date(view.year, view.month, 1),
-                ),
-              })
-            }
-            className="mt-1 gap-1.5"
-          >
-            <Add01 className="size-5" />
-            Create event
-          </Button>
+          {!readOnly && (
+            <Button
+              size="medium"
+              onClick={() =>
+                openForm({
+                  mode: "create",
+                  initial: blankDraft(
+                    viewingToday ? today : new Date(view.year, view.month, 1),
+                  ),
+                })
+              }
+              className="mt-1 gap-1.5"
+            >
+              <Add01 className="size-5" />
+              Create event
+            </Button>
+          )}
         </div>
 
         <div className="mt-[46px] overflow-x-auto">
@@ -425,7 +445,7 @@ export function CalendarScreen({
             })}
           </div>
         </div>
-      </main>
+      </Body>
 
       <EventDetailsPopover
         open={freshOpen(openEvent, allEvents)}
@@ -437,9 +457,13 @@ export function CalendarScreen({
 
       <DayEventsDialog
         date={openDay}
-        events={openDay ? eventsOn(visibleEvents, openDay) : []}
+        events={lastDay ? eventsOn(visibleEvents, lastDay) : []}
         onClose={() => setOpenDay(null)}
-        onCreate={(date) => openForm({ mode: "create", initial: blankDraft(date) })}
+        onCreate={
+          readOnly
+            ? undefined
+            : (date) => openForm({ mode: "create", initial: blankDraft(date) })
+        }
         onEdit={editEvent}
         onDelete={deleteEvent}
         onToggleDone={toggleDone}

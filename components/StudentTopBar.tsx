@@ -18,6 +18,7 @@ const pageLabels: Record<string, string> = {
   assignments: "Assignments",
   "control-tower": "Control tower",
   live: "Live sessions",
+  calendar: "Calendar",
   announcements: "Announcements",
   notifications: "Notifications",
   chat: "Chat",
@@ -115,13 +116,16 @@ export function StudentTopBar() {
           />
         </label>
 
-        <button
-          type="button"
+        <Link
+          href="/student/calendar"
           aria-label="Calendar"
-          className={`${iconButton} hidden sm:flex`}
+          aria-current={segment === "calendar" ? "page" : undefined}
+          className={`${iconButton} hidden sm:flex ${
+            segment === "calendar" ? "bg-brand-300 text-neutral-800" : ""
+          }`}
         >
           <Calendar className="h-5 w-5" />
-        </button>
+        </Link>
         {/* <Link
           href="/student/notifications"
           aria-label="Notifications"

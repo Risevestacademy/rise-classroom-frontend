@@ -70,8 +70,11 @@ function FilterForm({
   onApply: (filters: CalendarFilters) => void;
 }) {
   const [filters, setFilters] = React.useState(initial);
+  const area = useCalendarArea();
   // Mentors can't list tracks, and their sessions aren't tied to one.
-  const byTrack = useCalendarArea() === "admin";
+  const byTrack = area === "admin";
+  /* Students' calendars have no tasks to filter by. */
+  const kinds = contentTypes.filter(({ kind }) => area !== "student" || kind !== "task");
   const tracksQuery = useQuery({
     ...adminQueries.tracks("ACTIVE"),
     enabled: byTrack,
@@ -91,7 +94,7 @@ function FilterForm({
           title="Content type"
           description="Choose what to display on the calender"
         >
-          {contentTypes.map(({ kind, label, hint }) => (
+          {kinds.map(({ kind, label, hint }) => (
             <FilterOption
               key={kind}
               name="kind"

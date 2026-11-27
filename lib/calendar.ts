@@ -29,7 +29,7 @@ export type CalendarEvent = {
   /** Live sessions and tasks come from the calendar API; events are local for now. */
   kind: "event" | "task" | "live";
   /** Where an API item lives; unset for local events. */
-  source?: "LIVE_SESSION" | "WEEKLY_TASK" | "CALENDAR_TASK";
+  source?: "LIVE_SESSION" | "CALENDAR_EVENT" | "WEEKLY_TASK" | "CALENDAR_TASK";
   /** False for items the API won't let this person change, like weekly tasks. */
   canEdit?: boolean;
   /** A calendar task that's been ticked off. */

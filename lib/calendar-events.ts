@@ -14,13 +14,14 @@ type NamedRef = { id: string; name: string };
 type CalendarPerson = { id: string; name: string; image: string | null };
 
 /**
- * One entry from `GET /calendar/events`: a live session, a mentor's weekly
- * task (read-only, on its due date) or someone's own calendar task.
+ * One entry from `GET /calendar/events`: a live session, a plain event, a
+ * mentor's weekly task (read-only, on its due date) or someone's own
+ * calendar task.
  */
 export type CalendarItem = {
   id: string;
-  kind: "event" | "task";
-  source: "LIVE_SESSION" | "WEEKLY_TASK" | "CALENDAR_TASK";
+  kind: "live_session" | "event" | "task";
+  source: "LIVE_SESSION" | "CALENDAR_EVENT" | "WEEKLY_TASK" | "CALENDAR_TASK";
   type: LiveSessionType | null;
   title: string;
   description: string | null;
@@ -33,12 +34,25 @@ export type CalendarItem = {
   status: string;
   host: CalendarPerson | null;
   cohort: NamedRef | null;
-  track: NamedRef | null;
+  /* Older responses name one track; newer ones list every invited track. */
+  track?: NamedRef | null;
+  tracks?: NamedRef[];
+  /* Invites every track of the cohort, so `tracks` is empty. */
+  allTracks?: boolean;
+  /* Plain events and tasks only. */
+  meetingUrl?: string | null;
+  color?: string | null;
   canEdit: boolean;
 };
 
+/* Something that happens at a time, as opposed to a task to do. */
+export function isEventItem(item: CalendarItem) {
+  return item.source === "LIVE_SESSION" || item.source === "CALENDAR_EVENT";
+}
+
 export type CalendarItemDetails = CalendarItem & {
-  participants?: CalendarPerson[];
+  /* Everyone invited but the host; null when the guest list is hidden. */
+  participants?: CalendarPerson[] | null;
   participantCount?: number;
 };
 
@@ -77,6 +91,13 @@ export const calendarQueries = {
 
 const LIVE_COLOR = "#e5484d";
 const TASK_COLOR = eventColors[0];
+const EVENT_COLOR = eventColors[2];
+
+/* The tracks an item invites; "all" when it isn't tied to particular ones. */
+function trackIdsOf(item: CalendarItem): CalendarEvent["trackIds"] {
+  if (item.tracks && item.tracks.length > 0) return item.tracks.map((track) => track.id);
+  return item.track ? [item.track.id] : "all";
+}
 
 /** An API item as the month grid and details card show it; `basePath` is the area its Join link opens in. */
 export function toCalendarEvent(item: CalendarItem, basePath = "/admin"): CalendarEvent {
@@ -84,13 +105,14 @@ export function toCalendarEvent(item: CalendarItem, basePath = "/admin"): Calend
   const start = zonedParts(item.start, zone);
   const end = zonedParts(item.end, zone);
   const live = item.source === "LIVE_SESSION";
+  const plainEvent = item.source === "CALENDAR_EVENT";
 
   return {
     id: item.id,
-    kind: live ? "live" : "task",
+    kind: live ? "live" : plainEvent ? "event" : "task",
     source: item.source,
-    // Sessions that have started or ended can't be changed.
-    canEdit: item.canEdit && (!live || item.status === "SCHEDULED"),
+    /* Started sessions are locked; plain events stay read-only until the form saves them. */
+    canEdit: item.canEdit && !plainEvent && (!live || item.status === "SCHEDULED"),
     done: item.source === "CALENDAR_TASK" && item.status === "DONE",
     seriesId: item.seriesId,
     cohortId: item.cohort?.id ?? null,
@@ -103,13 +125,13 @@ export function toCalendarEvent(item: CalendarItem, basePath = "/admin"): Calend
     allDay: item.allDay,
     repeat: null,
     // Town halls, mentorship and invite-only sessions aren't tied to a track.
-    trackIds: item.track ? [item.track.id] : "all",
-    link: live ? `${basePath}/live/${item.id}` : "",
+    trackIds: trackIdsOf(item),
+    link: live ? `${basePath}/live/${item.id}` : plainEvent ? (item.meetingUrl ?? "") : "",
     description: item.description ?? "",
     guests: [],
     permissions: { modify: false, invite: false, seeGuests: false },
     notifications: [],
-    color: live ? LIVE_COLOR : TASK_COLOR,
+    color: live ? LIVE_COLOR : plainEvent ? (item.color ?? EVENT_COLOR) : TASK_COLOR,
     organizer: item.host?.name ?? (item.source === "CALENDAR_TASK" ? "You" : ""),
     attachments: [],
   };
