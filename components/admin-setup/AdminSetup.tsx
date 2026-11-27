@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 
 import { InformationCircle } from "@/assets/icons";
+import { useSidebarNav } from "@/components/SidebarNavContext";
 import { Spotlight } from "@/components/tour/Spotlight";
 import { Button } from "@/components/ui/button";
 import { adminQueries } from "@/lib/admin";
@@ -126,17 +127,29 @@ export function AdminSetupProvider({ children }: { children: React.ReactNode }) 
   const [form, setForm] = React.useState({ path: "", step: 0 });
   const formStep = form.path === pathname ? form.step : 0;
   const [trackNoteRead, setTrackNoteRead] = React.useState(false);
+  const [cohortPickerRead, setCohortPickerRead] = React.useState(false);
   const [teamStep, setTeamStep] = React.useState(0);
   const dialogOpen = useDialogOpen();
 
   const step = guiding
-    ? guideStep(pathname, progress, { formStep, trackNoteRead, teamStep })
+    ? guideStep(pathname, progress, { formStep, trackNoteRead, cohortPickerRead, teamStep })
     : null;
+
+  /* On small screens the sidebar is a closed menu, so it's opened for a step
+     that points at one of its links. */
+  const { setOpen: setSidebarOpen } = useSidebarNav();
+  const sidebarStep = Boolean(step?.target.startsWith("nav:")) && !dialogOpen;
+  React.useEffect(() => {
+    if (sidebarStep && window.matchMedia("(max-width: 1023px)").matches) {
+      setSidebarOpen(true);
+    }
+  }, [sidebarStep, step?.target, setSidebarOpen]);
 
   const act = (action: GuideAction) => {
     if (action === "form-next") setForm({ path: pathname, step: formStep + 1 });
     else if (action === "form-back") setForm({ path: pathname, step: Math.max(0, formStep - 1) });
     else if (action === "track-note-read") setTrackNoteRead(true);
+    else if (action === "picker-read") setCohortPickerRead(true);
     else if (action === "team-next") setTeamStep(1);
     else if (action === "team-back") setTeamStep(0);
     else {

@@ -798,8 +798,8 @@ function ProgramDetailsStep({
       </DialogHeader>
 
       <SetupHint item="student">
-        The cohort is already filled in. Choose the track this student is
-        joining.
+        The cohort comes from the menu at the top of the page. Choose the
+        track this student is joining.
       </SetupHint>
 
       <div className="mt-6 flex flex-col gap-6">
