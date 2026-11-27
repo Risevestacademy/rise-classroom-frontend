@@ -3,7 +3,12 @@ import { screen, within } from "@testing-library/react";
 
 import { LiveSessionsScreen } from "@/components/LiveSessionsScreen";
 import { JoinHub } from "@/components/live-room/JoinHub";
-import { toLiveSession, type ApiLiveSession } from "@/lib/live-sessions";
+import {
+  byRelevance,
+  nextOfEachSeries,
+  toLiveSession,
+  type ApiLiveSession,
+} from "@/lib/live-sessions";
 import { envelope, mockApi, renderWithClient, reply } from "@/test/utils";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -68,6 +73,66 @@ describe("the status shown", () => {
   it("trusts the backend for ended and cancelled sessions", () => {
     expect(toLiveSession(session({ status: "ENDED" }), at("2026-11-23T17:00:00Z")).status).toBe("completed");
     expect(toLiveSession(session({ status: "CANCELLED" }), at("2026-11-23T17:00:00Z")).status).toBe("cancelled");
+  });
+});
+
+describe("which sessions show first", () => {
+  // 10:00 in Lagos on Nov 23.
+  const now = Date.parse("2026-11-23T09:00:00Z");
+  const at = (id: string, status: ApiLiveSession["status"], start: string, seriesId?: string) =>
+    toLiveSession(
+      session({
+        id,
+        status,
+        seriesId,
+        scheduledStartAt: start,
+        scheduledEndAt: new Date(Date.parse(start) + 3_600_000).toISOString(),
+      }),
+      now,
+    );
+
+  it("puts live first, then everything coming up soonest first, then finished ones latest first", () => {
+    const sessions = [
+      at("last-week", "ENDED", "2026-11-16T09:00:00Z"),
+      at("next-week", "SCHEDULED", "2026-11-30T09:00:00Z"),
+      at("this-morning", "ENDED", "2026-11-23T06:00:00Z"),
+      at("tonight", "SCHEDULED", "2026-11-23T18:00:00Z"),
+      at("yesterday", "ENDED", "2026-11-22T09:00:00Z"),
+      at("this-afternoon", "SCHEDULED", "2026-11-23T13:00:00Z"),
+      at("live", "LIVE", "2026-11-23T08:30:00Z"),
+      at("earlier-today", "ENDED", "2026-11-23T07:30:00Z"),
+      at("tomorrow", "SCHEDULED", "2026-11-24T09:00:00Z"),
+    ];
+    expect(sessions.sort(byRelevance).map((s) => s.id)).toEqual([
+      "live",
+      "this-afternoon",
+      "tonight",
+      "tomorrow",
+      "next-week",
+      "earlier-today",
+      "this-morning",
+      "yesterday",
+      "last-week",
+    ]);
+  });
+
+  it("shows a repeating session once, at its next occurrence, and keeps its past ones", () => {
+    const sessions = [
+      at("retro-1", "ENDED", "2026-11-16T09:00:00Z", "retro"),
+      at("retro-3", "SCHEDULED", "2026-11-30T09:00:00Z", "retro"),
+      at("retro-2", "SCHEDULED", "2026-11-23T13:00:00Z", "retro"),
+      at("retro-4", "SCHEDULED", "2026-12-07T09:00:00Z", "retro"),
+      at("one-off", "SCHEDULED", "2026-11-30T09:00:00Z"),
+    ];
+    expect(nextOfEachSeries(sessions).map((s) => s.id)).toEqual(["retro-1", "retro-2", "one-off"]);
+  });
+
+  it("keeps the live occurrence of a repeating session over the next one", () => {
+    const sessions = [
+      at("retro-next", "SCHEDULED", "2026-11-30T09:00:00Z", "retro"),
+      at("retro-now", "LIVE", "2026-11-23T08:30:00Z", "retro"),
+    ];
+    expect(nextOfEachSeries(sessions).map((s) => s.id)).toEqual(["retro-now"]);
   });
 });
 
@@ -222,11 +287,13 @@ describe("Editing a live session", () => {
       "GET /live-sessions/next/participants": participants,
       "GET /live-sessions/past/participants": participants,
       "PATCH /live-sessions/next": envelope(session({ id: "next" })),
+      "GET /live-sessions/series/series-1": envelope({ rrule: "FREQ=WEEKLY;BYDAY=FR", endsOn: null }),
     });
     const { user } = renderWithClient(<LiveSessionsScreen topNav={null} canEdit />);
 
     expect(await screen.findByRole("button", { name: "Old class actions" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Edit Weekly sync" }));
+    await user.click(screen.getByRole("button", { name: "Weekly sync actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Edit session" }));
     expect(await screen.findByRole("heading", { name: "Edit live session" })).toBeInTheDocument();
     expect(screen.getByText("Track meeting · Design")).toBeInTheDocument();
 
@@ -246,6 +313,75 @@ describe("Editing a live session", () => {
       scheduledEndAt: "2027-01-15T10:00:00.000Z",
       timezone: "Africa/Lagos",
     });
+  });
+
+  it("cancels the chosen sessions of a series from the same menu", async () => {
+    const api = mockApi({
+      "GET /live-sessions": envelope({
+        items: [
+          session({
+            id: "next",
+            title: "Weekly sync",
+            seriesId: "series-1",
+            scheduledStartAt: "2027-01-15T08:00:00.000Z",
+            scheduledEndAt: "2027-01-15T09:00:00.000Z",
+          }),
+        ],
+        nextCursor: null,
+      }),
+      "GET /live-sessions/next/participants": participants,
+      "GET /live-sessions/series/series-1": envelope({ rrule: "FREQ=WEEKLY;BYDAY=FR", endsOn: null }),
+      "DELETE /calendar/events/next": envelope({}),
+    });
+    const { user } = renderWithClient(<LiveSessionsScreen topNav={null} canEdit />);
+
+    expect(await screen.findByText("Weekly on Friday")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Weekly sync actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Cancel session" }));
+    await user.click(await screen.findByRole("radio", { name: "This and following sessions" }));
+    await user.click(screen.getByRole("button", { name: "Cancel session" }));
+
+    expect(await screen.findByText("Live session cancelled")).toBeInTheDocument();
+    const [url] = api.urls("DELETE /calendar/events/next");
+    expect(url.searchParams.get("scope")).toBe("following");
+  });
+
+  it("has no menu for a session that has already happened", async () => {
+    mockApi({
+      "GET /live-sessions": envelope({
+        items: [session({ id: "past", title: "Old class", status: "ENDED" })],
+        nextCursor: null,
+      }),
+      "GET /live-sessions/past/participants": participants,
+    });
+    const { user } = renderWithClient(<LiveSessionsScreen topNav={null} canEdit />);
+
+    await user.click(await screen.findByRole("button", { name: "Old class actions" }));
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+  });
+});
+
+describe("A mentor's live sessions", () => {
+  it("only lets them edit or cancel the sessions they host", async () => {
+    mockApi({
+      "GET /auth/get-session": { user: { id: "mentor-1" }, session: {} },
+      "GET /live-sessions": envelope({
+        items: [
+          session({ id: "mine", title: "My check-in", hostId: "mentor-1", scheduledStartAt: "2027-01-15T08:00:00.000Z", scheduledEndAt: "2027-01-15T09:00:00.000Z" }),
+          session({ id: "theirs", title: "Town hall", hostId: "admin-1", scheduledStartAt: "2027-01-16T08:00:00.000Z", scheduledEndAt: "2027-01-16T09:00:00.000Z" }),
+        ],
+        nextCursor: null,
+      }),
+      "GET /live-sessions/mine/participants": participants,
+      "GET /live-sessions/theirs/participants": participants,
+    });
+    const { user } = renderWithClient(<LiveSessionsScreen topNav={null} canEdit="own" />);
+
+    await user.click(await screen.findByRole("button", { name: "Town hall actions" }));
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "My check-in actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Edit session" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Cancel session" })).toBeInTheDocument();
   });
 });
 
@@ -281,7 +417,8 @@ describe("Guests of an explicit-invite session", () => {
     });
     const { user } = renderWithClient(<LiveSessionsScreen topNav={null} canEdit />);
 
-    await user.click(await screen.findByRole("button", { name: "Edit Portfolio review" }));
+    await user.click(await screen.findByRole("button", { name: "Portfolio review actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Edit session" }));
     await user.click(await screen.findByText("Tola Ade"));
     await user.click(await screen.findByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -300,6 +437,26 @@ describe("Opening a session from a link", () => {
     renderWithClient(<LiveSessionsScreen topNav={null} openSessionId="s-9" />);
 
     expect(await screen.findByRole("heading", { name: "Participants (2)" })).toBeInTheDocument();
+  });
+
+  it("opens a later occurrence of a repeating session, though only the next one has a card", async () => {
+    mockApi({
+      "GET /live-sessions": envelope({
+        items: [
+          session({ id: "week-1", title: "Weekly sync", seriesId: "series-1", scheduledStartAt: "2027-01-15T08:00:00.000Z", scheduledEndAt: "2027-01-15T09:00:00.000Z" }),
+          session({ id: "week-2", title: "Weekly sync", seriesId: "series-1", scheduledStartAt: "2027-01-22T08:00:00.000Z", scheduledEndAt: "2027-01-22T09:00:00.000Z" }),
+        ],
+        nextCursor: null,
+      }),
+      "GET /live-sessions/week-1/participants": participants,
+      "GET /live-sessions/week-2/participants": participants,
+      "GET /live-sessions/series/series-1": envelope({ rrule: "FREQ=WEEKLY;BYDAY=FR", endsOn: null }),
+    });
+    renderWithClient(<LiveSessionsScreen topNav={null} openSessionId="week-2" />);
+
+    const preview = await screen.findByRole("complementary", { name: "Session preview" });
+    expect(within(preview).getByText("Fri, Jan 22 2027")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Weekly sync actions" })).toHaveLength(2);
   });
 });
 

@@ -69,6 +69,7 @@ import {
 import {
   isRunBy,
   liveSessionQueries,
+  nextOfEachSeries,
   stillAhead,
   toUpcomingSession,
   upcomingRange,
@@ -318,7 +319,7 @@ function useUpcomingSessions(userId: string) {
     items:
       now === null
         ? []
-        : stillAhead(list.data ?? [], now)
+        : stillAhead(nextOfEachSeries(list.data ?? []), now)
             .filter((session) => isRunBy(session, userId))
             .slice(0, VISIBLE_SESSIONS)
             .map((session) => toUpcomingSession(session, now)),

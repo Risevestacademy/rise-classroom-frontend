@@ -14,11 +14,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { CalendarEvent } from "@/lib/calendar";
-import {
-  calendarKeys,
-  deleteCalendarItem,
-  type SeriesScope,
-} from "@/lib/calendar-events";
+import { deleteCalendarItem, type SeriesScope } from "@/lib/calendar-events";
+import { liveSessionKeys } from "@/lib/live-sessions";
+
+/** A calendar event or a session from the Live Sessions list. */
+type CancellableSession = Pick<CalendarEvent, "id" | "title" | "seriesId">;
 
 const scopes: { value: SeriesScope; label: string }[] = [
   { value: "this", label: "This session" },
@@ -33,7 +33,7 @@ export function CancelSessionDialog({
   onCancelled,
 }: {
   /** The session to cancel; null keeps the dialog closed. */
-  event: CalendarEvent | null;
+  event: CancellableSession | null;
   onOpenChange: (open: boolean) => void;
   onCancelled: (title: string) => void;
 }) {
@@ -58,7 +58,7 @@ function CancelSessionForm({
   onClose,
   onCancelled,
 }: {
-  event: CalendarEvent;
+  event: CancellableSession;
   onClose: () => void;
   onCancelled: (title: string) => void;
 }) {
@@ -70,7 +70,7 @@ function CancelSessionForm({
     mutationFn: () =>
       deleteCalendarItem(event.id, repeating ? scope : undefined),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
+      await queryClient.invalidateQueries({ queryKey: liveSessionKeys.all });
       onCancelled(event.title);
       onClose();
     },

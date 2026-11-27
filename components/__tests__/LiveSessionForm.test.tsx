@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 
+import { CalendarAreaProvider } from "@/components/calendar/CalendarArea";
 import { EventFormDialog, type EventDraft } from "@/components/calendar/EventFormDialog";
 import { toRrule } from "@/lib/calendar";
 import { zonedTimeToIso } from "@/lib/live-sessions";
@@ -181,5 +182,118 @@ describe("Scheduling a live session from the calendar", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("The host already has a session then");
     expect(onLiveSessionCreated).not.toHaveBeenCalled();
+  });
+});
+
+describe("A mentor scheduling their own session", () => {
+  const myMentees = envelope([
+    {
+      id: "mentorship-1",
+      assignedAt: "2026-11-05T07:26:13.769Z",
+      student: {
+        id: "profile-1",
+        cohort: { id: "cohort-1", name: "Cohort 4" },
+        user: { id: "u-1", name: "Halima Obi", email: "halima@example.com" },
+      },
+    },
+    {
+      id: "mentorship-2",
+      assignedAt: "2026-11-05T07:26:13.769Z",
+      student: {
+        id: "profile-2",
+        cohort: { id: "cohort-1", name: "Cohort 4" },
+        user: { id: "u-2", name: "Yusuf Balogun", email: "yusuf@example.com" },
+      },
+    },
+  ]);
+
+  function renderAsMentor(routes: Parameters<typeof mockApi>[0]) {
+    const api = mockApi({
+      "GET /auth/get-session": { user: { id: "mentor-1", name: "Ada Mentor", email: "ada@example.com" } },
+      "GET /mentors/my-mentees": myMentees,
+      ...routes,
+    });
+    const onLiveSessionCreated = vi.fn();
+    const view = renderWithClient(
+      <CalendarAreaProvider area="mentor">
+        <EventFormDialog
+          open
+          onOpenChange={() => {}}
+          mode="create"
+          initial={draft}
+          onSubmit={vi.fn()}
+          hasEvents={() => false}
+          onLiveSessionCreated={onLiveSessionCreated}
+        />
+      </CalendarAreaProvider>,
+    );
+    const adminCalls = () =>
+      api.fetchMock.mock.calls.map(([input]) => String(input)).filter((url) => url.includes("/admin/"));
+    return { ...view, api, onLiveSessionCreated, adminCalls };
+  }
+
+  it("books a one-on-one with one of their students, hosted by themselves", async () => {
+    const { user, api, onLiveSessionCreated, adminCalls } = renderAsMentor({
+      "POST /live-sessions": created,
+    });
+
+    await user.type(screen.getByPlaceholderText("Add title"), "Weekly check-in");
+    await user.click(screen.getByRole("radio", { name: "Live session" }));
+    await user.click(screen.getByRole("combobox", { name: /^Who it/ }));
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "One-on-one mentorship",
+      "Mentorship group",
+    ]);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("combobox", { name: /^Mentor/ })).not.toBeInTheDocument();
+    expect(screen.getByText("You")).toBeInTheDocument();
+
+    await pick(user, "Student", "Yusuf Balogun");
+    await user.click(screen.getByRole("button", { name: "Schedule session" }));
+
+    await vi.waitFor(() => expect(onLiveSessionCreated).toHaveBeenCalledWith("Weekly check-in"));
+    expect(api.bodies("POST /live-sessions")[0]).toEqual({
+      type: "MENTORSHIP_PAIR",
+      title: "Weekly check-in",
+      hostId: "mentor-1",
+      scheduledStartAt: "2027-01-15T08:00:00.000Z",
+      scheduledEndAt: "2027-01-15T09:30:00.000Z",
+      timezone: "Africa/Lagos",
+      mentorId: "mentor-1",
+      mentorshipId: "mentorship-2",
+      studentProfileId: "profile-2",
+    });
+    expect(adminCalls()).toEqual([]);
+  });
+
+  it("runs a group for their students' cohort without asking for it", async () => {
+    const { user, api, onLiveSessionCreated, adminCalls } = renderAsMentor({
+      "POST /live-sessions": created,
+    });
+
+    await user.type(screen.getByPlaceholderText("Add title"), "Group session");
+    await user.click(screen.getByRole("radio", { name: "Live session" }));
+    await pick(user, "Who it", "Mentorship group");
+    await user.click(await screen.findByRole("button", { name: "Schedule session" }));
+
+    await vi.waitFor(() => expect(onLiveSessionCreated).toHaveBeenCalled());
+    expect(api.bodies("POST /live-sessions")[0]).toMatchObject({
+      type: "MENTORSHIP_GROUP",
+      hostId: "mentor-1",
+      mentorId: "mentor-1",
+      cohortId: "cohort-1",
+    });
+    expect(adminCalls()).toEqual([]);
+  });
+
+  it("invites their own students as guests, without the track picker", async () => {
+    const { user, adminCalls } = renderAsMentor({});
+
+    expect(screen.queryByText("Select track")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add guests" }));
+    await user.type(await screen.findByPlaceholderText("Search people"), "yus");
+    expect(await screen.findByText("Yusuf Balogun")).toBeInTheDocument();
+    expect(screen.queryByText("Halima Obi")).not.toBeInTheDocument();
+    expect(adminCalls()).toEqual([]);
   });
 });

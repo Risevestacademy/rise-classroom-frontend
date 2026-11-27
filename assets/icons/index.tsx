@@ -23,6 +23,32 @@ export const SquareLock = withDefaults(SquareLockPassword, { size: 20 }, "Square
 export const Video02 = Video;
 
 // Not in the Figma icon set yet.
+/** Hugeicons `repeat`, for sessions that repeat. */
+export const Repeat = createIcon(
+  "Repeat",
+  {
+    stroke: (
+      <>
+        <path
+          d="M16.388 3L17.391 3.976C17.839 4.412 18.063 4.63 17.984 4.815C17.906 5 17.589 5 16.955 5H9.194C5.221 5 2 8.134 2 12C2 13.487 2.477 14.866 3.29 16"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M7.612 21L6.609 20.024C6.161 19.588 5.937 19.37 6.016 19.185C6.094 19 6.411 19 7.045 19H14.806C18.779 19 22 15.866 22 12C22 10.513 21.523 9.134 20.71 8"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </>
+    ),
+  },
+  "stroke",
+);
+
 export const BagPack = createIcon(
   "BagPack",
   {
