@@ -30,6 +30,7 @@ function Page() {
       <div data-tour="plan" />
       <div data-tour="check-in" />
       <div data-tour="reflection" />
+      <div data-tour="goals" />
       <button type="button" data-tour="save">
         Save
       </button>

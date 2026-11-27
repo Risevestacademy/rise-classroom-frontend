@@ -12,7 +12,6 @@ import {
   Radar,
   Bell,
   Settings,
-  Blocks,
   X,
 } from "lucide-react";
 import { Video } from "@/assets/icons";
@@ -77,11 +76,6 @@ const accountNavItems: NavItem[] = [
     title: "Settings",
     href: "/student/profile",
     icon: Settings,
-  },
-  {
-    title: "Integration",
-    href: "/student/integration",
-    icon: Blocks,
   },
 ];
 

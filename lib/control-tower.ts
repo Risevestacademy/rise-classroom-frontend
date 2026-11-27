@@ -70,9 +70,100 @@ export type StudentControlTower = {
     cohort: { id: string; name: string; startDate?: string; endDate?: string };
   };
   mentor: ControlTowerMentor | null;
-  goals: unknown[];
+  goals: Goal[];
+  /* The student's standalone KPIs: ones not tied to a goal, which carry their own. */
+  kpis?: { summary: KpiSummary; items: Kpi[] };
   recentWeeklyMetrics: WeeklyMetric[];
 };
+
+export type KpiStatus = "NOT_STARTED" | "IN_PROGRESS" | "ACHIEVED" | "BEHIND" | "MISSED";
+
+export const kpiStatuses: Record<
+  KpiStatus,
+  { label: string; tone: "neutral" | "info" | "success" | "warning" | "error" }
+> = {
+  NOT_STARTED: { label: "Not started", tone: "neutral" },
+  IN_PROGRESS: { label: "In progress", tone: "info" },
+  ACHIEVED: { label: "Achieved", tone: "success" },
+  BEHIND: { label: "Behind", tone: "warning" },
+  MISSED: { label: "Missed", tone: "error" },
+};
+
+/*
+ * A measurable target, like "Ship 3 components". It runs for the whole
+ * programme, not one week: the student updates its current value and status
+ * as they go. Target and current values are free text.
+ */
+export type Kpi = {
+  id: string;
+  studentId: string;
+  goalId?: string | null;
+  name: string;
+  description?: string | null;
+  targetValue?: string | null;
+  currentValue?: string | null;
+  unit?: string | null;
+  status: KpiStatus;
+  /* Worked out by the API, 0 to 100. */
+  progress?: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type KpiSummary = {
+  totalCount: number;
+  achievedCount: number;
+  inProgressCount: number;
+  behindCount: number;
+  missedCount: number;
+  achievementRate: number;
+};
+
+export type GoalStatus = "ACTIVE" | "COMPLETED" | "ARCHIVED";
+
+/* What the student is working towards over the programme, measured by its KPIs. */
+export type Goal = {
+  id: string;
+  studentId: string;
+  title: string;
+  description?: string | null;
+  longTermGoal?: string | null;
+  status: GoalStatus;
+  kpis?: Kpi[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+/* `null` clears a field on update; on create, empty fields are left out. */
+export type GoalInput = {
+  title: string;
+  description?: string | null;
+  longTermGoal?: string | null;
+  status?: GoalStatus;
+};
+
+export type KpiInput = {
+  name: string;
+  goalId?: string | null;
+  targetValue?: string | null;
+  currentValue?: string | null;
+  unit?: string | null;
+  status?: KpiStatus;
+};
+
+/* The counts the API's own KPI summaries give, for any set of KPIs. */
+export function summarizeKpis(kpis: Kpi[]): KpiSummary {
+  const count = (status: KpiStatus) => kpis.filter((kpi) => kpi.status === status).length;
+  const achievedCount = count("ACHIEVED");
+  return {
+    totalCount: kpis.length,
+    achievedCount,
+    inProgressCount: count("IN_PROGRESS"),
+    behindCount: count("BEHIND"),
+    missedCount: count("MISSED"),
+    achievementRate: kpis.length ? Math.round((achievedCount / kpis.length) * 100) : 0,
+  };
+}
 
 async function getStudentControlTower() {
   const { data } = await api.get<Envelope<StudentControlTower>>(
@@ -80,6 +171,36 @@ async function getStudentControlTower() {
   );
 
   return data;
+}
+
+export async function createGoal(studentProfileId: string, input: GoalInput) {
+  const { data } = await api.post<Envelope<Goal>>("/goals", {
+    studentProfileId,
+    ...input,
+  });
+  return data;
+}
+
+export async function updateGoal(goalId: string, input: Partial<GoalInput>) {
+  const { data } = await api.patch<Envelope<Goal>>(`/goals/${goalId}`, input);
+  return data;
+}
+
+export async function createKpi(studentProfileId: string, input: KpiInput) {
+  const { data } = await api.post<Envelope<Kpi>>("/kpis", {
+    studentProfileId,
+    ...input,
+  });
+  return data;
+}
+
+export async function updateKpi(kpiId: string, input: Partial<KpiInput>) {
+  const { data } = await api.patch<Envelope<Kpi>>(`/kpis/${kpiId}`, input);
+  return data;
+}
+
+export async function deleteKpi(kpiId: string) {
+  await api.delete(`/kpis/${kpiId}`);
 }
 
 async function listWeeklyMetrics(studentProfileId: string) {

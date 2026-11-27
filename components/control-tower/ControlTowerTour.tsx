@@ -47,6 +47,12 @@ export const controlTowerTourSteps: TourStep[] = [
     mood: "thinking",
   },
   {
+    target: "goals",
+    title: "Track your goals",
+    body: "Your goals and KPIs run for the whole programme. Update a KPI whenever it moves; changes here save straight away.",
+    mood: "happy",
+  },
+  {
     target: "save",
     title: "Save before the deadline",
     body: "Saving marks the week Completed. A week left empty is marked Missed, but you can still fill it in later.",

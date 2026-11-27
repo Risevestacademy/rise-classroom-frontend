@@ -23,7 +23,6 @@ const pageLabels: Record<string, string> = {
   chat: "Chat",
   settings: "Settings",
   profile: "Profile",
-  integration: "Integration",
 };
 
 function toTitle(segment: string) {

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
   ControlTowerTour,
   useControlTowerTour,
 } from "@/components/control-tower/ControlTowerTour";
+import { GoalsAndKpis } from "@/components/control-tower/GoalsAndKpis";
 import {
   ControlTowerColumn,
   ControlTowerMenu,
@@ -27,6 +29,8 @@ import {
 } from "@/components/control-tower/hooks";
 import { ApiError } from "@/lib/api";
 import {
+  controlTowerKeys,
+  controlTowerQueries,
   daysLeftIn,
   formatShortWeekRange,
   weekRangeFor,
@@ -143,10 +147,28 @@ function CurrentWeek({
         }
       />
 
+      <StudentGoals profileId={profileId} />
+
       <HowItWorksDialog open={showHowItWorks} onOpenChange={setShowHowItWorks} />
       {tour.open && <ControlTowerTour onClose={tour.close} />}
       {leave.dialog}
       {editor.toast}
     </ControlTowerColumn>
+  );
+}
+
+/* Goals & KPIs */
+function StudentGoals({ profileId }: { profileId: string }) {
+  const tower = useQuery(controlTowerQueries.student());
+  return (
+    <div data-tour="goals">
+      <GoalsAndKpis
+        studentProfileId={profileId}
+        goals={tower.data?.goals ?? []}
+        kpis={tower.data?.kpis?.items ?? []}
+        editable
+        queryKey={controlTowerKeys.student()}
+      />
+    </div>
   );
 }
