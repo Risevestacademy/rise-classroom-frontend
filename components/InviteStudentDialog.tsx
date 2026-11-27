@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/field";
 import { LockedField } from "@/components/ui/locked-field";
+import { SetupHint } from "@/components/admin-setup/AdminSetup";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { parseInstructorCsv } from "@/components/InviteInstructorDialog";
 import {
@@ -338,7 +339,12 @@ export function InviteStudentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <Button size="medium" onClick={() => setOpen(true)} className="gap-2">
+      <Button
+        size="medium"
+        data-tour="invite-student"
+        onClick={() => setOpen(true)}
+        className="gap-2"
+      >
         <Add01 className="size-[18px]" />
         Invite students
       </Button>
@@ -535,6 +541,11 @@ function ChoiceStep({
         </DialogDescription>
       </DialogHeader>
 
+      <SetupHint item="student">
+        For your first student, choose Invite Individually. You can upload a
+        list of students later.
+      </SetupHint>
+
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <ChoiceCard
           icon={UserPlus}
@@ -596,6 +607,11 @@ function SingleFormStep({
         <DialogTitle>Invite a student</DialogTitle>
         <DialogDescription>Enter the students information</DialogDescription>
       </DialogHeader>
+
+      <SetupHint item="student">
+        We&apos;ll email them a link to set up their account. The link lasts 7
+        days.
+      </SetupHint>
 
       <div className="mt-6 flex flex-col gap-6">
         <FormField
@@ -780,6 +796,11 @@ function ProgramDetailsStep({
           Assign the student to a cohort and track
         </DialogDescription>
       </DialogHeader>
+
+      <SetupHint item="student">
+        The cohort comes from the menu at the top of the page. Choose the
+        track this student is joining.
+      </SetupHint>
 
       <div className="mt-6 flex flex-col gap-6">
         <ProgramFields

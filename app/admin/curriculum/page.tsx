@@ -146,7 +146,7 @@ export default function CurriculumPage({
                     <Skeleton className="h-10 w-10 rounded-lg" />
                     <div className="flex flex-col gap-1.5">
                       <Skeleton className="h-5 w-56" />
-                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-20" />
                     </div>
                   </div>
                   <Skeleton className="mt-5 ml-14 h-10 w-96 max-w-[70%]" />

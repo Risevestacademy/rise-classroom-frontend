@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, type QueryClient } from "@tanstack/react-query";
 import { api, ApiError, apiFileHref, isApiFilePath } from "@/lib/api";
 import { studentQueries } from "@/lib/student";
 import type { ResourceRecord } from "@/features/curriculum/types";
@@ -107,6 +107,10 @@ export const lessonQueries = {
         );
         return response.data;
       },
+      /* Takes the API several seconds and nearly every page reads it, so it isn't
+         re-asked on each page change. Completions update it in place. */
+      staleTime: 5 * 60_000,
+      gcTime: 30 * 60_000,
     }),
 
   lesson: (enrollmentId: string, lessonId: string) =>
@@ -138,10 +142,57 @@ export async function setLessonCompleted(
 }
 
 /**
+ * Applies a saved completion to the cached progress, curriculum and lesson, so
+ * Leafy and every progress bar move at once instead of after the refetch.
+ */
+export function applyLessonCompletion(
+  queryClient: QueryClient,
+  enrollmentId: string,
+  lessonId: string,
+  completed: boolean,
+) {
+  const mark = <T extends CurriculumLesson>(lesson: T): T =>
+    lesson.id === lessonId && lesson.lock ? { ...lesson, lock: { ...lesson.lock, completed } } : lesson;
+
+  queryClient.setQueryData(
+    lessonQueries.lesson(enrollmentId, lessonId).queryKey,
+    (lesson) => (lesson ? mark(lesson) : lesson),
+  );
+  queryClient.setQueryData(lessonQueries.content(enrollmentId).queryKey, (curricula) =>
+    curricula?.map((curriculum) => ({
+      ...curriculum,
+      topics: curriculum.topics?.map((topic) => ({ ...topic, lessons: topic.lessons.map(mark) })),
+    })),
+  );
+  queryClient.setQueryData(studentQueries.progress().queryKey, (tracks) =>
+    tracks?.map((track) => {
+      if (track.enrollmentId !== enrollmentId) return track;
+      const { totalLessons } = track.progress;
+      const completedLessons = Math.min(
+        totalLessons,
+        Math.max(0, track.progress.completedLessons + (completed ? 1 : -1)),
+      );
+      return {
+        ...track,
+        progress: {
+          completedLessons,
+          totalLessons,
+          percentage: totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0,
+        },
+      };
+    }),
+  );
+}
+
+/**
  * The student's current track and its curriculum, as every learning page
  * loads them. Picks the track still being worked through, like the dashboard.
  */
-export function useStudentCurriculum() {
+/**
+ * The student's current track and its curriculum. With `loadContent: false`
+ * the curriculum is only read from the cache, never requested.
+ */
+export function useStudentCurriculum({ loadContent = true } = {}) {
   const progress = useQuery(studentQueries.progress());
   const enrollment =
     progress.data?.find((item) => !item.trackComplete) ?? progress.data?.[0];
@@ -149,7 +200,7 @@ export function useStudentCurriculum() {
 
   const content = useQuery({
     ...lessonQueries.content(enrollmentId ?? ""),
-    enabled: Boolean(enrollmentId),
+    enabled: loadContent && Boolean(enrollmentId),
   });
 
   const notEnrolled =
@@ -250,6 +301,12 @@ export function countTopicResources(topic: CurriculumTopic) {
 
 export function countWatched(topic: CurriculumTopic) {
   return topic.lessons.filter(isCompleted).length;
+}
+
+/** Where to pick a module up: its first open lesson that isn't done yet. */
+export function topicNextLesson(topic: CurriculumTopic) {
+  const index = topic.lessons.findIndex((lesson) => isUnlocked(lesson) && !isCompleted(lesson));
+  return index === -1 ? null : { lesson: topic.lessons[index], number: index + 1 };
 }
 
 /** Published assignments the student can open: the module's own, then each unlocked lesson's. */

@@ -6,6 +6,7 @@ import { ClipboardList, WifiOff } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CompanionPeek } from "@/components/mascot/Companion";
 import {
   CardEmptyState,
   DashboardCard,
@@ -47,7 +48,8 @@ export function UpcomingDeadlinesCard({ className }: { className?: string }) {
   const failed = curriculum.error ?? submissions.error ?? tasks.error;
 
   return (
-    <DashboardCard title="Upcoming deadlines" className={className}>
+    <CompanionPeek target="deadlines" label="Due today. Start here." className={className}>
+      <DashboardCard title="Upcoming deadlines" className="flex-1">
       {isPending ? (
         <div className="flex flex-col gap-4">
           {Array.from({ length: 3 }, (_, index) => (
@@ -75,7 +77,8 @@ export function UpcomingDeadlinesCard({ className }: { className?: string }) {
           )}
         />
       )}
-    </DashboardCard>
+      </DashboardCard>
+    </CompanionPeek>
   );
 }
 

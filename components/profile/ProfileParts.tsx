@@ -164,6 +164,7 @@ export function AvatarChoices({
   onUpload,
   onError,
   disabled = false,
+  className,
 }: {
   choices: AvatarChoice[];
   selected: string;
@@ -171,9 +172,15 @@ export function AvatarChoices({
   onUpload: (file: File) => void;
   onError: (message: string | null) => void;
   disabled?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="grid grid-cols-3 justify-items-center gap-4 border-t border-border-default pt-5">
+    <div
+      className={cn(
+        "grid grid-cols-3 justify-items-center gap-4 border-t border-border-default pt-5",
+        className,
+      )}
+    >
       <label
         className={cn(
           "flex size-20 cursor-pointer items-center justify-center rounded-full bg-surface-subtle text-icon-primary hover:bg-neutral-200 has-focus-visible:ring-2 has-focus-visible:ring-border-focus",

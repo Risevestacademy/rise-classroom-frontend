@@ -16,6 +16,7 @@ import {
   useInstructorNotifications,
   type NotificationRecord,
 } from "@/lib/instructor";
+import { notificationText } from "@/lib/notification-text";
 
 const icons = {
   assignment: ClipboardList,
@@ -121,7 +122,7 @@ export function InstructorNotificationsPopover() {
                             {item.title}
                           </span>
                           <span className="mt-0.5 block truncate text-[11px] text-neutral-500">
-                            {item.body ?? item.message ?? ""}
+                            {notificationText(item.body ?? item.message ?? "")}
                           </span>
                         </span>
                         <span className="shrink-0 text-[11px] text-neutral-500">

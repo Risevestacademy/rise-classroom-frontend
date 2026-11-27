@@ -9,13 +9,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { Student } from "@/components/instructor-dashboard/data";
+import type { InstructorStudentListItem } from "@/lib/instructor";
 
 interface ExportStudentsModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  allStudents: Student[];
-  filteredStudents: Student[];
+  allStudents: InstructorStudentListItem[];
+  filteredStudents: InstructorStudentListItem[];
   selectedStudentIds: string[];
 }
 
@@ -44,12 +44,10 @@ export function ExportStudentsModal({
     }
 
     if (exportFormat === "csv") {
-      const headers = ["Name", "Email", "Progress (%)", "Average Grade", "Status"];
+      const headers = ["Name", "Email", "Status"];
       const rows = dataToExport.map((student) => [
         `"${student.name.replace(/"/g, '""')}"`,
         `"${student.email.replace(/"/g, '""')}"`,
-        `"${student.progress}%"`,
-        `"${student.averageGrade}%"`,
         `"${student.status}"`,
       ]);
 
@@ -68,7 +66,7 @@ export function ExportStudentsModal({
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(18);
-      doc.text("Student Progress Report", 14, 20);
+      doc.text("Students Report", 14, 20);
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
@@ -83,9 +81,11 @@ export function ExportStudentsModal({
       doc.setTextColor(50);
       doc.text("Name", 16, yPos);
       doc.text("Email", 70, yPos);
+      /*
       doc.text("Progress", 130, yPos);
       doc.text("Grade", 155, yPos);
-      doc.text("Status", 180, yPos);
+      */
+      doc.text("Status", 140, yPos);
 
       yPos += 8;
       doc.setFont("helvetica", "normal");
@@ -98,9 +98,11 @@ export function ExportStudentsModal({
 
         doc.text(student.name, 16, yPos);
         doc.text(student.email, 70, yPos);
+        /*
         doc.text(`${student.progress}%`, 130, yPos);
         doc.text(`${student.averageGrade}%`, 155, yPos);
-        doc.text(student.status, 180, yPos);
+        */
+        doc.text(student.status, 140, yPos);
 
         yPos += 8;
       });
@@ -188,7 +190,7 @@ export function ExportStudentsModal({
           </div>
 
           <p className="text-xs text-neutral-500 leading-relaxed">
-            Includes name, email, track, progress, grades, attendance and status.
+            Includes name, email and status.
           </p>
 
           <div className="flex items-center justify-end gap-3 pt-2">

@@ -1,5 +1,5 @@
-// PENDING-BACKEND: there are no mentor or instructor sessions or activity yet,
-// so their profiles and the mentor dashboard show this sample data from the design.
+// PENDING-BACKEND: there's no mentor or instructor activity feed yet, so their
+// profiles and the mentor dashboard show this sample data from the design.
 
 export type AssignedStudent = {
   id: string;
@@ -13,12 +13,6 @@ export type AssignedStudent = {
 
 /** Below this overall progress a student is flagged as needing attention. */
 export const attentionThreshold = 50;
-
-export const upcomingSessions = [
-  { date: "Mon, Oct 12 2026", time: "6:00 PM - 7:00 PM", until: "In 12 hours" },
-  { date: "Wed, Oct 21 2026", time: "6:00 PM - 7:00 PM", until: "In 9 days" },
-  { date: "Mon, Nov 5 2026", time: "6:00 PM - 7:00 PM", until: "In 21 days" },
-];
 
 export type MentorActivityKind = "session" | "note" | "student" | "profile";
 

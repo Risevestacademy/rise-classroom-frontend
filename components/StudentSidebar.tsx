@@ -4,6 +4,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   GraduationCap,
@@ -14,13 +15,17 @@ import {
   Blocks,
   X,
 } from "lucide-react";
-
+import { Video } from "@/assets/icons";
 import { Logo } from "@/assets/logo";
 import { cn } from "@/lib/utils";
 import { SidebarOrganization } from "@/components/SidebarOrganization";
 import { useStudentNav } from "@/components/StudentNavContext";
 import { CountBadge } from "@/components/notifications/NotificationParts";
 import { useStudentNotifications } from "@/lib/student-notifications";
+import { prefetchStudentPage } from "@/lib/student-prefetch";
+
+/* A pointer resting this long on a link counts as heading there; one just passing over doesn't. */
+const HOVER_INTENT_MS = 100;
 
 interface NavItem {
   title: string;
@@ -51,6 +56,11 @@ const homeNavItems: NavItem[] = [
     href: "/student/control-tower",
     icon: Radar,
   },
+  {
+    title: "Live sessions",
+    href: "/student/live",
+    icon: Video,
+  }
 ];
 
 const communicationNavItems: NavItem[] = [
@@ -65,7 +75,7 @@ const communicationNavItems: NavItem[] = [
 const accountNavItems: NavItem[] = [
   {
     title: "Settings",
-    href: "/student/settings",
+    href: "/student/profile",
     icon: Settings,
   },
   {
@@ -191,6 +201,15 @@ function SidebarNavItem({
   isActive: boolean;
 }) {
   const Icon = item.icon;
+  const queryClient = useQueryClient();
+  const hoverTimer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const prefetch = () => {
+    if (!isActive) prefetchStudentPage(queryClient, item.href);
+  };
+  const cancelHover = () => clearTimeout(hoverTimer.current);
+
+  React.useEffect(() => cancelHover, []);
 
   return (
     <div className="relative flex w-full items-center">
@@ -201,6 +220,13 @@ function SidebarNavItem({
       <Link
         href={item.href}
         aria-current={isActive ? "page" : undefined}
+        onMouseEnter={() => {
+          cancelHover();
+          hoverTimer.current = setTimeout(prefetch, HOVER_INTENT_MS);
+        }}
+        onMouseLeave={cancelHover}
+        onFocus={prefetch}
+        onTouchStart={prefetch}
         className={cn(
           "flex h-10 w-full items-center gap-3 rounded-lg border px-3 text-sm font-medium",
           isActive

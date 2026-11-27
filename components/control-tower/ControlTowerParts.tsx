@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Info,
   MoreVertical,
+  Sprout,
   WifiOff,
 } from "lucide-react";
 import { Field } from "@base-ui/react/field";
@@ -37,13 +38,19 @@ export function ControlTowerColumn({ children }: { children: React.ReactNode }) 
   return <div className="mx-auto flex w-full max-w-180 flex-col gap-6">{children}</div>;
 }
 
-export function Card({ children }: { children: React.ReactNode }) {
+export function Card({ children, ...props }: React.ComponentProps<"div">) {
   return (
-    <div className="flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-white p-4 sm:p-6">
+    <div
+      {...props}
+      className="flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-white p-4 sm:p-6"
+    >
       {children}
     </div>
   );
 }
+
+/* What the Control Tower tour calls each prompt card, in order. */
+const cardTourTargets = ["plan", "check-in", "reflection"];
 
 export function WeekStatusBadge({ completed }: { completed: boolean }) {
   return (
@@ -69,7 +76,7 @@ export function WeekFields({
   return (
     <>
       {promptGroups.map((group, index) => (
-        <Card key={group.section ?? "plan"}>
+        <Card key={group.section ?? "plan"} data-tour={cardTourTargets[index]}>
           {index === 0 && intro}
           {group.section && (
             <Badge variant="light" status="info" size="sm" className="-mb-2">
@@ -102,13 +109,16 @@ const menuItem =
 export function ControlTowerMenu({
   onViewPreviousWeeks,
   onHowItWorks,
+  onTakeTour,
 }: {
   onViewPreviousWeeks: () => void;
   onHowItWorks: () => void;
+  onTakeTour?: () => void;
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
+        data-tour="menu"
         aria-label="More options"
         className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100"
       >
@@ -127,6 +137,12 @@ export function ControlTowerMenu({
           <Info className="h-4 w-4" />
           How Control Tower works
         </DropdownMenuItem>
+        {onTakeTour && (
+          <DropdownMenuItem className={menuItem} onClick={onTakeTour}>
+            <Sprout className="h-4 w-4" />
+            Take the tour with Leafy
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

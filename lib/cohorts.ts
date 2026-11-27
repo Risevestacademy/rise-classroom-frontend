@@ -200,7 +200,7 @@ async function listUsersPage(
   return data;
 }
 
-function listStudentsPage(cohortId: string, page: number) {
+function listStudentsPage(cohortId: string | undefined, page: number) {
   return listUsersPage({ role: "STUDENT", cohortId }, page);
 }
 
@@ -215,7 +215,7 @@ async function listAllStaff(role: "INSTRUCTOR" | "MENTOR") {
   return [first, ...rest].flatMap((page) => page.items);
 }
 
-async function listAllStudents(cohortId: string) {
+async function listAllStudents(cohortId?: string) {
   const first = await listStudentsPage(cohortId, 1);
   const rest = await Promise.all(
     Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, i) =>
@@ -292,6 +292,26 @@ async function listCohortTrackIds(cohortId: string) {
     listAllStudents(cohortId),
   ]);
   return Array.from(cohortTrackNames(cohortId, assignments, students).keys());
+}
+
+/* Ids of the tracks any cohort runs. A track missing from this list is new and has no one on it yet. */
+async function listAssignedTrackIds() {
+  const [assignments, students] = await Promise.all([
+    listInstructorTracks(),
+    listAllStudents(),
+  ]);
+  const ids = new Set<string>();
+  for (const assignment of assignments) {
+    if (assignment.track) ids.add(assignment.track.id);
+  }
+  for (const student of students) {
+    for (const membership of student.studentProfile ?? []) {
+      for (const enrollment of membership.enrollment ?? []) {
+        if (enrollment.track) ids.add(enrollment.track.id);
+      }
+    }
+  }
+  return Array.from(ids);
 }
 
 /** Each mentor on the cohort's mentees, or null where the list failed. */
@@ -507,6 +527,8 @@ export const cohortKeys = {
   detail: (id: string) => [...adminKeys.allCohorts(), "overview", id] as const,
   trackIds: (id: string) =>
     [...adminKeys.allCohorts(), "track-ids", id] as const,
+  assignedTrackIds: () =>
+    [...adminKeys.allCohorts(), "assigned-track-ids"] as const,
 };
 
 export const cohortQueries = {
@@ -526,5 +548,11 @@ export const cohortQueries = {
     queryOptions({
       queryKey: cohortKeys.trackIds(id),
       queryFn: () => listCohortTrackIds(id),
+    }),
+
+  assignedTrackIds: () =>
+    queryOptions({
+      queryKey: cohortKeys.assignedTrackIds(),
+      queryFn: listAssignedTrackIds,
     }),
 };

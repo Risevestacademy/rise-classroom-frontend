@@ -10,6 +10,7 @@ import {
 } from "@/components/student-profile/shared";
 import { MenteeRowsSkeleton } from "@/components/student-profile/skeletons";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   attentionThreshold,
@@ -17,10 +18,14 @@ import {
 } from "@/app/admin/mentors/[id]/profile-data";
 
 export type UpcomingSession = {
+  /** Defaults to the date and `until`, for sample rows without one. */
+  id?: string;
   date: string;
   time: string;
   until: string;
   joinable?: boolean;
+  /** Where Join goes. */
+  href?: string;
 };
 
 export const studentStatusPill = {
@@ -49,10 +54,11 @@ export function StudentName({
   href,
 }: {
   student: AssignedStudent;
-  href: string;
+  /** Omit where there's no profile to open. */
+  href?: string;
 }) {
-  return (
-    <Link href={href} className="truncate text-base font-medium text-text-primary">
+  const content = (
+    <>
       {student.name}
       {needsAttention(student) && (
         <>
@@ -63,7 +69,15 @@ export function StudentName({
           <span className="sr-only">(needs attention)</span>
         </>
       )}
+    </>
+  );
+  const className = "truncate text-base font-medium text-text-primary";
+  return href ? (
+    <Link href={href} className={className}>
+      {content}
     </Link>
+  ) : (
+    <p className={className}>{content}</p>
   );
 }
 
@@ -77,7 +91,8 @@ export function StudentsProgressCard({
 }: {
   title: string;
   students: AssignedStudent[];
-  studentHref: (student: AssignedStudent) => string;
+  /** Where a student links to; omit where there's no profile to open. */
+  studentHref?: (student: AssignedStudent) => string;
   /** Shown in place of the list when there are no students. */
   emptyMessage?: string;
   /** Shows skeleton rows while the students load. */
@@ -116,7 +131,10 @@ export function StudentsProgressCard({
                   size={40}
                 />
                 <div className="min-w-0">
-                  <StudentName student={student} href={studentHref(student)} />
+                  <StudentName
+                    student={student}
+                    href={studentHref?.(student)}
+                  />
                   <p className="truncate font-work text-sm text-text-secondary">
                     {student.email}
                   </p>
@@ -152,9 +170,13 @@ export function StudentsProgressCard({
 export function UpcomingSessionsCard({
   sessions,
   onViewAll,
+  loading = false,
+  emptyMessage = "No upcoming sessions.",
 }: {
   sessions: UpcomingSession[];
   onViewAll?: () => void;
+  loading?: boolean;
+  emptyMessage?: string;
 }) {
   return (
     <Card className="gap-3">
@@ -167,37 +189,58 @@ export function UpcomingSessionsCard({
           </Button>
         }
       />
-      <ul className="flex flex-col gap-3">
-        {sessions.map((session) => (
-          <li
-            key={session.date + session.until}
-            className="flex items-center justify-between gap-3 border-b border-border-default py-3 last:border-b-0"
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-info-badge text-icon-info">
-                <Calendar03 className="size-5" />
-              </span>
-              <div className="flex min-w-0 flex-col gap-1">
-                <p className="truncate font-work text-sm font-medium tracking-[-0.01em] text-text-primary">
-                  {session.date}
-                </p>
-                <p className="font-work text-xs text-text-secondary">
-                  {session.time}
-                </p>
+      {loading ? (
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 3 }, (_, index) => (
+            <Skeleton key={index} className="h-16 rounded-lg" />
+          ))}
+        </div>
+      ) : sessions.length === 0 ? (
+        <p className="py-6 text-center font-work text-sm text-text-secondary">
+          {emptyMessage}
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {sessions.map((session) => (
+            <li
+              key={session.id ?? session.date + session.until}
+              className="flex items-center justify-between gap-3 border-b border-border-default py-3 last:border-b-0"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-info-badge text-icon-info">
+                  <Calendar03 className="size-5" />
+                </span>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <p className="truncate font-work text-sm font-medium tracking-[-0.01em] text-text-primary">
+                    {session.date}
+                  </p>
+                  <p className="font-work text-xs text-text-secondary">
+                    {session.time}
+                  </p>
+                </div>
               </div>
-            </div>
-            {session.joinable ? (
-              <Button variant="tertiary" size="sm">
-                Join
-              </Button>
-            ) : (
-              <span className="shrink-0 font-work text-[13px]/[18px] text-text-secondary">
-                {session.until}
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
+              {session.joinable && session.href ? (
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  nativeButton={false}
+                  render={<Link href={session.href} />}
+                >
+                  Join
+                </Button>
+              ) : session.joinable ? (
+                <Button variant="tertiary" size="sm">
+                  Join
+                </Button>
+              ) : (
+                <span className="shrink-0 font-work text-[13px]/[18px] text-text-secondary">
+                  {session.until}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }

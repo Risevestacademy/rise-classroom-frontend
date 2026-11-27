@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { cookies } from "next/headers";
 import { HydrationBoundary } from "@tanstack/react-query";
 
+import { AdminSetupProvider } from "@/components/admin-setup/AdminSetup";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { RoleGate } from "@/components/RoleGate";
 import { SidebarNavProvider } from "@/components/SidebarNavContext";
@@ -36,12 +37,14 @@ export default async function AdminLayout({
           initialId={cookieStore.get(SELECTED_COHORT_COOKIE)?.value ?? ""}
         >
           <SidebarNavProvider>
-            <div className="flex min-h-screen w-full">
-              <AdminSidebar />
-              <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col bg-neutral-50">
-                {children}
+            <AdminSetupProvider>
+              <div className="flex min-h-screen w-full">
+                <AdminSidebar />
+                <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col bg-neutral-50">
+                  {children}
+                </div>
               </div>
-            </div>
+            </AdminSetupProvider>
           </SidebarNavProvider>
         </SelectedCohortProvider>
       </HydrationBoundary>

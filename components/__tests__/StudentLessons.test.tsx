@@ -107,7 +107,8 @@ describe("student lessons", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("2 live class recordings")).toBeInTheDocument();
     expect(screen.getByText("3 lessons")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View module" })).toHaveAttribute(
+    expect(screen.getByText("1 of 3 lessons done")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Continue · Lesson 1" })).toHaveAttribute(
       "href",
       "/student/my-learning/module/t1",
     );
@@ -124,7 +125,13 @@ describe("student lessons", () => {
 
     expect(await screen.findByRole("heading", { name: "Visual design" })).toBeInTheDocument();
     expect(screen.getByText("Use a grid")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Play Live Class 2" })).toBeInTheDocument();
+    expect(screen.getByText("1 of 3 lessons completed")).toBeInTheDocument();
+    // The module sends you into a lesson instead of playing recordings itself.
+    expect(screen.queryByRole("button", { name: /Play Live Class/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Continue · Lesson 1/ })).toHaveAttribute(
+      "href",
+      "/student/my-learning/lesson/l1",
+    );
     expect(screen.getByRole("link", { name: "Grids" })).toHaveAttribute(
       "href",
       "/student/my-learning/lesson/l1",
@@ -181,6 +188,29 @@ describe("student lessons", () => {
       "href",
       "/student/my-learning/lesson/l2",
     );
+  });
+
+  it("moves on at once after saving, without waiting for the refetch", async () => {
+    let saved = false;
+    // Once saved, the refetches never answer: the page must not wait on them.
+    const later = <T,>(value: T) => (saved ? new Promise<T>(() => {}) : value);
+    const api = mockApi({
+      "GET /student/me/progress": () => later(progress),
+      "GET /student/enrollments/e1/content": () => later(content()),
+      "GET /student/enrollments/e1/lessons/l1": () =>
+        later(envelope(unlockedLesson("l1", "Grids", false))),
+      "PATCH /student/enrollments/e1/lessons/l1/progress": () => {
+        saved = true;
+        return envelope({ id: "p1", itemType: "LESSON", itemId: "l1", completed: true });
+      },
+    });
+    const { user } = renderWithClient(<LessonPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Mark as completed" }));
+
+    expect(await screen.findByRole("link", { name: "Next lesson" })).toBeInTheDocument();
+    expect(screen.getByText("2 of 3 completed")).toBeInTheDocument();
+    expect(api.bodies("PATCH /student/enrollments/e1/lessons/l1/progress")).toHaveLength(1);
   });
 
   it("marks a lesson as completed when its video ends, previewing a frame 3s in", async () => {

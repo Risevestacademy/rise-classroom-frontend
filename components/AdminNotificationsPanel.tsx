@@ -2,62 +2,17 @@
 
 import * as React from "react";
 import { Dialog } from "@base-ui/react/dialog";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { BellOff, X } from "lucide-react";
 
-import {
-  adminDashboardKeys,
-  adminDashboardQueries,
-  markAllNotificationsRead,
-  markNotificationRead,
-  type AdminNotifications,
-} from "@/lib/admin-dashboard";
 import { PersonAvatar } from "@/components/PersonAvatar";
+import { useAdminNotifications } from "@/lib/admin-notifications";
 import { cn, timeAgo } from "@/lib/utils";
+import { notificationText } from "@/lib/notification-text";
 
 type Filter = "all" | "unread";
 
-/** The admin's notifications and a way to mark them read. */
-export function useAdminNotifications() {
-  const queryClient = useQueryClient();
-  const query = useQuery(adminDashboardQueries.notifications());
-  const notifications = query.data?.items ?? [];
-  const queryKey = adminDashboardKeys.notifications();
-
-  /* Marks them read straight away; a failed save reloads the real state. */
-  const mutation = useMutation({
-    mutationFn: (id?: string) =>
-      id ? markNotificationRead(id) : markAllNotificationsRead(),
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey });
-      queryClient.setQueryData<AdminNotifications>(
-        queryKey,
-        (current) =>
-          current && {
-            items: current.items.map((item) =>
-              id === undefined || item.id === id
-                ? { ...item, isRead: true }
-                : item,
-            ),
-            unreadCount: id ? Math.max(0, current.unreadCount - 1) : 0,
-          },
-      );
-    },
-    onError: () => queryClient.invalidateQueries({ queryKey }),
-  });
-
-  function markRead(id?: string) {
-    if (id && notifications.find((item) => item.id === id)?.isRead) return;
-    mutation.mutate(id);
-  }
-
-  return {
-    notifications,
-    unreadCount: query.data?.unreadCount ?? 0,
-    isPending: query.isPending,
-    markRead,
-  };
-}
+export const notificationHref = (id: string) => `/admin/notifications?id=${id}`;
 
 /** Slides in from the right under the top nav. */
 export function AdminNotificationsPanel({
@@ -144,9 +99,12 @@ export function AdminNotificationsPanel({
               <ul className="flex flex-col gap-1">
                 {visible.map((item) => (
                   <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => markRead(item.id)}
+                    <Link
+                      href={notificationHref(item.id)}
+                      onClick={() => {
+                        markRead(item.id);
+                        onOpenChange(false);
+                      }}
                       className="flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-neutral-50"
                     >
                       {/* System notifications have no sender, so they show the title. */}
@@ -160,7 +118,7 @@ export function AdminNotificationsPanel({
                           <span className="font-medium text-neutral-800">
                             {item.actor?.name ?? item.title}
                           </span>{" "}
-                          {item.body}
+                          {notificationText(item.body)}
                         </span>
                         <span className="mt-1 block font-work text-xs text-neutral-400">
                           {timeAgo(item.createdAt)}
@@ -172,7 +130,7 @@ export function AdminNotificationsPanel({
                           className="mt-1.5 size-2 shrink-0 rounded-full bg-text-error"
                         />
                       )}
-                    </button>
+                    </Link>
                   </li>
                 ))}
               </ul>

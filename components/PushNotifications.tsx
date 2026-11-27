@@ -30,7 +30,7 @@ function useRefreshOnPush(): void {
 
 /* Sits in every signed-in area. Offers push notifications to a user who
    hasn't answered yet on this browser; the browser's own permission question
-   only appears once they say yes. */
+   only appears once they say yes. It hides while Leafy is talking in the same corner. */
 export function PushNotifications(): React.JSX.Element | null {
   const push = usePushNotifications();
   useRefreshOnPush();
@@ -40,7 +40,7 @@ export function PushNotifications(): React.JSX.Element | null {
   return (
     <section
       aria-labelledby="push-prompt-title"
-      className="fixed right-4 bottom-4 z-40 w-[calc(100%-2rem)] max-w-sm rounded-xl bg-white p-4 shadow-lg sm:right-8 sm:bottom-8"
+      className="fixed right-4 bottom-4 z-40 w-[calc(100%-2rem)] max-w-sm rounded-xl bg-white p-4 shadow-lg sm:right-8 sm:bottom-8 [[data-leafy-talking]_&]:hidden"
     >
       <div className="flex items-start gap-3">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-brand text-text-brand">

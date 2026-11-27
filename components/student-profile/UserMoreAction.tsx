@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Menu } from "@base-ui/react/menu";
 
 import { MoreVertical } from "@/assets/icons";
+import { EditUserDialog } from "@/components/EditUserDialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +26,7 @@ import { sessionQuery } from "@/lib/session-query";
 export function UserMoreActions({ user }: { user: AdminUser }) {
   const { data: session } = useQuery(sessionQuery());
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [editOpen, setEditOpen] = React.useState(false);
 
   const canManage = session?.user.role === "SUPERADMIN";
   const isSelf = session?.user.id === user.id;
@@ -56,6 +58,14 @@ export function UserMoreActions({ user }: { user: AdminUser }) {
           <Menu.Positioner align="end">
             <Menu.Popup className="z-50 w-52 rounded-lg border border-neutral-200 bg-neutral-0 py-1 text-sm shadow-lg outline-none">
               <Menu.Item
+                disabled={!canManage}
+                title={canManage ? undefined : "Only super admins can do this"}
+                onClick={() => setEditOpen(true)}
+                className="block cursor-pointer px-3 py-2 text-neutral-700 outline-none hover:bg-neutral-50 data-[highlighted]:bg-neutral-50 data-[disabled]:cursor-not-allowed data-[disabled]:text-neutral-300"
+              >
+                Edit user
+              </Menu.Item>
+              <Menu.Item
                 disabled={Boolean(actionHint)}
                 title={actionHint}
                 onClick={() => setConfirmOpen(true)}
@@ -73,6 +83,12 @@ export function UserMoreActions({ user }: { user: AdminUser }) {
         </Menu.Portal>
       </Menu.Root>
 
+      <EditUserDialog
+        user={user}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        isSelf={isSelf}
+      />
       <SuspendUserDialog
         user={user}
         open={confirmOpen}
