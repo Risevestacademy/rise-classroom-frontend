@@ -17,14 +17,20 @@ import { toCohortStudent, type CohortStudent } from "@/lib/cohorts";
 import { useDebounced } from "@/lib/use-debounced";
 import { usePageParams } from "@/lib/use-page-params";
 
-/** A cohort's Students tab: search, filters and pages all come from the API. */
+/**
+ * A cohort's Students tab, or one track's students in it: search, filters and
+ * pages all come from the API.
+ */
 export function CohortStudentsTable({
   cohortId,
+  trackId,
   title,
   columns,
   filters,
 }: {
   cohortId: string;
+  /** Only the students on this track. */
+  trackId?: string;
   title: string;
   columns: PeopleColumn<CohortStudent>[];
   /** Keys match the `/admin/users` query params they set. */
@@ -41,6 +47,7 @@ export function CohortStudentsTable({
     ...adminQueries.users({
       role: "STUDENT",
       cohortId,
+      trackId,
       ...toUserFilters(filterValues),
       search: debouncedSearch || undefined,
       page,

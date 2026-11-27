@@ -31,6 +31,7 @@ import {
   type UpdateTrackInput,
 } from "@/lib/admin";
 import { sessionQuery } from "@/lib/session-query";
+import { cn } from "@/lib/utils";
 
 const DESCRIPTION_MAX = 200;
 
@@ -94,12 +95,21 @@ export function EditTrackDialog({
   );
 }
 
-function EditTrackForm({
+/**
+ * A track's name, description and status. In the edit dialog, or on its own
+ * on the track's Settings tab (`inPage`).
+ */
+export function EditTrackForm({
   track,
   onDone,
+  onCancel = onDone,
+  inPage = false,
 }: {
   track: Track;
+  /** After saving. */
   onDone: () => void;
+  onCancel?: () => void;
+  inPage?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [name, setName] = React.useState(track.name);
@@ -121,9 +131,29 @@ function EditTrackForm({
     },
   });
 
+  const buttons = (
+    <>
+      <Button
+        variant="secondary"
+        size="medium"
+        disabled={save.isPending || (inPage && !hasChanges)}
+        onClick={onCancel}
+      >
+        Cancel
+      </Button>
+      <Button
+        size="medium"
+        disabled={!canSave || save.isPending}
+        onClick={() => save.mutate(changes)}
+      >
+        {save.isPending ? "Saving…" : "Save changes"}
+      </Button>
+    </>
+  );
+
   return (
     <>
-      <div className="mt-6 flex flex-col gap-6">
+      <div className={cn("flex flex-col gap-6", !inPage && "mt-6")}>
         <FormField
           label="Track name"
           required
@@ -164,23 +194,11 @@ function EditTrackForm({
 
       {save.error && <ErrorNote>{getTrackErrorMessage(save.error)}</ErrorNote>}
 
-      <DialogFooter className="sm:justify-end">
-        <Button
-          variant="secondary"
-          size="medium"
-          disabled={save.isPending}
-          onClick={onDone}
-        >
-          Cancel
-        </Button>
-        <Button
-          size="medium"
-          disabled={!canSave || save.isPending}
-          onClick={() => save.mutate(changes)}
-        >
-          {save.isPending ? "Saving…" : "Save changes"}
-        </Button>
-      </DialogFooter>
+      {inPage ? (
+        <div className="mt-6 flex justify-end gap-3">{buttons}</div>
+      ) : (
+        <DialogFooter className="sm:justify-end">{buttons}</DialogFooter>
+      )}
     </>
   );
 }
