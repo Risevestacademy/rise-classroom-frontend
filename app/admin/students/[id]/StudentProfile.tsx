@@ -56,6 +56,7 @@ import {
 } from "@/components/student-profile/shared";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
 import {
   adminQueries,
@@ -63,13 +64,16 @@ import {
   nameWithDisplayName,
   type AdminUser,
 } from "@/lib/admin";
-import { useMentorshipSessions, useStudentProgress } from "@/lib/student-profile";
+import {
+  useMentorshipSessions,
+  useStudentDeadlines,
+  useStudentProgress,
+} from "@/lib/student-profile";
 import { useTabParam } from "@/lib/use-tab-param";
 import { getStudentStatus } from "../student-display";
 import {
   activityGroups,
   attendanceMonth,
-  deadlines,
   notes,
 } from "./overview-data";
 
@@ -271,7 +275,7 @@ function OverviewTab({
         <ProfileCard student={student} />
         <MentorCard mentor={student.mentor} />
         <ProgressCard student={student} onTabChange={onTabChange} />
-        <DeadlinesCard onTabChange={onTabChange} />
+        <DeadlinesCard student={student} onTabChange={onTabChange} />
       </div>
       <div className="flex min-w-0 flex-col gap-4">
         <AttendanceCard />
@@ -580,7 +584,29 @@ function ListItem({
   );
 }
 
-function DeadlinesCard({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
+/** "Due today", "Due tomorrow" or "Due in 11 days". */
+function dueLabel(daysLeft: number) {
+  if (daysLeft <= 0) return "Due today";
+  if (daysLeft === 1) return "Due tomorrow";
+  return `Due in ${daysLeft} days`;
+}
+
+/** Red within 3 days, amber within two weeks, as in the design's examples. */
+function deadlineTone(daysLeft: number): keyof typeof deadlineTones {
+  if (daysLeft <= 3) return "error";
+  if (daysLeft <= 14) return "warning";
+  return "neutral";
+}
+
+function DeadlinesCard({
+  student,
+  onTabChange,
+}: {
+  student: AdminUser;
+  onTabChange: (tab: Tab) => void;
+}) {
+  const { isPending, error, deadlines } = useStudentDeadlines(student);
+
   return (
     <Card>
       <CardHeader
@@ -591,26 +617,42 @@ function DeadlinesCard({ onTabChange }: { onTabChange: (tab: Tab) => void }) {
           </Button>
         }
       />
-      <div className="flex flex-col gap-6">
-        <GroupLabel>Today</GroupLabel>
-        <ul className="flex flex-col gap-6">
-          {deadlines.map((deadline) => {
-            const tone = deadlineTones[deadline.tone];
-            return (
-              <ListItem
-                key={deadline.title}
-                icon={File01}
-                iconClassName={tone.box}
-                title={deadline.title}
-                detail={deadline.type}
-                trailing={
-                  <BrandBadge className={tone.badge}>{deadline.due}</BrandBadge>
-                }
-              />
-            );
-          })}
-        </ul>
-      </div>
+      {isPending ? (
+        <div className="flex flex-col gap-6">
+          {Array.from({ length: 3 }, (_, index) => (
+            <Skeleton key={index} className="h-10 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : deadlines.length === 0 ? (
+        <p className="font-work text-sm text-text-muted">
+          {error
+            ? "Couldn't load this student's deadlines."
+            : "No upcoming deadlines."}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-6">
+          <GroupLabel>Today</GroupLabel>
+          <ul className="flex flex-col gap-6">
+            {deadlines.map((deadline) => {
+              const tone = deadlineTones[deadlineTone(deadline.daysLeft)];
+              return (
+                <ListItem
+                  key={deadline.id}
+                  icon={File01}
+                  iconClassName={tone.box}
+                  title={deadline.title}
+                  detail="Assignment"
+                  trailing={
+                    <BrandBadge className={tone.badge}>
+                      {dueLabel(deadline.daysLeft)}
+                    </BrandBadge>
+                  }
+                />
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 }

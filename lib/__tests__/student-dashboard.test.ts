@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { WeeklyTask } from "@/lib/instructor";
 import type { TrackProgress } from "@/lib/student";
 import type { StudentSubmission } from "@/lib/student-assignments";
-import { continueLearning, upcomingDeadlines } from "@/lib/student-dashboard";
+import type { StudentNotification } from "@/lib/student-notifications";
+import { continueLearning, recentActivity, upcomingDeadlines } from "@/lib/student-dashboard";
 import type { CurriculumTopic, LessonAssignment } from "@/lib/student-lessons";
 
 const open = { instructorUnlocked: true, unlocked: true, completed: false };
@@ -136,5 +137,73 @@ describe("upcomingDeadlines", () => {
         now,
       })
     ).toEqual([]);
+  });
+});
+
+describe("recentActivity", () => {
+  const notification = (id: string, type: string, createdAt: string): StudentNotification => ({
+    id,
+    type,
+    title: `Notification ${id}`,
+    body: "Starts at 2026-10-15T17:00:00.000Z.",
+    isRead: false,
+    createdAt,
+  });
+
+  const submission = (overrides: Partial<StudentSubmission>): StudentSubmission =>
+    ({
+      id: "s1",
+      assignmentId: "a2",
+      enrollmentId: "e1",
+      status: "SUBMITTED",
+      submittedAt: "2026-10-13T09:00:00.000Z",
+      updatedAt: "2026-10-13T09:00:00.000Z",
+      ...overrides,
+    }) as StudentSubmission;
+
+  it("merges submissions, reviews and notifications, newest first", () => {
+    const items = recentActivity(
+      [notification("n1", "LIVE_SESSION_SCHEDULED", "2026-10-12T08:00:00.000Z")],
+      [
+        submission({
+          status: "GRADED",
+          score: 85,
+          reviewedAt: "2026-10-14T10:00:00.000Z",
+          assignment: { id: "a2", title: "Moodboard", submissionType: "LINK", maxScore: 100 },
+        } as Partial<StudentSubmission>),
+      ],
+      topics
+    );
+    expect(items.map((item) => [item.title, item.subtitle])).toEqual([
+      ["Assignment graded", "Moodboard · 85/100"],
+      ["Assignment submitted", "Moodboard"],
+      ["Notification n1", expect.not.stringContaining("2026-10-15T17:00")],
+    ]);
+    expect(items[2].kind).toBe("event");
+  });
+
+  it("names a submission from the curriculum when the API leaves the assignment out", () => {
+    const [item] = recentActivity([], [submission({})], topics);
+    expect(item.subtitle).toBe("Assignment a2");
+  });
+
+  it("leaves out reminders and assignment notifications", () => {
+    const items = recentActivity(
+      [
+        notification("n1", "LIVE_CLASS_REMINDER", "2026-10-12T08:00:00.000Z"),
+        notification("n2", "ASSIGNMENT_DUE", "2026-10-12T08:00:00.000Z"),
+        notification("n3", "LIVE_SESSION_CANCELLED", "2026-10-12T08:00:00.000Z"),
+      ],
+      [],
+      []
+    );
+    expect(items.map((item) => item.key)).toEqual(["notification-n3"]);
+  });
+
+  it("keeps only the latest few", () => {
+    const many = Array.from({ length: 10 }, (_, index) =>
+      notification(`n${index}`, "LIVE_SESSION_SCHEDULED", `2026-10-${String(index + 1).padStart(2, "0")}T08:00:00.000Z`)
+    );
+    expect(recentActivity(many, [], [], { limit: 2 })).toHaveLength(2);
   });
 });
