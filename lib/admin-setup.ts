@@ -15,13 +15,22 @@ export type SetupProgress = { cohort: boolean; track: boolean; student: boolean 
 export type GuidePosition = {
   /** The field being explained on the create-cohort form. */
   formStep: number;
-  /** The "new tracks only show once a student joins" note was read. */
+  /** The "your track is ready" note was read. */
   trackNoteRead: boolean;
+  /** The cohort picker on the Students page was explained. */
+  cohortPickerRead: boolean;
   /** Instructors, then mentors. */
   teamStep: number;
 };
 
-export type GuideAction = "form-next" | "form-back" | "track-note-read" | "team-next" | "team-back" | "finish";
+export type GuideAction =
+  | "form-next"
+  | "form-back"
+  | "track-note-read"
+  | "picker-read"
+  | "team-next"
+  | "team-back"
+  | "finish";
 
 export type GuideStep = {
   item: SetupItem;
@@ -131,21 +140,22 @@ export function guideStep(
         item,
         interactive: false,
         target: "tracks-list",
-        title: "Your track is saved",
-        body: "Tracks are listed per cohort, and a new one only shows under a cohort once a student joins it. So if this list looks empty, don't worry.",
+        title: "Your track is ready",
+        body: "It's listed here now. Add a track for each programme you run, now or any time later.",
         next: { action: "track-note-read", label: "Got it" },
       };
     }
-    if (pathname === "/admin/cohorts") {
+    if (pathname === "/admin/students" && !position.cohortPickerRead) {
       return {
         item,
-        interactive: true,
-        target: "cohort-card",
-        title: "Open your cohort",
-        body: "Students join through their cohort. Open it to invite your first student.",
+        interactive: false,
+        target: "cohort-select",
+        title: "Check the cohort",
+        body: "New students join the cohort picked here at the top of the page. Your new cohort is already selected.",
+        next: { action: "picker-read", label: "Next" },
       };
     }
-    if (/^\/admin\/cohorts\/(?!create$)[^/]+$/.test(pathname)) {
+    if (pathname === "/admin/students") {
       return {
         item,
         interactive: true,
@@ -157,9 +167,9 @@ export function guideStep(
     return {
       item,
       interactive: true,
-      target: nav("/admin/cohorts"),
+      target: nav("/admin/students"),
       title: "Invite your first student",
-      body: "Students are invited from their cohort. Open Cohorts to find it.",
+      body: "Students are invited from the Students page. Open Students.",
     };
   }
 

@@ -21,7 +21,11 @@ export function AdminTopNav({
     <AppTopNav
       basePath="/admin"
       breadcrumb={breadcrumb}
-      filters={<AdminCohortSelect />}
+      filters={
+        <div data-tour="cohort-select">
+          <AdminCohortSelect />
+        </div>
+      }
       unreadCount={unreadCount}
       notificationsOpen={notificationsOpen}
       onNotificationsClick={() => setNotificationsOpen(true)}

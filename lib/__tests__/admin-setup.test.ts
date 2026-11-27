@@ -6,7 +6,7 @@ const none: SetupProgress = { cohort: false, track: false, student: false };
 const withCohort = { ...none, cohort: true };
 const withTrack = { ...withCohort, track: true };
 const withStudent = { ...withTrack, student: true };
-const start = { formStep: 0, trackNoteRead: false, teamStep: 0 };
+const start = { formStep: 0, trackNoteRead: false, cohortPickerRead: false, teamStep: 0 };
 
 describe("currentItem", () => {
   it("asks for a cohort, then a track, then a student, then shows the team", () => {
@@ -37,22 +37,29 @@ describe("guideStep", () => {
     expect(guideStep("/admin/tracks", withCohort, start).target).toBe("create-track");
   });
 
-  it("explains why a new track isn't listed before moving on", () => {
+  it("confirms the new track before moving on", () => {
     const note = guideStep("/admin/tracks", withTrack, start);
     expect(note).toMatchObject({
       target: "tracks-list",
+      title: "Your track is ready",
       interactive: false,
       next: { action: "track-note-read" },
     });
     expect(
       guideStep("/admin/tracks", withTrack, { ...start, trackNoteRead: true }).target,
-    ).toBe("nav:/admin/cohorts");
+    ).toBe("nav:/admin/students");
   });
 
-  it("invites the first student from inside the cohort", () => {
-    expect(guideStep("/admin/students", withTrack, start).target).toBe("nav:/admin/cohorts");
-    expect(guideStep("/admin/cohorts", withTrack, start).target).toBe("cohort-card");
-    expect(guideStep("/admin/cohorts/abc-123", withTrack, start).target).toBe("invite-student");
+  it("invites the first student from the Students page, after showing the cohort picker", () => {
+    expect(guideStep("/admin/cohorts", withTrack, start).target).toBe("nav:/admin/students");
+    expect(guideStep("/admin/students", withTrack, start)).toMatchObject({
+      target: "cohort-select",
+      interactive: false,
+      next: { action: "picker-read" },
+    });
+    expect(
+      guideStep("/admin/students", withTrack, { ...start, cohortPickerRead: true }),
+    ).toMatchObject({ target: "invite-student", interactive: true });
   });
 
   it("ends by pointing at instructors and mentors", () => {

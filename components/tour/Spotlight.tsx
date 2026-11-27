@@ -23,6 +23,28 @@ function findTarget(target: string | null) {
   return target ? document.querySelector(`[data-tour="${target}"]`) : null;
 }
 
+/* The part of the element actually on screen: cut down by the window and by
+   every scrolling area it sits in, such as the sidebar's link list. Null when
+   none of it shows. */
+function visibleBox(element: Element) {
+  const box = element.getBoundingClientRect();
+  let top = Math.max(box.top, 0);
+  let left = Math.max(box.left, 0);
+  let bottom = Math.min(box.bottom, window.innerHeight);
+  let right = Math.min(box.right, window.innerWidth);
+  for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+    const { overflowX, overflowY } = getComputedStyle(parent);
+    if (overflowX === "visible" && overflowY === "visible") continue;
+    const clip = parent.getBoundingClientRect();
+    top = Math.max(top, clip.top);
+    left = Math.max(left, clip.left);
+    bottom = Math.min(bottom, clip.bottom);
+    right = Math.min(right, clip.right);
+  }
+  if (bottom - top < 4 || right - left < 4) return null;
+  return { top, left, width: right - left, height: bottom - top };
+}
+
 /* Where the target is on screen, kept up to date while the page scrolls,
    resizes or changes. Null while the target isn't on screen, such as a
    sidebar link while the mobile menu is closed. */
@@ -35,10 +57,8 @@ function useTargetRect(target: string | null): Rect | null {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const element = findTarget(target);
-        const box = element?.getBoundingClientRect();
-        if (!box || box.width === 0 || box.right <= 0 || box.left >= window.innerWidth) {
-          return setRect(null);
-        }
+        const box = element && visibleBox(element);
+        if (!box) return setRect(null);
         setRect((current) => {
           const next = {
             top: box.top - spotlightPadding,
@@ -73,18 +93,41 @@ function useTargetRect(target: string | null): Rect | null {
   return rect;
 }
 
-/* Brings the step's target into view, leaving room for the card. A target
-   taller than the screen is lined up by its top instead. */
-function scrollToTarget(target: string | null) {
-  const element = findTarget(target);
-  if (!element) return;
+/* Brings the step's target into view, leaving room for the card, including
+   inside a scrolling area like the sidebar's link list. A target taller than
+   the screen is lined up by its top instead. */
+function scrollToTarget(element: Element) {
   const box = element.getBoundingClientRect();
   const behavior = prefersReducedMotion() ? "auto" : "smooth";
   const fits = box.height < window.innerHeight - cardRoom - gutter * 3;
-  const top = fits
-    ? window.scrollY + box.top - (window.innerHeight - box.height - cardRoom) / 2
-    : window.scrollY + box.top - 88;
-  window.scrollTo({ top: Math.max(0, top), behavior });
+  // Older browsers and test environments may not have it.
+  if (fits && element.scrollIntoView) {
+    element.scrollIntoView({ block: "center", inline: "nearest", behavior });
+    return;
+  }
+  window.scrollTo({ top: Math.max(0, window.scrollY + box.top - 88), behavior });
+}
+
+/* Scrolls to the target once it's on the page, which may be a moment after
+   the step starts, while its page loads. */
+function useScrollToTarget(target: string | null, stepKey: string) {
+  React.useEffect(() => {
+    if (!target) return;
+    const observer = new MutationObserver(() => attempt());
+    const attempt = () => {
+      const element = findTarget(target);
+      if (!element) return;
+      observer.disconnect();
+      scrollToTarget(element);
+    };
+    observer.observe(document.body, { childList: true, subtree: true });
+    attempt();
+    const giveUp = setTimeout(() => observer.disconnect(), 5000);
+    return () => {
+      clearTimeout(giveUp);
+      observer.disconnect();
+    };
+  }, [target, stepKey]);
 }
 
 /* The card goes below the target if it fits, else above, else it sits at the
@@ -150,11 +193,11 @@ export function Spotlight({
   const bodyId = React.useId();
   const stepKey = `${index}-${target}`;
 
+  useScrollToTarget(target, stepKey);
   React.useEffect(() => {
-    scrollToTarget(target);
     // An interactive step leaves focus where the person is typing.
     if (!interactive) nextRef.current?.focus({ preventScroll: true });
-  }, [target, interactive, stepKey]);
+  }, [interactive, stepKey]);
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
