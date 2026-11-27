@@ -154,7 +154,12 @@ function getProgramOptions(
  */
 export function InviteStudentDialog({
   defaultCohortId = "",
-}: { defaultCohortId?: string } = {}) {
+  defaultTrackId = "",
+}: {
+  defaultCohortId?: string;
+  /** Picked first in the Track menu, when inviting from a track's page. */
+  defaultTrackId?: string;
+} = {}) {
   const queryClient = useQueryClient();
 
   const [open, setOpen] = React.useState(false);
@@ -169,7 +174,7 @@ export function InviteStudentDialog({
 
 
   const { cohortId: topNavCohortId } = useSelectedCohort();
-  const [chosenTrackId, setChosenTrackId] = React.useState("");
+  const [chosenTrackId, setChosenTrackId] = React.useState(defaultTrackId);
   const [emailSent, setEmailSent] = React.useState(true);
 
   const [upload, setUpload] = React.useState<UploadState>({ status: "idle" });
@@ -223,7 +228,7 @@ export function InviteStudentDialog({
     setFirstName("");
     setLastName("");
     setDetailsErrors({});
-    setChosenTrackId("");
+    setChosenTrackId(defaultTrackId);
     setEmailSent(true);
     setUpload({ status: "idle" });
     setCsvRows([]);

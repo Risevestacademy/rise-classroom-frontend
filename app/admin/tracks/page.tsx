@@ -2,42 +2,34 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Hash, ChevronDown } from "lucide-react";
 
+import { Lesson, Mail02, Teacher, Track as TrackIcon } from "@/assets/icons";
 import { AdminTopNav } from "@/components/AdminTopNav";
+import { CohortTabs } from "@/components/cohorts/CohortTabs";
 import { CreateTrackDialog } from "@/components/CreateTrackDialog";
 import { EditTrackDialog } from "@/components/EditTrackDialog";
-import { Badge } from "@/components/ui/badge";
+import { TrackCard } from "@/components/tracks/TrackCard";
+import { useTrackStats } from "@/components/tracks/use-track-stats";
 import { Skeleton } from "@/components/ui/skeleton";
-import { adminQueries, type TrackStatus } from "@/lib/admin";
-import { cohortQueries } from "@/lib/cohorts";
+import { adminQueries, getTrackErrorMessage, type Track } from "@/lib/admin";
+import { cohortQueries, trackKeyFor, type CohortDetail } from "@/lib/cohorts";
 import { useSelectedCohort } from "@/lib/selected-cohort";
 
-const STATUS_FILTERS: { label: string; value: TrackStatus | undefined }[] = [
-  { label: "All statuses", value: undefined },
-  { label: "Active", value: "ACTIVE" },
-  { label: "Suspended", value: "SUSPENDED" },
-];
+const filters = [
+  { value: "all", label: "All tracks" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "SUSPENDED", label: "Suspended" },
+] as const;
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+type Filter = (typeof filters)[number]["value"];
 
 export default function TracksPage() {
-  const [statusFilter, setStatusFilter] = React.useState<
-    TrackStatus | undefined
-  >(undefined);
-
-  const tracksQuery = useQuery(adminQueries.tracks(statusFilter));
-  const allTracksQuery = useQuery(adminQueries.tracks());
-  // The API can't filter tracks by cohort, so this works out which ones it runs.
+  const [filter, setFilter] = React.useState<Filter>("all");
+  const tracksQuery = useQuery(adminQueries.tracks());
   const { cohortId, isReady } = useSelectedCohort();
-  const cohortTracksQuery = useQuery({
-    ...cohortQueries.trackIds(cohortId ?? ""),
+  // Who's on each track in the picked cohort; the cohort page loads the same.
+  const cohortQuery = useQuery({
+    ...cohortQueries.detail(cohortId ?? ""),
     enabled: Boolean(cohortId),
   });
   /* A new track has no instructor or student in any cohort yet, so it is shown under every cohort. Otherwise it disappears right after it is created. */
@@ -45,208 +37,178 @@ export default function TracksPage() {
     ...cohortQueries.assignedTrackIds(),
     enabled: Boolean(cohortId),
   });
-  const inCohort = (track: { id: string }) =>
+
+  const cohort = cohortQuery.data;
+  const cohortTrackIds = new Set(cohort?.trackList.map((track) => track.id));
+  const inCohort = (track: Track) =>
     !cohortId ||
-    (cohortTracksQuery.data ?? []).includes(track.id) ||
+    cohortTrackIds.has(track.id) ||
     !(assignedTracksQuery.data ?? []).includes(track.id);
 
-  const cohortPending =
+  const pending =
+    tracksQuery.isPending ||
     !isReady ||
-    (Boolean(cohortId) &&
-      (cohortTracksQuery.isPending || assignedTracksQuery.isPending));
+    (Boolean(cohortId) && (cohortQuery.isPending || assignedTracksQuery.isPending));
 
-  const tracks = (tracksQuery.data ?? []).filter(inCohort);
-  const allTracks = (allTracksQuery.data ?? []).filter(inCohort);
-  const activeCount = allTracks.filter((t) => t.status === "ACTIVE").length;
-  const suspendedCount = allTracks.filter(
-    (t) => t.status === "SUSPENDED",
-  ).length;
-
-  const showEmptyState =
-    // A cohort with no tracks yet still shows the (empty) table.
-    !allTracksQuery.isPending &&
-    allTracksQuery.data?.length === 0 &&
-    !statusFilter;
+  const allTracks = tracksQuery.data ?? [];
+  const cohortTracks = allTracks.filter(inCohort);
+  const visible =
+    filter === "all" ? cohortTracks : cohortTracks.filter((track) => track.status === filter);
 
   return (
     <>
       <AdminTopNav breadcrumb={["Academy", { label: "Tracks", href: "/admin/tracks" }]} />
-      <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
-        {tracksQuery.isError ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-            <Hash className="h-12 w-12 text-neutral-200" />
-            <p className="font-semibold text-neutral-800">
-              Couldn&apos;t load tracks
-            </p>
-            <p className="max-w-80 text-sm text-neutral-400">
-              {tracksQuery.error.message}
-            </p>
-          </div>
-        ) : showEmptyState ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-            <Hash className="h-12 w-12 text-neutral-200" />
-            <p className="font-semibold text-neutral-800">
-              No tracks created yet.
-            </p>
-            <p className="max-w-80 text-sm text-neutral-400">
-              You haven&apos;t created any learning tracks yet. Set up your
-              first track to start organizing your program, adding instructors
-              and inviting students.
-            </p>
-            <div className="mt-2">
-              <CreateTrackDialog />
-            </div>
-          </div>
+      <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-8">
+        {tracksQuery.isSuccess && allTracks.length === 0 ? (
+          <EmptyState />
         ) : (
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-neutral-800">Tracks</h1>
-                <p className="mt-1 text-sm text-neutral-400">
-                  Create and manage learning tracks. Each track groups modules,
-                  lessons, assignments and participants around a specific
-                  learning path.
+                <h1 className="text-2xl font-semibold text-text-primary">Tracks</h1>
+                <p className="mt-1 font-work text-sm text-text-secondary">
+                  Create and manage learning tracks. Each track groups modules, lessons,
+                  assignments and participants around a specific learning path.
                 </p>
               </div>
               <CreateTrackDialog />
             </div>
 
-            <div data-tour="tracks-list" className="rounded-xl border border-neutral-200 bg-white">
-              <div className="flex flex-col gap-4 border-b border-neutral-100 p-5 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  {allTracksQuery.isPending || cohortPending ? (
-                    <>
-                      <Skeleton className="h-5 w-20" />
-                      <Skeleton className="mt-2 h-4 w-20" />
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-semibold text-neutral-800">
-                        {allTracks.length} Track
-                        {allTracks.length === 1 ? "" : "s"}
-                      </p>
-                      <p className="text-sm text-neutral-400">
-                        {activeCount} Active · {suspendedCount} Suspended
-                      </p>
-                    </>
-                  )}
-                </div>
+            <CohortTabs
+              label="Filter tracks"
+              tabs={filters}
+              value={filter}
+              onChange={setFilter}
+              className="mt-6"
+            />
 
-                <div className="relative">
-                  <select
-                    value={statusFilter ?? ""}
-                    onChange={(event) =>
-                      setStatusFilter(
-                        (event.target.value || undefined) as
-                          TrackStatus | undefined,
-                      )
-                    }
-                    className="h-10 w-full appearance-none rounded-lg border border-neutral-200 bg-transparent py-2 pr-9 pl-3 text-sm font-medium text-neutral-600 outline-none focus:border-brand-primary sm:w-44"
-                  >
-                    {STATUS_FILTERS.map((option) => (
-                      <option key={option.label} value={option.value ?? ""}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-160 text-left text-sm">
-                  <thead className="text-xs tracking-wider text-neutral-400 uppercase">
-                    <tr>
-                      <th className="px-5 py-3">Track</th>
-                      <th className="px-5 py-3">Status</th>
-                      <th className="px-5 py-3">Created</th>
-                      <th className="w-12 px-5 py-3">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tracksQuery.isPending || cohortPending ? (
-                      Array.from({ length: 5 }).map((_, index) => (
-                        <tr key={index} className="border-t border-neutral-100">
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-3">
-                              <Skeleton className="h-9 w-9 rounded-full" />
-                              <div className="flex flex-col gap-1.5">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-3 w-44" />
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-5 py-4">
-                            <Skeleton className="h-6 w-16 rounded-full" />
-                          </td>
-                          <td className="px-5 py-4">
-                            <Skeleton className="h-4 w-24" />
-                          </td>
-                          <td className="px-5 py-4">
-                            <Skeleton className="h-4 w-4" />
-                          </td>
-                        </tr>
-                      ))
-                    ) : tracks.length === 0 ? (
-                      <tr className="border-t border-neutral-100">
-                        <td
-                          colSpan={4}
-                          className="px-5 py-10 text-center text-sm text-neutral-400"
-                        >
-                          No tracks match this filter.
-                        </td>
-                      </tr>
-                    ) : (
-                      tracks.map((track) => (
-                        <tr
-                          key={track.id}
-                          className="border-t border-neutral-100"
-                        >
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-brand text-brand-primary">
-                                <Hash className="h-4 w-4" />
-                              </span>
-                              <div className="min-w-0">
-                                <p className="font-medium text-neutral-800">
-                                  {track.name}
-                                </p>
-                                <p className="truncate text-xs text-neutral-400">
-                                  {track.description || "No description"}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-5 py-4">
-                            <Badge
-                              status={
-                                track.status === "ACTIVE" ? "success" : "error"
-                              }
-                            >
-                              {track.status === "ACTIVE"
-                                ? "Active"
-                                : "Suspended"}
-                            </Badge>
-                          </td>
-                          <td className="px-5 py-4 text-neutral-400">
-                            {formatDate(track.createdAt)}
-                          </td>
-                          <td className="px-5 py-4">
-                            <EditTrackDialog
-                              trackId={track.id}
-                              trackName={track.name}
-                            />
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+            {tracksQuery.isError ? (
+              <p className="mt-8 font-work text-sm text-text-error">
+                {getTrackErrorMessage(tracksQuery.error)}
+              </p>
+            ) : pending ? (
+              <TrackCardsSkeleton />
+            ) : visible.length === 0 ? (
+              <p className="mt-8 font-work text-sm text-text-secondary">
+                No tracks match this filter.
+              </p>
+            ) : (
+              <ul
+                data-tour="tracks-list"
+                className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+              >
+                {visible.map((track, index) => (
+                  <li key={track.id}>
+                    <TrackCardItem
+                      track={track}
+                      index={index}
+                      cohortId={cohortId}
+                      cohort={cohort}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
       </main>
     </>
+  );
+}
+
+function TrackCardItem({
+  track,
+  index,
+  cohortId,
+  cohort,
+}: {
+  track: Track;
+  index: number;
+  cohortId: string | undefined;
+  cohort: CohortDetail | undefined;
+}) {
+  const stats = useTrackStats(track.id, cohortId, cohort);
+
+  return (
+    <TrackCard
+      name={track.name}
+      active={track.status === "ACTIVE"}
+      students={stats.studentCount}
+      progress={stats.progress}
+      colorKey={trackKeyFor(track.name, index)}
+      href={`/admin/tracks/${track.id}`}
+      menu={<EditTrackDialog trackId={track.id} trackName={track.name} />}
+      stats={[
+        {
+          icon: <Teacher className="size-6 text-text-primary" />,
+          value: stats.instructorCount,
+          label: stats.instructorCount === 1 ? "Instructor" : "Instructors",
+          tone: "text-text-primary",
+          labelTone: "text-text-secondary",
+        },
+        {
+          icon: <Lesson className="size-6 text-text-primary" />,
+          value: stats.lessons,
+          label: stats.lessons === 1 ? "Lesson" : "Lessons",
+          tone: "text-text-primary",
+          labelTone: "text-text-secondary",
+        },
+        {
+          icon: <Mail02 className="size-6 text-text-warning" />,
+          value: stats.pendingInvites,
+          label: "Pending invites",
+          tone: "text-text-warning",
+        },
+      ]}
+    />
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center px-4 pt-[231px] pb-16 text-center lg:-mr-8">
+      <TrackIcon className="size-[84px] text-brand-primary" />
+      <p className="mt-[17px] text-2xl font-semibold text-text-primary">No tracks yet</p>
+      <p className="mt-0.5 max-w-[372px] font-work text-sm text-text-secondary">
+        Set up your first track to start organizing your program, adding instructors and
+        inviting students.
+      </p>
+      <div className="mt-[23px]">
+        <CreateTrackDialog />
+      </div>
+    </div>
+  );
+}
+
+function TrackCardsSkeleton() {
+  return (
+    <ul aria-busy className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <li
+          key={index}
+          className="rounded-3xl bg-white p-6 shadow-[0_2px_4px_rgb(17_24_25/0.06)]"
+        >
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-7 w-16 rounded-full" />
+            <Skeleton className="size-4" />
+          </div>
+          <Skeleton className="mt-3 h-7 w-40" />
+          <Skeleton className="mt-2 h-4 w-20" />
+          <div className="mt-4 flex gap-6">
+            {Array.from({ length: 3 }).map((_, stat) => (
+              <div key={stat} className="flex gap-3">
+                <Skeleton className="size-6" />
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-5 w-8" />
+                  <Skeleton className="h-4 w-14" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <Skeleton className="mt-4 h-4 w-24" />
+          <Skeleton className="mt-1 h-2 w-full rounded-full" />
+        </li>
+      ))}
+    </ul>
   );
 }
