@@ -13,6 +13,7 @@ import {
   MoreHorizontal,
   Pin,
   Sent,
+  UserAdd01,
   UserRemove01,
   VideoOff,
   WavingHand02,
@@ -22,6 +23,7 @@ import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu
 import { feedbackFor, FEEDBACK_ATTRIBUTE, HAND_ATTRIBUTE, LABEL_ATTRIBUTE } from "@/lib/live-room";
 import { personName } from "@/lib/live-sessions";
 import { cn } from "@/lib/utils";
+import { InvitePeople } from "./InvitePeople";
 import { avatarOf, displayName } from "./ParticipantTile";
 import { insertMention, mentionMatches, mentionQuery, splitMentions, type Mentionable } from "./mentions";
 import { RoomMenuContent, RoomMenuItem } from "./RoomMenu";
@@ -110,6 +112,7 @@ export function ParticipantsPanel({
   onMuteAll,
   onCamerasOff,
   onDisableScreenShare,
+  onInvite,
 }: {
   participants: Participant[];
   isHost: boolean;
@@ -124,11 +127,39 @@ export function ParticipantsPanel({
   onMuteAll: () => void;
   onCamerasOff: () => void;
   onDisableScreenShare: () => void;
+  /** Brings people into the call; left out for those who can't search the academy. */
+  onInvite?: (people: { id: string; name: string }[]) => Promise<void>;
 }) {
   const [actionsOpen, setActionsOpen] = React.useState(false);
+  const [adding, setAdding] = React.useState(false);
+
+  if (adding && onInvite) {
+    return (
+      <Panel title="Add people" opening={opening} leaving={leaving} onClose={onClose}>
+        <InvitePeople
+          inRoom={new Set(participants.map((participant) => participant.identity))}
+          onInvite={async (people) => {
+            await onInvite(people);
+            setAdding(false);
+          }}
+          onBack={() => setAdding(false)}
+        />
+      </Panel>
+    );
+  }
 
   return (
     <Panel title="Participants" count={participants.length} opening={opening} leaving={leaving} onClose={onClose}>
+      {onInvite && (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-room-panel-border bg-room-panel-raised text-sm font-medium text-white transition-colors hover:bg-room-control-hover"
+        >
+          <UserAdd01 className="size-5" />
+          Add people
+        </button>
+      )}
       <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {participants.map((participant) => (
           <ParticipantRow

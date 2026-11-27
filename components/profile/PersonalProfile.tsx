@@ -34,7 +34,11 @@ import {
 import { sessionQuery } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
 
-export function PersonalProfile() {
+export function PersonalProfile({
+  passwordHref = profileRoutes.password,
+}: {
+  passwordHref?: string;
+}) {
   const { data: me, isPending, isError } = useQuery(profileQueries.me());
   const [editing, setEditing] = React.useState(false);
 
@@ -77,7 +81,7 @@ export function PersonalProfile() {
           <section className="mt-8 max-w-[609px]">
             <h3 className="text-lg font-medium text-text-primary">Security</h3>
             <div className={cn(settingsCardClass, "mt-3 px-4 py-2")}>
-              <SettingsLinkRow href={profileRoutes.password} label="Password" />
+              <SettingsLinkRow href={passwordHref} label="Password" />
             </div>
           </section>
 

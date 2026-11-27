@@ -168,6 +168,7 @@ function SidebarNavItem({
 
       <Link
         href={item.href}
+        data-tour={`nav:${item.href}`}
         className={cn(
           "flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium",
           /* Makes room for a long title beside the count. */

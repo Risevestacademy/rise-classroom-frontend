@@ -136,6 +136,7 @@ function CreateCohortLink({ label = "Create cohort" }: { label?: string }) {
   return (
     <Link
       href="/admin/cohorts/create"
+      data-tour="create-cohort"
       className="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-lg bg-brand-primary px-4 text-sm font-medium text-white hover:bg-interactive-primary-hover"
     >
       <Add01 className="size-[18px]" />
@@ -157,7 +158,7 @@ function EmptyState() {
       </p>
       <div className="mt-[23px]">
         {/* Label kept from the design. */}
-        <CreateCohortLink label="Add assignment" />
+        <CreateCohortLink label="Add cohort" />
       </div>
     </div>
   );

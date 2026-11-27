@@ -84,9 +84,12 @@ export function LiveSessionsScreen({
   joinPath = "/live",
   action,
   canEdit = false,
+  openSessionId = null,
 }: {
   topNav: React.ReactNode;
   joinPath?: string;
+  /** A session to preview straight away, such as one a notification links to. */
+  openSessionId?: string | null;
   /** Beside the title, such as the admin's "Schedule live session". */
   action?: React.ReactNode;
   /** The three-dot buttons open an edit dialog for upcoming sessions. */
@@ -97,7 +100,7 @@ export function LiveSessionsScreen({
   const dismissSaved = React.useCallback(() => setSaved(null), []);
   const onEdit = canEdit ? setEditing : undefined;
   const [tab, setTab] = React.useState<Tab>("all");
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [selectedId, setSelectedId] = React.useState<string | null>(openSessionId);
 
   const list = useQuery(liveSessionQueries.list());
   const all = React.useMemo(

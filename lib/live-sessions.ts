@@ -359,9 +359,46 @@ export const liveSessionKeys = {
   recordingUrl: (id: string) =>
     ["live-sessions", id, "recording", "url"] as const,
   chat: (id: string) => ["live-sessions", id, "chat"] as const,
+  session: (id: string) => ["live-sessions", id] as const,
+  invitees: (id: string) => ["live-sessions", id, "invitees"] as const,
 };
 
 export const liveSessionQueries = {
+  /** `null` when it's gone or the user can't see it. */
+  session: (id: string) =>
+    queryOptions({
+      queryKey: liveSessionKeys.session(id),
+      queryFn: async () => {
+        try {
+          return toLiveSession(await getLiveSession(id));
+        } catch (error) {
+          if (error instanceof ApiError && [400, 403, 404].includes(error.status)) return null;
+          throw error;
+        }
+      },
+      retry: false,
+    }),
+
+  /** The guests of an explicit-invite session, or of every remaining occurrence in its series. */
+  invitees: (id: string, seriesId?: string | null) =>
+    queryOptions({
+      queryKey: [...liveSessionKeys.invitees(id), seriesId ?? null],
+      queryFn: async (): Promise<SessionInvitee[]> =>
+        (
+          await api.get<Envelope<ApiInvitee[]>>(
+            seriesId
+              ? `/live-sessions/series/${seriesId}/invitees`
+              : `/live-sessions/${id}/invitees`,
+          )
+        ).data
+          .filter((invitee) => !invitee.removedAt)
+          .map((invitee) => ({
+            id: invitee.user.id,
+            name: invitee.user.name || invitee.user.email,
+            email: invitee.user.email,
+          })),
+    }),
+
   list: (range: ListFilter = {}) =>
     queryOptions({
       queryKey: liveSessionKeys.list(range),
@@ -550,6 +587,37 @@ export const updateLiveSession = async (
 
 export const cancelLiveSession = (id: string) =>
   api.post(`/live-sessions/${id}/cancel`, {});
+
+type ApiInvitee = {
+  userId: string;
+  removedAt?: string | null;
+  user: { id: string; name: string; email: string };
+};
+
+export type SessionInvitee = { id: string; name: string; email: string };
+
+/** Explicit-invite sessions only; a series path covers its remaining occurrences. */
+const inviteesPath = (id: string, seriesId?: string | null) =>
+  seriesId ? `/live-sessions/series/${seriesId}/invitees` : `/live-sessions/${id}/invitees`;
+
+export const addInvitees = (id: string, inviteeIds: string[], seriesId?: string | null) =>
+  api.post(inviteesPath(id, seriesId), { inviteeIds });
+
+export const removeInvitee = (id: string, userId: string, seriesId?: string | null) =>
+  api.delete(`${inviteesPath(id, seriesId)}/${userId}`);
+
+/**
+ * `POST /live-sessions/:id/invite`: brings people into a call that's live
+ * now, whatever its type. They get a notification to join. People the host
+ * removed answer 409 and need readmitting instead.
+ */
+export const inviteToCall = async (id: string, userIds: string[]) =>
+  (
+    await api.post<Envelope<{ invited: { userId: string; name: string }[] }>>(
+      `/live-sessions/${id}/invite`,
+      { userIds },
+    )
+  ).data.invited;
 
 /** The instant a wall-clock date and time ("2026-11-23", "19:00") happen in a time zone. */
 export function zonedTimeToIso(

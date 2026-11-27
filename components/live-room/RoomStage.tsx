@@ -37,6 +37,7 @@ import {
   recordingProblem,
   removeParticipant,
   ROLE_ATTRIBUTE,
+  canSearchPeople,
   roleLabel,
   muteParticipant,
   SESSION_TOPIC,
@@ -48,7 +49,7 @@ import {
   type SessionSettings,
 } from "@/lib/live-room";
 import { ApiError } from "@/lib/api";
-import { getSessionEntry, personName, type RoomAccess } from "@/lib/live-sessions";
+import { getSessionEntry, inviteToCall, personName, type RoomAccess } from "@/lib/live-sessions";
 import { sessionQuery } from "@/lib/session-query";
 import { cn } from "@/lib/utils";
 import { ControlBar } from "./ControlBar";
@@ -272,6 +273,28 @@ export function RoomStage({
     }
   }
 
+  async function invite(people: { id: string; name: string }[]) {
+    try {
+      await inviteToCall(sessionId, people.map((person) => person.id));
+      notify(
+        "info",
+        people.length === 1
+          ? `${people[0].name} has been invited to join.`
+          : `${people.length} people have been invited to join.`,
+      );
+    } catch (error) {
+      notify(
+        "error",
+        error instanceof ApiError && error.status === 409
+          ? "Someone you picked was removed from this session, so they can't be invited back."
+          : error instanceof ApiError && error.status < 500
+            ? error.message
+            : "Couldn't send the invites. Try again.",
+      );
+      throw error;
+    }
+  }
+
   if (connection === ConnectionState.Connecting || connection === ConnectionState.Disconnected) {
     return (
       <div role="status" className="flex flex-1 flex-col items-center justify-center gap-4">
@@ -379,6 +402,7 @@ export function RoomStage({
             onMuteAll={() => hostAction(() => muteEveryone(sessionId), "Couldn't mute everyone.")}
             onCamerasOff={() => hostAction(() => turnOffAllCameras(sessionId), "Couldn't turn off everyone's camera.")}
             onDisableScreenShare={() => setSettings({ ...settings, screenShare: false })}
+            onInvite={isHost && canSearchPeople(access.platformRole) ? invite : undefined}
           />
         )}
         {shownPanel.tab === "chat" && (

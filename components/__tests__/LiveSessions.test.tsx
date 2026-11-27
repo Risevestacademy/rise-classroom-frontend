@@ -249,6 +249,60 @@ describe("Editing a live session", () => {
   });
 });
 
+describe("Guests of an explicit-invite session", () => {
+  it("adds and removes guests when the session is saved", async () => {
+    const api = mockApi({
+      "GET /live-sessions": envelope({
+        items: [
+          session({
+            id: "invite",
+            title: "Portfolio review",
+            type: "EXPLICIT_INVITE",
+            track: null,
+            scheduledStartAt: "2027-01-15T08:00:00.000Z",
+            scheduledEndAt: "2027-01-15T09:00:00.000Z",
+          }),
+        ],
+        nextCursor: null,
+      }),
+      "GET /live-sessions/invite/participants": participants,
+      "GET /live-sessions/invite/invitees": envelope([
+        { userId: "u-2", removedAt: null, user: { id: "u-2", name: "Tola Ade", email: "tola@example.com" } },
+      ]),
+      "GET /admin/users": envelope({
+        items: [{ id: "u-3", firstName: "Kemi", lastName: "Ojo", email: "kemi@example.com" }],
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      }),
+      "PATCH /live-sessions/invite": envelope(session({ id: "invite" })),
+      "POST /live-sessions/invite/invitees": envelope([]),
+    });
+    const { user } = renderWithClient(<LiveSessionsScreen topNav={null} canEdit />);
+
+    await user.click(await screen.findByRole("button", { name: "Edit Portfolio review" }));
+    await user.click(await screen.findByText("Tola Ade"));
+    await user.click(await screen.findByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(await screen.findByText("Live session updated")).toBeInTheDocument();
+    expect(api.bodies("POST /live-sessions/invite/invitees")).toEqual([{ inviteeIds: ["u-3"] }]);
+  });
+});
+
+describe("Opening a session from a link", () => {
+  it("previews the session a notification points to", async () => {
+    mockApi({
+      "GET /live-sessions": envelope({ items: [session({ id: "s-9", title: "Design crit" })], nextCursor: null }),
+      "GET /live-sessions/s-9/participants": participants,
+    });
+    renderWithClient(<LiveSessionsScreen topNav={null} openSessionId="s-9" />);
+
+    expect(await screen.findByRole("heading", { name: "Participants (2)" })).toBeInTheDocument();
+  });
+});
+
 describe("JoinHub", () => {
   it("lets people join a live session and asks the API for the week", async () => {
     const now = Date.parse("2026-11-23T18:30:00Z");

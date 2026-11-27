@@ -31,13 +31,17 @@ import {
   toDateKey,
   toRrule,
   type CalendarEvent,
+  type EventGuest,
 } from "@/lib/calendar";
 import { cn } from "@/lib/utils";
 import {
+  addInvitees,
   createLiveSession,
   createLiveSessionSeries,
   DEFAULT_TIME_ZONE,
   liveSessionKeys,
+  liveSessionQueries,
+  removeInvitee,
   updateLiveSession,
   zonedTimeToIso,
   type LiveSession,
@@ -695,8 +699,9 @@ export function ScopeChoice<T extends string>({
 }
 
 /**
- * Changes a scheduled session's title, time and description, all the API
- * lets change. Who it's for and who hosts it are shown but fixed.
+ * Changes a scheduled session's title, time and description, and the guests
+ * of an explicit-invite session. Who it's for and who hosts it are fixed;
+ * people can be added to any other kind of session once it's live.
  */
 function EditLiveSessionForm({
   session,
@@ -715,6 +720,13 @@ function EditLiveSessionForm({
     endTime: session.endTime,
   });
   const [scope, setScope] = React.useState<Scope>("THIS_OCCURRENCE");
+  const invitesGuests = session.type === "EXPLICIT_INVITE";
+  const invitees = useQuery({
+    ...liveSessionQueries.invitees(session.id),
+    enabled: invitesGuests,
+  });
+  const [guests, setGuests] = React.useState<EventGuest[] | null>(null);
+  const shownGuests = guests ?? invitees.data ?? [];
   const set = <K extends keyof typeof draft>(
     key: K,
     value: (typeof draft)[K],
@@ -732,18 +744,33 @@ function EditLiveSessionForm({
       : Date.parse(endsAt) <= Date.parse(startsAt)
         ? "The session has to end after it starts."
         : null;
-  const canSubmit = draft.title.trim().length > 0 && !timeProblem;
+  const canSubmit =
+    draft.title.trim().length > 0 &&
+    !timeProblem &&
+    (!invitesGuests || (invitees.isSuccess && shownGuests.length > 0));
 
   const save = useMutation({
-    mutationFn: () =>
-      updateLiveSession(session.id, {
+    mutationFn: async () => {
+      await updateLiveSession(session.id, {
         ...(session.seriesId && { scope }),
         title: draft.title.trim(),
         description: draft.description.trim(),
         scheduledStartAt: startsAt,
         scheduledEndAt: endsAt,
         timezone: zone,
-      }),
+      });
+      if (!invitesGuests || guests === null) return;
+      const before = new Set((invitees.data ?? []).map((guest) => guest.id));
+      const after = new Set(guests.map((guest) => guest.id));
+      const series = scope === "THIS_OCCURRENCE" ? null : session.seriesId;
+      const added = [...after].filter((id) => !before.has(id));
+      if (added.length > 0) await addInvitees(session.id, added, series);
+      await Promise.all(
+        [...before]
+          .filter((id) => !after.has(id))
+          .map((id) => removeInvitee(session.id, id, series)),
+      );
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: liveSessionKeys.all });
       onSaved(draft.title.trim());
@@ -828,6 +855,27 @@ function EditLiveSessionForm({
             label="Who it’s for"
             value={`${sessionTypes[session.type].label} · ${session.trackName}`}
           />
+          {invitesGuests && (
+            <div className="flex flex-col gap-1">
+              <span className={labelClass}>
+                Guests <span className="text-text-error">*</span>
+              </span>
+              {invitees.isPending ? (
+                <p className="flex h-9 items-center rounded-lg bg-neutral-100 px-3 font-work text-sm text-text-muted">
+                  Loading guests…
+                </p>
+              ) : invitees.isError ? (
+                <p className="font-work text-sm text-text-error">
+                  We couldn&rsquo;t load the guests.{" "}
+                  <button type="button" onClick={() => invitees.refetch()} className="cursor-pointer underline">
+                    Try again
+                  </button>
+                </p>
+              ) : (
+                <GuestsField value={shownGuests} onChange={setGuests} />
+              )}
+            </div>
+          )}
           <Fixed label="Host" value={session.hostName || "Not set"} />
 
           {session.seriesId && (

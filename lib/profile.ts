@@ -75,6 +75,8 @@ export type MyProfile = {
 export type UpdateMyProfileInput = {
   displayName?: string;
   phoneNumber?: string;
+  location?: string;
+  description?: string;
   image?: File | null;
 };
 

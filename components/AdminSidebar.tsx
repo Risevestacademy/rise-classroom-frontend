@@ -39,7 +39,7 @@ const sections: NavSectionConfig[] = [
       { title: "Students", href: "/admin/students", icon: UserMultiple },
       { title: "Instructors", href: "/admin/instructors", icon: Teacher },
       { title: "Mentors", href: "/admin/mentors", icon: Mentor },
-      { title: "Admins", href: "/admin/admins", icon: Admin },
+      // { title: "Admins", href: "/admin/admins", icon: Admin },
     ],
   },
   {
@@ -62,7 +62,7 @@ const sections: NavSectionConfig[] = [
     items: [
       { title: "Announcements", href: "/admin/announcements", icon: Marketing },
       { title: "Notifications", href: "/admin/notifications", icon: Notification02 },
-      { title: "Messages", href: "/admin/messages", icon: Message01 },
+      // { title: "Messages", href: "/admin/messages", icon: Message01 },
     ],
   },
 ];
