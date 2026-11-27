@@ -17,22 +17,53 @@ import type { CalendarEvent } from "@/lib/calendar";
 import { deleteCalendarItem, type SeriesScope } from "@/lib/calendar-events";
 import { liveSessionKeys } from "@/lib/live-sessions";
 
-/** A calendar event or a session from the Live Sessions list. */
-type CancellableSession = Pick<CalendarEvent, "id" | "title" | "seriesId">;
+/** A calendar entry or a session from the Live Sessions list. */
+type CancellableSession = Pick<CalendarEvent, "id" | "title" | "seriesId"> &
+  Partial<Pick<CalendarEvent, "kind">>;
 
-const scopes: { value: SeriesScope; label: string }[] = [
-  { value: "this", label: "This session" },
-  { value: "following", label: "This and following sessions" },
-  { value: "all", label: "All sessions" },
-];
+const copy = {
+  live: {
+    title: "Cancel live session",
+    question: "Cancel",
+    note: "Everyone invited will be told.",
+    noun: "session",
+    keep: "Keep session",
+    confirm: "Cancel session",
+    pending: "Cancelling…",
+    failed: "We couldn't cancel the session. Please try again.",
+  },
+  event: {
+    title: "Delete event",
+    question: "Delete",
+    note: "It's removed for everyone invited.",
+    noun: "event",
+    keep: "Keep event",
+    confirm: "Delete event",
+    pending: "Deleting…",
+    failed: "We couldn't delete the event. Please try again.",
+  },
+  task: {
+    title: "Delete task",
+    question: "Delete",
+    note: "It's removed for everyone invited.",
+    noun: "task",
+    keep: "Keep task",
+    confirm: "Delete task",
+    pending: "Deleting…",
+    failed: "We couldn't delete the task. Please try again.",
+  },
+};
 
-/** Asks before cancelling a live session, since everyone invited is told. */
+/**
+ * Asks before cancelling a live session, since everyone invited is told, or
+ * before deleting an event or task that repeats, to pick which occurrences go.
+ */
 export function CancelSessionDialog({
   event,
   onOpenChange,
   onCancelled,
 }: {
-  /** The session to cancel; null keeps the dialog closed. */
+  /** The entry to cancel; null keeps the dialog closed. */
   event: CancellableSession | null;
   onOpenChange: (open: boolean) => void;
   onCancelled: (title: string) => void;
@@ -65,6 +96,7 @@ function CancelSessionForm({
   const queryClient = useQueryClient();
   const [scope, setScope] = React.useState<SeriesScope>("this");
   const repeating = Boolean(event.seriesId);
+  const text = copy[event.kind ?? "live"];
 
   const cancel = useMutation({
     mutationFn: () =>
@@ -79,17 +111,21 @@ function CancelSessionForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Cancel live session</DialogTitle>
+        <DialogTitle>{text.title}</DialogTitle>
         <DialogDescription>
-          Cancel &ldquo;{event.title}&rdquo;? Everyone invited will be told.
+          {text.question} &ldquo;{event.title}&rdquo;? {text.note}
         </DialogDescription>
       </DialogHeader>
 
       {repeating && (
         <div className="mt-5">
           <ScopeChoice
-            label="Cancel"
-            options={scopes}
+            label={text.question}
+            options={[
+              { value: "this", label: `This ${text.noun}` },
+              { value: "following", label: `This and following ${text.noun}s` },
+              { value: "all", label: `All ${text.noun}s` },
+            ]}
             value={scope}
             onChange={setScope}
           />
@@ -98,14 +134,13 @@ function CancelSessionForm({
 
       {cancel.isError && (
         <p role="alert" className="mt-4 text-sm text-text-error">
-          {cancel.error.message ||
-            "We couldn't cancel the session. Please try again."}
+          {cancel.error.message || text.failed}
         </p>
       )}
 
       <DialogFooter className="mt-6 sm:justify-end">
         <Button variant="secondary" size="medium" onClick={onClose}>
-          Keep session
+          {text.keep}
         </Button>
         <Button
           variant="primary"
@@ -113,7 +148,7 @@ function CancelSessionForm({
           disabled={cancel.isPending}
           onClick={() => cancel.mutate()}
         >
-          {cancel.isPending ? "Cancelling…" : "Cancel session"}
+          {cancel.isPending ? text.pending : text.confirm}
         </Button>
       </DialogFooter>
     </>

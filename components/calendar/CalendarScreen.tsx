@@ -36,12 +36,14 @@ import {
 import {
   calendarKeys,
   calendarQueries,
-  createCalendarTask,
+  createCalendarEntry,
   deleteCalendarItem,
   inCohort,
+  invitedGuests,
   setTaskDone,
   toCalendarEvent,
-  updateCalendarTask,
+  updateCalendarEntry,
+  type SeriesScope,
 } from "@/lib/calendar-events";
 import {
   getLiveSession,
@@ -64,21 +66,21 @@ const weekdays = ["Sun", "Mon", "Tues", "Wed", "Thur", "Fri", "Sat"];
 const VISIBLE_EVENTS = 3;
 
 /**
- * The month calendar admins and mentors share. Live sessions and tasks come
- * from the API; each area passes its own top nav and cohorts.
+ * The month calendar admins and mentors share. Live sessions, events and
+ * tasks come from the API; each area passes its own top nav and cohorts.
  */
 export function CalendarScreen({
   topNav,
   cohortId,
   taskCohortId,
-  noTaskCohort = "Pick a cohort first: every task belongs to one.",
+  noTaskCohort = "Pick a cohort first: every event and task belongs to one.",
 }: {
   topNav: React.ReactNode;
   /** Only this cohort's items show, plus those with no cohort. */
   cohortId?: string;
-  /** The cohort new tasks go in, since the API needs one. */
+  /** The cohort new events and tasks go in, since the API needs one. */
   taskCohortId?: string;
-  /** Why a task can't be made without that cohort. */
+  /** Why an event or task can't be made without that cohort. */
   noTaskCohort?: string;
 }) {
   const area = useCalendarArea();
@@ -87,8 +89,6 @@ export function CalendarScreen({
     year: today.getFullYear(),
     month: today.getMonth(),
   });
-  // PENDING-BACKEND: the API has no plain events, so those live here.
-  const [events, setEvents] = React.useState<CalendarEvent[]>([]);
   const [openEvent, setOpenEvent] = React.useState<OpenEvent | null>(null);
   const [openDay, setOpenDay] = React.useState<Date | null>(null);
   const [form, setForm] = React.useState<Form | null>(null);
@@ -115,13 +115,11 @@ export function CalendarScreen({
   // Filtered here rather than by the API's cohortId, which would also hide
   // invite-only sessions (they have no cohort).
   const allEvents = React.useMemo(
-    () => [
-      ...events,
-      ...(calendar.data ?? [])
+    () =>
+      (calendar.data ?? [])
         .filter((item) => inCohort(item, cohortId))
         .map((item) => toCalendarEvent(item, `/${area}`)),
-    ],
-    [events, calendar.data, cohortId, area],
+    [calendar.data, cohortId, area],
   );
   const visibleEvents = filterEvents(allEvents, filters);
   const hasEvents = (date: Date) => eventsOn(visibleEvents, date).length > 0;
@@ -139,79 +137,65 @@ export function CalendarScreen({
     setFormOpen(true);
   };
 
-  const saveTask = async (draft: EventDraft, editing?: CalendarEvent) => {
-    if (editing?.source === "CALENDAR_TASK") {
-      await updateCalendarTask(editing.id, draft);
+  // Mentors can't invite tracks.
+  const tracks = area === "admin";
+
+  const saveEvent = async (draft: EventDraft, scope?: SeriesScope) => {
+    const editing =
+      form?.mode === "edit"
+        ? allEvents.find((event) => event.id === form.id)
+        : undefined;
+    const noun = draft.kind === "task" ? "Task" : "Event";
+    if (editing) {
+      await updateCalendarEntry(editing.id, draft, editing, {
+        tracks,
+        owner: editing.ownerId === session.data?.user.id,
+        scope,
+      });
     } else {
       if (!taskCohortId) throw new Error(noTaskCohort);
-      await createCalendarTask(draft, taskCohortId);
-      // A local event switched to a task moves to the API.
-      if (editing) setEvents((all) => all.filter((e) => e.id !== editing.id));
+      await createCalendarEntry(
+        draft.kind === "task" ? "task" : "event",
+        draft,
+        taskCohortId,
+        { tracks },
+      );
     }
     await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
     setToast(
       editing
         ? {
-            title: "Task updated",
+            title: `${noun} updated`,
             message: `“${draft.title}” has been successfully updated`,
           }
         : {
-            title: "Task created",
+            title: `${noun} created`,
             message: `“${draft.title}” has been added to the calendar`,
           },
     );
   };
 
-  const saveEvent = async (draft: EventDraft) => {
-    const editing =
-      form?.mode === "edit"
-        ? allEvents.find((event) => event.id === form.id)
-        : undefined;
-    // PENDING-BACKEND: a task keeps its title, times and description; the
-    // API has nowhere for its repeat, tracks, link, guests, reminders,
-    // colour or attachments, and an API task can't become an event.
-    if (draft.kind === "task" || editing?.source === "CALENDAR_TASK") {
-      return saveTask(draft, editing);
-    }
-    if (form?.mode === "edit") {
-      setEvents((all) =>
-        all.map((event) =>
-          event.id === form.id ? { ...event, ...draft } : event,
-        ),
-      );
-      setToast({
-        title: "Event updated",
-        message: `“${draft.title}” has been successfully updated`,
-      });
-      return;
-    }
-    setEvents((all) => [
-      ...all,
-      {
-        ...draft,
-        id: crypto.randomUUID(),
-        organizer: session.data?.user.email ?? "",
-      },
-    ]);
-    setToast({
-      title: "Event created",
-      message: `“${draft.title}” has been added to the calendar`,
-    });
-  };
-
   const editEvent = async (event: CalendarEvent) => {
-    if (event.kind !== "live") {
-      openForm({ mode: "edit", initial: event, id: event.id });
-      return;
-    }
     setOpenEvent(null);
     setOpenDay(null);
     try {
-      setEditingSession(toLiveSession(await getLiveSession(event.id)));
+      if (event.kind === "live") {
+        setEditingSession(toLiveSession(await getLiveSession(event.id)));
+        return;
+      }
+      // The list leaves out the guests, which the form needs.
+      const details = await queryClient.fetchQuery(
+        calendarQueries.item(event.id),
+      );
+      openForm({
+        mode: "edit",
+        initial: { ...event, guests: invitedGuests(details) },
+        id: event.id,
+      });
     } catch {
       setToast({
         tone: "error",
-        title: "Couldn't open the session",
+        title: `Couldn't open the ${event.kind === "live" ? "session" : event.kind}`,
         message: "Please try again.",
       });
     }
@@ -219,7 +203,7 @@ export function CalendarScreen({
 
   const toggleDone = async (event: CalendarEvent, done: boolean) => {
     try {
-      await setTaskDone(event.id, done);
+      await setTaskDone(event.id, done, event.seriesId ? "this" : undefined);
       await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
     } catch {
       setToast({
@@ -232,27 +216,25 @@ export function CalendarScreen({
 
   const deleteEvent = async (event: CalendarEvent) => {
     setOpenEvent(null);
-    if (event.kind === "live") {
+    // Sessions tell everyone invited, and repeating entries need a scope.
+    if (event.kind === "live" || event.seriesId) {
       setOpenDay(null);
       setCancelling(event);
       return;
     }
-    if (event.source) {
-      try {
-        await deleteCalendarItem(event.id);
-        await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
-      } catch {
-        setToast({
-          tone: "error",
-          title: "Couldn't delete",
-          message: `“${event.title}” is still on the calendar. Please try again.`,
-        });
-        return;
-      }
+    try {
+      await deleteCalendarItem(event.id);
+      await queryClient.invalidateQueries({ queryKey: calendarKeys.all });
+    } catch {
+      setToast({
+        tone: "error",
+        title: "Couldn't delete",
+        message: `“${event.title}” is still on the calendar. Please try again.`,
+      });
+      return;
     }
-    setEvents((all) => all.filter((e) => e.id !== event.id));
     setToast({
-      title: "Event deleted",
+      title: `${event.kind === "task" ? "Task" : "Event"} deleted`,
       message: `“${event.title}” has been removed from the calendar`,
     });
   };
@@ -460,10 +442,17 @@ export function CalendarScreen({
         event={cancelling}
         onOpenChange={(open) => !open && setCancelling(null)}
         onCancelled={(title) =>
-          setToast({
-            title: "Live session cancelled",
-            message: `“${title}” has been cancelled and everyone invited was told`,
-          })
+          setToast(
+            cancelling?.kind === "live"
+              ? {
+                  title: "Live session cancelled",
+                  message: `“${title}” has been cancelled and everyone invited was told`,
+                }
+              : {
+                  title: `${cancelling?.kind === "task" ? "Task" : "Event"} deleted`,
+                  message: `“${title}” has been removed from the calendar`,
+                },
+          )
         }
       />
 

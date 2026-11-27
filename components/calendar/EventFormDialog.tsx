@@ -20,7 +20,10 @@ import {
   TitleField,
 } from "@/components/calendar/EventFields";
 import { useCalendarArea } from "@/components/calendar/CalendarArea";
-import { LiveSessionForm } from "@/components/calendar/LiveSessionForm";
+import {
+  LiveSessionForm,
+  ScopeChoice,
+} from "@/components/calendar/LiveSessionForm";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MultiSelectInput, SelectInput } from "@/components/ui/select";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -33,9 +36,13 @@ import {
   toDateKey,
   type CalendarEvent,
 } from "@/lib/calendar";
+import type { SeriesScope } from "@/lib/calendar-events";
 import { cn } from "@/lib/utils";
 
 export type EventDraft = Omit<CalendarEvent, "id" | "organizer">;
+
+/** Saves the form; `scope` is set when editing something that repeats. */
+type SubmitEvent = (draft: EventDraft, scope?: SeriesScope) => Promise<void>;
 
 const notificationOptions = [5, 10, 15, 30, 60, 1440, 10080];
 
@@ -86,7 +93,7 @@ export function EventFormDialog({
   initial: EventDraft;
   mode: "create" | "edit";
   /** Can return a promise; the dialog stays open with its error if it rejects. */
-  onSubmit: (draft: EventDraft) => void | Promise<void>;
+  onSubmit: (draft: EventDraft, scope?: SeriesScope) => void | Promise<void>;
   hasEvents: (date: Date) => boolean;
   onLiveSessionCreated?: (title: string) => void;
 }) {
@@ -102,8 +109,8 @@ export function EventFormDialog({
             initial={initial}
             mode={mode}
             hasEvents={hasEvents}
-            onSubmit={async (draft) => {
-              await onSubmit(draft);
+            onSubmit={async (...args) => {
+              await onSubmit(...args);
               onOpenChange(false);
             }}
             onLiveSessionCreated={
@@ -130,7 +137,7 @@ function EventDialogBody({
 }: {
   initial: EventDraft;
   mode: "create" | "edit";
-  onSubmit: (draft: EventDraft) => Promise<void>;
+  onSubmit: SubmitEvent;
   hasEvents: (date: Date) => boolean;
   onLiveSessionCreated?: (title: string) => void;
 }) {
@@ -179,7 +186,7 @@ function EventForm({
 }: {
   initial: EventDraft;
   mode: "create" | "edit";
-  onSubmit: (draft: EventDraft) => Promise<void>;
+  onSubmit: SubmitEvent;
   hasEvents: (date: Date) => boolean;
   /** Offers "Live session" as a type, handing over what's been typed so far. */
   onLive?: (draft: EventDraft) => void;
@@ -196,6 +203,8 @@ function EventForm({
   });
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [scope, setScope] = React.useState<SeriesScope>("this");
+  const repeating = mode === "edit" && Boolean(initial.seriesId);
   const start = fromDateKey(draft.date);
   const end = fromDateKey(draft.endDate);
   const canSubmit = draft.title.trim().length > 0 && !saving;
@@ -204,7 +213,8 @@ function EventForm({
     setSaving(true);
     setError(null);
     try {
-      await onSubmit({ ...draft, title: draft.title.trim() });
+      const saved = { ...draft, title: draft.title.trim() };
+      await (repeating ? onSubmit(saved, scope) : onSubmit(saved));
     } catch (err) {
       setError(
         (err instanceof Error && err.message) ||
@@ -259,7 +269,14 @@ function EventForm({
 
           <KindToggle
             value={draft.kind}
-            kinds={onLive ? ["event", "task", "live"] : ["event", "task"]}
+            // A saved event can't become a task, or the other way round.
+            kinds={
+              mode === "edit"
+                ? [draft.kind]
+                : onLive
+                  ? ["event", "task", "live"]
+                  : ["event", "task"]
+            }
             onChange={(kind) =>
               kind === "live" ? onLive?.(draft) : set("kind", kind)
             }
@@ -353,10 +370,29 @@ function EventForm({
             onChange={(description) => set("description", description)}
           />
 
+          {/* PENDING-BACKEND: the API has nowhere to keep attachments yet. */}
           <AttachmentField
             files={draft.attachments}
             onChange={(files) => set("attachments", files)}
           />
+
+          {repeating && (
+            <div className="mt-4">
+              <ScopeChoice
+                label="Change"
+                options={[
+                  { value: "this", label: `This ${draft.kind}` },
+                  {
+                    value: "following",
+                    label: `This and following ${draft.kind}s`,
+                  },
+                  { value: "all", label: `All ${draft.kind}s` },
+                ]}
+                value={scope}
+                onChange={setScope}
+              />
+            </div>
+          )}
         </div>
 
         <div aria-hidden className="hidden bg-[#e1e6ed] md:block" />

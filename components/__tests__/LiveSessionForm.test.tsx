@@ -117,6 +117,25 @@ describe("Scheduling a live session from the calendar", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("invites several tracks to one track meeting", async () => {
+    const { user, api } = renderDialog({ "POST /live-sessions": created });
+
+    await user.type(screen.getByPlaceholderText("Add title"), "Demo day");
+    await user.click(screen.getByRole("radio", { name: "Live session" }));
+    await pick(user, "Cohort", "Cohort 4");
+    await user.click(screen.getByRole("combobox", { name: /^Tracks/ }));
+    await user.click(await screen.findByRole("option", { name: "Backend" }));
+    await user.click(screen.getByRole("option", { name: "Frontend" }));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Schedule session" }));
+
+    await vi.waitFor(() => expect(api.bodies("POST /live-sessions")).toHaveLength(1));
+    const [body] = api.bodies("POST /live-sessions");
+    expect(body).toMatchObject({ type: "TRACK_MEETING", cohortId: "cohort-1" });
+    expect((body as { trackIds: string[] }).trackIds).toHaveLength(2);
+    expect(body).not.toHaveProperty("trackId");
+  });
+
   it("schedules a repeating town hall as a series", async () => {
     const { user, api, onLiveSessionCreated } = renderDialog({
       "POST /live-sessions/series": created,

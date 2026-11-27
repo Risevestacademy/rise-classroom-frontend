@@ -18,7 +18,7 @@ export default function MentorCalendarPage() {
         />
       }
       taskCohortId={mentees.data?.[0]?.student.cohort.id}
-      noTaskCohort="Tasks are kept in your students' cohort, and you don't have any students yet."
+      noTaskCohort="Events and tasks are kept in your students' cohort, and you don't have any students yet."
     />
   );
 }

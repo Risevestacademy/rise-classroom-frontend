@@ -105,7 +105,7 @@ function EventDetails({
   // The list only has the host; the participants come with the item.
   const details = useQuery({
     ...calendarQueries.item(event.id),
-    enabled: event.source === "LIVE_SESSION",
+    enabled: Boolean(event.source) && event.source !== "WEEKLY_TASK",
   });
   const guests =
     event.guests.length > 0
@@ -198,16 +198,18 @@ function EventDetails({
               {describeRepeat(event.repeat, fromDateKey(event.date))}
             </p>
           )}
-          {event.source === "CALENDAR_TASK" && onToggleDone && (
-            <label className="mt-3 flex items-center gap-3 font-work text-sm">
-              <Checkbox
-                checked={event.done ?? false}
-                onCheckedChange={(checked) => onToggleDone(event, checked)}
-                className="border-[1.5px] border-neutral-600"
-              />
-              Done
-            </label>
-          )}
+          {event.source === "CALENDAR_TASK" &&
+            event.canEdit !== false &&
+            onToggleDone && (
+              <label className="mt-3 flex items-center gap-3 font-work text-sm">
+                <Checkbox
+                  checked={event.done ?? false}
+                  onCheckedChange={(checked) => onToggleDone(event, checked)}
+                  className="border-[1.5px] border-neutral-600"
+                />
+                Done
+              </label>
+            )}
         </div>
 
         {event.link && (
@@ -220,7 +222,7 @@ function EventDetails({
                 className="flex h-10 items-center gap-2 rounded-full bg-brand-900 px-4 text-sm font-medium text-white hover:bg-brand-800"
               >
                 <Video className="size-[17px]" />
-                Join Live Session
+                {live ? "Join Live Session" : "Join meeting"}
               </a>
               <button
                 type="button"

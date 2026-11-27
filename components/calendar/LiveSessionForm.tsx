@@ -23,7 +23,7 @@ import {
 import { blankDraft } from "@/components/calendar/EventFormDialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { SelectInput } from "@/components/ui/select";
+import { MultiSelectInput, SelectInput } from "@/components/ui/select";
 import { SuccessToast } from "@/components/ui/toast";
 import { adminQueries } from "@/lib/admin";
 import {
@@ -66,7 +66,7 @@ export type LiveSessionBasics = Pick<
   | "guests"
 >;
 
-type Audience = "cohortId" | "trackId" | "mentorId" | "mentee" | "invitees";
+type Audience = "cohortId" | "trackIds" | "mentorId" | "mentee" | "invitees";
 
 /** Who each type is for, and what the API needs to know to invite them. */
 const sessionTypes: Record<
@@ -80,8 +80,8 @@ const sessionTypes: Record<
   },
   TRACK_MEETING: {
     label: "Track meeting",
-    hint: "Everyone in one track of a cohort is invited.",
-    needs: ["cohortId", "trackId"],
+    hint: "Everyone in the picked tracks of a cohort is invited.",
+    needs: ["cohortId", "trackIds"],
   },
   MENTORSHIP_GROUP: {
     label: "Mentorship group",
@@ -118,7 +118,7 @@ const selectClass = "h-9 gap-2 pr-3.5 pl-3 font-work text-sm text-text-primary";
 type Draft = LiveSessionBasics & {
   type: LiveSessionType;
   cohortId: string;
-  trackId: string;
+  trackIds: string[];
   mentorId: string;
   /** The chosen mentee's mentorship. */
   mentorshipId: string;
@@ -155,7 +155,7 @@ export function LiveSessionForm({
     guests: initial.guests,
     type: asMentor ? "MENTORSHIP_PAIR" : "TRACK_MEETING",
     cohortId: "",
-    trackId: "",
+    trackIds: [],
     mentorId: "",
     mentorshipId: "",
     hostId: ME,
@@ -173,7 +173,7 @@ export function LiveSessionForm({
   });
   const tracks = useQuery({
     ...adminQueries.tracks("ACTIVE"),
-    enabled: !asMentor && needs.includes("trackId"),
+    enabled: !asMentor && needs.includes("trackIds"),
   });
   // A mentorship group is for one cohort, so only its mentors are offered.
   const groupCohort =
@@ -191,7 +191,8 @@ export function LiveSessionForm({
     ...adminQueries.users({
       role: "INSTRUCTOR",
       cohortId: draft.cohortId || undefined,
-      trackId: draft.trackId || undefined,
+      // Only narrowed when there's one track to narrow to.
+      trackId: draft.trackIds.length === 1 ? draft.trackIds[0] : undefined,
       limit: 100,
     }),
     enabled: !asMentor && !mentored,
@@ -261,7 +262,7 @@ export function LiveSessionForm({
           : null;
   const audienceMissing =
     (needs.includes("cohortId") && !cohortId) ||
-    (needs.includes("trackId") && !draft.trackId) ||
+    (needs.includes("trackIds") && draft.trackIds.length === 0) ||
     (needs.includes("mentorId") && !mentorId) ||
     (needs.includes("mentee") && !mentee) ||
     (needs.includes("invitees") && draft.guests.length === 0);
@@ -284,7 +285,10 @@ export function LiveSessionForm({
         timezone: DEFAULT_TIME_ZONE,
         // The API turns away fields that don't belong to the type.
         ...(needs.includes("cohortId") && { cohortId }),
-        ...(needs.includes("trackId") && { trackId: draft.trackId }),
+        ...(needs.includes("trackIds") &&
+          (draft.trackIds.length === 1
+            ? { trackId: draft.trackIds[0] }
+            : { trackIds: draft.trackIds })),
         ...(needs.includes("mentorId") && { mentorId }),
         ...(mentee && {
           mentorshipId: mentee.mentorshipId,
@@ -466,20 +470,33 @@ export function LiveSessionForm({
             />
           )}
 
-          {needs.includes("trackId") && (
-            <Picker
-              id="live-track"
-              label="Track"
-              value={draft.trackId}
-              onChange={(trackId) =>
-                setDraft((d) => ({ ...d, trackId, hostId: ME }))
-              }
-              loading={tracks.isPending}
-              options={(tracks.data ?? []).map((track) => ({
-                value: track.id,
-                label: track.name,
-              }))}
-            />
+          {needs.includes("trackIds") && (
+            <div className="flex flex-col gap-1">
+              <label htmlFor="live-track" className={labelClass}>
+                Tracks <span className="text-text-error">*</span>
+              </label>
+              <MultiSelectInput
+                id="live-track"
+                value={draft.trackIds}
+                onChange={(trackIds) =>
+                  setDraft((d) => ({
+                    ...d,
+                    trackIds: trackIds === "all" ? [] : trackIds,
+                    hostId: ME,
+                  }))
+                }
+                disabled={tracks.isPending}
+                placeholder={tracks.isPending ? "Loading…" : "Select tracks"}
+                options={(tracks.data ?? []).map((track) => ({
+                  value: track.id,
+                  label: track.name,
+                }))}
+                chevron={<ArrowDown01 className="size-5" />}
+                chevronClassName="text-text-primary"
+                className={selectClass}
+                popupClassName="max-h-60"
+              />
+            </div>
           )}
 
           {needs.includes("mentorId") && !asMentor && (

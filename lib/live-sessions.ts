@@ -38,7 +38,10 @@ export type ApiLiveSession = {
   actualStartedAt?: string | null;
   actualEndedAt?: string | null;
   timezone?: string | null;
+  /** Track meetings: the first invited track. */
   track?: { id: string; name: string } | null;
+  /** Track meetings: every invited track. */
+  trackIds?: string[];
   cohort?: { id: string; name: string } | null;
   /** Mentorship sessions: the mentor, and for a pair, the mentorship. */
   mentorId?: string | null;
@@ -203,6 +206,7 @@ export function toLiveSession(
 ): LiveSession {
   const zone = session.timezone || DEFAULT_TIME_ZONE;
   const start = zonedParts(session.scheduledStartAt, zone);
+  const moreTracks = (session.trackIds?.length ?? 1) - 1;
   return {
     id: session.id,
     title: session.title,
@@ -218,8 +222,9 @@ export function toLiveSession(
     endsAt: session.scheduledEndAt,
     endDate: zonedParts(session.scheduledEndAt, zone).date,
     trackId: session.track?.id ?? null,
-    trackName:
-      session.track?.name ?? session.cohort?.name ?? typeNames[session.type],
+    trackName: session.track
+      ? `${session.track.name}${moreTracks > 0 ? ` + ${moreTracks} more` : ""}`
+      : (session.cohort?.name ?? typeNames[session.type]),
     hostId: session.hostId,
     hostName: personName(session.host),
     mentorId: session.mentorId ?? null,
@@ -570,6 +575,8 @@ export type CreateLiveSessionInput = {
   timezone: string;
   cohortId?: string;
   trackId?: string;
+  /** Track meetings with several tracks, instead of `trackId`. */
+  trackIds?: string[];
   mentorId?: string;
   mentorshipId?: string;
   studentProfileId?: string;
