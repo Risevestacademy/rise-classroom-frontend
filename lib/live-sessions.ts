@@ -2,8 +2,10 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { api, ApiError, type Envelope } from "@/lib/api";
 import {
+  describeRepeat,
   fieldTime,
   fromDateKey,
+  fromRrule,
   monthNames,
   weekdayNames,
 } from "@/lib/calendar";
@@ -361,7 +363,10 @@ export const liveSessionKeys = {
   chat: (id: string) => ["live-sessions", id, "chat"] as const,
   session: (id: string) => ["live-sessions", id] as const,
   invitees: (id: string) => ["live-sessions", id, "invitees"] as const,
+  series: (seriesId: string) => ["live-sessions", "series", seriesId] as const,
 };
+
+type ApiSeries = { rrule: string; endsOn?: string | null; timezone?: string | null };
 
 export const liveSessionQueries = {
   /** `null` when it's gone or the user can't see it. */
@@ -397,6 +402,27 @@ export const liveSessionQueries = {
             name: invitee.user.name || invitee.user.email,
             email: invitee.user.email,
           })),
+    }),
+
+  /** How a series repeats, e.g. "Weekly on Friday"; null if the rule can't be shown. */
+  repeat: (session: Pick<LiveSession, "seriesId" | "date">) =>
+    queryOptions({
+      queryKey: liveSessionKeys.series(session.seriesId ?? ""),
+      queryFn: async () =>
+        (
+          await api.get<Envelope<ApiSeries>>(
+            `/live-sessions/series/${session.seriesId}`,
+          )
+        ).data,
+      select: (series) => {
+        const endsOn = series.endsOn
+          ? zonedParts(series.endsOn, series.timezone || DEFAULT_TIME_ZONE).date
+          : null;
+        const rule = fromRrule(series.rrule, endsOn);
+        return rule && describeRepeat(rule, fromDateKey(session.date));
+      },
+      enabled: Boolean(session.seriesId),
+      staleTime: 5 * 60_000,
     }),
 
   list: (range: ListFilter = {}) =>
@@ -717,6 +743,42 @@ export function toUpcomingSession(session: LiveSession, now: number) {
     time: sessionTime(session),
     until: session.status === "live" ? "Live now" : daysUntil(session, now),
   };
+}
+
+const isAhead = (session: LiveSession) =>
+  session.status === "live" || session.status === "upcoming";
+
+/**
+ * A repeating session only once: the occurrence that's live, or else the next
+ * one. Its later occurrences stay on the calendar, and past ones stay listed.
+ */
+export function nextOfEachSeries(sessions: LiveSession[]) {
+  const comesFirst = (a: LiveSession, b: LiveSession) =>
+    a.status !== b.status ? a.status === "live" : a.startsAt < b.startsAt;
+  const next = new Map<string, LiveSession>();
+  for (const session of sessions) {
+    if (!session.seriesId || !isAhead(session)) continue;
+    const kept = next.get(session.seriesId);
+    if (!kept || comesFirst(session, kept)) next.set(session.seriesId, session);
+  }
+  return sessions.filter(
+    (session) =>
+      !session.seriesId ||
+      !isAhead(session) ||
+      next.get(session.seriesId) === session,
+  );
+}
+
+const relevance = { live: 0, upcoming: 1, completed: 2, cancelled: 3 };
+
+/**
+ * Most relevant first: live now, then everything still to come (soonest
+ * first, so later today leads), then finished ones (latest first).
+ */
+export function byRelevance(a: LiveSession, b: LiveSession) {
+  if (a.status !== b.status) return relevance[a.status] - relevance[b.status];
+  const sooner = a.startsAt.localeCompare(b.startsAt);
+  return a.status === "upcoming" || a.status === "live" ? sooner : -sooner;
 }
 
 /** Sessions still to come or running now: live ones first, then soonest first. */

@@ -7,6 +7,7 @@ import {
   CalendarDialogActions,
   CalendarDialogHeader,
 } from "@/components/calendar/CalendarDialog";
+import { useCalendarArea } from "@/components/calendar/CalendarArea";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   FilterOption,
@@ -69,7 +70,12 @@ function FilterForm({
   onApply: (filters: CalendarFilters) => void;
 }) {
   const [filters, setFilters] = React.useState(initial);
-  const tracksQuery = useQuery(adminQueries.tracks("ACTIVE"));
+  // Mentors can't list tracks, and their sessions aren't tied to one.
+  const byTrack = useCalendarArea() === "admin";
+  const tracksQuery = useQuery({
+    ...adminQueries.tracks("ACTIVE"),
+    enabled: byTrack,
+  });
 
   return (
     <form
@@ -102,31 +108,33 @@ function FilterForm({
           ))}
         </FilterSection>
 
-        <FilterSection
-          title="Track"
-          description="Select one or more tracks"
-        >
-          {tracksQuery.isPending ? (
-            <p className="font-work text-sm text-text-muted">
-              Loading tracks…
-            </p>
-          ) : (
-            tracksQuery.data?.map((track) => (
-              <FilterOption
-                key={track.id}
-                name="track"
-                label={track.name}
-                checked={filters.trackIds.includes(track.id)}
-                onCheckedChange={(checked) =>
-                  setFilters((f) => ({
-                    ...f,
-                    trackIds: toggle(f.trackIds, track.id, checked),
-                  }))
-                }
-              />
-            ))
-          )}
-        </FilterSection>
+        {byTrack && (
+          <FilterSection
+            title="Track"
+            description="Select one or more tracks"
+          >
+            {tracksQuery.isPending ? (
+              <p className="font-work text-sm text-text-muted">
+                Loading tracks…
+              </p>
+            ) : (
+              tracksQuery.data?.map((track) => (
+                <FilterOption
+                  key={track.id}
+                  name="track"
+                  label={track.name}
+                  checked={filters.trackIds.includes(track.id)}
+                  onCheckedChange={(checked) =>
+                    setFilters((f) => ({
+                      ...f,
+                      trackIds: toggle(f.trackIds, track.id, checked),
+                    }))
+                  }
+                />
+              ))
+            )}
+          </FilterSection>
+        )}
       </div>
 
       <CalendarDialogActions submitLabel="Apply filters" className="pt-6">

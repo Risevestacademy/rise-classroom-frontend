@@ -4,6 +4,7 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Add01, ArrowDown01 } from "@/assets/icons";
+import { useCalendarArea } from "@/components/calendar/CalendarArea";
 import {
   CalendarDialogActions,
   CalendarDialogHeader,
@@ -49,7 +50,8 @@ import {
   type LiveSessionType,
   type UpdateLiveSessionInput,
 } from "@/lib/live-sessions";
-import { mentorQueries } from "@/lib/mentors";
+import { mentorQueries, myMenteesQuery } from "@/lib/mentors";
+import { sessionQuery } from "@/lib/session-query";
 
 /** What the event form hands over when someone switches to a live session. */
 export type LiveSessionBasics = Pick<
@@ -98,9 +100,13 @@ const sessionTypes: Record<
   },
 };
 
-const typeOptions = (Object.keys(sessionTypes) as LiveSessionType[]).map(
-  (type) => ({ value: type, label: sessionTypes[type].label }),
-);
+const typeOptions = (types: LiveSessionType[]) =>
+  types.map((type) => ({ value: type, label: sessionTypes[type].label }));
+
+const allTypes = Object.keys(sessionTypes) as LiveSessionType[];
+
+/** Mentors can only schedule mentorship sessions, hosted by themselves. */
+const mentorTypes: LiveSessionType[] = ["MENTORSHIP_PAIR", "MENTORSHIP_GROUP"];
 
 const DESCRIPTION_LIMIT = 5000;
 
@@ -136,6 +142,8 @@ export function LiveSessionForm({
   onKind?: (kind: "event" | "task", basics: LiveSessionBasics) => void;
 }) {
   const queryClient = useQueryClient();
+  const asMentor = useCalendarArea() === "mentor";
+  const me = useQuery({ ...sessionQuery(), enabled: asMentor }).data?.user;
   const [draft, setDraft] = React.useState<Draft>({
     title: initial.title,
     date: initial.date,
@@ -145,7 +153,7 @@ export function LiveSessionForm({
     repeat: initial.repeat,
     description: initial.description,
     guests: initial.guests,
-    type: "TRACK_MEETING",
+    type: asMentor ? "MENTORSHIP_PAIR" : "TRACK_MEETING",
     cohortId: "",
     trackId: "",
     mentorId: "",
@@ -158,25 +166,27 @@ export function LiveSessionForm({
   const needs = sessionTypes[draft.type].needs;
   const mentored = needs.includes("mentorId");
 
+  // The admin lists are closed to mentors, who pick from their own mentees.
   const cohorts = useQuery({
     ...adminQueries.cohorts(),
-    enabled: needs.includes("cohortId"),
+    enabled: !asMentor && needs.includes("cohortId"),
   });
   const tracks = useQuery({
     ...adminQueries.tracks("ACTIVE"),
-    enabled: needs.includes("trackId"),
+    enabled: !asMentor && needs.includes("trackId"),
   });
   // A mentorship group is for one cohort, so only its mentors are offered.
   const groupCohort =
     draft.type === "MENTORSHIP_GROUP" ? draft.cohortId || undefined : undefined;
   const mentors = useQuery({
     ...mentorQueries.list(groupCohort),
-    enabled: mentored,
+    enabled: !asMentor && mentored,
   });
   const mentees = useQuery({
     ...mentorQueries.mentees(draft.mentorId),
-    enabled: needs.includes("mentee") && draft.mentorId !== "",
+    enabled: !asMentor && needs.includes("mentee") && draft.mentorId !== "",
   });
+  const myMentees = useQuery({ ...myMenteesQuery(), enabled: asMentor });
   const instructors = useQuery({
     ...adminQueries.users({
       role: "INSTRUCTOR",
@@ -184,10 +194,42 @@ export function LiveSessionForm({
       trackId: draft.trackId || undefined,
       limit: 100,
     }),
-    enabled: !mentored,
+    enabled: !asMentor && !mentored,
   });
 
-  const mentee = mentees.data?.find(
+  const menteeQuery = asMentor ? myMentees : mentees;
+  const menteeOptions = asMentor
+    ? (myMentees.data ?? []).map((m) => ({
+        mentorshipId: m.id,
+        studentProfileId: m.student.id,
+        name: m.student.user.name || m.student.user.email,
+      }))
+    : (mentees.data ?? []).map((m) => ({
+        mentorshipId: m.mentorshipId,
+        studentProfileId: m.studentProfileId,
+        name: m.user.name || m.user.email,
+      }));
+  const cohortOptions = asMentor
+    ? [
+        ...new Map(
+          (myMentees.data ?? []).map((m) => [
+            m.student.cohort.id,
+            { value: m.student.cohort.id, label: m.student.cohort.name },
+          ]),
+        ).values(),
+      ]
+    : (cohorts.data ?? []).map((cohort) => ({
+        value: cohort.id,
+        label: cohort.name,
+      }));
+
+  // A mentor always schedules their own sessions, and one whose students are
+  // all in one cohort doesn't need to pick it.
+  const mentorId = asMentor ? (me?.id ?? "") : draft.mentorId;
+  const cohortId =
+    draft.cohortId ||
+    (asMentor && cohortOptions.length === 1 ? cohortOptions[0].value : "");
+  const mentee = menteeOptions.find(
     (m) => m.mentorshipId === draft.mentorshipId,
   );
   const mentor = mentors.data?.find((m) => m.id === draft.mentorId);
@@ -218,9 +260,9 @@ export function LiveSessionForm({
           ? "A repeating session can't run longer than a day."
           : null;
   const audienceMissing =
-    (needs.includes("cohortId") && !draft.cohortId) ||
+    (needs.includes("cohortId") && !cohortId) ||
     (needs.includes("trackId") && !draft.trackId) ||
-    (needs.includes("mentorId") && !draft.mentorId) ||
+    (needs.includes("mentorId") && !mentorId) ||
     (needs.includes("mentee") && !mentee) ||
     (needs.includes("invitees") && draft.guests.length === 0);
   const canSubmit =
@@ -229,7 +271,7 @@ export function LiveSessionForm({
   const create = useMutation({
     mutationFn: () => {
       const hostId = mentored
-        ? draft.mentorId
+        ? mentorId
         : draft.hostId === ME
           ? undefined
           : draft.hostId;
@@ -241,9 +283,9 @@ export function LiveSessionForm({
         scheduledStartAt: startsAt,
         timezone: DEFAULT_TIME_ZONE,
         // The API turns away fields that don't belong to the type.
-        ...(needs.includes("cohortId") && { cohortId: draft.cohortId }),
+        ...(needs.includes("cohortId") && { cohortId }),
         ...(needs.includes("trackId") && { trackId: draft.trackId }),
-        ...(needs.includes("mentorId") && { mentorId: draft.mentorId }),
+        ...(needs.includes("mentorId") && { mentorId }),
         ...(mentee && {
           mentorshipId: mentee.mentorshipId,
           studentProfileId: mentee.studentProfileId,
@@ -396,7 +438,7 @@ export function LiveSessionForm({
               id="live-type"
               value={draft.type}
               onChange={(type) => set("type", type)}
-              options={typeOptions}
+              options={typeOptions(asMentor ? mentorTypes : allTypes)}
               chevron={<ArrowDown01 className="size-5" />}
               chevronClassName="text-text-primary"
               className={selectClass}
@@ -410,7 +452,7 @@ export function LiveSessionForm({
             <Picker
               id="live-cohort"
               label="Cohort"
-              value={draft.cohortId}
+              value={cohortId}
               onChange={(cohortId) =>
                 setDraft((d) => ({
                   ...d,
@@ -419,11 +461,8 @@ export function LiveSessionForm({
                   ...(d.type === "MENTORSHIP_GROUP" && { mentorId: "" }),
                 }))
               }
-              loading={cohorts.isPending}
-              options={(cohorts.data ?? []).map((cohort) => ({
-                value: cohort.id,
-                label: cohort.name,
-              }))}
+              loading={asMentor ? myMentees.isPending : cohorts.isPending}
+              options={cohortOptions}
             />
           )}
 
@@ -443,7 +482,7 @@ export function LiveSessionForm({
             />
           )}
 
-          {needs.includes("mentorId") && (
+          {needs.includes("mentorId") && !asMentor && (
             <Picker
               id="live-mentor"
               label="Mentor"
@@ -464,17 +503,19 @@ export function LiveSessionForm({
               label="Student"
               value={draft.mentorshipId}
               onChange={(mentorshipId) => set("mentorshipId", mentorshipId)}
-              disabled={!draft.mentorId}
-              placeholder={draft.mentorId ? undefined : "Pick a mentor first"}
-              loading={draft.mentorId !== "" && mentees.isPending}
+              disabled={!mentorId}
+              placeholder={mentorId ? undefined : "Pick a mentor first"}
+              loading={mentorId !== "" && menteeQuery.isPending}
               empty={
-                mentees.isSuccess && mentees.data.length === 0
-                  ? "This mentor has no students yet"
+                menteeQuery.isSuccess && menteeOptions.length === 0
+                  ? asMentor
+                    ? "You have no students yet"
+                    : "This mentor has no students yet"
                   : undefined
               }
-              options={(mentees.data ?? []).map((m) => ({
+              options={menteeOptions.map((m) => ({
                 value: m.mentorshipId,
-                label: m.user.name || m.user.email,
+                label: m.name,
               }))}
             />
           )}
@@ -497,7 +538,7 @@ export function LiveSessionForm({
             </label>
             {mentored ? (
               <p className="flex h-9 items-center rounded-lg bg-neutral-100 px-3 font-work text-sm text-text-secondary">
-                {mentor ? mentor.name : "The mentor hosts it"}
+                {asMentor ? "You" : mentor ? mentor.name : "The mentor hosts it"}
               </p>
             ) : (
               <SelectInput

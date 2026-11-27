@@ -7,11 +7,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Clock } from "lucide-react";
 
 import { Add01, ArrowDown01 } from "@/assets/icons";
+import { useCalendarArea } from "@/components/calendar/CalendarArea";
 import { DatePickerPopup } from "@/components/calendar/DatePickerPopup";
 import { RecurrencePopup } from "@/components/calendar/RecurrencePopup";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SelectInput } from "@/components/ui/select";
 import { adminQueries } from "@/lib/admin";
+import { myMenteesQuery } from "@/lib/mentors";
 import {
   describeRepeat,
   fieldTime,
@@ -327,7 +329,10 @@ export function RepeatField({
   );
 }
 
-/** "Add guests": pick admins, instructors and students to invite. */
+/**
+ * "Add guests": admins pick admins, instructors and students to invite;
+ * mentors pick from their own students.
+ */
 export function GuestsField({
   value,
   onChange,
@@ -337,11 +342,29 @@ export function GuestsField({
 }) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
+  const asMentor = useCalendarArea() === "mentor";
   const usersQuery = useQuery({
     ...adminQueries.users({ search: search.trim() || undefined, limit: 20 }),
-    enabled: open,
+    enabled: open && !asMentor,
   });
-  const users = usersQuery.data?.items ?? [];
+  const menteesQuery = useQuery({ ...myMenteesQuery(), enabled: open && asMentor });
+  const peopleQuery = asMentor ? menteesQuery : usersQuery;
+  const wanted = search.trim().toLowerCase();
+  const people: EventGuest[] = asMentor
+    ? (menteesQuery.data ?? [])
+        .map(({ student: { user } }) => ({
+          id: user.id,
+          name: user.name || user.email,
+          email: user.email,
+        }))
+        .filter((person) =>
+          `${person.name} ${person.email}`.toLowerCase().includes(wanted),
+        )
+    : (usersQuery.data?.items ?? []).map((user) => ({
+        id: user.id,
+        name: `${user.firstName} ${user.lastName}`.trim() || user.email,
+        email: user.email,
+      }));
   const selected = new Set(value.map((guest) => guest.id));
 
   const toggle = (guest: EventGuest) =>
@@ -384,33 +407,27 @@ export function GuestsField({
               />
             </div>
             <ul className="max-h-60 overflow-y-auto p-1">
-              {usersQuery.isPending && (
+              {peopleQuery.isPending && (
                 <li className="px-2 py-3 text-center text-text-muted">
                   Loading…
                 </li>
               )}
-              {usersQuery.isError && (
+              {peopleQuery.isError && (
                 <li className="px-2 py-3 text-center text-text-error">
                   We couldn&rsquo;t load people. Please try again.
                 </li>
               )}
-              {usersQuery.isSuccess && users.length === 0 && (
+              {peopleQuery.isSuccess && people.length === 0 && (
                 <li className="px-2 py-3 text-center text-text-muted">
                   No people found
                 </li>
               )}
-              {users.map((user) => {
-                const guest = {
-                  id: user.id,
-                  name:
-                    `${user.firstName} ${user.lastName}`.trim() || user.email,
-                  email: user.email,
-                };
+              {people.map((guest) => {
                 return (
-                  <li key={user.id}>
+                  <li key={guest.id}>
                     <label className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-neutral-100">
                       <Checkbox
-                        checked={selected.has(user.id)}
+                        checked={selected.has(guest.id)}
                         onCheckedChange={() => toggle(guest)}
                       />
                       <span className="min-w-0">
@@ -418,7 +435,7 @@ export function GuestsField({
                           {guest.name}
                         </span>
                         <span className="block truncate text-xs text-text-muted">
-                          {user.email}
+                          {guest.email}
                         </span>
                       </span>
                     </label>

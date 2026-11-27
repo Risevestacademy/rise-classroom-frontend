@@ -4,17 +4,26 @@ import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
-import { Calendar03, Cancel01, MoreHorizontal, Time04, Track } from "@/assets/icons";
+import { Calendar03, Cancel01, MoreHorizontal, Repeat, Time04, Track } from "@/assets/icons";
+import { CancelSessionDialog } from "@/components/calendar/CancelSessionDialog";
 import { EditLiveSessionDialog } from "@/components/calendar/LiveSessionForm";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
 import { LessonVideo } from "@/components/lessons/LessonVideo";
 import { PersonAvatar } from "@/components/PersonAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SuccessToast } from "@/components/ui/toast";
 import {
+  byRelevance,
   liveSessionQueries,
+  nextOfEachSeries,
   personName,
   sessionDate,
   sessionStanding,
@@ -23,6 +32,7 @@ import {
   type LiveSession,
   type SessionParticipant,
 } from "@/lib/live-sessions";
+import { sessionQuery } from "@/lib/session-query";
 import { useCurrentMinute } from "@/lib/use-current-minute";
 import { cn } from "@/lib/utils";
 
@@ -40,15 +50,6 @@ const statusBadge = {
   completed: { label: "Completed", status: "neutral" },
   cancelled: { label: "Cancelled", status: "error" },
 } as const;
-
-const order = { live: 0, upcoming: 1, completed: 2, cancelled: 3 };
-
-/** Live first, then the next ones coming up, then the most recent past ones. */
-function byWhen(a: LiveSession, b: LiveSession) {
-  if (a.status !== b.status) return order[a.status] - order[b.status];
-  const sooner = a.startsAt.localeCompare(b.startsAt);
-  return a.status === "completed" ? -sooner : sooner;
-}
 
 /**
  * The previewed session, kept a moment after it closes so the panel can slide
@@ -92,24 +93,33 @@ export function LiveSessionsScreen({
   openSessionId?: string | null;
   /** Beside the title, such as the admin's "Schedule live session". */
   action?: React.ReactNode;
-  /** The three-dot buttons open an edit dialog for upcoming sessions. */
-  canEdit?: boolean;
+  /**
+   * The three-dot buttons let people edit or cancel upcoming sessions: all of
+   * them, or with "own" only the ones they host.
+   */
+  canEdit?: boolean | "own";
 }) {
   const [editing, setEditing] = React.useState<LiveSession | null>(null);
-  const [saved, setSaved] = React.useState<string | null>(null);
-  const dismissSaved = React.useCallback(() => setSaved(null), []);
-  const onEdit = canEdit ? setEditing : undefined;
+  const [cancelling, setCancelling] = React.useState<LiveSession | null>(null);
+  const [done, setDone] = React.useState<{ title: string; message: string } | null>(null);
+  const dismissDone = React.useCallback(() => setDone(null), []);
+  const me = useQuery({ ...sessionQuery(), enabled: canEdit === "own" }).data?.user.id;
+  const actionsFor = (session: LiveSession) =>
+    canEdit === true || (canEdit === "own" && session.hostId === me)
+      ? { onEdit: setEditing, onCancel: setCancelling }
+      : undefined;
   const [tab, setTab] = React.useState<Tab>("all");
   const [selectedId, setSelectedId] = React.useState<string | null>(openSessionId);
 
   const list = useQuery(liveSessionQueries.list());
   const all = React.useMemo(
-    () => [...(list.data ?? [])].sort(byWhen),
+    () => nextOfEachSeries(list.data ?? []).sort(byRelevance),
     [list.data],
   );
   const sessions = all.filter((session) => inTab(session, tab));
   const panel = usePresence(selectedId);
-  const previewed = all.find((session) => session.id === panel.id);
+  // From the full list, so a notification can open an occurrence whose card is collapsed.
+  const previewed = list.data?.find((session) => session.id === panel.id);
   const previewOpen = selectedId !== null && previewed !== undefined;
   const toggle = (id: string) =>
     setSelectedId((current) => (current === id ? null : id));
@@ -199,7 +209,7 @@ export function LiveSessionsScreen({
                   session={session}
                   selected={session.id === selectedId}
                   onSelect={() => toggle(session.id)}
-                  onEdit={onEdit}
+                  actions={actionsFor(session)}
                 />
               </li>
             ))}
@@ -246,7 +256,7 @@ export function LiveSessionsScreen({
                 key={previewed.id}
                 session={previewed}
                 joinPath={joinPath}
-                onEdit={onEdit}
+                actions={actionsFor(previewed)}
                 onClose={() => setSelectedId(null)}
               />
             </aside>
@@ -255,19 +265,24 @@ export function LiveSessionsScreen({
       </div>
 
       {canEdit && (
-        <EditLiveSessionDialog
-          session={editing}
-          onOpenChange={(open) => !open && setEditing(null)}
-          onSaved={setSaved}
-        />
+        <>
+          <EditLiveSessionDialog
+            session={editing}
+            onOpenChange={(open) => !open && setEditing(null)}
+            onSaved={(title) =>
+              setDone({ title: "Live session updated", message: `“${title}” has been updated` })
+            }
+          />
+          <CancelSessionDialog
+            event={cancelling}
+            onOpenChange={(open) => !open && setCancelling(null)}
+            onCancelled={(title) =>
+              setDone({ title: "Live session cancelled", message: `“${title}” has been cancelled` })
+            }
+          />
+        </>
       )}
-      {saved && (
-        <SuccessToast
-          title="Live session updated"
-          message={`“${saved}” has been updated`}
-          onDismiss={dismissSaved}
-        />
-      )}
+      {done && <SuccessToast title={done.title} message={done.message} onDismiss={dismissDone} />}
     </div>
   );
 }
@@ -276,12 +291,12 @@ function SessionCard({
   session,
   selected,
   onSelect,
-  onEdit,
+  actions,
 }: {
   session: LiveSession;
   selected: boolean;
   onSelect: () => void;
-  onEdit?: (session: LiveSession) => void;
+  actions?: SessionActions;
 }) {
   const badge = statusBadge[session.status];
 
@@ -303,7 +318,7 @@ function SessionCard({
         >
           {badge.label}
         </Badge>
-        <ActionsButton session={session} onEdit={onEdit} />
+        <ActionsMenu session={session} actions={actions} />
       </div>
 
       <div className="flex min-w-0 flex-col gap-3">
@@ -321,6 +336,7 @@ function SessionCard({
           <Calendar03 className="size-4 shrink-0 text-icon-secondary" />
           <span className="truncate">{sessionDate(session.date)}</span>
         </p>
+        <RepeatNote session={session} className="gap-2 text-[13px]/[18px]" iconClassName="size-4 text-icon-secondary" />
         <p className="flex min-w-0 items-center gap-2 font-work text-[13px]/[18px] text-text-secondary">
           <Track className="size-4 shrink-0 text-icon-secondary" />
           <span className="truncate">{session.trackName}</span>
@@ -334,12 +350,12 @@ function SessionCard({
 function SessionPreview({
   session,
   joinPath,
-  onEdit,
+  actions,
   onClose,
 }: {
   session: LiveSession;
   joinPath: string;
-  onEdit?: (session: LiveSession) => void;
+  actions?: SessionActions;
   onClose: () => void;
 }) {
   const [showAll, setShowAll] = React.useState(false);
@@ -371,7 +387,7 @@ function SessionPreview({
           {session.title}
         </h2>
         <div className="flex shrink-0 items-center gap-2">
-          <ActionsButton session={session} onEdit={onEdit} />
+          <ActionsMenu session={session} actions={actions} />
           <button
             type="button"
             aria-label="Close preview"
@@ -394,6 +410,7 @@ function SessionPreview({
             {sessionTime(session)}
           </span>
         </div>
+        <RepeatNote session={session} className="gap-3" iconClassName="size-6" />
         <span className="flex items-center gap-3">
           <Track className="size-6 shrink-0" />
           {session.trackName}
@@ -581,25 +598,67 @@ function Avatars({
   );
 }
 
-function ActionsButton({
+/** "Weekly on Friday", for a session that repeats. */
+function RepeatNote({
   session,
-  onEdit,
+  className,
+  iconClassName,
 }: {
   session: LiveSession;
-  onEdit?: (session: LiveSession) => void;
+  className: string;
+  iconClassName: string;
 }) {
-  // Only a session that hasn't started can be changed.
-  const editable = onEdit !== undefined && session.status === "upcoming";
+  const repeat = useQuery(liveSessionQueries.repeat(session)).data;
+  if (!session.seriesId) return null;
   return (
-    <button
-      type="button"
-      aria-label={
-        editable ? `Edit ${session.title}` : `${session.title} actions`
-      }
-      onClick={editable ? () => onEdit(session) : undefined}
-      className="relative z-10 flex size-6 shrink-0 items-center justify-center text-text-primary"
-    >
-      <MoreHorizontal className="size-5" />
-    </button>
+    <p className={cn("flex min-w-0 items-center", className)}>
+      <Repeat aria-hidden className={cn("shrink-0", iconClassName)} />
+      <span className="truncate">{repeat || "Repeats"}</span>
+    </p>
+  );
+}
+
+type SessionActions = {
+  onEdit: (session: LiveSession) => void;
+  onCancel: (session: LiveSession) => void;
+};
+
+const menuItemClass =
+  "cursor-pointer rounded-lg px-3 py-2 font-work text-sm text-text-primary hover:bg-neutral-100 focus:bg-neutral-100";
+
+function ActionsMenu({
+  session,
+  actions,
+}: {
+  session: LiveSession;
+  actions?: SessionActions;
+}) {
+  const trigger =
+    "relative z-10 flex size-6 shrink-0 items-center justify-center rounded-md text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-border-focus";
+  // Only a session that hasn't started can be changed.
+  if (!actions || session.status !== "upcoming") {
+    return (
+      <button type="button" aria-label={`${session.title} actions`} className={trigger}>
+        <MoreHorizontal className="size-5" />
+      </button>
+    );
+  }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger aria-label={`${session.title} actions`} className={cn(trigger, "cursor-pointer hover:bg-neutral-100")}>
+        <MoreHorizontal className="size-5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-auto min-w-40 rounded-xl border-none bg-white p-1 shadow-lg ring-0">
+        <DropdownMenuItem onClick={() => actions.onEdit(session)} className={menuItemClass}>
+          Edit session
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => actions.onCancel(session)}
+          className={cn(menuItemClass, "text-text-error")}
+        >
+          Cancel session
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

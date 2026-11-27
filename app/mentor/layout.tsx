@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 
+import { CalendarAreaProvider } from "@/components/calendar/CalendarArea";
 import { RoleGate } from "@/components/RoleGate";
 import { MentorSidebar } from "@/components/MentorSidebar";
 import { SidebarNavProvider } from "@/components/SidebarNavContext";
@@ -20,7 +21,7 @@ export default function MentorLayout({
         <div className="flex min-h-screen w-full">
           <MentorSidebar />
           <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col bg-neutral-50">
-            {children}
+            <CalendarAreaProvider area="mentor">{children}</CalendarAreaProvider>
           </div>
         </div>
       </SidebarNavProvider>

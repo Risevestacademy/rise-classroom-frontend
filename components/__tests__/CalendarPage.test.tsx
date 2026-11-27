@@ -9,8 +9,11 @@ import { envelope, mockApi, renderWithClient, reply } from "@/test/utils";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/components/AdminTopNav", () => ({ AdminTopNav: () => null }));
+vi.mock("@/components/AppTopNav", () => ({ AppTopNav: () => null }));
 
 const { default: CalendarPage } = await import("@/app/admin/calendar/page");
+const { default: MentorCalendarPage } = await import("@/app/mentor/calendar/page");
+const { CalendarAreaProvider } = await import("@/components/calendar/CalendarArea");
 
 const today = toDateKey(new Date());
 const tomorrow = toDateKey(addDays(new Date(), 1));
@@ -213,5 +216,62 @@ describe("CalendarPage", () => {
     await vi.waitFor(() =>
       expect(api.bodies("PATCH /calendar/events/task-1")).toEqual([{ completed: true }]),
     );
+  });
+});
+
+describe("The mentor's calendar", () => {
+  function renderMentorPage(routes: Record<string, unknown> = {}) {
+    const api = mockApi({
+      "GET /auth/get-session": { user: { id: "mentor-1", role: "MENTOR" }, session: {} },
+      "GET /mentors/my-mentees": envelope([
+        {
+          id: "mentorship-1",
+          assignedAt: "2026-11-05T07:26:13.769Z",
+          student: {
+            id: "profile-1",
+            cohort: { id: "cohort-9", name: "Cohort 9" },
+            user: { id: "u-1", name: "Halima Obi", email: "halima@example.com" },
+          },
+        },
+      ]),
+      "GET /calendar/events": envelope({ items }),
+      ...routes,
+    });
+    const view = renderWithClient(
+      <CalendarAreaProvider area="mentor">
+        <MentorCalendarPage />
+      </CalendarAreaProvider>,
+    );
+    const adminCalls = () =>
+      api.fetchMock.mock.calls.map(([input]) => String(input)).filter((url) => url.includes("/admin/"));
+    return { ...view, api, adminCalls };
+  }
+
+  it("shows everything on their calendar and joins sessions in the mentor area", async () => {
+    const { user, adminCalls } = renderMentorPage({
+      "GET /calendar/events/live-1": envelope({ ...items[0], participants: [] }),
+    });
+
+    // Nothing is hidden by cohort, so today's fourth item is behind "+2 more".
+    await user.click(await screen.findByRole("button", { name: "+2 more" }, { timeout: 5000 }));
+    expect(await screen.findByText(/Other town hall/)).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await user.click(await screen.findByRole("button", { name: /Track standup/ }));
+    expect(await screen.findByRole("link", { name: "Join Live Session" })).toHaveAttribute("href", "/mentor/live/live-1");
+    expect(adminCalls()).toEqual([]);
+  });
+
+  it("keeps new tasks in their students' cohort", async () => {
+    const { user, api } = renderMentorPage({
+      "POST /calendar/events": (body: object) => envelope(item({ ...body, id: "task-2" })),
+    });
+
+    await user.click(await screen.findByRole("button", { name: "Create event" }));
+    await user.type(await screen.findByPlaceholderText("Add title"), "Prep notes");
+    await user.click(screen.getByRole("radio", { name: "Task" }));
+    await user.click(screen.getAllByRole("button", { name: "Create event" }).at(-1)!);
+
+    expect(await screen.findByText("Task created")).toBeInTheDocument();
+    expect(api.bodies("POST /calendar/events")[0]).toMatchObject({ kind: "task", cohortId: "cohort-9" });
   });
 });

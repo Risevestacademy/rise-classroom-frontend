@@ -78,8 +78,8 @@ export const calendarQueries = {
 const LIVE_COLOR = "#e5484d";
 const TASK_COLOR = eventColors[0];
 
-/** An API item as the month grid and details card show it. */
-export function toCalendarEvent(item: CalendarItem): CalendarEvent {
+/** An API item as the month grid and details card show it; `basePath` is the area its Join link opens in. */
+export function toCalendarEvent(item: CalendarItem, basePath = "/admin"): CalendarEvent {
   const zone = item.timezone || DEFAULT_TIME_ZONE;
   const start = zonedParts(item.start, zone);
   const end = zonedParts(item.end, zone);
@@ -104,7 +104,7 @@ export function toCalendarEvent(item: CalendarItem): CalendarEvent {
     repeat: null,
     // Town halls, mentorship and invite-only sessions aren't tied to a track.
     trackIds: item.track ? [item.track.id] : "all",
-    link: live ? `/admin/live/${item.id}` : "",
+    link: live ? `${basePath}/live/${item.id}` : "",
     description: item.description ?? "",
     guests: [],
     permissions: { modify: false, invite: false, seeGuests: false },

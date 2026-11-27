@@ -19,6 +19,7 @@ import {
   times,
   TitleField,
 } from "@/components/calendar/EventFields";
+import { useCalendarArea } from "@/components/calendar/CalendarArea";
 import { LiveSessionForm } from "@/components/calendar/LiveSessionForm";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MultiSelectInput, SelectInput } from "@/components/ui/select";
@@ -187,7 +188,12 @@ function EventForm({
   const set = <K extends keyof EventDraft>(key: K, value: EventDraft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
-  const tracksQuery = useQuery(adminQueries.tracks("ACTIVE"));
+  // Mentors can't list tracks.
+  const byTrack = useCalendarArea() === "admin";
+  const tracksQuery = useQuery({
+    ...adminQueries.tracks("ACTIVE"),
+    enabled: byTrack,
+  });
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const start = fromDateKey(draft.date);
@@ -293,30 +299,32 @@ function EventForm({
             />
           </div>
 
-          <div className="mt-4 flex flex-col gap-1">
-            <label htmlFor="event-tracks" className={labelClass}>
-              Select track
-            </label>
-            <MultiSelectInput
-              id="event-tracks"
-              value={draft.trackIds}
-              onChange={(trackIds) => set("trackIds", trackIds)}
-              options={(tracksQuery.data ?? []).map((track) => ({
-                value: track.id,
-                label: track.name,
-              }))}
-              allLabel="All tracks"
-              placeholder={
-                tracksQuery.isPending ? "Loading tracks…" : "Select track"
-              }
-              leadingIcon={
-                <Track className="size-[18px]! text-text-secondary" />
-              }
-              chevron={<ArrowDown01 className="size-5" />}
-              chevronClassName="text-text-primary"
-              className="h-9 gap-2 pr-3.5 pl-2.5 font-work text-text-primary"
-            />
-          </div>
+          {byTrack && (
+            <div className="mt-4 flex flex-col gap-1">
+              <label htmlFor="event-tracks" className={labelClass}>
+                Select track
+              </label>
+              <MultiSelectInput
+                id="event-tracks"
+                value={draft.trackIds}
+                onChange={(trackIds) => set("trackIds", trackIds)}
+                options={(tracksQuery.data ?? []).map((track) => ({
+                  value: track.id,
+                  label: track.name,
+                }))}
+                allLabel="All tracks"
+                placeholder={
+                  tracksQuery.isPending ? "Loading tracks…" : "Select track"
+                }
+                leadingIcon={
+                  <Track className="size-[18px]! text-text-secondary" />
+                }
+                chevron={<ArrowDown01 className="size-5" />}
+                chevronClassName="text-text-primary"
+                className="h-9 gap-2 pr-3.5 pl-2.5 font-work text-text-primary"
+              />
+            </div>
+          )}
 
           <label className="mt-4 flex flex-col gap-1">
             <span className={labelClass}>Add event link</span>

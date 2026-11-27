@@ -219,6 +219,36 @@ export function toRrule(rule: RepeatRule, start: Date) {
   return parts.join(";");
 }
 
+/** A rule back from an RRULE such as "FREQ=WEEKLY;BYDAY=FR", or null if it can't be shown. */
+export function fromRrule(rrule: string, endsOn?: string | null): RepeatRule | null {
+  const parts = Object.fromEntries(
+    rrule
+      .replace(/^RRULE:/, "")
+      .split(";")
+      .map((part) => part.split("=")),
+  ) as Record<string, string | undefined>;
+  const frequency = (Object.keys(rruleFrequencies) as RepeatFrequency[]).find(
+    (key) => rruleFrequencies[key] === parts.FREQ,
+  );
+  if (!frequency) return null;
+  const byDay = parts.BYDAY?.split(",") ?? [];
+  const count = Number(parts.COUNT);
+  return {
+    frequency,
+    interval: Number(parts.INTERVAL) || 1,
+    weekdays:
+      frequency === "week"
+        ? byDay.map((day) => rruleDays.indexOf(day)).filter((day) => day >= 0)
+        : undefined,
+    monthlyOn: frequency === "month" ? (byDay.length ? "weekday" : "date") : undefined,
+    ends: count
+      ? { type: "after", count }
+      : endsOn
+        ? { type: "on", date: endsOn }
+        : { type: "never" },
+  };
+}
+
 export function eventsOn(events: CalendarEvent[], date: Date) {
   return events
     .filter((event) => occursOn(event, date))

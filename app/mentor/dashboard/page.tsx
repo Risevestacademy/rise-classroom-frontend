@@ -25,6 +25,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   liveSessionQueries,
+  nextOfEachSeries,
   sessionStanding,
   stillAhead,
   toUpcomingSession,
@@ -64,7 +65,7 @@ export default function MentorDashboardPage() {
   const [range] = React.useState(() => upcomingRange(Date.now()));
   const liveSessions = useQuery(liveSessionQueries.list(range));
   const ahead = now === null ? [] : stillAhead(liveSessions.data ?? [], now);
-  const sessions: UpcomingSession[] = ahead
+  const sessions: UpcomingSession[] = nextOfEachSeries(ahead)
     .slice(0, VISIBLE_SESSIONS)
     .map((live) => ({
       ...toUpcomingSession(live, now ?? 0),

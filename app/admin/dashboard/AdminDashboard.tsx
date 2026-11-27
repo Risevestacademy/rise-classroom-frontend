@@ -22,7 +22,12 @@ import { CircularProgress } from "@/components/ui/circular-progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminQueries } from "@/lib/admin";
 import { dashboardMock, toUpcomingActivity } from "@/lib/admin-dashboard";
-import { liveSessionQueries, stillAhead, upcomingRange } from "@/lib/live-sessions";
+import {
+  liveSessionQueries,
+  nextOfEachSeries,
+  stillAhead,
+  upcomingRange,
+} from "@/lib/live-sessions";
 import { useCurrentMinute } from "@/lib/use-current-minute";
 import { ActivityTimeline } from "@/components/student-profile/shared";
 import { cohortQueries, trackKeyFor } from "@/lib/cohorts";
@@ -115,7 +120,7 @@ export function AdminDashboard({ loading = false }: { loading?: boolean }) {
   const upcoming =
     now === null || liveSessions.isPending
       ? null
-      : stillAhead(liveSessions.data ?? [], now)
+      : stillAhead(nextOfEachSeries(liveSessions.data ?? []), now)
           .slice(0, UPCOMING_COUNT)
           .map((item) => toUpcomingActivity(item, now));
   const adminName = session.data?.user.firstName ?? "Admin";
