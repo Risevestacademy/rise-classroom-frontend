@@ -70,7 +70,8 @@ const studentStatusPill: Record<
   needsAttention: "error",
 };
 
-const staffColumns = [
+/** Shared with a track's Instructors tab. */
+export const staffColumns = [
   {
     header: "Track",
     width: "w-[210px]",
@@ -121,30 +122,32 @@ function trackFilter<T>(
 }
 
 function studentFilters(tracks: CohortTrack[]): PeopleFilter<CohortStudent>[] {
-  return [
-    trackFilter(tracks, (row) => row.trackIds),
-    {
-      key: "status",
-      title: "Account status",
-      description: "Find students whose account is active or suspended.",
-      allLabel: "All",
-      options: accountStatusOptions,
-      values: (row) => [row.accountStatus],
-    },
-    {
-      key: "onboardingStatus",
-      title: "Onboarding",
-      description:
-        "Find students who have joined or are yet to accept their invite.",
-      allLabel: "All",
-      options: [
-        { value: "INVITED", label: "Invited" },
-        { value: "COMPLETED", label: "Joined" },
-      ],
-      values: (row) => [row.onboardingStatus],
-    },
-  ];
+  return [trackFilter(tracks, (row) => row.trackIds), ...studentAccountFilters];
 }
+
+/** Account and onboarding filters, shared with a track's Students tab. */
+export const studentAccountFilters: PeopleFilter<CohortStudent>[] = [
+  {
+    key: "status",
+    title: "Account status",
+    description: "Find students whose account is active or suspended.",
+    allLabel: "All",
+    options: accountStatusOptions,
+    values: (row) => [row.accountStatus],
+  },
+  {
+    key: "onboardingStatus",
+    title: "Onboarding",
+    description:
+      "Find students who have joined or are yet to accept their invite.",
+    allLabel: "All",
+    options: [
+      { value: "INVITED", label: "Invited" },
+      { value: "COMPLETED", label: "Joined" },
+    ],
+    values: (row) => [row.onboardingStatus],
+  },
+];
 
 function instructorFilters(tracks: CohortTrack[]): PeopleFilter<CohortStaff>[] {
   return [
@@ -440,7 +443,8 @@ export function CohortDetail({
   );
 }
 
-function HeaderStat({
+/** A figure under the page title; shared with the track page. */
+export function HeaderStat({
   icon,
   iconClass,
   label,
@@ -449,7 +453,7 @@ function HeaderStat({
   icon: React.ReactNode;
   iconClass: string;
   label: string;
-  value: number;
+  value: number | string;
 }) {
   return (
     <div className="flex items-start gap-3">
