@@ -3,11 +3,9 @@
 import * as React from "react";
 
 import { AdminCohortSelect } from "@/components/AdminCohortSelect";
-import {
-  AdminNotificationsPanel,
-  useAdminNotifications,
-} from "@/components/AdminNotificationsPanel";
+import { AdminNotificationsPanel } from "@/components/AdminNotificationsPanel";
 import { AppTopNav, type Crumb } from "@/components/AppTopNav";
+import { useAdminNotifications } from "@/lib/admin-notifications";
 
 export function AdminTopNav({
   breadcrumb = ["Overview", { label: "Dashboard", href: "/admin/dashboard" }],

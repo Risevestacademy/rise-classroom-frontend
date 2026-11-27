@@ -13,6 +13,10 @@ const roleLabels: Record<string, string> = {
 
 export const roleLabel = (platformRole: string) => roleLabels[platformRole] ?? "";
 
+/** Only admins can search the academy (`/admin/users`), so only they can add people to a call. */
+export const canSearchPeople = (platformRole: string) =>
+  platformRole === "SUPERADMIN" || platformRole === "PLATFORM_ADMIN";
+
 /** Why someone can't join yet, matching `canJoin.reason` in the proposed API. */
 export type JoinBlock = "too_early" | "not_eligible" | "ended" | "cancelled" | "removed";
 
