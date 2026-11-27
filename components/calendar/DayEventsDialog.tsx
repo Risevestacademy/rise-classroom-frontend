@@ -39,7 +39,8 @@ export function DayEventsDialog({
   date: Date | null;
   events: CalendarEvent[];
   onClose: () => void;
-  onCreate: (date: Date) => void;
+  /* Left out where nothing can be created, which hides the button. */
+  onCreate?: (date: Date) => void;
   onEdit: (event: CalendarEvent) => void;
   onDelete: (event: CalendarEvent) => void;
   onToggleDone?: (event: CalendarEvent, done: boolean) => void;
@@ -88,7 +89,7 @@ export function DayEventsDialog({
                     shown &&
                     setOpenEvent({ event, date: shown, anchor: e.currentTarget })
                   }
-                  className="group flex w-full items-center gap-3 rounded-xl bg-white p-3 text-left transition-colors hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:outline-none"
+                  className="flex w-full items-center gap-3 rounded-xl bg-white p-3 text-left hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:outline-none"
                 >
                   <span
                     aria-hidden
@@ -110,23 +111,27 @@ export function DayEventsDialog({
                       {kindLabels[event.kind]}
                     </span>
                   </span>
-                  <ArrowRight01 className="size-4 shrink-0 text-icon-secondary transition-transform group-hover:translate-x-0.5" />
+                  <ArrowRight01 className="size-4 shrink-0 text-icon-secondary" />
                 </button>
               </li>
             ))}
           </ul>
         )}
 
-        <div className="mt-5 flex justify-end border-t border-neutral-200 px-5 py-4 sm:px-6">
-          <Button
-            size="medium"
-            className="gap-1.5"
-            onClick={() => shown && onCreate(shown)}
-          >
-            <Add01 className="size-5" />
-            Create event
-          </Button>
-        </div>
+        {onCreate ? (
+          <div className="mt-5 flex justify-end border-t border-neutral-200 px-5 py-4 sm:px-6">
+            <Button
+              size="medium"
+              className="gap-1.5"
+              onClick={() => shown && onCreate(shown)}
+            >
+              <Add01 className="size-5" />
+              Create event
+            </Button>
+          </div>
+        ) : (
+          <div className="h-5 sm:h-6" />
+        )}
 
         <EventDetailsPopover
           open={freshOpen(openEvent, events)}
