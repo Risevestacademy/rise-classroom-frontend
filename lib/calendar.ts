@@ -1,8 +1,6 @@
 /**
- * Calendar events for the admin calendar. Live sessions and tasks come from
- * `GET /calendar/events` (see `lib/calendar-events.ts`).
- * PENDING-BACKEND: the API has no plain events (every event is a live
- * session), so events made with the Event type stay in the page's state.
+ * Calendar events for the admin and mentor calendars. Live sessions, events
+ * and tasks all come from `GET /calendar/events` (see `lib/calendar-events.ts`).
  */
 
 export type RepeatFrequency = "day" | "week" | "month" | "year";
@@ -26,10 +24,11 @@ export type EventGuest = { id: string; name: string; email: string };
 
 export type CalendarEvent = {
   id: string;
-  /** Live sessions and tasks come from the calendar API; events are local for now. */
   kind: "event" | "task" | "live";
-  /** Where an API item lives; unset for local events. */
-  source?: "LIVE_SESSION" | "WEEKLY_TASK" | "CALENDAR_TASK";
+  /** Where an API item lives; unset for one that's only in a form. */
+  source?: "LIVE_SESSION" | "CALENDAR_EVENT" | "CALENDAR_TASK" | "WEEKLY_TASK";
+  /** Who made it, or hosts the live session. */
+  ownerId?: string;
   /** False for items the API won't let this person change, like weekly tasks. */
   canEdit?: boolean;
   /** A calendar task that's been ticked off. */
@@ -45,6 +44,7 @@ export type CalendarEvent = {
   startTime: string;
   endTime: string;
   allDay: boolean;
+  /** API items come one per occurrence, so for them this only describes the repeat. */
   repeat: RepeatRule | null;
   /** The tracks the event is for; "all" includes tracks added later. */
   trackIds: string[] | "all";
@@ -182,7 +182,7 @@ export function occursOn(event: CalendarEvent, date: Date) {
   const offset = daysBetween(start, date);
   if (offset < 0) return false;
 
-  const rule = event.repeat;
+  const rule = event.source ? null : event.repeat;
   if (!rule) return date <= fromDateKey(event.endDate);
   if (!matchesPattern(rule, start, date)) return false;
 
