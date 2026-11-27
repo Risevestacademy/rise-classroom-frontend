@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 
-import { Calendar03, Cancel01, MoreHorizontal, Repeat, Time04, Track } from "@/assets/icons";
+import { Calendar03, Cancel01, Copy01, MoreHorizontal, Repeat, Time04, Track } from "@/assets/icons";
 import { CancelSessionDialog } from "@/components/calendar/CancelSessionDialog";
 import { EditLiveSessionDialog } from "@/components/calendar/LiveSessionForm";
 import { CohortTabs } from "@/components/cohorts/CohortTabs";
@@ -22,10 +22,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SuccessToast } from "@/components/ui/toast";
 import {
   byRelevance,
+  isComingUp,
   liveSessionQueries,
   nextOfEachSeries,
   personName,
   sessionDate,
+  sessionShareLink,
   sessionStanding,
   sessionTime,
   type AttendanceRecord,
@@ -70,11 +72,25 @@ function usePresence(id: string | null) {
 /** Avatars shown before the rest collapse into "+N". */
 const VISIBLE_GUESTS = 5;
 
-const inTab = (session: LiveSession, tab: Tab) =>
-  tab === "all" ||
-  (tab === "upcoming"
-    ? session.status !== "completed"
-    : session.status === tab);
+/** Copies the session's link, then says so for a moment. */
+function useCopyLink(sessionId: string, onCopied?: () => void) {
+  const [copied, setCopied] = React.useState(false);
+  React.useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(sessionShareLink(sessionId, window.location.origin));
+      setCopied(true);
+      onCopied?.();
+    } catch {
+      // Clipboard access can be refused; nothing else to do here.
+    }
+  };
+  return { copied, copy };
+}
 
 /**
  * The Live Sessions page admins and mentors share; each passes its own top nav.
@@ -104,6 +120,10 @@ export function LiveSessionsScreen({
   const [done, setDone] = React.useState<{ title: string; message: string } | null>(null);
   const dismissDone = React.useCallback(() => setDone(null), []);
   const me = useQuery({ ...sessionQuery(), enabled: canEdit === "own" }).data?.user.id;
+  const linkCopied = React.useCallback(
+    () => setDone({ title: "Link copied", message: "Share it with anyone invited to the session" }),
+    [],
+  );
   const actionsFor = (session: LiveSession) =>
     canEdit === true || (canEdit === "own" && session.hostId === me)
       ? { onEdit: setEditing, onCancel: setCancelling }
@@ -112,11 +132,16 @@ export function LiveSessionsScreen({
   const [selectedId, setSelectedId] = React.useState<string | null>(openSessionId);
 
   const list = useQuery(liveSessionQueries.list());
-  const all = React.useMemo(
-    () => nextOfEachSeries(list.data ?? []).sort(byRelevance),
-    [list.data],
-  );
-  const sessions = all.filter((session) => inTab(session, tab));
+  const now = useCurrentMinute();
+  // Upcoming is the next two days, every occurrence; the other tabs show a
+  // repeating session once, at its soonest occurrence.
+  const sessions = React.useMemo(() => {
+    const data = list.data ?? [];
+    if (tab === "upcoming")
+      return now === null ? [] : data.filter((session) => isComingUp(session, now)).sort(byRelevance);
+    const collapsed = nextOfEachSeries(data).sort(byRelevance);
+    return tab === "all" ? collapsed : collapsed.filter((session) => session.status === "completed");
+  }, [list.data, tab, now]);
   const panel = usePresence(selectedId);
   // From the full list, so a notification can open an occurrence whose card is collapsed.
   const previewed = list.data?.find((session) => session.id === panel.id);
@@ -186,7 +211,7 @@ export function LiveSessionsScreen({
               {tab === "completed"
                 ? "No completed sessions yet."
                 : tab === "upcoming"
-                  ? "No upcoming sessions. New ones will show here once they're scheduled."
+                  ? "Nothing in the next 2 days. Sessions show here as they come up."
                   : "No live sessions yet. They'll show here once they're scheduled."}
             </p>
           ) : null}
@@ -210,6 +235,7 @@ export function LiveSessionsScreen({
                   selected={session.id === selectedId}
                   onSelect={() => toggle(session.id)}
                   actions={actionsFor(session)}
+                  onLinkCopied={linkCopied}
                 />
               </li>
             ))}
@@ -257,6 +283,7 @@ export function LiveSessionsScreen({
                 session={previewed}
                 joinPath={joinPath}
                 actions={actionsFor(previewed)}
+                onLinkCopied={linkCopied}
                 onClose={() => setSelectedId(null)}
               />
             </aside>
@@ -292,11 +319,13 @@ function SessionCard({
   selected,
   onSelect,
   actions,
+  onLinkCopied,
 }: {
   session: LiveSession;
   selected: boolean;
   onSelect: () => void;
   actions?: SessionActions;
+  onLinkCopied: () => void;
 }) {
   const badge = statusBadge[session.status];
 
@@ -318,7 +347,7 @@ function SessionCard({
         >
           {badge.label}
         </Badge>
-        <ActionsMenu session={session} actions={actions} />
+        <ActionsMenu session={session} actions={actions} onCopied={onLinkCopied} />
       </div>
 
       <div className="flex min-w-0 flex-col gap-3">
@@ -351,15 +380,18 @@ function SessionPreview({
   session,
   joinPath,
   actions,
+  onLinkCopied,
   onClose,
 }: {
   session: LiveSession;
   joinPath: string;
   actions?: SessionActions;
+  onLinkCopied: () => void;
   onClose: () => void;
 }) {
   const [showAll, setShowAll] = React.useState(false);
   const now = useCurrentMinute();
+  const link = useCopyLink(session.id);
   const completed = session.status === "completed";
   // A finished session shows who came; until then, everyone invited.
   const attendance = useQuery({
@@ -387,7 +419,7 @@ function SessionPreview({
           {session.title}
         </h2>
         <div className="flex shrink-0 items-center gap-2">
-          <ActionsMenu session={session} actions={actions} />
+          <ActionsMenu session={session} actions={actions} onCopied={onLinkCopied} />
           <button
             type="button"
             aria-label="Close preview"
@@ -492,7 +524,7 @@ function SessionPreview({
       </section>
 
       {/* Opens shortly before the start too, so the host can start it. */}
-      {now !== null && sessionStanding(session, now).joinable && (
+      {now !== null && sessionStanding(session, now).joinable ? (
         <Button
           variant="primary"
           size="medium"
@@ -502,6 +534,19 @@ function SessionPreview({
         >
           Join session
         </Button>
+      ) : (
+        session.status === "upcoming" && (
+          <Button
+            variant="secondary"
+            size="medium"
+            className="mt-6 w-full"
+            onClick={link.copy}
+            aria-live="polite"
+          >
+            <Copy01 className="size-5" />
+            {link.copied ? "Link copied" : "Copy link"}
+          </Button>
+        )
       )}
     </div>
   );
@@ -629,14 +674,19 @@ const menuItemClass =
 function ActionsMenu({
   session,
   actions,
+  onCopied,
 }: {
   session: LiveSession;
   actions?: SessionActions;
+  onCopied: () => void;
 }) {
+  const link = useCopyLink(session.id, onCopied);
   const trigger =
     "relative z-10 flex size-6 shrink-0 items-center justify-center rounded-md text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-border-focus";
+  const shareable = session.status === "upcoming" || session.status === "live";
   // Only a session that hasn't started can be changed.
-  if (!actions || session.status !== "upcoming") {
+  const editable = actions && session.status === "upcoming";
+  if (!shareable && !editable) {
     return (
       <button type="button" aria-label={`${session.title} actions`} className={trigger}>
         <MoreHorizontal className="size-5" />
@@ -649,15 +699,22 @@ function ActionsMenu({
         <MoreHorizontal className="size-5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-auto min-w-40 rounded-xl border-none bg-white p-1 shadow-lg ring-0">
-        <DropdownMenuItem onClick={() => actions.onEdit(session)} className={menuItemClass}>
-          Edit session
+        <DropdownMenuItem onClick={link.copy} className={menuItemClass}>
+          Copy link
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => actions.onCancel(session)}
-          className={cn(menuItemClass, "text-text-error")}
-        >
-          Cancel session
-        </DropdownMenuItem>
+        {editable && (
+          <>
+            <DropdownMenuItem onClick={() => actions.onEdit(session)} className={menuItemClass}>
+              Edit session
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => actions.onCancel(session)}
+              className={cn(menuItemClass, "text-text-error")}
+            >
+              Cancel session
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
