@@ -68,7 +68,8 @@ export function EventDetailsPopover({
           collisionPadding={16}
           className="z-[60]"
         >
-          <Popover.Popup className="w-[446px] max-w-[calc(100vw-2rem)] rounded-3xl bg-neutral-100 pb-6 shadow-[0_4px_4px_rgb(0_0_0/0.25)] outline-none">
+          {/* Never taller than the room beside the event; longer cards scroll. */}
+          <Popover.Popup className="max-h-(--available-height) w-[446px] max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-3xl bg-neutral-100 pb-6 shadow-[0_4px_4px_rgb(0_0_0/0.25)] outline-none">
             {open && (
               <EventDetails
                 key={open.event.id}
@@ -102,10 +103,10 @@ function EventDetails({
   const [guestsOpen, setGuestsOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
   const live = event.kind === "live";
-  // The list only has the host; the participants come with the item.
+  /* The month's list only has the host, so guests come from the item itself. */
   const details = useQuery({
     ...calendarQueries.item(event.id),
-    enabled: event.source === "LIVE_SESSION",
+    enabled: event.source === "LIVE_SESSION" || event.source === "CALENDAR_EVENT",
   });
   const guests =
     event.guests.length > 0
@@ -115,6 +116,10 @@ function EventDetails({
           name: person.name,
           email: "",
         }));
+  /* When the owner hides the guest list, only how many were invited is known. */
+  const guestCount =
+    guests.length > 0 ? guests.length : (details.data?.participantCount ?? 0);
+  const guestListHidden = guests.length === 0 && guestCount > 0;
   // A live session's link is a path in the app; share the full address.
   const link =
     live && typeof window !== "undefined"
@@ -220,7 +225,7 @@ function EventDetails({
                 className="flex h-10 items-center gap-2 rounded-full bg-brand-900 px-4 text-sm font-medium text-white hover:bg-brand-800"
               >
                 <Video className="size-[17px]" />
-                Join Live Session
+                {live ? "Join Live Session" : "Join meeting"}
               </a>
               <button
                 type="button"
@@ -239,30 +244,38 @@ function EventDetails({
         )}
 
         <dl className="col-span-2 mt-[22px] grid grid-cols-[39px_minmax(0,1fr)] gap-y-3 font-work text-sm leading-5">
-          {guests.length > 0 && (
+          {guestCount > 0 && (
             <>
               <dt className="flex h-5 items-center">
                 <UserMultiple className="size-4 text-icon-secondary" />
                 <span className="sr-only">Guests</span>
               </dt>
               <dd>
-                <button
-                  type="button"
-                  aria-expanded={guestsOpen}
-                  onClick={() => setGuestsOpen((o) => !o)}
-                  className="flex w-full items-center justify-between"
-                >
-                  {guests.length} guest
-                  {guests.length === 1 ? "" : "s"}
-                  <ArrowDown01
-                    className={cn(
-                      "size-5 text-icon-secondary transition-transform",
-                      guestsOpen && "rotate-180",
-                    )}
-                  />
-                </button>
-                {guestsOpen && (
-                  <ul className="mt-2 flex max-h-[128px] flex-col gap-1 overflow-y-auto text-text-secondary">
+                {guestListHidden ? (
+                  <p>
+                    {guestCount} guest{guestCount === 1 ? "" : "s"}
+                    <span className="ml-1 text-text-muted">· list hidden by the organizer</span>
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    aria-expanded={guestsOpen}
+                    onClick={() => setGuestsOpen((o) => !o)}
+                    className="flex w-full items-center justify-between"
+                  >
+                    {guestCount} guest
+                    {guestCount === 1 ? "" : "s"}
+                    <ArrowDown01
+                      className={cn(
+                        "size-5 text-icon-secondary transition-transform",
+                        guestsOpen && "rotate-180",
+                      )}
+                    />
+                  </button>
+                )}
+                {guestsOpen && !guestListHidden && (
+                  /* A block list, not flex: flex would squash the truncated rows to fit instead of scrolling. */
+                  <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto overscroll-contain pr-1 text-text-secondary">
                     {guests.map((guest) => (
                       <li key={guest.id} className="truncate">
                         {guest.name}
