@@ -748,13 +748,33 @@ export function toUpcomingSession(session: LiveSession, now: number) {
 const isAhead = (session: LiveSession) =>
   session.status === "live" || session.status === "upcoming";
 
+/** How far ahead the Upcoming tab looks, as Google Calendar's "upcoming" does. */
+export const UPCOMING_WINDOW_MS = 2 * DAY_MS;
+
+/**
+ * Live now, or starting within the next two days and not over yet. Every
+ * occurrence of a repeating session counts on its own, so a daily one shows
+ * today and tomorrow.
+ */
+export const isComingUp = (session: LiveSession, now: number) =>
+  session.status === "live" ||
+  (session.status === "upcoming" &&
+    Date.parse(session.endsAt) > now &&
+    Date.parse(session.startsAt) - now <= UPCOMING_WINDOW_MS);
+
+/** The address anyone invited can open; it sends each role to the same room. */
+export const sessionShareLink = (sessionId: string, origin: string) =>
+  new URL(`/live/${sessionId}`, origin).href;
+
 /**
  * A repeating session only once: the occurrence that's live, or else the next
  * one. Its later occurrences stay on the calendar, and past ones stay listed.
  */
 export function nextOfEachSeries(sessions: LiveSession[]) {
   const comesFirst = (a: LiveSession, b: LiveSession) =>
-    a.status !== b.status ? a.status === "live" : a.startsAt < b.startsAt;
+    a.status !== b.status
+      ? a.status === "live"
+      : Date.parse(a.startsAt) < Date.parse(b.startsAt);
   const next = new Map<string, LiveSession>();
   for (const session of sessions) {
     if (!session.seriesId || !isAhead(session)) continue;

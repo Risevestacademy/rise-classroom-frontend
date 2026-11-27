@@ -5,6 +5,7 @@ import { LiveSessionsScreen } from "@/components/LiveSessionsScreen";
 import { JoinHub } from "@/components/live-room/JoinHub";
 import {
   byRelevance,
+  isComingUp,
   nextOfEachSeries,
   toLiveSession,
   type ApiLiveSession,
@@ -125,6 +126,22 @@ describe("which sessions show first", () => {
       at("one-off", "SCHEDULED", "2026-11-30T09:00:00Z"),
     ];
     expect(nextOfEachSeries(sessions).map((s) => s.id)).toEqual(["retro-1", "retro-2", "one-off"]);
+  });
+
+  it("counts as upcoming what's live or starts within two days, every occurrence of a series", () => {
+    const sessions = [
+      at("live", "LIVE", "2026-11-23T08:30:00Z"),
+      at("daily-today", "SCHEDULED", "2026-11-23T13:00:00Z", "daily"),
+      at("daily-tomorrow", "SCHEDULED", "2026-11-24T13:00:00Z", "daily"),
+      at("daily-in-3-days", "SCHEDULED", "2026-11-26T13:00:00Z", "daily"),
+      at("next-week", "SCHEDULED", "2026-11-30T09:00:00Z"),
+      at("done", "ENDED", "2026-11-23T06:00:00Z"),
+    ];
+    expect(sessions.filter((s) => isComingUp(s, now)).map((s) => s.id)).toEqual([
+      "live",
+      "daily-today",
+      "daily-tomorrow",
+    ]);
   });
 
   it("keeps the live occurrence of a repeating session over the next one", () => {
@@ -265,6 +282,37 @@ describe("Joining from the session preview", () => {
     expect(await screen.findByRole("heading", { name: "Participants (0)" })).toBeInTheDocument();
     expect(screen.queryByText("Join session")).not.toBeInTheDocument();
     vi.useRealTimers();
+  });
+});
+
+describe("Copying a session's link", () => {
+  it("offers Copy link instead of Join before a session opens, and in the three-dot menu", async () => {
+    mockApi({
+      "GET /live-sessions": envelope({
+        items: [
+          session({
+            id: "later",
+            title: "Later class",
+            scheduledStartAt: "2027-01-15T08:00:00.000Z",
+            scheduledEndAt: "2027-01-15T09:00:00.000Z",
+          }),
+        ],
+        nextCursor: null,
+      }),
+      "GET /live-sessions/later/participants": envelope({ items: [], total: 0 }),
+    });
+    const { user } = renderWithClient(<LiveSessionsScreen topNav={null} joinPath="/admin/live" />);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+
+    await user.click(await screen.findByRole("button", { name: "Later class" }));
+    await user.click(await screen.findByRole("button", { name: "Copy link" }));
+    expect(writeText).toHaveBeenLastCalledWith(`${window.location.origin}/live/later`);
+    expect(await screen.findByRole("button", { name: "Link copied" })).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "Later class actions" })[0]);
+    await user.click(await screen.findByRole("menuitem", { name: "Copy link" }));
+    expect(writeText).toHaveBeenCalledTimes(2);
   });
 });
 
