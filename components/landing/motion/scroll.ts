@@ -37,11 +37,12 @@ export function navAutoHide({ followScroll = true } = {}) {
 
   let scrollingDown = false;
   let tabsStuck = false;
+  let tourPinned = false;
   let footerShowing = false;
   let hidden = false;
 
   const update = () => {
-    const shouldHide = scrollingDown || tabsStuck || footerShowing;
+    const shouldHide = scrollingDown || tabsStuck || tourPinned || footerShowing;
     if (shouldHide === hidden) return;
     hidden = shouldHide;
     gsap.to(header, {
@@ -75,6 +76,20 @@ export function navAutoHide({ followScroll = true } = {}) {
       onToggle: (self) => {
         tabsStuck = self.isActive;
         tabs.dataset.stuck = String(self.isActive);
+        update();
+      },
+    });
+  }
+
+  // The product tour pins a device to the full screen, so keep out of its way.
+  const tour = one("[data-tour-track]");
+  if (tour) {
+    ScrollTrigger.create({
+      trigger: tour,
+      start: "top 20%",
+      end: "bottom bottom",
+      onToggle: (self) => {
+        tourPinned = self.isActive;
         update();
       },
     });

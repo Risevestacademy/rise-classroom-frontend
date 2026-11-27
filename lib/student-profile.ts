@@ -171,6 +171,70 @@ export function useStudentProgress(student: AdminUser) {
   };
 }
 
+export type TrackDeadline = {
+  id: string;
+  title: string;
+  dueAt: string;
+  /** Whole days from today, counted in the viewer's time zone. */
+  daysLeft: number;
+};
+
+const startOfDay = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+/**
+ * The next published assignments due on the student's track, soonest first.
+ * PENDING-BACKEND: admins can't read a student's submissions (the instructor
+ * submissions endpoint answers 403), so ones already handed in still show.
+ */
+export function upcomingTrackDeadlines(
+  modules: CurriculumModule[],
+  { now = new Date(), limit = 3 } = {},
+): TrackDeadline[] {
+  // The API tree lists lesson assignments under the module too; keep each once.
+  const byId = new Map<string, TrackDeadline>();
+  for (const trackModule of modules) {
+    if (trackModule.status !== "PUBLISHED") continue;
+    for (const { id, title, dueAt, status } of trackModule.assignments) {
+      if (status !== "PUBLISHED" || !dueAt || byId.has(id)) continue;
+      if (new Date(dueAt).getTime() < now.getTime()) continue;
+      const daysLeft = Math.round(
+        (startOfDay(new Date(dueAt)) - startOfDay(now)) / 86_400_000,
+      );
+      byId.set(id, { id, title, dueAt, daysLeft });
+    }
+  }
+  return [...byId.values()]
+    .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
+    .slice(0, limit);
+}
+
+/** The student's next deadlines, from the same curriculum as their progress. */
+export function useStudentDeadlines(student: AdminUser) {
+  const membership = student.studentProfile?.[0];
+  const cohortId = membership?.cohort?.id ?? "";
+  const trackId = membership?.enrollment?.[0]?.track?.id ?? "";
+
+  const curriculum = useQuery(
+    studentProfileQueries.curriculumId(cohortId, trackId),
+  );
+  const curriculumId = curriculum.data ?? "";
+  const modules = useQuery({
+    ...curriculumApis.admin.queries.modules(curriculumId),
+    enabled: curriculumId.length > 0,
+  });
+
+  const isPending =
+    (cohortId.length > 0 && trackId.length > 0 && curriculum.isPending) ||
+    (curriculumId.length > 0 && modules.isPending);
+
+  return {
+    isPending,
+    error: curriculum.error ?? modules.error,
+    deadlines: upcomingTrackDeadlines(modules.data ?? []),
+  };
+}
+
 export type ProgressTarget = {
   profileId: string;
   cohortId: string;

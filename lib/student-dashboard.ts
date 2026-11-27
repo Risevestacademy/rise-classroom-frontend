@@ -1,6 +1,8 @@
 import type { WeeklyTask } from "@/lib/instructor";
+import { notificationText } from "@/lib/notification-text";
 import type { TrackProgress } from "@/lib/student";
 import { assignmentHref, type StudentSubmission } from "@/lib/student-assignments";
+import type { StudentNotification } from "@/lib/student-notifications";
 import {
   findLesson,
   findTopic,
@@ -143,4 +145,87 @@ export function upcomingDeadlines(
   return [...assignments, ...weeklyTasks]
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
     .slice(0, limit);
+}
+
+/** One row of the "Recent Activity" card. */
+export type ActivityItem = {
+  key: string;
+  kind: "recording" | "assignment" | "note" | "event";
+  title: string;
+  subtitle: string;
+  at: string;
+};
+
+const reviewedTitles: Partial<Record<StudentSubmission["status"], string>> = {
+  GRADED: "Assignment graded",
+  REVIEWED: "Assignment reviewed",
+  CHANGES_REQUESTED: "Changes requested",
+};
+
+function notificationKind(type: string): ActivityItem["kind"] {
+  const upper = type.toUpperCase();
+  if (upper.includes("RECORDING")) return "recording";
+  if (upper.includes("LIVE")) return "event";
+  return "note";
+}
+
+/**
+ * The student's latest happenings, newest first: work they handed in, reviews
+ * of it, and their notifications. Reminders are left out since they repeat
+ * what's already scheduled, and assignment notifications since the
+ * submissions say the same thing with more detail.
+ */
+export function recentActivity(
+  notifications: StudentNotification[],
+  submissions: StudentSubmission[],
+  topics: CurriculumTopic[],
+  { limit = 6 } = {}
+): ActivityItem[] {
+  const titles = new Map(
+    topics.flatMap((topic) =>
+      topicAssignments(topic).map(({ assignment }) => [assignment.id, assignment.title] as const)
+    )
+  );
+
+  const work = submissions.flatMap((submission): ActivityItem[] => {
+    const title =
+      submission.assignment?.title ?? titles.get(submission.assignmentId) ?? "Assignment";
+    const items: ActivityItem[] = [];
+    if (submission.submittedAt)
+      items.push({
+        key: `submitted-${submission.id}`,
+        kind: "assignment",
+        title: "Assignment submitted",
+        subtitle: title,
+        at: submission.submittedAt,
+      });
+    const reviewed = reviewedTitles[submission.status];
+    if (reviewed && submission.reviewedAt) {
+      const outOf = submission.assignment?.maxScore;
+      const score =
+        submission.status === "GRADED" && submission.score != null
+          ? ` · ${submission.score}${outOf ? `/${outOf}` : ""}`
+          : "";
+      items.push({
+        key: `reviewed-${submission.id}`,
+        kind: "assignment",
+        title: reviewed,
+        subtitle: `${title}${score}`,
+        at: submission.reviewedAt,
+      });
+    }
+    return items;
+  });
+
+  const news = notifications
+    .filter((item) => !/REMINDER|ASSIGNMENT|SUBMISSION|GRADE/i.test(item.type))
+    .map((item) => ({
+      key: `notification-${item.id}`,
+      kind: notificationKind(item.type),
+      title: item.title,
+      subtitle: notificationText(item.body),
+      at: item.createdAt,
+    }));
+
+  return [...work, ...news].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
 }
