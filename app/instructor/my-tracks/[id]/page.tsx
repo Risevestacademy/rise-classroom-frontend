@@ -1,6 +1,7 @@
 "use client";
 
 import { InstructorNavbar } from "@/components/instructor-dashboard/InstructorNavbar";
+import { StudentProgressOverview } from "@/components/instructor-dashboard/StudentProgress";
 import StudentsTable from "@/components/instructor-dashboard/StudentsTable";
 import { ExportStudentsModal } from "@/components/instructor-dashboard/ExportStudentsModal";
 import { FilterStudentsModal } from "@/components/instructor-dashboard/FilterStudentsModal";
@@ -27,11 +28,10 @@ import {
   Search,
   Filter,
   Plus,
-  ChevronDown,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
 const BADGE_BASE =
   "rounded-full border px-2.5 py-0.5 text-[10px] font-medium shrink-0";
@@ -767,201 +767,22 @@ function TrackDetailsContent({ trackId }: { trackId: string }) {
             </TabsContent>
 
             <TabsContent value="progress" className="mt-0">
-              <div className="flex flex-col space-y-6 bg-white p-6 rounded-b-2xl border border-neutral-100 border-t-0 shadow-xs">
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="rounded-2xl border border-neutral-100 bg-white p-5 shadow-xs flex flex-col justify-between">
-                    <div>
-                      <p className="text-3xl font-bold text-neutral-900 tracking-tight">68%</p>
-                      <p className="text-xs font-medium text-neutral-500 mt-1">Average progress</p>
-                    </div>
-                    <p className="text-[11px] font-semibold text-emerald-600 mt-3 flex items-center gap-1">
-                      +8% this week
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-neutral-100 bg-white p-5 shadow-xs flex flex-col justify-between">
-                    <div>
-                      <p className="text-3xl font-bold text-neutral-900 tracking-tight">74%</p>
-                      <p className="text-xs font-medium text-neutral-500 mt-1">Average grade</p>
-                    </div>
-                    <p className="text-[11px] font-semibold text-emerald-600 mt-3 flex items-center gap-1">
-                      +2% this month
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-neutral-100 bg-white p-5 shadow-xs flex flex-col justify-between">
-                    <div>
-                      <p className="text-3xl font-bold text-neutral-900 tracking-tight">82%</p>
-                      <p className="text-xs font-medium text-neutral-500 mt-1">Attendance</p>
-                    </div>
-                    <p className="text-[11px] font-normal text-neutral-400 mt-3">
-                      Last 5 live sessions
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-neutral-100 bg-white p-5 shadow-xs flex flex-col justify-between">
-                    <div>
-                      <p className="text-3xl font-bold text-neutral-900 tracking-tight">3</p>
-                      <p className="text-xs font-medium text-neutral-500 mt-1">Students at risk</p>
-                    </div>
-                    <p className="text-[11px] font-normal text-neutral-400 mt-3">
-                      Inactive or overdue
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-neutral-100 bg-white p-6 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-semibold text-neutral-800">Average progress</h3>
-                    <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-600 bg-neutral-50 border border-neutral-200 px-3 py-1.5 rounded-xl cursor-pointer">
-                      <span>Whole track</span>
-                      <ChevronDown className="h-3.5 w-3.5 text-neutral-400" />
-                    </div>
-                  </div>
-
-                  <div className="w-full h-72 pt-4">
-                    <div style={{ width: "100%", height: "100%" }}>
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                        <LineChart
-                          data={[
-                            { date: "Aug 3", progress: 0 },
-                            { date: "Aug 10", progress: 12 },
-                            { date: "Aug 17", progress: 24 },
-                            { date: "Aug 24", progress: 35 },
-                            { date: "Aug 31", progress: 46 },
-                            { date: "Sep 7", progress: 54 },
-                            { date: "Sep 14", progress: 62 },
-                            { date: "Sep 21", progress: 68 },
-                            { date: "Sep 28", progress: 74 },
-                          ]}
-                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                          <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#888888" }} />
-                          <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#888888" }} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} />
-                          <Tooltip />
-                          <Line type="monotone" dataKey="progress" stroke="#1e1b4b" strokeWidth={2} dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                  <div className="rounded-2xl border border-neutral-100 bg-white p-6 shadow-xs flex flex-col justify-between space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base font-semibold text-neutral-800">Progress by module</h3>
-                      <button className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs cursor-pointer">
-                        See lessons
-                      </button>
-                    </div>
-
-                    <div className="space-y-5">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-neutral-800">Introduction</span>
-                          <span className="font-semibold text-neutral-900">96%</span>
-                        </div>
-                        <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-brand-primary rounded-full" style={{ width: "96%" }} />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-neutral-800">User Research</span>
-                          <span className="font-semibold text-neutral-900">71%</span>
-                        </div>
-                        <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-brand-primary rounded-full" style={{ width: "71%" }} />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-neutral-800">Design Thinking</span>
-                          <span className="font-semibold text-neutral-900">38%</span>
-                        </div>
-                        <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-brand-primary rounded-full" style={{ width: "38%" }} />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-neutral-800">UI Design</span>
-                          <span className="font-semibold text-neutral-900">0%</span>
-                        </div>
-                        <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-brand-primary rounded-full" style={{ width: "0%" }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-neutral-100 bg-white p-6 shadow-xs flex flex-col justify-between space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-base font-semibold text-neutral-800">Needs attention</h3>
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-100 text-[11px] font-semibold text-rose-600">
-                          3
-                        </span>
-                      </div>
-                      <button className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs cursor-pointer">
-                        View all
-                      </button>
-                    </div>
-
-                    <div className="divide-y divide-neutral-100">
-                      <div className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
-                            TA
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-neutral-900">Tunde Adeyemi</p>
-                            <p className="text-[11px] text-neutral-500 mt-0.5">9 days inactive • 2 overdue</p>
-                          </div>
-                        </div>
-                        <button className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs cursor-pointer">
-                          Send an email
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                            DI
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-neutral-900">David Ibrahim</p>
-                            <p className="text-[11px] text-neutral-500 mt-0.5">Overdue assignments</p>
-                          </div>
-                        </div>
-                        <button className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs cursor-pointer">
-                          Send an email
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-bold text-purple-700">
-                            FB
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-neutral-900">Fatima Bello</p>
-                            <p className="text-[11px] text-neutral-500 mt-0.5">Progress behind schedule</p>
-                          </div>
-                        </div>
-                        <button className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs cursor-pointer">
-                          Send an email
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <StudentProgressOverview
+                trackName={trackName ?? "Product Design"}
+                trackSummary={`${studentCount} students · ${modulesCount} modules · ${
+                  cohort
+                    ? `${formatDate(cohort.startDate)} – ${formatDate(cohort.endDate)}`
+                    : "Jan 5 – Dec 19, 2026"
+                }`}
+                showHeader={false}
+                className="flex min-w-0 flex-col gap-6 rounded-b-2xl border border-neutral-100 border-t-0 p-4 shadow-xs sm:p-6"
+                onSeeLessons={() =>
+                  router.push("/instructor/student-progress/lessons?student=tunde")
+                }
+                onViewAll={() =>
+                  router.push("/instructor/student-progress/attention")
+                }
+              />
             </TabsContent>
 
           </Tabs>
