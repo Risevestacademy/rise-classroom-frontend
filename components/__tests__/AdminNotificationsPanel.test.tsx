@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { AdminNotificationsPanel } from "@/components/AdminNotificationsPanel";
-import type { AdminNotification } from "@/lib/admin-dashboard";
+import type { AdminNotification } from "@/lib/admin-notifications";
 import { mockApi, renderWithClient } from "@/test/utils";
 
 const notifications: AdminNotification[] = [

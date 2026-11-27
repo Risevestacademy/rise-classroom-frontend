@@ -140,44 +140,10 @@ export const dashboardMock = {
   ] satisfies DashboardActivity[],
 };
 
-/** A notification as `/notifications` returns it. */
-export type AdminNotification = {
-  id: string;
-  title: string;
-  body: string;
-  type: string;
-  /** Who caused it, or null for system notifications. */
-  actor?: { id: string; name: string; image?: string | null; role: string } | null;
-  isRead: boolean;
-  createdAt: string;
-};
-
-export type AdminNotifications = {
-  items: AdminNotification[];
-  unreadCount: number;
-};
-
-/** The latest notifications; the panel has no paging, so it shows one page. */
-async function getNotifications(): Promise<AdminNotifications> {
-  const { data, metadata } = await api.get<
-    Envelope<AdminNotification[]> & { metadata: { unreadCount: number } }
-  >("/notifications", { query: { limit: 50 } });
-  return { items: data, unreadCount: metadata.unreadCount };
-}
-
-export function markNotificationRead(id: string) {
-  return api.patch(`/notifications/${id}/read`);
-}
-
-export function markAllNotificationsRead() {
-  return api.patch("/notifications/read-all");
-}
-
 export const adminDashboardKeys = {
   allControlTowers: () => ["admin", "control-tower"] as const,
   controlTower: (cohortId?: string) =>
     ["admin", "control-tower", cohortId] as const,
-  notifications: () => ["admin", "notifications"] as const,
 };
 
 export const adminDashboardQueries = {
@@ -185,12 +151,5 @@ export const adminDashboardQueries = {
     queryOptions({
       queryKey: adminDashboardKeys.controlTower(cohortId),
       queryFn: () => getAdminControlTower(cohortId),
-    }),
-
-  notifications: () =>
-    queryOptions({
-      queryKey: adminDashboardKeys.notifications(),
-      queryFn: getNotifications,
-      staleTime: 60_000,
     }),
 };
