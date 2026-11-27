@@ -32,6 +32,7 @@ export function TrackCard({
   students,
   stats,
   progress,
+  progressMessage = "Progress couldn't be loaded",
   colorKey,
   href,
   menu,
@@ -40,8 +41,10 @@ export function TrackCard({
   active: boolean;
   students: number | null;
   stats: TrackCardStat[];
-  /** Null while it's loading; undefined when it couldn't be loaded. */
+  /** Null while it's loading; undefined when it isn't available. */
   progress: number | null | undefined;
+  /** Shown in place of the bar when progress isn't available. */
+  progressMessage?: string;
   colorKey: TrackKey;
   /** Makes the whole card a link to the track. */
   href?: string;
@@ -102,9 +105,7 @@ export function TrackCard({
           <Skeleton className="mt-1 h-2 w-full rounded-full" />
         </>
       ) : progress === undefined ? (
-        <p className="mt-3.5 font-work text-xs text-text-secondary">
-          Progress couldn&apos;t be loaded
-        </p>
+        <p className="mt-3.5 font-work text-xs text-text-secondary">{progressMessage}</p>
       ) : (
         <>
           <p className="mt-3.5 text-xs font-medium text-text-primary">{progress}% Complete</p>

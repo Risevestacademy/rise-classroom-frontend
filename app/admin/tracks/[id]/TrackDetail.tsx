@@ -54,12 +54,12 @@ const cardClass = "rounded-xl bg-white p-6 shadow-[0_2px_4px_rgb(17_24_25/0.06)]
 export function TrackDetail({ id, loading = false }: { id: string; loading?: boolean }) {
   const [tab, setTab] = useTabParam(tabs);
   const trackQuery = useQuery({ ...adminQueries.track(id), enabled: !loading });
-  const { cohort: pickedCohort, cohortId } = useSelectedCohort();
+  const { cohort: pickedCohort, cohortId, cohortsQuery } = useSelectedCohort();
   const cohortQuery = useQuery({
     ...cohortQueries.detail(cohortId ?? ""),
     enabled: Boolean(cohortId) && !loading,
   });
-  const stats = useTrackStats(id, cohortId, cohortQuery.data);
+  const stats = useTrackStats(id, cohortId, cohortQuery.data, { loadProgress: true });
   const [toast, setToast] = React.useState<string | null>(null);
   const dismissToast = React.useCallback(() => setToast(null), []);
 
@@ -141,7 +141,11 @@ export function TrackDetail({ id, loading = false }: { id: string; loading?: boo
           className="mt-[22px]"
         />
 
-        {!cohortId ? (
+        {cohortsQuery.isError ? (
+          <p className="mt-6 font-work text-sm text-text-error">
+            {getTrackErrorMessage(cohortsQuery.error)}
+          </p>
+        ) : !cohortId ? (
           <CohortEmptyState
             icon={TrackIcon}
             title="No cohort to show"
@@ -239,6 +243,7 @@ function StudentsTab({
           cell: (row: CohortStudent) => {
             const item = progress.get(row.user.id);
             if (!item) return stats.progressRows ? "--" : <Skeleton className="h-4 w-24" />;
+            if (item.unknown) return "--";
             return `${item.percentage}% · ${item.completedLessons} of ${item.totalLessons} lessons`;
           },
         },
@@ -286,7 +291,8 @@ function InstructorsTab({ cohortId, stats }: { cohortId: string; stats: Stats })
 }
 
 function ProgressTab({ stats }: { stats: Stats }) {
-  const rows = stats.progressRows;
+  const rows = stats.progressRows?.filter((row) => !row.unknown);
+  const unknown = (stats.progressRows?.length ?? 0) - (rows?.length ?? 0);
   const students = new Map(stats.students.map((student) => [student.user.id, student]));
   const sorted = [...(rows ?? [])].sort((a, b) => a.percentage - b.percentage);
 
@@ -344,6 +350,8 @@ function ProgressTab({ stats }: { stats: Stats }) {
         <h2 className="text-lg leading-6 font-semibold text-text-primary">Student progress</h2>
         <p className="mt-1 font-work text-sm text-text-secondary">
           Lowest first, so you can see who might need a hand.
+          {unknown > 0 &&
+            ` ${unknown} ${unknown === 1 ? "student's" : "students'"} progress couldn't be loaded, so they're not counted.`}
         </p>
         {stats.progress === undefined ? (
           <p className="mt-4 font-work text-sm text-text-error">

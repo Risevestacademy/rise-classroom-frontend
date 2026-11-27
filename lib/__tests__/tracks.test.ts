@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 
 import { averageProgress, trackQueries } from "@/lib/tracks";
-import { envelope, mockApi } from "@/test/utils";
+import { envelope, mockApi, reply } from "@/test/utils";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -55,6 +55,30 @@ describe("trackQueries.progress", () => {
 
     expect(rows.map((row) => row.percentage)).toEqual([40, 0, 0]);
     expect(rows[0]).toMatchObject({ userId: "u1", completedLessons: 4, totalLessons: 10 });
+  });
+});
+
+describe("trackQueries.progress when some students fail to load", () => {
+  it("leaves them out of the average instead of failing the track", async () => {
+    mockApi({
+      "GET /admin/users/u1": student("u1", "c1", "t1", 60),
+      "GET /admin/users/u2": reply(404),
+    });
+
+    const rows = await new QueryClient().fetchQuery(
+      trackQueries.progress("t1", "c1", ["u1", "u2"]),
+    );
+
+    expect(rows[1]).toMatchObject({ userId: "u2", unknown: true });
+    expect(averageProgress(rows)).toBe(60);
+  });
+
+  it("fails when nobody's progress could be loaded", async () => {
+    mockApi({ "GET /admin/users/u1": reply(404) });
+
+    await expect(
+      new QueryClient().fetchQuery(trackQueries.progress("t1", "c1", ["u1"])),
+    ).rejects.toThrow();
   });
 });
 

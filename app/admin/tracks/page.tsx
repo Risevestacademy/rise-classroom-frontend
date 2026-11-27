@@ -12,7 +12,12 @@ import { TrackCard } from "@/components/tracks/TrackCard";
 import { useTrackStats } from "@/components/tracks/use-track-stats";
 import { Skeleton } from "@/components/ui/skeleton";
 import { adminQueries, getTrackErrorMessage, type Track } from "@/lib/admin";
-import { cohortQueries, trackKeyFor, type CohortDetail } from "@/lib/cohorts";
+import {
+  cohortLabel,
+  cohortQueries,
+  trackKeyFor,
+  type CohortDetail,
+} from "@/lib/cohorts";
 import { useSelectedCohort } from "@/lib/selected-cohort";
 
 const filters = [
@@ -26,7 +31,7 @@ type Filter = (typeof filters)[number]["value"];
 export default function TracksPage() {
   const [filter, setFilter] = React.useState<Filter>("all");
   const tracksQuery = useQuery(adminQueries.tracks());
-  const { cohortId, isReady } = useSelectedCohort();
+  const { cohort: pickedCohort, cohortId, isReady } = useSelectedCohort();
   // Who's on each track in the picked cohort; the cohort page loads the same.
   const cohortQuery = useQuery({
     ...cohortQueries.detail(cohortId ?? ""),
@@ -89,8 +94,10 @@ export default function TracksPage() {
             ) : pending ? (
               <TrackCardsSkeleton />
             ) : visible.length === 0 ? (
-              <p className="mt-8 font-work text-sm text-text-secondary">
-                No tracks match this filter.
+              <p className="mt-8 max-w-xl font-work text-sm text-text-secondary">
+                {filter === "all" && pickedCohort
+                  ? `No tracks in ${cohortLabel(pickedCohort.name)} yet. A track shows here once a student or instructor joins it in this cohort. Pick another cohort at the top to see its tracks.`
+                  : "No tracks match this filter."}
               </p>
             ) : (
               <ul
@@ -135,6 +142,9 @@ function TrackCardItem({
       active={track.status === "ACTIVE"}
       students={stats.studentCount}
       progress={stats.progress}
+      progressMessage={
+        stats.progressNotLoaded ? "Open the track to see progress" : undefined
+      }
       colorKey={trackKeyFor(track.name, index)}
       href={`/admin/tracks/${track.id}`}
       menu={<EditTrackDialog trackId={track.id} trackName={track.name} />}
