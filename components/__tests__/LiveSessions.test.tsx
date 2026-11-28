@@ -426,7 +426,12 @@ describe("A mentor's live sessions", () => {
     const { user } = renderWithClient(<LiveSessionsScreen topNav={null} canEdit="own" />);
 
     await user.click(await screen.findByRole("button", { name: "Town hall actions" }));
-    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+    expect(await screen.findByRole("menuitem", { name: "Copy link" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Edit session" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Cancel session" })).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await vi.waitFor(() => expect(screen.queryByRole("menuitem")).not.toBeInTheDocument());
+
     await user.click(screen.getByRole("button", { name: "My check-in actions" }));
     expect(await screen.findByRole("menuitem", { name: "Edit session" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Cancel session" })).toBeInTheDocument();
