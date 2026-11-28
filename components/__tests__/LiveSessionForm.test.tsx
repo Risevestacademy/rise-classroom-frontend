@@ -24,7 +24,6 @@ const draft: EventDraft = {
   permissions: { modify: false, invite: false, seeGuests: true },
   notifications: [10],
   color: "#000000",
-  attachments: [],
 };
 
 const created = envelope({ id: "s-1", title: "Kickoff", status: "SCHEDULED" });

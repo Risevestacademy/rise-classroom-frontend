@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { ArrowDown01, Attachment, Cancel01, Track } from "@/assets/icons";
+import { ArrowDown01, Track } from "@/assets/icons";
 import {
   CalendarDialogActions,
   CalendarDialogHeader,
@@ -11,12 +11,13 @@ import {
 import {
   DateTimeRow,
   DescriptionField,
+  endAfterMove,
   GuestsField,
   KindToggle,
   labelClass,
-  minutesOf,
+  moveRepeatDay,
   RepeatField,
-  times,
+  timeOf,
   TitleField,
 } from "@/components/calendar/EventFields";
 import { useCalendarArea } from "@/components/calendar/CalendarArea";
@@ -46,21 +47,20 @@ type SubmitEvent = (draft: EventDraft, scope?: SeriesScope) => Promise<void>;
 
 const notificationOptions = [5, 10, 15, 30, 60, 1440, 10080];
 
-/** A fresh event starting at the next half hour on `date`. */
+/** A fresh half-hour event starting at the next half hour on `date`. */
 export function blankDraft(date: Date): EventDraft {
   const now = new Date();
-  const slot = Math.min(
-    95,
-    Math.ceil((now.getHours() * 60 + now.getMinutes()) / 30) * 2,
+  const start = Math.min(
+    23 * 60 + 30,
+    Math.ceil((now.getHours() * 60 + now.getMinutes()) / 30) * 30,
   );
-  const startTime = times[slot];
   return {
     kind: "event",
     title: "",
     date: toDateKey(date),
     endDate: toDateKey(date),
-    startTime,
-    endTime: times[Math.min(95, slot + 2)],
+    startTime: timeOf(start),
+    endTime: timeOf(start + 30),
     allDay: false,
     repeat: null,
     trackIds: [],
@@ -70,7 +70,6 @@ export function blankDraft(date: Date): EventDraft {
     permissions: { modify: false, invite: false, seeGuests: true },
     notifications: [10],
     color: eventColors[0],
-    attachments: [],
   };
 }
 
@@ -213,7 +212,12 @@ function EventForm({
     setSaving(true);
     setError(null);
     try {
-      const saved = { ...draft, title: draft.title.trim() };
+      const saved = {
+        ...draft,
+        title: draft.title.trim(),
+        // One occurrence can't change how the series repeats.
+        ...(repeating && scope === "this" && { repeat: initial.repeat }),
+      };
       await (repeating ? onSubmit(saved, scope) : onSubmit(saved));
     } catch (err) {
       setError(
@@ -232,20 +236,15 @@ function EventForm({
       ...d,
       date: toDateKey(date),
       endDate: toDateKey(addDays(date, Math.max(0, length))),
+      repeat: moveRepeatDay(d.repeat, start, date),
     }));
   };
-  const setStartTime = (time: string) => {
-    const length = minutesOf(draft.endTime) - minutesOf(draft.startTime);
-    const endMinutes = Math.min(
-      minutesOf(time) + Math.max(0, length),
-      23 * 60 + 45,
-    );
+  const setStartTime = (time: string) =>
     setDraft((d) => ({
       ...d,
       startTime: time,
-      endTime: times[endMinutes / 15],
+      endTime: endAfterMove(d, time),
     }));
-  };
   const setEndDate = (date: Date) =>
     set("endDate", toDateKey(date < start ? start : date));
 
@@ -368,12 +367,6 @@ function EventForm({
           <DescriptionField
             value={draft.description}
             onChange={(description) => set("description", description)}
-          />
-
-          {/* PENDING-BACKEND: the API has nowhere to keep attachments yet. */}
-          <AttachmentField
-            files={draft.attachments}
-            onChange={(files) => set("attachments", files)}
           />
 
           {repeating && (
@@ -515,62 +508,5 @@ function EventForm({
         className="mt-[26px]"
       />
     </form>
-  );
-}
-
-function AttachmentField({
-  files,
-  onChange,
-}: {
-  files: string[];
-  onChange: (files: string[]) => void;
-}) {
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
-  return (
-    <div className="mt-4 flex flex-col items-start gap-2">
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="flex h-9 items-center gap-1.5 rounded-lg bg-neutral-100 px-3 text-xs font-medium text-black hover:bg-neutral-200"
-      >
-        <Attachment className="size-5" />
-        Add attachment
-      </button>
-      <input
-        ref={inputRef}
-        type="file"
-        multiple
-        hidden
-        onChange={(e) => {
-          const names = Array.from(e.target.files ?? [], (file) => file.name);
-          onChange([
-            ...files,
-            ...names.filter((name) => !files.includes(name)),
-          ]);
-          e.target.value = "";
-        }}
-      />
-      {files.length > 0 && (
-        <ul className="flex flex-wrap gap-2 font-work text-xs text-text-secondary">
-          {files.map((name) => (
-            <li
-              key={name}
-              className="flex items-center gap-1 rounded-md bg-neutral-100 py-1 pr-1 pl-2"
-            >
-              {name}
-              <button
-                type="button"
-                aria-label={`Remove ${name}`}
-                onClick={() => onChange(files.filter((f) => f !== name))}
-                className="rounded p-0.5 hover:bg-neutral-200"
-              >
-                <Cancel01 className="size-3" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }

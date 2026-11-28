@@ -56,7 +56,6 @@ export type CalendarEvent = {
   notifications: number[];
   color: string;
   organizer: string;
-  attachments: string[];
 };
 
 export const eventColors = [

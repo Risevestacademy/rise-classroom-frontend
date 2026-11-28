@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 
 import { LiveSessionsScreen } from "@/components/LiveSessionsScreen";
 import { JoinHub } from "@/components/live-room/JoinHub";
@@ -348,8 +348,7 @@ describe("Editing a live session", () => {
     const title = screen.getByPlaceholderText("Add title");
     await user.clear(title);
     await user.type(title, "Weekly sync (moved)");
-    await user.click(screen.getByRole("combobox", { name: "Start time" }));
-    await user.click(await screen.findByRole("option", { name: "10:00AM" }));
+    fireEvent.change(screen.getByLabelText("Start time"), { target: { value: "10:00" } });
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(await screen.findByText("Live session updated")).toBeInTheDocument();

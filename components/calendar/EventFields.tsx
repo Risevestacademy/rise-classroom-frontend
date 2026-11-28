@@ -11,12 +11,10 @@ import { useCalendarArea } from "@/components/calendar/CalendarArea";
 import { DatePickerPopup } from "@/components/calendar/DatePickerPopup";
 import { RecurrencePopup } from "@/components/calendar/RecurrencePopup";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SelectInput } from "@/components/ui/select";
 import { adminQueries } from "@/lib/admin";
 import { myMenteesQuery } from "@/lib/mentors";
 import {
   describeRepeat,
-  fieldTime,
   presetRule,
   repeatPresets,
   shortDate,
@@ -27,11 +25,6 @@ import { cn } from "@/lib/utils";
 
 // The fields the calendar's event form and live session form share.
 
-export const times = Array.from({ length: 96 }, (_, i) => {
-  const hours = String(Math.floor(i / 4)).padStart(2, "0");
-  const minutes = String((i % 4) * 15).padStart(2, "0");
-  return `${hours}:${minutes}`;
-});
 
 export const chipClass =
   "h-[33px] rounded-lg border border-neutral-200 bg-transparent px-2 font-work text-xs text-text-muted outline-none hover:bg-neutral-100 focus-visible:border-brand-primary";
@@ -41,6 +34,39 @@ export const labelClass = "text-sm leading-6 font-medium text-text-primary";
 export function minutesOf(time: string) {
   const [h, m] = time.split(":").map(Number);
   return h * 60 + m;
+}
+
+/** "HH:MM" for a number of minutes after midnight. */
+export function timeOf(minutes: number) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+}
+
+/** The end time that keeps the length when the start moves to `time`. */
+export function endAfterMove(
+  draft: { startTime: string; endTime: string },
+  time: string,
+) {
+  const length = minutesOf(draft.endTime) - minutesOf(draft.startTime);
+  return timeOf(Math.min(minutesOf(time) + Math.max(0, length), 23 * 60 + 59));
+}
+
+/** Moves a weekly rule's day with the start date, so Monday's event moved to Tuesday repeats on Tuesdays. */
+export function moveRepeatDay(
+  rule: RepeatRule | null,
+  from: Date,
+  to: Date,
+): RepeatRule | null {
+  const days = rule?.weekdays;
+  if (rule?.frequency !== "week" || !days?.includes(from.getDay())) return rule;
+  return {
+    ...rule,
+    weekdays: [
+      ...new Set(
+        days.map((day) => (day === from.getDay() ? to.getDay() : day)),
+      ),
+    ],
+  };
 }
 
 type Times = { allDay: boolean; startTime: string; endTime: string };
@@ -186,7 +212,7 @@ export function DateTimeRow({
         {shortDate(start)}
       </button>
       {!draft.allDay && (
-        <TimeSelect
+        <TimeInput
           label="Start time"
           value={draft.startTime}
           onChange={onStartTime}
@@ -194,7 +220,7 @@ export function DateTimeRow({
       )}
       <span className="text-sm text-text-secondary">to</span>
       {!draft.allDay && (
-        <TimeSelect
+        <TimeInput
           label="End time"
           value={draft.endTime}
           onChange={onEndTime}
@@ -235,7 +261,7 @@ export function DateTimeRow({
   );
 }
 
-function TimeSelect({
+function TimeInput({
   label,
   value,
   onChange,
@@ -245,14 +271,13 @@ function TimeSelect({
   onChange: (time: string) => void;
 }) {
   return (
-    <SelectInput
+    <input
+      type="time"
       aria-label={label}
       value={value}
-      onChange={onChange}
-      options={times.map((time) => ({ value: time, label: fieldTime(time) }))}
-      showChevron={false}
-      className={cn(chipClass, "w-auto justify-center text-center")}
-      popupClassName="max-h-60"
+      // Cleared fields keep the last time.
+      onChange={(e) => e.target.value && onChange(e.target.value)}
+      className={cn(chipClass, "w-auto text-text-primary")}
     />
   );
 }
