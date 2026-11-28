@@ -162,7 +162,6 @@ export function toCalendarEvent(
     notifications: item.reminderMinutes ?? [],
     color: live ? LIVE_COLOR : item.color || DEFAULT_COLOR,
     organizer: item.host?.name ?? "",
-    attachments: [],
   };
 }
 

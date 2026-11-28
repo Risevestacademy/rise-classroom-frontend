@@ -14,10 +14,10 @@ import {
   DescriptionField,
   GuestsField,
   KindToggle,
+  endAfterMove,
   labelClass,
-  minutesOf,
+  moveRepeatDay,
   RepeatField,
-  times,
   TitleField,
 } from "@/components/calendar/EventFields";
 import { blankDraft } from "@/components/calendar/EventFormDialog";
@@ -331,20 +331,15 @@ export function LiveSessionForm({
       ...d,
       date: toDateKey(date),
       endDate: toDateKey(addDays(date, Math.max(0, length))),
+      repeat: moveRepeatDay(d.repeat, start, date),
     }));
   };
-  const setStartTime = (time: string) => {
-    const length = minutesOf(draft.endTime) - minutesOf(draft.startTime);
-    const endMinutes = Math.min(
-      minutesOf(time) + Math.max(0, length),
-      23 * 60 + 45,
-    );
+  const setStartTime = (time: string) =>
     setDraft((d) => ({
       ...d,
       startTime: time,
-      endTime: times[endMinutes / 15],
+      endTime: endAfterMove(d, time),
     }));
-  };
 
   const basics = (): LiveSessionBasics => ({
     title: draft.title,
@@ -843,18 +838,12 @@ function EditLiveSessionForm({
       endDate: toDateKey(addDays(date, Math.max(0, length))),
     }));
   };
-  const setStartTime = (time: string) => {
-    const length = minutesOf(draft.endTime) - minutesOf(draft.startTime);
-    const endMinutes = Math.min(
-      minutesOf(time) + Math.max(0, length),
-      23 * 60 + 45,
-    );
+  const setStartTime = (time: string) =>
     setDraft((d) => ({
       ...d,
       startTime: time,
-      endTime: times[endMinutes / 15],
+      endTime: endAfterMove(d, time),
     }));
-  };
 
   return (
     <form

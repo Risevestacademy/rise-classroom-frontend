@@ -95,8 +95,8 @@ export function AppTopNav({
             aria-current={onCalendar ? "page" : undefined}
             className={
               onCalendar
-                ? "hidden size-10 items-center justify-center rounded-lg bg-brand-300 text-neutral-800 sm:flex"
-                : "hidden size-10 items-center justify-center rounded-lg bg-surface-subtle text-icon-primary hover:bg-neutral-200 sm:flex"
+                ? "flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-300 text-neutral-800"
+                : "flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-subtle text-icon-primary hover:bg-neutral-200"
             }
           >
             <Calendar />

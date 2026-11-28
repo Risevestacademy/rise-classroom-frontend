@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 import { EventFormDialog, type EventDraft } from "@/components/calendar/EventFormDialog";
 import { tracks } from "@/test/fixtures";
@@ -21,7 +21,6 @@ const draft: EventDraft = {
   permissions: { modify: false, invite: false, seeGuests: true },
   notifications: [10],
   color: "#000000",
-  attachments: [],
 };
 
 function renderForm({
@@ -44,13 +43,8 @@ function renderForm({
   return { ...view, onSubmit, onOpenChange };
 }
 
-async function pickTime(
-  user: ReturnType<typeof renderWithClient>["user"],
-  label: string,
-  time: string
-) {
-  await user.click(screen.getByRole("combobox", { name: label }));
-  await user.click(await screen.findByRole("option", { name: time }));
+function pickTime(label: string, time: string) {
+  fireEvent.change(screen.getByLabelText(label), { target: { value: time } });
 }
 
 describe("EventFormDialog", () => {
@@ -77,7 +71,7 @@ describe("EventFormDialog", () => {
   it("keeps the event's length when the start time moves", async () => {
     const { user, onSubmit } = renderForm({ initial: { ...draft, title: "Standup" } });
 
-    await pickTime(user, "Start time", "11:30AM");
+    pickTime("Start time", "11:30");
     await user.click(screen.getByRole("button", { name: "Create event" }));
 
     expect(onSubmit).toHaveBeenCalledWith(
@@ -88,7 +82,7 @@ describe("EventFormDialog", () => {
   it("won't end before it starts on the same day", async () => {
     const { user, onSubmit } = renderForm({ initial: { ...draft, title: "Standup" } });
 
-    await pickTime(user, "End time", "8:00AM");
+    pickTime("End time", "08:00");
     await user.click(screen.getByRole("button", { name: "Create event" }));
 
     expect(onSubmit).toHaveBeenCalledWith(
@@ -101,8 +95,8 @@ describe("EventFormDialog", () => {
 
     await user.click(screen.getByRole("checkbox", { name: "All day" }));
 
-    expect(screen.queryByRole("combobox", { name: "Start time" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "End time" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Start time")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("End time")).not.toBeInTheDocument();
   });
 
   it("edits an existing event", async () => {
@@ -116,5 +110,56 @@ describe("EventFormDialog", () => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ title: "Demo day" }));
+  });
+
+  it("takes any minute, not just quarter hours", async () => {
+    const { user, onSubmit } = renderForm({ initial: { ...draft, title: "Standup" } });
+
+    pickTime("Start time", "10:07");
+    pickTime("End time", "10:52");
+    await user.click(screen.getByRole("button", { name: "Create event" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ startTime: "10:07", endTime: "10:52" })
+    );
+  });
+
+  const weekly = {
+    ...draft,
+    title: "Standup",
+    seriesId: "s-1",
+    repeat: { frequency: "week", interval: 1, weekdays: [1], ends: { type: "never" } },
+  } satisfies EventDraft;
+
+  async function moveToTuesday(user: ReturnType<typeof renderWithClient>["user"]) {
+    // 2 Nov 2026 is a Monday.
+    await user.click(screen.getByRole("button", { name: /^Starts/ }));
+    await user.click(await screen.findByRole("button", { name: "Tue Nov 03 2026" }));
+    await user.click(screen.getByRole("button", { name: "Apply" }));
+  }
+
+  it("repeats on the new weekday when every event moves to another day", async () => {
+    const { user, onSubmit } = renderForm({ mode: "edit", initial: weekly });
+
+    await moveToTuesday(user);
+    await user.click(screen.getByRole("radio", { name: "All events" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ date: "2026-11-03", repeat: { ...weekly.repeat, weekdays: [2] } }),
+      "all"
+    );
+  });
+
+  it("keeps the series' repeat when only one event moves", async () => {
+    const { user, onSubmit } = renderForm({ mode: "edit", initial: weekly });
+
+    await moveToTuesday(user);
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ date: "2026-11-03", repeat: weekly.repeat }),
+      "this"
+    );
   });
 });
